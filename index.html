@@ -1,0 +1,3638 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>鎮山工程 水電靠模板產生器</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#171b24;--bg3:#1e2333;
+  --border:#2a3045;--border-hi:#3d4f72;
+  --accent:#4f8ef7;--accent2:#7dd3c0;
+  --text:#e8ecf4;--text2:#8a94a8;--text3:#5a6278;
+  --danger:#e06060;--success:#5cb88a;
+  --mono:'IBM Plex Mono',monospace;--sans:'Noto Sans TC',sans-serif;
+  --rad:6px;--rad-lg:10px;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:300;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 16px 80px}
+.container{width:100%;max-width:920px}
+header{margin-bottom:36px}
+.logo{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--accent);text-transform:uppercase;margin-bottom:10px}
+h1{font-family:var(--mono);font-size:28px;font-weight:500;letter-spacing:-.02em;line-height:1.2}
+h1 span{color:var(--accent2)}
+.subtitle{margin-top:8px;font-size:14px;color:var(--text2);line-height:1.6}
+
+.rule-strip{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:28px}
+.rule-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);
+  padding:14px 18px;display:flex;align-items:center;gap:12px}
+.rule-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.rule-dot.inner{background:var(--accent)}.rule-dot.outer{background:var(--accent2)}
+.rule-label{font-size:13px;color:var(--text2);font-family:var(--mono);line-height:1.5}
+.rule-label strong{color:var(--text);font-weight:500;display:block}
+
+.proj-section{margin-bottom:20px}
+.section-label{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--text3);
+  text-transform:uppercase;margin-bottom:8px}
+.proj-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.proj-row input[type=text]{width:100%;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:14px;
+  padding:9px 12px;outline:none;transition:border-color .15s,background .15s}
+.proj-row input[type=text]:focus{border-color:var(--accent);background:#1c2235}
+.proj-row input[type=text]::placeholder{color:var(--text3)}
+.fname-preview{margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--text2)}
+.fname-preview span{color:var(--accent2)}
+
+/* Global R input */
+.global-r-bar{
+  display:flex;align-items:center;gap:12px;
+  background:var(--bg2);border:1px solid var(--border-hi);
+  border-radius:var(--rad-lg);padding:12px 18px;margin-bottom:20px;
+}
+.global-r-bar label{font-family:var(--mono);font-size:12px;color:var(--text2);white-space:nowrap}
+.global-r-bar input[type=number]{
+  width:110px;background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:14px;
+  padding:7px 10px;outline:none;transition:border-color .15s;
+  -moz-appearance:textfield;
+}
+.global-r-bar input[type=number]::-webkit-inner-spin-button,
+.global-r-bar input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+.global-r-bar input[type=number]:focus{border-color:var(--accent)}
+.btn-apply{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 16px;border-radius:var(--rad);
+  font-family:var(--mono);font-size:12px;cursor:pointer;
+  background:none;border:1px solid var(--border-hi);color:var(--text2);
+  transition:all .15s;white-space:nowrap;
+}
+.btn-apply:hover{border-color:var(--accent2);color:var(--accent2);background:#1a2e2a}
+.global-r-bar .hint{font-family:var(--mono);font-size:11px;color:var(--text3);flex:1}
+
+.table-header{display:grid;grid-template-columns:28px 1fr 1fr 1fr 130px 130px 32px;
+  gap:8px;padding:0 4px 8px;font-family:var(--mono);font-size:11px;
+  letter-spacing:.1em;color:var(--text3);text-transform:uppercase;
+  border-bottom:1px solid var(--border);margin-bottom:8px}
+
+.rows{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.row{display:grid;grid-template-columns:28px 1fr 1fr 1fr 130px 130px 32px;
+  gap:8px;align-items:center;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--rad);padding:8px 4px;transition:border-color .15s;
+  animation:rowIn .18s ease}
+@keyframes rowIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.row:hover{border-color:var(--border-hi)}
+.row-num{font-family:var(--mono);font-size:11px;color:var(--text3);text-align:center}
+.row input[type=number]{width:100%;background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:14px;
+  padding:7px 10px;outline:none;transition:border-color .15s,background .15s;
+  -moz-appearance:textfield}
+.row input[type=number]::-webkit-inner-spin-button,
+.row input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+.row input[type=number]:focus{border-color:var(--accent);background:#1c2235}
+.row input[type=number]::placeholder{color:var(--text3)}
+.row input[type=number].r-input{border-color:var(--border-hi)}
+.row input[type=number].r-input:focus{border-color:var(--accent2)}
+.calc-cell{font-family:var(--mono);font-size:11px;color:var(--text2);line-height:1.7;padding:0 4px}
+.calc-cell .iv{color:var(--accent)}.calc-cell .ov{color:var(--accent2)}
+.calc-cell .err{color:var(--danger)}
+.btn-del{background:none;border:1px solid transparent;border-radius:var(--rad);
+  color:var(--text3);cursor:pointer;width:28px;height:28px;
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+  transition:color .15s,border-color .15s,background .15s}
+.btn-del:hover{color:var(--danger);border-color:var(--danger);background:#2a1a1a}
+
+.actions{display:flex;gap:10px;margin-bottom:28px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;
+  border-radius:var(--rad);font-family:var(--mono);font-size:13px;cursor:pointer;
+  transition:all .15s;border:1px solid;font-weight:400;letter-spacing:.05em}
+.btn-add{background:none;border-color:var(--border-hi);color:var(--text2)}
+.btn-add:hover{border-color:var(--accent);color:var(--accent);background:#1a2235}
+.btn-gen{background:var(--accent);border-color:var(--accent);color:#fff;
+  flex:1;justify-content:center;font-weight:500}
+.btn-gen:hover{background:#6fa0ff;border-color:#6fa0ff}
+.btn-gen:active{transform:scale(.98)}
+
+.output{display:none}
+.output.visible{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.output-title{font-family:var(--mono);font-size:11px;letter-spacing:.15em;
+  color:var(--text3);text-transform:uppercase;margin-bottom:12px}
+.file-item{display:flex;align-items:center;gap:14px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:var(--rad-lg);padding:16px 20px}
+.file-icon{font-family:var(--mono);font-size:10px;color:var(--text3);
+  background:var(--bg3);border:1px solid var(--border);border-radius:3px;
+  padding:3px 6px;flex-shrink:0}
+.file-info{flex:1}
+.file-name{font-family:var(--mono);font-size:15px;color:var(--text);margin-bottom:4px}
+.file-desc{font-size:12px;color:var(--text2)}
+.file-desc .iv{color:var(--accent)}.file-desc .ov{color:var(--accent2)}
+.btn-dl-main{display:inline-flex;align-items:center;gap:8px;padding:9px 22px;
+  border-radius:var(--rad);background:var(--accent);border:1px solid var(--accent);
+  color:#fff;font-family:var(--mono);font-size:13px;cursor:pointer;
+  text-decoration:none;font-weight:500;transition:all .15s;flex-shrink:0}
+.btn-dl-main:hover{background:#6fa0ff;border-color:#6fa0ff}
+
+.preview-wrap{margin-top:28px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--rad-lg);overflow:hidden}
+.preview-top{display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-size:11px;color:var(--text3);
+  letter-spacing:.1em;text-transform:uppercase}
+#preview-canvas{display:block;background:#0b0e14;width:100%}
+
+.notice{margin-top:16px;background:var(--bg2);border:1px solid var(--border-hi);
+  border-radius:var(--rad);padding:12px 16px;font-family:var(--mono);font-size:12px;
+  color:var(--text2);line-height:1.7}
+.notice strong{color:var(--accent2)}
+
+.statusbar{margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--text3);
+  display:flex;align-items:center;gap:8px}
+.statusbar .dot{width:6px;height:6px;border-radius:50%;background:var(--success);display:none}
+.statusbar.ok .dot{display:block}
+
+@media(max-width:640px){
+  .table-header,.row{grid-template-columns:24px 1fr 1fr 1fr 28px}
+  .table-header .col-inner,.row .calc-inner,
+  .table-header .col-outer,.row .calc-outer{display:none}
+  .proj-row{grid-template-columns:1fr}
+  .rule-strip{grid-template-columns:1fr}
+  .actions{flex-wrap:wrap}
+  h1{font-size:22px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">CAD Tooling / Frame Generator</div>
+    <h1>鎮山工程 <span>水電靠模板</span>產生器</h1>
+    <p class="subtitle">輸入基準尺寸與 R 角，所有框架合併成單一 .dxf 檔案</p>
+  </header>
+
+  <div class="rule-strip">
+    <div class="rule-card">
+      <div class="rule-dot inner"></div>
+      <div class="rule-label"><strong>內匡</strong>基準 +25 四邊，圓角 R（自訂）</div>
+    </div>
+    <div class="rule-card">
+      <div class="rule-dot outer"></div>
+      <div class="rule-label"><strong>外匡</strong>基準 +105 四邊，直角矩形</div>
+    </div>
+  </div>
+
+  <div class="proj-section">
+    <div class="section-label">工程資訊</div>
+    <div class="proj-row">
+      <input type="text" id="proj-name" placeholder="工程編號（例：B820）" oninput="updateFname()"/>
+      <input type="text" id="proj-num"  placeholder="工程區（例：6BG.6BB）" oninput="updateFname()"/>
+    </div>
+    <div class="fname-preview">檔案名稱：<span id="fname-display">請輸入工程資訊</span></div>
+  </div>
+
+  <div class="global-r-bar">
+    <label>統一 R 角</label>
+    <input type="number" id="global-r" placeholder="例：25" min="0" step="0.1"/>
+    <button class="btn-apply" onclick="applyGlobalR()">套用至全部列</button>
+    <span class="hint">套用後仍可對各列單獨修改</span>
+  </div>
+
+  <div class="table-header">
+    <div>#</div><div>基準 W</div><div>基準 H</div><div>R 角</div>
+    <div class="col-inner">內匡結果</div>
+    <div class="col-outer">外匡結果</div>
+    <div></div>
+  </div>
+  <div class="rows" id="rows"></div>
+  <div class="actions">
+    <button class="btn btn-add" onclick="addRow()">＋ 新增一組</button>
+    <button class="btn btn-gen" id="btn-gen" onclick="generate()">▶ 產生並下載 DXF</button>
+  </div>
+
+  <div class="output" id="output">
+    <div class="output-title">產生結果</div>
+    <div id="file-list"></div>
+    <div class="preview-wrap" id="preview-wrap" style="display:none">
+      <div class="preview-top"><span>全部框架預覽</span><span id="prev-info"></span></div>
+      <canvas id="preview-canvas" height="340"></canvas>
+    </div>
+  </div>
+
+  <div class="notice">
+    <strong>關於 DWG：</strong>產生的 .dxf 用 AutoCAD 開啟後，「另存新檔」選 .dwg 即可。內容完全相同。
+  </div>
+  <div class="statusbar" id="statusbar">
+    <div class="dot"></div>
+    <span id="status-text">就緒</span>
+  </div>
+</div>
+
+<script>
+// ── Static DXF sections (extracted from ezdxf, guaranteed AutoCAD-compatible) ──
+const DXF_HEADER = `  0
+SECTION
+  2
+HEADER
+  9
+\$ACADVER
+  1
+AC1024
+  9
+\$ACADMAINTVER
+ 70
+6
+  9
+\$DWGCODEPAGE
+  3
+ANSI_1252
+  9
+\$LASTSAVEDBY
+  1
+ezdxf
+  9
+\$INSBASE
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$EXTMIN
+ 10
+1e+20
+ 20
+1e+20
+ 30
+1e+20
+  9
+\$EXTMAX
+ 10
+-1e+20
+ 20
+-1e+20
+ 30
+-1e+20
+  9
+\$LIMMIN
+ 10
+0.0
+ 20
+0.0
+  9
+\$LIMMAX
+ 10
+420.0
+ 20
+297.0
+  9
+\$ORTHOMODE
+ 70
+0
+  9
+\$REGENMODE
+ 70
+1
+  9
+\$FILLMODE
+ 70
+1
+  9
+\$QTEXTMODE
+ 70
+0
+  9
+\$MIRRTEXT
+ 70
+1
+  9
+\$LTSCALE
+ 40
+1.0
+  9
+\$ATTMODE
+ 70
+1
+  9
+\$TEXTSIZE
+ 40
+2.5
+  9
+\$TRACEWID
+ 40
+1.0
+  9
+\$TEXTSTYLE
+  7
+Standard
+  9
+\$CLAYER
+  8
+0
+  9
+\$CELTYPE
+  6
+ByLayer
+  9
+\$CECOLOR
+ 62
+256
+  9
+\$CELTSCALE
+ 40
+1.0
+  9
+\$DISPSILH
+ 70
+0
+  9
+\$DIMSCALE
+ 40
+1.0
+  9
+\$DIMASZ
+ 40
+2.5
+  9
+\$DIMEXO
+ 40
+0.625
+  9
+\$DIMDLI
+ 40
+3.75
+  9
+\$DIMRND
+ 40
+0.0
+  9
+\$DIMDLE
+ 40
+0.0
+  9
+\$DIMEXE
+ 40
+1.25
+  9
+\$DIMTP
+ 40
+0.0
+  9
+\$DIMTM
+ 40
+0.0
+  9
+\$DIMTXT
+ 40
+2.5
+  9
+\$DIMCEN
+ 40
+2.5
+  9
+\$DIMTSZ
+ 40
+0.0
+  9
+\$DIMTOL
+ 70
+0
+  9
+\$DIMLIM
+ 70
+0
+  9
+\$DIMTIH
+ 70
+0
+  9
+\$DIMTOH
+ 70
+0
+  9
+\$DIMSE1
+ 70
+0
+  9
+\$DIMSE2
+ 70
+0
+  9
+\$DIMTAD
+ 70
+1
+  9
+\$DIMZIN
+ 70
+8
+  9
+\$DIMBLK
+  1
+
+  9
+\$DIMASO
+ 70
+1
+  9
+\$DIMSHO
+ 70
+1
+  9
+\$DIMPOST
+  1
+
+  9
+\$DIMAPOST
+  1
+
+  9
+\$DIMALT
+ 70
+0
+  9
+\$DIMALTD
+ 70
+3
+  9
+\$DIMALTF
+ 40
+0.03937007874
+  9
+\$DIMLFAC
+ 40
+1.0
+  9
+\$DIMTOFL
+ 70
+1
+  9
+\$DIMTVP
+ 40
+0.0
+  9
+\$DIMTIX
+ 70
+0
+  9
+\$DIMSOXD
+ 70
+0
+  9
+\$DIMSAH
+ 70
+0
+  9
+\$DIMBLK1
+  1
+
+  9
+\$DIMBLK2
+  1
+
+  9
+\$DIMSTYLE
+  2
+ISO-25
+  9
+\$DIMCLRD
+ 70
+0
+  9
+\$DIMCLRE
+ 70
+0
+  9
+\$DIMCLRT
+ 70
+0
+  9
+\$DIMTFAC
+ 40
+1.0
+  9
+\$DIMGAP
+ 40
+0.625
+  9
+\$DIMJUST
+ 70
+0
+  9
+\$DIMSD1
+ 70
+0
+  9
+\$DIMSD2
+ 70
+0
+  9
+\$DIMTOLJ
+ 70
+0
+  9
+\$DIMTZIN
+ 70
+8
+  9
+\$DIMALTZ
+ 70
+0
+  9
+\$DIMALTTZ
+ 70
+0
+  9
+\$DIMUPT
+ 70
+0
+  9
+\$DIMDEC
+ 70
+2
+  9
+\$DIMTDEC
+ 70
+2
+  9
+\$DIMALTU
+ 70
+2
+  9
+\$DIMALTTD
+ 70
+3
+  9
+\$DIMTXSTY
+  7
+Standard
+  9
+\$DIMAUNIT
+ 70
+0
+  9
+\$DIMADEC
+ 70
+0
+  9
+\$DIMALTRND
+ 40
+0.0
+  9
+\$DIMAZIN
+ 70
+0
+  9
+\$DIMDSEP
+ 70
+44
+  9
+\$DIMATFIT
+ 70
+3
+  9
+\$DIMFRAC
+ 70
+0
+  9
+\$DIMLDRBLK
+  1
+
+  9
+\$DIMLUNIT
+ 70
+2
+  9
+\$DIMLWD
+ 70
+-2
+  9
+\$DIMLWE
+ 70
+-2
+  9
+\$DIMTMOVE
+ 70
+0
+  9
+\$DIMFXL
+ 40
+1.0
+  9
+\$DIMFXLON
+ 70
+0
+  9
+\$DIMJOGANG
+ 40
+0.785398163397
+  9
+\$DIMTFILL
+ 70
+0
+  9
+\$DIMTFILLCLR
+ 70
+0
+  9
+\$DIMARCSYM
+ 70
+0
+  9
+\$DIMLTYPE
+  6
+
+  9
+\$DIMLTEX1
+  6
+
+  9
+\$DIMLTEX2
+  6
+
+  9
+\$DIMTXTDIRECTION
+ 70
+0
+  9
+\$LUNITS
+ 70
+2
+  9
+\$LUPREC
+ 70
+4
+  9
+\$SKETCHINC
+ 40
+1.0
+  9
+\$FILLETRAD
+ 40
+10.0
+  9
+\$AUNITS
+ 70
+0
+  9
+\$AUPREC
+ 70
+2
+  9
+\$MENU
+  1
+.
+  9
+\$ELEVATION
+ 40
+0.0
+  9
+\$PELEVATION
+ 40
+0.0
+  9
+\$THICKNESS
+ 40
+0.0
+  9
+\$LIMCHECK
+ 70
+0
+  9
+\$CHAMFERA
+ 40
+0.0
+  9
+\$CHAMFERB
+ 40
+0.0
+  9
+\$CHAMFERC
+ 40
+0.0
+  9
+\$CHAMFERD
+ 40
+0.0
+  9
+\$SKPOLY
+ 70
+0
+  9
+\$TDCREATE
+ 40
+2461201.08556713
+  9
+\$TDUCREATE
+ 40
+2458532.153996898
+  9
+\$TDUPDATE
+ 40
+2461201.08556713
+  9
+\$TDUUPDATE
+ 40
+2458532.1544311
+  9
+\$TDINDWG
+ 40
+0.0
+  9
+\$TDUSRTIMER
+ 40
+0.0
+  9
+\$USRTIMER
+ 70
+1
+  9
+\$ANGBASE
+ 50
+0.0
+  9
+\$ANGDIR
+ 70
+0
+  9
+\$PDMODE
+ 70
+0
+  9
+\$PDSIZE
+ 40
+0.0
+  9
+\$PLINEWID
+ 40
+0.0
+  9
+\$SPLFRAME
+ 70
+0
+  9
+\$SPLINETYPE
+ 70
+6
+  9
+\$SPLINESEGS
+ 70
+8
+  9
+\$HANDSEED
+  5
+38
+  9
+\$SURFTAB1
+ 70
+6
+  9
+\$SURFTAB2
+ 70
+6
+  9
+\$SURFTYPE
+ 70
+6
+  9
+\$SURFU
+ 70
+6
+  9
+\$SURFV
+ 70
+6
+  9
+\$UCSBASE
+  2
+
+  9
+\$UCSNAME
+  2
+
+  9
+\$UCSORG
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$UCSXDIR
+ 10
+1.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$UCSYDIR
+ 10
+0.0
+ 20
+1.0
+ 30
+0.0
+  9
+\$UCSORTHOREF
+  2
+
+  9
+\$UCSORTHOVIEW
+ 70
+0
+  9
+\$UCSORGTOP
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$UCSORGBOTTOM
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$UCSORGLEFT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$UCSORGRIGHT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$UCSORGFRONT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$UCSORGBACK
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSBASE
+  2
+
+  9
+\$PUCSNAME
+  2
+
+  9
+\$PUCSORG
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSXDIR
+ 10
+1.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSYDIR
+ 10
+0.0
+ 20
+1.0
+ 30
+0.0
+  9
+\$PUCSORTHOREF
+  2
+
+  9
+\$PUCSORTHOVIEW
+ 70
+0
+  9
+\$PUCSORGTOP
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSORGBOTTOM
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSORGLEFT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSORGRIGHT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSORGFRONT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSORGBACK
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$USERI1
+ 70
+0
+  9
+\$USERI2
+ 70
+0
+  9
+\$USERI3
+ 70
+0
+  9
+\$USERI4
+ 70
+0
+  9
+\$USERI5
+ 70
+0
+  9
+\$USERR1
+ 40
+0.0
+  9
+\$USERR2
+ 40
+0.0
+  9
+\$USERR3
+ 40
+0.0
+  9
+\$USERR4
+ 40
+0.0
+  9
+\$USERR5
+ 40
+0.0
+  9
+\$WORLDVIEW
+ 70
+1
+  9
+\$SHADEDGE
+ 70
+3
+  9
+\$SHADEDIF
+ 70
+70
+  9
+\$TILEMODE
+ 70
+1
+  9
+\$MAXACTVP
+ 70
+64
+  9
+\$PINSBASE
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PLIMCHECK
+ 70
+0
+  9
+\$PEXTMIN
+ 10
+1e+20
+ 20
+1e+20
+ 30
+1e+20
+  9
+\$PEXTMAX
+ 10
+-1e+20
+ 20
+-1e+20
+ 30
+-1e+20
+  9
+\$PLIMMIN
+ 10
+0.0
+ 20
+0.0
+  9
+\$PLIMMAX
+ 10
+420.0
+ 20
+297.0
+  9
+\$UNITMODE
+ 70
+0
+  9
+\$VISRETAIN
+ 70
+1
+  9
+\$PLINEGEN
+ 70
+0
+  9
+\$PSLTSCALE
+ 70
+1
+  9
+\$TREEDEPTH
+ 70
+3020
+  9
+\$CMLSTYLE
+  2
+Standard
+  9
+\$CMLJUST
+ 70
+0
+  9
+\$CMLSCALE
+ 40
+20.0
+  9
+\$PROXYGRAPHICS
+ 70
+1
+  9
+\$MEASUREMENT
+ 70
+1
+  9
+\$CELWEIGHT
+370
+-1
+  9
+\$ENDCAPS
+280
+0
+  9
+\$JOINSTYLE
+280
+0
+  9
+\$LWDISPLAY
+290
+0
+  9
+\$INSUNITS
+ 70
+4
+  9
+\$HYPERLINKBASE
+  1
+
+  9
+\$STYLESHEET
+  1
+
+  9
+\$XEDIT
+290
+1
+  9
+\$CEPSNTYPE
+380
+0
+  9
+\$PSTYLEMODE
+290
+1
+  9
+\$FINGERPRINTGUID
+  2
+{80D2FA0A-D7C6-472D-A385-E21F5859EE55}
+  9
+\$VERSIONGUID
+  2
+{A93C2D88-3940-403D-BC7E-438AD06BC9C5}
+  9
+\$EXTNAMES
+290
+1
+  9
+\$PSVPSCALE
+ 40
+0.0
+  9
+\$OLESTARTUP
+290
+0
+  9
+\$SORTENTS
+280
+127
+  9
+\$INDEXCTL
+280
+0
+  9
+\$HIDETEXT
+280
+1
+  9
+\$XCLIPFRAME
+280
+1
+  9
+\$HALOGAP
+280
+0
+  9
+\$OBSCOLOR
+ 70
+257
+  9
+\$OBSLTYPE
+280
+0
+  9
+\$INTERSECTIONDISPLAY
+280
+0
+  9
+\$INTERSECTIONCOLOR
+ 70
+257
+  9
+\$DIMASSOC
+280
+2
+  9
+\$PROJECTNAME
+  1
+
+  9
+\$CAMERADISPLAY
+290
+0
+  9
+\$LENSLENGTH
+ 40
+50.0
+  9
+\$CAMERAHEIGHT
+ 40
+0.0
+  9
+\$STEPSPERSEC
+ 40
+24.0
+  9
+\$STEPSIZE
+ 40
+100.0
+  9
+\$3DDWFPREC
+ 40
+2.0
+  9
+\$PSOLWIDTH
+ 40
+0.005
+  9
+\$PSOLHEIGHT
+ 40
+0.08
+  9
+\$LOFTANG1
+ 40
+1.570796326795
+  9
+\$LOFTANG2
+ 40
+1.570796326795
+  9
+\$LOFTMAG1
+ 40
+0.0
+  9
+\$LOFTMAG2
+ 40
+0.0
+  9
+\$LOFTPARAM
+ 70
+7
+  9
+\$LOFTNORMALS
+280
+1
+  9
+\$LATITUDE
+ 40
+37.795
+  9
+\$LONGITUDE
+ 40
+-122.394
+  9
+\$NORTHDIRECTION
+ 40
+0.0
+  9
+\$TIMEZONE
+ 70
+-8000
+  9
+\$LIGHTGLYPHDISPLAY
+280
+1
+  9
+\$TILEMODELIGHTSYNCH
+280
+1
+  9
+\$CMATERIAL
+347
+20
+  9
+\$SOLIDHIST
+280
+0
+  9
+\$SHOWHIST
+280
+1
+  9
+\$DWFFRAME
+280
+2
+  9
+\$DGNFRAME
+280
+2
+  9
+\$REALWORLDSCALE
+290
+1
+  9
+\$INTERFERECOLOR
+ 62
+256
+  9
+\$CSHADOW
+280
+0
+  9
+\$SHADOWPLANELOCATION
+ 40
+0.0
+  0
+ENDSEC
+  0
+SECTION
+  2
+CLASSES
+  0
+CLASS
+  1
+ACDBDICTIONARYWDFLT
+  2
+AcDbDictionaryWithDefault
+  3
+ObjectDBX Classes
+ 90
+0
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+SUN
+  2
+AcDbSun
+  3
+SCENEOE
+ 90
+1153
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+VISUALSTYLE
+  2
+AcDbVisualStyle
+  3
+ObjectDBX Classes
+ 90
+4095
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+MATERIAL
+  2
+AcDbMaterial
+  3
+ObjectDBX Classes
+ 90
+1153
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+SCALE
+  2
+AcDbScale
+  3
+ObjectDBX Classes
+ 90
+1153
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+TABLESTYLE
+  2
+AcDbTableStyle
+  3
+ObjectDBX Classes
+ 90
+4095
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+MLEADERSTYLE
+  2
+AcDbMLeaderStyle
+  3
+ACDB_MLEADERSTYLE_CLASS
+ 90
+4095
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+DICTIONARYVAR
+  2
+AcDbDictionaryVar
+  3
+ObjectDBX Classes
+ 90
+0
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+CELLSTYLEMAP
+  2
+AcDbCellStyleMap
+  3
+ObjectDBX Classes
+ 90
+1152
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+MENTALRAYRENDERSETTINGS
+  2
+AcDbMentalRayRenderSettings
+  3
+SCENEOE
+ 90
+1024
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+ACDBDETAILVIEWSTYLE
+  2
+AcDbDetailViewStyle
+  3
+ObjectDBX Classes
+ 90
+1025
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+ACDBSECTIONVIEWSTYLE
+  2
+AcDbSectionViewStyle
+  3
+ObjectDBX Classes
+ 90
+1025
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+RASTERVARIABLES
+  2
+AcDbRasterVariables
+  3
+ISM
+ 90
+0
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+ACDBPLACEHOLDER
+  2
+AcDbPlaceHolder
+  3
+ObjectDBX Classes
+ 90
+0
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+LAYOUT
+  2
+AcDbLayout
+  3
+ObjectDBX Classes
+ 90
+0
+ 91
+0
+280
+0
+281
+0
+  0
+ENDSEC
+  0
+SECTION
+  2
+TABLES
+  0
+TABLE
+  2
+VPORT
+  5
+8
+330
+0
+100
+AcDbSymbolTable
+ 70
+1
+  0
+VPORT
+  5
+23
+330
+8
+100
+AcDbSymbolTableRecord
+100
+AcDbViewportTableRecord
+  2
+*Active
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 11
+1.0
+ 21
+1.0
+ 12
+0.0
+ 22
+0.0
+ 13
+0.0
+ 23
+0.0
+ 14
+0.5
+ 24
+0.5
+ 15
+0.5
+ 25
+0.5
+ 16
+0.0
+ 26
+0.0
+ 36
+1.0
+ 17
+0.0
+ 27
+0.0
+ 37
+0.0
+ 40
+1000.0
+ 41
+1.34
+ 42
+50.0
+ 43
+0.0
+ 44
+0.0
+ 50
+0.0
+ 51
+0.0
+ 71
+0
+ 72
+1000
+ 73
+1
+ 74
+3
+ 75
+0
+ 76
+0
+ 77
+0
+ 78
+0
+281
+0
+ 65
+0
+146
+0.0
+  0
+ENDTAB
+  0
+TABLE
+  2
+LTYPE
+  5
+2
+330
+0
+100
+AcDbSymbolTable
+ 70
+3
+  0
+LTYPE
+  5
+24
+330
+2
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+ByBlock
+ 70
+0
+  3
+
+ 72
+65
+ 73
+0
+ 40
+0.0
+  0
+LTYPE
+  5
+25
+330
+2
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+ByLayer
+ 70
+0
+  3
+
+ 72
+65
+ 73
+0
+ 40
+0.0
+  0
+LTYPE
+  5
+26
+330
+2
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+Continuous
+ 70
+0
+  3
+
+ 72
+65
+ 73
+0
+ 40
+0.0
+  0
+ENDTAB
+  0
+TABLE
+  2
+LAYER
+  5
+1
+330
+0
+100
+AcDbSymbolTable
+ 70
+5
+  0
+LAYER
+  5
+27
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+0
+ 70
+0
+ 62
+7
+  6
+Continuous
+370
+-3
+390
+13
+347
+21
+  0
+LAYER
+  5
+28
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+Defpoints
+ 70
+0
+ 62
+7
+  6
+Continuous
+290
+0
+370
+-3
+390
+13
+347
+21
+  0
+LAYER
+  5
+2F
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+OUTER
+ 70
+0
+ 62
+3
+  6
+Continuous
+370
+-3
+390
+13
+347
+21
+  0
+LAYER
+  5
+30
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+INNER
+ 70
+0
+ 62
+1
+  6
+Continuous
+370
+-3
+390
+13
+347
+21
+  0
+LAYER
+  5
+31
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+LABEL
+ 70
+0
+ 62
+7
+  6
+Continuous
+370
+-3
+390
+13
+347
+21
+  0
+ENDTAB
+  0
+TABLE
+  2
+STYLE
+  5
+5
+330
+0
+100
+AcDbSymbolTable
+ 70
+1
+  0
+STYLE
+  5
+29
+330
+5
+100
+AcDbSymbolTableRecord
+100
+AcDbTextStyleTableRecord
+  2
+Standard
+ 70
+0
+ 40
+0.0
+ 41
+1.0
+ 50
+0.0
+ 71
+0
+ 42
+2.5
+  3
+txt
+  4
+
+  0
+ENDTAB
+  0
+TABLE
+  2
+VIEW
+  5
+7
+330
+0
+100
+AcDbSymbolTable
+ 70
+0
+  0
+ENDTAB
+  0
+TABLE
+  2
+UCS
+  5
+6
+330
+0
+100
+AcDbSymbolTable
+ 70
+0
+  0
+ENDTAB
+  0
+TABLE
+  2
+APPID
+  5
+3
+330
+0
+100
+AcDbSymbolTable
+ 70
+3
+  0
+APPID
+  5
+2A
+330
+3
+100
+AcDbSymbolTableRecord
+100
+AcDbRegAppTableRecord
+  2
+ACAD
+ 70
+0
+  0
+APPID
+  5
+35
+330
+3
+100
+AcDbSymbolTableRecord
+100
+AcDbRegAppTableRecord
+  2
+HATCHBACKGROUNDCOLOR
+ 70
+0
+  0
+APPID
+  5
+36
+330
+3
+100
+AcDbSymbolTableRecord
+100
+AcDbRegAppTableRecord
+  2
+EZDXF
+ 70
+0
+  0
+ENDTAB
+  0
+TABLE
+  2
+DIMSTYLE
+  5
+4
+330
+0
+100
+AcDbSymbolTable
+ 70
+1
+100
+AcDbDimStyleTable
+  0
+DIMSTYLE
+105
+2B
+330
+4
+100
+AcDbSymbolTableRecord
+100
+AcDbDimStyleTableRecord
+  2
+Standard
+ 70
+0
+ 40
+1.0
+ 41
+2.5
+ 42
+0.625
+ 43
+3.75
+ 44
+1.25
+ 45
+0.0
+ 46
+0.0
+ 47
+0.0
+ 48
+0.0
+ 49
+2.5
+140
+2.5
+141
+2.5
+142
+0.0
+143
+0.03937007874
+144
+1.0
+145
+0.0
+146
+1.0
+147
+0.625
+148
+0.0
+ 69
+0
+ 70
+0
+ 71
+0
+ 72
+0
+ 73
+0
+ 74
+0
+ 75
+0
+ 76
+0
+ 77
+1
+ 78
+8
+ 79
+3
+170
+0
+171
+3
+172
+1
+173
+0
+174
+0
+175
+0
+176
+0
+177
+0
+178
+0
+179
+2
+271
+2
+272
+2
+273
+2
+274
+3
+275
+0
+276
+0
+277
+2
+278
+44
+279
+0
+280
+0
+281
+0
+282
+0
+283
+0
+284
+8
+285
+0
+286
+0
+288
+0
+289
+3
+290
+0
+371
+-2
+372
+-2
+  0
+ENDTAB
+  0
+TABLE
+  2
+BLOCK_RECORD
+  5
+9
+330
+0
+100
+AcDbSymbolTable
+ 70
+2
+  0
+BLOCK_RECORD
+  5
+17
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+*Model_Space
+340
+1A
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+1B
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+*Paper_Space
+340
+1E
+ 70
+0
+280
+1
+281
+0
+  0
+ENDTAB
+  0
+ENDSEC
+  0
+SECTION
+  2
+BLOCKS
+  0
+BLOCK
+  5
+18
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+*Model_Space
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+*Model_Space
+  1
+
+  0
+ENDBLK
+  5
+19
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+1C
+330
+1B
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+*Paper_Space
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+*Paper_Space
+  1
+
+  0
+ENDBLK
+  5
+1D
+330
+1B
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+ENDSEC
+`;
+const DXF_OBJECTS = `  0
+SECTION
+  2
+OBJECTS
+  0
+DICTIONARY
+  5
+A
+330
+0
+100
+AcDbDictionary
+281
+1
+  3
+ACAD_COLOR
+350
+B
+  3
+ACAD_GROUP
+350
+C
+  3
+ACAD_LAYOUT
+350
+D
+  3
+ACAD_MATERIAL
+350
+E
+  3
+ACAD_MLEADERSTYLE
+350
+F
+  3
+ACAD_MLINESTYLE
+350
+10
+  3
+ACAD_PLOTSETTINGS
+350
+11
+  3
+ACAD_PLOTSTYLENAME
+350
+12
+  3
+ACAD_SCALELIST
+350
+14
+  3
+ACAD_TABLESTYLE
+350
+15
+  3
+ACAD_VISUALSTYLE
+350
+16
+  3
+EZDXF_META
+350
+2D
+  0
+DICTIONARY
+  5
+B
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+DICTIONARY
+  5
+C
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+DICTIONARY
+  5
+D
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+Model
+350
+1A
+  3
+Layout1
+350
+1E
+  0
+DICTIONARY
+  5
+E
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+ByBlock
+350
+1F
+  3
+ByLayer
+350
+20
+  3
+Global
+350
+21
+  0
+DICTIONARY
+  5
+F
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+Standard
+350
+2C
+  0
+DICTIONARY
+  5
+10
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+Standard
+350
+22
+  0
+DICTIONARY
+  5
+11
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+ACDBDICTIONARYWDFLT
+  5
+12
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+Normal
+350
+13
+100
+AcDbDictionaryWithDefault
+340
+13
+  0
+ACDBPLACEHOLDER
+  5
+13
+330
+12
+  0
+DICTIONARY
+  5
+14
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+DICTIONARY
+  5
+15
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+DICTIONARY
+  5
+16
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+LAYOUT
+  5
+1A
+330
+D
+100
+AcDbPlotSettings
+  1
+
+  4
+A3
+  6
+
+ 40
+7.5
+ 41
+20.0
+ 42
+7.5
+ 43
+20.0
+ 44
+420.0
+ 45
+297.0
+ 46
+0.0
+ 47
+0.0
+ 48
+0.0
+ 49
+0.0
+140
+0.0
+141
+0.0
+142
+1.0
+143
+1.0
+ 70
+1024
+ 72
+1
+ 73
+0
+ 74
+5
+  7
+
+ 75
+16
+ 76
+0
+ 77
+2
+ 78
+300
+147
+1.0
+148
+0.0
+149
+0.0
+100
+AcDbLayout
+  1
+Model
+ 70
+1
+ 71
+0
+ 10
+0.0
+ 20
+0.0
+ 11
+420.0
+ 21
+297.0
+ 12
+0.0
+ 22
+0.0
+ 32
+0.0
+ 14
+1e+20
+ 24
+1e+20
+ 34
+1e+20
+ 15
+-1e+20
+ 25
+-1e+20
+ 35
+-1e+20
+146
+0.0
+ 13
+0.0
+ 23
+0.0
+ 33
+0.0
+ 16
+1.0
+ 26
+0.0
+ 36
+0.0
+ 17
+0.0
+ 27
+1.0
+ 37
+0.0
+ 76
+1
+330
+17
+  0
+LAYOUT
+  5
+1E
+330
+D
+100
+AcDbPlotSettings
+  1
+
+  4
+A3
+  6
+
+ 40
+7.5
+ 41
+20.0
+ 42
+7.5
+ 43
+20.0
+ 44
+420.0
+ 45
+297.0
+ 46
+0.0
+ 47
+0.0
+ 48
+0.0
+ 49
+0.0
+140
+0.0
+141
+0.0
+142
+1.0
+143
+1.0
+ 70
+0
+ 72
+1
+ 73
+0
+ 74
+5
+  7
+
+ 75
+16
+ 76
+0
+ 77
+2
+ 78
+300
+147
+1.0
+148
+0.0
+149
+0.0
+100
+AcDbLayout
+  1
+Layout1
+ 70
+1
+ 71
+1
+ 10
+0.0
+ 20
+0.0
+ 11
+420.0
+ 21
+297.0
+ 12
+0.0
+ 22
+0.0
+ 32
+0.0
+ 14
+1e+20
+ 24
+1e+20
+ 34
+1e+20
+ 15
+-1e+20
+ 25
+-1e+20
+ 35
+-1e+20
+146
+0.0
+ 13
+0.0
+ 23
+0.0
+ 33
+0.0
+ 16
+1.0
+ 26
+0.0
+ 36
+0.0
+ 17
+0.0
+ 27
+1.0
+ 37
+0.0
+ 76
+1
+330
+1B
+  0
+MATERIAL
+  5
+1F
+102
+{ACAD_REACTORS
+330
+E
+102
+}
+330
+E
+100
+AcDbMaterial
+  1
+ByBlock
+  2
+
+ 70
+0
+ 40
+1.0
+ 71
+1
+ 41
+1.0
+ 91
+-1023410177
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 44
+0.5
+ 73
+0
+ 45
+1.0
+ 46
+1.0
+ 77
+1
+  4
+
+ 78
+1
+ 79
+1
+170
+1
+ 48
+1.0
+171
+1
+  6
+
+172
+1
+173
+1
+174
+1
+140
+1.0
+141
+1.0
+175
+1
+  7
+
+176
+1
+177
+1
+178
+1
+143
+1.0
+179
+1
+  8
+
+270
+1
+271
+1
+272
+1
+145
+1.0
+146
+1.0
+273
+1
+  9
+
+274
+1
+275
+1
+276
+1
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 94
+63
+  0
+MATERIAL
+  5
+20
+102
+{ACAD_REACTORS
+330
+E
+102
+}
+330
+E
+100
+AcDbMaterial
+  1
+ByLayer
+  2
+
+ 70
+0
+ 40
+1.0
+ 71
+1
+ 41
+1.0
+ 91
+-1023410177
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 44
+0.5
+ 73
+0
+ 45
+1.0
+ 46
+1.0
+ 77
+1
+  4
+
+ 78
+1
+ 79
+1
+170
+1
+ 48
+1.0
+171
+1
+  6
+
+172
+1
+173
+1
+174
+1
+140
+1.0
+141
+1.0
+175
+1
+  7
+
+176
+1
+177
+1
+178
+1
+143
+1.0
+179
+1
+  8
+
+270
+1
+271
+1
+272
+1
+145
+1.0
+146
+1.0
+273
+1
+  9
+
+274
+1
+275
+1
+276
+1
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 94
+63
+  0
+MATERIAL
+  5
+21
+102
+{ACAD_REACTORS
+330
+E
+102
+}
+330
+E
+100
+AcDbMaterial
+  1
+Global
+  2
+
+ 70
+0
+ 40
+1.0
+ 71
+1
+ 41
+1.0
+ 91
+-1023410177
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 44
+0.5
+ 73
+0
+ 45
+1.0
+ 46
+1.0
+ 77
+1
+  4
+
+ 78
+1
+ 79
+1
+170
+1
+ 48
+1.0
+171
+1
+  6
+
+172
+1
+173
+1
+174
+1
+140
+1.0
+141
+1.0
+175
+1
+  7
+
+176
+1
+177
+1
+178
+1
+143
+1.0
+179
+1
+  8
+
+270
+1
+271
+1
+272
+1
+145
+1.0
+146
+1.0
+273
+1
+  9
+
+274
+1
+275
+1
+276
+1
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 94
+63
+  0
+MLINESTYLE
+  5
+22
+102
+{ACAD_REACTORS
+330
+10
+102
+}
+330
+10
+100
+AcDbMlineStyle
+  2
+Standard
+ 70
+0
+  3
+
+ 62
+256
+ 51
+90.0
+ 52
+90.0
+ 71
+2
+ 49
+0.5
+ 62
+256
+  6
+BYLAYER
+ 49
+-0.5
+ 62
+256
+  6
+BYLAYER
+  0
+MLEADERSTYLE
+  5
+2C
+102
+{ACAD_REACTORS
+330
+F
+102
+}
+330
+F
+100
+AcDbMLeaderStyle
+179
+2
+170
+2
+171
+1
+172
+0
+ 90
+2
+ 40
+0.0
+ 41
+0.0
+173
+1
+ 91
+-1056964608
+ 92
+-2
+290
+1
+ 42
+2.0
+291
+1
+ 43
+8.0
+  3
+Standard
+ 44
+4.0
+300
+
+342
+29
+174
+1
+175
+1
+176
+0
+178
+1
+ 93
+-1056964608
+ 45
+4.0
+292
+0
+297
+0
+ 46
+4.0
+ 94
+-1056964608
+ 47
+1.0
+ 49
+1.0
+140
+1.0
+294
+1
+141
+0.0
+177
+0
+142
+1.0
+295
+0
+296
+0
+143
+3.75
+271
+0
+272
+9
+273
+9
+  0
+DICTIONARY
+  5
+2D
+330
+A
+100
+AcDbDictionary
+280
+1
+281
+1
+  3
+CREATED_BY_EZDXF
+350
+2E
+  3
+WRITTEN_BY_EZDXF
+350
+37
+  0
+DICTIONARYVAR
+  5
+2E
+330
+2D
+100
+DictionaryVariables
+280
+0
+  1
+1.4.4 @ 2026-06-09T02:03:13.925169+00:00
+  0
+DICTIONARYVAR
+  5
+37
+330
+2D
+100
+DictionaryVariables
+280
+0
+  1
+1.4.4 @ 2026-06-09T02:03:13.926305+00:00
+  0
+ENDSEC
+  0
+EOF
+`;
+
+const BULGE = 0.41421356237309503; // tan(pi/8), exact 90-degree arc
+let rowCount = 0;
+let lastFrames = [];
+
+// ── Group code formatter (right-aligned, exactly like ezdxf) ──
+function g(code, value) {
+  const c = String(code).padStart(3, ' ');
+  return c + '\n' + value + '\n';
+}
+
+function fmt(n) {
+  return Number.isInteger(n) ? n.toFixed(1) : String(n);
+}
+
+// ── DXF entity builder ──
+function buildDXF(frames) {
+  let entities = '';
+  let handle = 0x50;
+  let xOff = 0;
+  const GAP = 50;
+
+  frames.forEach(({w, h, r}) => {
+    const iw = w+25, ih = h+25;
+    const ow = w+105, oh = h+105;
+    const cx = xOff + ow/2, cy = 0;
+
+    // OUTER: plain rectangle
+    entities += g(0,'LWPOLYLINE');
+    entities += g(5, handle.toString(16).toUpperCase()); handle++;
+    entities += g(330,'17');
+    entities += g(100,'AcDbEntity');
+    entities += g(8,'OUTER');
+    entities += g(100,'AcDbPolyline');
+    entities += g(90,'4');
+    entities += g(70,'1');
+    [[cx-ow/2,cy-oh/2],[cx+ow/2,cy-oh/2],[cx+ow/2,cy+oh/2],[cx-ow/2,cy+oh/2]].forEach(([x,y]) => {
+      entities += g(10, fmt(x));
+      entities += g(20, fmt(y));
+    });
+
+    // INNER: rounded rectangle with bulge on arc-start vertices
+    const iPts = [
+      [cx-iw/2+r, cy-ih/2,   0],
+      [cx+iw/2-r, cy-ih/2,   BULGE],
+      [cx+iw/2,   cy-ih/2+r, 0],
+      [cx+iw/2,   cy+ih/2-r, BULGE],
+      [cx+iw/2-r, cy+ih/2,   0],
+      [cx-iw/2+r, cy+ih/2,   BULGE],
+      [cx-iw/2,   cy+ih/2-r, 0],
+      [cx-iw/2,   cy-ih/2+r, BULGE],
+    ];
+    entities += g(0,'LWPOLYLINE');
+    entities += g(5, handle.toString(16).toUpperCase()); handle++;
+    entities += g(330,'17');
+    entities += g(100,'AcDbEntity');
+    entities += g(8,'INNER');
+    entities += g(100,'AcDbPolyline');
+    entities += g(90,'8');
+    entities += g(70,'1');
+    iPts.forEach(([x,y,b]) => {
+      entities += g(10, fmt(x));
+      entities += g(20, fmt(y));
+      if (b) entities += g(42, String(b));
+    });
+
+    // TEXT label
+    const lx = cx - ow/2, ly = cy - oh/2 - 12;
+    const wl = Number.isInteger(w)?w:w, hl = Number.isInteger(h)?h:h, rl = Number.isInteger(r)?r:r;
+    entities += g(0,'TEXT');
+    entities += g(5, handle.toString(16).toUpperCase()); handle++;
+    entities += g(330,'17');
+    entities += g(100,'AcDbEntity');
+    entities += g(8,'LABEL');
+    entities += g(100,'AcDbText');
+    entities += g(10, fmt(lx));
+    entities += g(20, fmt(ly));
+    entities += g(30,'0.0');
+    entities += g(40,'8.0');
+    entities += g(1, `${wl}x${hl} R${rl}`);
+    entities += g(100,'AcDbText');
+
+    xOff += ow + GAP;
+  });
+
+  return (
+    DXF_HEADER +
+    '  0\nSECTION\n  2\nENTITIES\n' +
+    entities +
+    '  0\nENDSEC\n' +
+    DXF_OBJECTS
+  );
+}
+
+// ── UI ──
+function updateFname() {
+  const n   = document.getElementById('proj-name').value.trim();
+  const num = document.getElementById('proj-num').value.trim();
+  const el  = document.getElementById('fname-display');
+  const parts = [n, num].filter(Boolean);
+  const name = (parts.join('-') || 'frame') + '.dxf';
+  el.textContent = name;
+  el.style.color = parts.length ? 'var(--accent2)' : 'var(--text3)';
+}
+
+function getFilename() {
+  const n   = document.getElementById('proj-name').value.trim();
+  const num = document.getElementById('proj-num').value.trim();
+  const parts = [n, num].filter(Boolean);
+  return (parts.join('-') || 'frame') + '.dxf';
+}
+
+function applyGlobalR() {
+  const r = document.getElementById('global-r').value;
+  if (r === '') return;
+  document.querySelectorAll('[id^="row-"]').forEach(row => {
+    const id = row.id.replace('row-','');
+    const el = document.getElementById('r-' + id);
+    if (el) { el.value = r; updateCalc(id); }
+  });
+  setStatus(`已將全部列的 R 角設為 ${r}`, true);
+}
+
+function addRow(w, h, r) {
+  rowCount++;
+  const id = rowCount;
+  // inherit global R if set and r not provided
+  const globalR = document.getElementById('global-r').value;
+  const rVal = (r !== undefined && r !== null) ? r : (globalR !== '' ? globalR : '');
+  const div = document.createElement('div');
+  div.className = 'row'; div.id = 'row-' + id;
+  div.innerHTML = `
+    <div class="row-num">${id}</div>
+    <input type="number" id="w-${id}" placeholder="200" value="${w||''}" min="1" step="0.1"/>
+    <input type="number" id="h-${id}" placeholder="300" value="${h||''}" min="1" step="0.1"/>
+    <input type="number" id="r-${id}" class="r-input" placeholder="25" value="${rVal}" min="0" step="0.1"/>
+    <div class="calc-cell" id="ci-${id}">—</div>
+    <div class="calc-cell" id="co-${id}">—</div>
+    <button class="btn-del" onclick="removeRow(${id})" title="刪除">✕</button>
+  `;
+  document.getElementById('rows').appendChild(div);
+  ['w','h','r'].forEach(k => document.getElementById(`${k}-${id}`).addEventListener('input', () => updateCalc(id)));
+  if (w && h) updateCalc(id);
+}
+
+function updateCalc(id) {
+  const w = parseFloat(document.getElementById('w-'+id)?.value);
+  const h = parseFloat(document.getElementById('h-'+id)?.value);
+  const r = parseFloat(document.getElementById('r-'+id)?.value);
+  const ci = document.getElementById('ci-'+id);
+  const co = document.getElementById('co-'+id);
+  if (!ci) return;
+  if (isNaN(w)||isNaN(h)) { ci.innerHTML='—'; co.innerHTML='—'; return; }
+  const iw=+(w+25).toFixed(3), ih=+(h+25).toFixed(3);
+  const ow=+(w+105).toFixed(3), oh=+(h+105).toFixed(3);
+  const rLabel = (!isNaN(r)&&r>=0) ? `R${r}` : '<span class="err">缺R值</span>';
+  ci.innerHTML = `<span class="iv">${iw}×${ih}</span><br>${rLabel}`;
+  co.innerHTML = `<span class="ov">${ow}×${oh}</span><br>直角`;
+}
+
+function removeRow(id) {
+  const el = document.getElementById('row-'+id);
+  if (el) { el.style.opacity='0'; el.style.transform='translateX(8px)'; el.style.transition='all .15s'; setTimeout(()=>el.remove(),150); }
+}
+
+function generate() {
+  const rows = document.querySelectorAll('[id^="row-"]');
+  if (!rows.length) { setStatus('請先新增尺寸', false); return; }
+
+  const frames = [];
+  let errors = 0;
+  rows.forEach(row => {
+    const id = row.id.replace('row-','');
+    const w = parseFloat(document.getElementById('w-'+id)?.value);
+    const h = parseFloat(document.getElementById('h-'+id)?.value);
+    const r = parseFloat(document.getElementById('r-'+id)?.value);
+    const maxR = Math.min(w+25, h+25) / 2;
+    const valid = !isNaN(w)&&!isNaN(h)&&w>0&&h>0&&!isNaN(r)&&r>=0&&r<=maxR;
+    if (!valid) {
+      errors++;
+      row.style.borderColor = 'var(--danger)';
+      setTimeout(() => row.style.borderColor = '', 1400);
+      return;
+    }
+    frames.push({w, h, r});
+  });
+
+  if (!frames.length) { setStatus('沒有有效的尺寸資料，請確認輸入', false); return; }
+
+  const fname = getFilename();
+
+  try {
+    const dxf = buildDXF(frames);
+    const blob = new Blob([dxf], {type:'application/dxf'});
+    const url  = URL.createObjectURL(blob);
+
+    // File result card
+    const fileList = document.getElementById('file-list');
+    fileList.innerHTML = '';
+    const desc = frames.map(f =>
+      `<span class="iv">${f.w+25}×${f.h+25}</span> R${f.r} / <span class="ov">${f.w+105}×${f.h+105}</span>`
+    ).join('&nbsp;&nbsp;|&nbsp;&nbsp;');
+    const item = document.createElement('div');
+    item.className = 'file-item';
+    item.innerHTML = `
+      <div class="file-icon">.DXF</div>
+      <div class="file-info">
+        <div class="file-name">${fname}</div>
+        <div class="file-desc">${frames.length} 組框架 — ${desc}</div>
+      </div>
+      <a class="btn-dl-main" href="${url}" download="${fname}">⬇ 下載</a>
+    `;
+    fileList.appendChild(item);
+
+    // Preview
+    lastFrames = frames;
+    document.getElementById('preview-wrap').style.display = 'block';
+    document.getElementById('prev-info').textContent = `${frames.length} 組`;
+    drawPreview(frames);
+    document.getElementById('output').classList.add('visible');
+
+    // Auto-trigger download
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+    setStatus(`已產生 ${fname}，${frames.length} 組框架${errors?' ('+errors+' 列跳過)':''}`, true);
+  } catch(e) {
+    setStatus('產生失敗：' + e.message, false);
+    console.error(e);
+  }
+}
+
+function drawPreview(frames) {
+  const canvas = document.getElementById('preview-canvas');
+  const ctx = canvas.getContext('2d');
+  const CW = canvas.offsetWidth || 860;
+  canvas.width = CW; canvas.height = 340;
+  ctx.clearRect(0,0,CW,340);
+  if (!frames.length) return;
+
+  const GAP = 50;
+  const totalW = frames.reduce((s,f)=>s+(f.w+105),0) + GAP*(frames.length-1);
+  const maxH   = Math.max(...frames.map(f=>f.h+105));
+  const pad = 50;
+  const scale = Math.min((CW-pad*2)/totalW, (340-pad*2-20)/maxH);
+  let xOff = 0;
+  const startX = CW/2 - totalW*scale/2;
+
+  frames.forEach(({w,h,r}) => {
+    const ow=w+105, oh=h+105, iw=w+25, ih=h+25;
+    const cx = startX + (xOff + ow/2)*scale;
+    const cy = 340/2 + 10;
+
+    function drawR(rw,rh,rx,color,lw) {
+      const x=cx-rw*scale/2, y=cy-rh*scale/2, rr=rx*scale;
+      ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=lw;
+      if (rx>0) {
+        ctx.moveTo(x+rr,y); ctx.lineTo(x+rw*scale-rr,y);
+        ctx.arcTo(x+rw*scale,y,x+rw*scale,y+rr,rr);
+        ctx.lineTo(x+rw*scale,y+rh*scale-rr);
+        ctx.arcTo(x+rw*scale,y+rh*scale,x+rw*scale-rr,y+rh*scale,rr);
+        ctx.lineTo(x+rr,y+rh*scale);
+        ctx.arcTo(x,y+rh*scale,x,y+rh*scale-rr,rr);
+        ctx.lineTo(x,y+rr);
+        ctx.arcTo(x,y,x+rr,y,rr); ctx.closePath();
+      } else { ctx.rect(x,y,rw*scale,rh*scale); }
+      ctx.stroke();
+    }
+
+    drawR(ow,oh,0,'#7dd3c0',1.5);
+    drawR(iw,ih,r,'#4f8ef7',1.5);
+    ctx.font = "10px 'IBM Plex Mono',monospace";
+    ctx.fillStyle='#4f8ef7';
+    ctx.fillText(`${iw}×${ih} R${r}`, cx-iw*scale/2, cy-ih*scale/2-5);
+    ctx.fillStyle='#7dd3c0';
+    ctx.fillText(`${ow}×${oh}`, cx-ow*scale/2, cy+oh*scale/2+14);
+    xOff += ow + GAP;
+  });
+}
+
+function setStatus(msg, ok) {
+  document.getElementById('status-text').textContent = msg;
+  document.getElementById('statusbar').classList.toggle('ok', ok);
+}
+
+window.addEventListener('resize', () => { if (lastFrames.length) drawPreview(lastFrames); });
+
+addRow(200, 300, 25);
+addRow(150, 250, 20);
+setStatus('就緒', true);
+</script>
+</body>
+</html>
