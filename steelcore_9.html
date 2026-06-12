@@ -1,0 +1,5210 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>鎮山工程管理系統</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230f1117'/><text y='72' x='50' font-size='62' text-anchor='middle' fill='%23f97316' font-family='sans-serif' font-weight='bold'>山</text></svg>"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500&family=Bebas+Neue&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.6/dist/pizzip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.6/dist/pizzip-utils.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.50.0/build/docxtemplater.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#171b24;--bg3:#1e2333;--bg4:#232840;
+  --border:#2a3045;--border-hi:#3d4f72;
+  --accent:#f97316;--accent2:#4f8ef7;--accent3:#7dd3c0;
+  --green:#5cb88a;--yellow:#f5c542;--red:#e06060;--purple:#a78bfa;
+  --text:#e8ecf4;--text2:#8a94a8;--text3:#5a6278;
+  --danger:#e06060;--success:#5cb88a;
+  --mono:'IBM Plex Mono',monospace;--sans:'Noto Sans TC',sans-serif;
+  --rad:6px;--rad-lg:10px;
+  --sidebar:200px;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:300;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Login ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-wrap{width:100%;max-width:400px}
+.login-brand{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.15em;color:var(--accent);margin-bottom:4px}
+.login-brand-sub{font-family:var(--mono);font-size:10px;letter-spacing:.25em;color:var(--text3);text-transform:uppercase;margin-bottom:32px}
+.login-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:28px;display:flex;flex-direction:column;gap:10px}
+.login-divider{display:flex;align-items:center;gap:10px;margin:2px 0}
+.login-divider span{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap}
+.login-divider:before,.login-divider:after{content:'';flex:1;height:1px;background:var(--border)}
+.login-tabs{display:flex;border:1px solid var(--border);border-radius:var(--rad);overflow:hidden}
+.login-tab{flex:1;padding:8px;font-family:var(--mono);font-size:12px;cursor:pointer;background:none;border:none;color:var(--text3);transition:all .15s}
+.login-tab.active{background:var(--accent2);color:#fff}
+.tab-panel{display:flex;flex-direction:column;gap:10px}
+.lf label{display:block;font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.lf input,.lf select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:14px;padding:9px 12px;outline:none;transition:border-color .15s}
+.lf input:focus,.lf select:focus{border-color:var(--accent2)}
+.lf input::placeholder{color:var(--text3)}
+.btn-primary{width:100%;padding:11px;background:var(--accent2);border:1px solid var(--accent2);border-radius:var(--rad);color:#fff;font-family:var(--mono);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-primary:hover{background:#6fa0ff}.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-google{width:100%;padding:10px;background:#fff;border:1px solid #dadce0;border-radius:var(--rad);color:#3c4043;font-family:var(--sans);font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .15s}
+.btn-google:hover{background:#f8f9fa;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.btn-guest{width:100%;padding:10px;background:none;border:1px solid #a07040;border-radius:var(--rad);color:#c89050;font-family:var(--mono);font-size:13px;cursor:pointer;transition:all .15s}
+.btn-guest:hover{background:rgba(160,112,64,.1)}
+.login-msg{font-family:var(--mono);font-size:12px;text-align:center;min-height:16px}
+.login-msg.err{color:var(--danger)}.login-msg.ok{color:var(--success)}
+
+/* ── Modal ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);align-items:center;justify-content:center;z-index:500}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border-hi);border-radius:var(--rad-lg);padding:28px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:14px;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--text)}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-grid .full{grid-column:1/-1}
+.modal-actions{display:flex;gap:8px;margin-top:4px}
+.btn-modal-ok{flex:1;padding:10px;background:var(--accent2);border:1px solid var(--accent2);border-radius:var(--rad);color:#fff;font-family:var(--mono);font-size:13px;cursor:pointer;font-weight:500}
+.btn-modal-ok:hover{background:#6fa0ff}
+.btn-modal-cancel{padding:10px 16px;background:none;border:1px solid var(--border);border-radius:var(--rad);color:var(--text3);font-family:var(--mono);font-size:13px;cursor:pointer}
+.btn-modal-cancel:hover{border-color:var(--danger);color:var(--danger)}
+
+/* ── App layout ── */
+#app-screen{display:none;flex:1;flex-direction:row}
+.sidebar{width:var(--sidebar);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100}
+.sidebar-brand{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
+.sidebar-brand-name{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.1em;color:var(--accent);line-height:1}
+.sidebar-brand-sub{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--text3);text-transform:uppercase;margin-top:2px}
+.sidebar-nav{flex:1;padding:12px 8px;display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--rad);cursor:pointer;transition:all .15s;font-size:13px;color:var(--text3);border:1px solid transparent}
+.nav-item:hover{background:var(--bg3);color:var(--text2)}
+.nav-item.active{background:var(--bg4);color:var(--text);border-color:var(--border)}
+.nav-item .nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.nav-item .nav-label{font-family:var(--mono);font-size:11px;letter-spacing:.05em}
+.nav-item .nav-badge{margin-left:auto;font-size:10px;background:var(--accent);color:#fff;border-radius:8px;padding:1px 6px;font-family:var(--mono)}
+.nav-section{font-family:var(--mono);font-size:9px;letter-spacing:.15em;color:var(--text3);text-transform:uppercase;padding:12px 10px 4px}
+.sidebar-user{padding:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--bg);flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.btn-logout-side{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px;transition:color .15s}
+.btn-logout-side:hover{color:var(--danger)}
+
+.main-content{margin-left:var(--sidebar);flex:1;min-height:100vh;display:flex;flex-direction:column}
+.app-header{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:flex-end;padding:14px 32px;background:var(--bg);border-bottom:1px solid var(--border)}
+.top-clock{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border-hi);border-radius:var(--rad);padding:8px 16px}
+.clock-date{font-family:var(--mono);font-size:12px;color:var(--text2)}
+.clock-time{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.08em;color:var(--accent);line-height:1}
+.content-body{padding:28px 32px;flex:1}
+@media(max-width:768px){.app-header{padding:12px 16px}.content-body{padding:16px}}
+.page{display:none}.page.active{display:block}
+.page-title{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.1em;color:var(--text);margin-bottom:24px}
+
+/* ── Dashboard ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:20px;position:relative;overflow:hidden;cursor:default}
+.stat-card:before{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;opacity:.12}
+.stat-card.orange:before{background:var(--accent)}
+.stat-card.blue:before{background:var(--accent2)}
+.stat-card.green:before{background:var(--green)}
+.stat-card.yellow:before{background:var(--yellow)}
+.stat-icon{font-size:22px;margin-bottom:8px}
+.stat-value{font-family:'Bebas Neue',sans-serif;font-size:40px;line-height:1;margin-bottom:4px}
+.stat-label{font-size:12px;color:var(--text3)}
+.stat-delta{font-size:11px;margin-top:6px;display:flex;align-items:center;gap:4px}
+.stat-delta.up{color:var(--green)}.stat-delta.down{color:var(--danger)}
+
+.dash-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
+.dash-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:20px}
+.card-title{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--text3);text-transform:uppercase;margin-bottom:14px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-title{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--text3);text-transform:uppercase}
+
+/* project table */
+.project-table{width:100%;border-collapse:collapse;font-size:13px}
+.project-table th{text-align:left;padding:6px 8px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border)}
+.project-table td{padding:10px 8px;border-bottom:1px solid rgba(42,48,69,.6);color:var(--text2);vertical-align:middle}
+.project-table tr:last-child td{border-bottom:none}
+.project-table td:first-child{color:var(--text);font-weight:500}
+.progress-bar{background:var(--bg3);border-radius:3px;height:4px;width:100px}
+.progress-fill{height:100%;border-radius:3px;background:var(--accent2)}
+.progress-fill.high{background:var(--green)}.progress-fill.low{background:var(--yellow)}
+.status-badge{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:4px;letter-spacing:.05em}
+.status-badge.進行中{background:rgba(79,142,247,.15);color:var(--accent2);border:1px solid rgba(79,142,247,.3)}
+.status-badge.已完成{background:rgba(92,184,138,.15);color:var(--green);border:1px solid rgba(92,184,138,.3)}
+.status-badge.未開始{background:rgba(90,98,120,.15);color:var(--text3);border:1px solid var(--border)}
+.status-badge.REVIEW{background:rgba(245,197,66,.15);color:var(--yellow);border:1px solid rgba(245,197,66,.3)}
+
+/* crew list */
+.crew-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(42,48,69,.5)}
+.crew-item:last-child{border-bottom:none}
+.crew-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.crew-dot.on{background:var(--green)}.crew-dot.off{background:var(--text3)}
+.crew-info{flex:1}
+.crew-name{font-size:13px;color:var(--text)}
+.crew-role{font-size:11px;color:var(--text3)}
+.crew-time{font-family:var(--mono);font-size:11px;color:var(--accent2)}
+
+/* mini chart */
+.mini-chart{display:flex;align-items:flex-end;gap:4px;height:60px;margin-top:12px}
+.bar{flex:1;border-radius:2px 2px 0 0;transition:opacity .2s}
+.bar:hover{opacity:.7}
+
+/* low stock */
+.stock-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(42,48,69,.5);font-size:13px}
+.stock-item:last-child{border-bottom:none}
+.stock-qty{font-family:var(--mono);font-size:12px;font-weight:500}
+.stock-qty.critical{color:var(--danger)}.stock-qty.warning{color:var(--yellow)}
+
+/* weekly total */
+.weekly-total{font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--accent2);line-height:1;margin-bottom:4px}
+
+/* ── BOM page ── */
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.btn-add-new{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:var(--accent2);border:1px solid var(--accent2);border-radius:var(--rad);color:#fff;font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .15s;font-weight:500}
+.btn-add-new:hover{background:#6fa0ff}
+.search-bar{display:flex;gap:8px;margin-bottom:16px;align-items:center}
+.search-input{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:13px;padding:8px 12px;outline:none;width:280px;transition:border-color .15s}
+.search-input:focus{border-color:var(--accent2)}
+.search-input::placeholder{color:var(--text3)}
+.filter-select{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);color:var(--text2);font-family:var(--mono);font-size:12px;padding:8px 10px;outline:none;cursor:pointer}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{text-align:left;padding:10px 12px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border);font-weight:400;white-space:nowrap}
+.data-table td{padding:12px 12px;border-bottom:1px solid rgba(42,48,69,.5);color:var(--text2);vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--bg3)}
+.proj-num-link{color:var(--accent2);font-family:var(--mono);font-size:12px;font-weight:500;cursor:pointer;text-decoration:none;border-bottom:1px solid rgba(79,142,247,.3);transition:all .15s}
+.proj-num-link:hover{color:#6fa0ff;border-bottom-color:var(--accent2)}
+.btn-icon{background:none;border:1px solid transparent;border-radius:var(--rad);color:var(--text3);cursor:pointer;padding:4px 8px;font-size:13px;transition:all .15s}
+.btn-icon.edit:hover{color:var(--accent2);border-color:var(--accent2)}
+.btn-icon.del:hover{color:var(--danger);border-color:var(--danger)}
+.empty-state{text-align:center;padding:48px;color:var(--text3);font-family:var(--mono);font-size:13px}
+
+/* ── Staff page ── */
+.staff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.zone-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.zone-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:18px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden}
+.zone-card:hover{border-color:var(--accent2);transform:translateY(-2px)}
+.zone-card:before{content:'';position:absolute;top:-15px;right:-15px;width:60px;height:60px;border-radius:50%;background:var(--accent2);opacity:.08}
+.zone-code{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.05em;color:var(--accent2);line-height:1;margin-bottom:6px}
+.zone-name{font-size:13px;color:var(--text2);margin-bottom:12px;min-height:18px}
+.zone-card-footer{display:flex;align-items:center;justify-content:space-between}
+.zone-actions{display:flex;gap:4px}
+.zone-card .btn-icon{padding:3px 6px;font-size:11px}
+.staff-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:16px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s}
+.staff-card:hover{border-color:var(--border-hi)}
+.staff-card-header{display:flex;align-items:center;gap:10px}
+.staff-avatar{width:36px;height:36px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;color:var(--accent2);flex-shrink:0}
+.staff-name{font-size:14px;color:var(--text);font-weight:400}
+.staff-role{font-size:12px;color:var(--text3)}
+.staff-info{font-family:var(--mono);font-size:11px;color:var(--text3);display:flex;flex-direction:column;gap:3px}
+.staff-actions{display:flex;gap:6px;margin-top:4px}
+.active-dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;margin-right:4px}
+.inactive-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);display:inline-block;margin-right:4px}
+
+/* ── DXF page ── */
+.rule-strip{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px}
+.rule-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:14px 18px;display:flex;align-items:center;gap:12px}
+.rule-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.rule-dot.inner{background:var(--accent2)}.rule-dot.outer{background:var(--accent3)}
+.rule-label{font-size:13px;color:var(--text2);font-family:var(--mono);line-height:1.5}
+.rule-label strong{color:var(--text);font-weight:500;display:block}
+.proj-section{margin-bottom:20px}
+.section-label{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-bottom:8px}
+.proj-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.proj-row input[type=text]{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:14px;padding:9px 12px;outline:none;transition:border-color .15s}
+.proj-row input[type=text]:focus{border-color:var(--accent2)}
+.proj-row input[type=text]::placeholder{color:var(--text3)}
+.fname-preview{margin-top:4px;font-family:var(--mono);font-size:12px;color:var(--text2)}
+.fname-preview span{color:var(--accent3)}
+.global-r-bar{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border-hi);border-radius:var(--rad-lg);padding:12px 18px;margin-bottom:20px}
+.global-r-bar label{font-family:var(--mono);font-size:12px;color:var(--text2);white-space:nowrap}
+.global-r-bar input{width:110px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:14px;padding:7px 10px;outline:none;-moz-appearance:textfield}
+.global-r-bar input::-webkit-inner-spin-button,.global-r-bar input::-webkit-outer-spin-button{-webkit-appearance:none}
+.global-r-bar input:focus{border-color:var(--accent2)}
+.btn-apply{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:var(--rad);font-family:var(--mono);font-size:12px;cursor:pointer;background:none;border:1px solid var(--border-hi);color:var(--text2);transition:all .15s;white-space:nowrap}
+.btn-apply:hover{border-color:var(--accent3);color:var(--accent3)}
+.global-r-bar .hint{font-family:var(--mono);font-size:11px;color:var(--text3);flex:1}
+.table-header{display:grid;grid-template-columns:28px 1fr 1fr 1fr 130px 130px 32px;gap:8px;padding:0 4px 8px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:8px}
+.dxf-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.dxf-row{display:grid;grid-template-columns:28px 1fr 1fr 1fr 130px 130px 32px;gap:8px;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);padding:8px 4px;transition:border-color .15s;animation:rowIn .18s ease}
+@keyframes rowIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.dxf-row:hover{border-color:var(--border-hi)}
+.row-num{font-family:var(--mono);font-size:11px;color:var(--text3);text-align:center}
+.dxf-row input[type=number]{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:14px;padding:7px 10px;outline:none;transition:border-color .15s;-moz-appearance:textfield}
+.dxf-row input[type=number]::-webkit-inner-spin-button,.dxf-row input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+.dxf-row input[type=number]:focus{border-color:var(--accent2)}
+.dxf-row input[type=number].r-input{border-color:var(--border-hi)}
+.dxf-row input[type=number].r-input:focus{border-color:var(--accent3)}
+.calc-cell{font-family:var(--mono);font-size:11px;color:var(--text2);line-height:1.7;padding:0 4px}
+.calc-cell .iv{color:var(--accent2)}.calc-cell .ov{color:var(--accent3)}.calc-cell .err{color:var(--danger)}
+.btn-del{background:none;border:1px solid transparent;border-radius:var(--rad);color:var(--text3);cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;transition:color .15s,border-color .15s}
+.btn-del:hover{color:var(--danger);border-color:var(--danger)}
+.dxf-actions{display:flex;gap:10px;margin-bottom:28px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:var(--rad);font-family:var(--mono);font-size:13px;cursor:pointer;transition:all .15s;border:1px solid;letter-spacing:.05em}
+.btn-add-row{background:none;border-color:var(--border-hi);color:var(--text2)}
+.btn-add-row:hover{border-color:var(--accent2);color:var(--accent2)}
+.btn-gen{background:var(--accent2);border-color:var(--accent2);color:#fff;flex:1;justify-content:center;font-weight:500}
+.btn-gen:hover{background:#6fa0ff}.btn-gen:active{transform:scale(.98)}
+.dxf-output{display:none}.dxf-output.visible{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.file-item{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:16px 20px;margin-bottom:16px}
+.file-icon{font-family:var(--mono);font-size:10px;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:3px 6px;flex-shrink:0}
+.file-info{flex:1}
+.file-name{font-family:var(--mono);font-size:15px;color:var(--text);margin-bottom:4px}
+.file-desc{font-size:12px;color:var(--text2)}
+.btn-dl-main{display:inline-flex;align-items:center;gap:8px;padding:9px 22px;border-radius:var(--rad);background:var(--accent2);border:1px solid var(--accent2);color:#fff;font-family:var(--mono);font-size:13px;cursor:pointer;text-decoration:none;font-weight:500;transition:all .15s;flex-shrink:0}
+.btn-dl-main:hover{background:#6fa0ff}
+.preview-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden}
+.preview-top{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase}
+#preview-canvas{display:block;background:#0b0e14;width:100%}
+.notice-bar{margin-top:16px;background:var(--bg2);border:1px solid var(--border-hi);border-radius:var(--rad);padding:10px 14px;font-family:var(--mono);font-size:12px;color:var(--text2)}
+.notice-bar strong{color:var(--accent3)}
+.statusbar{margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--text3);display:flex;align-items:center;gap:8px}
+.statusbar .dot{width:6px;height:6px;border-radius:50%;background:var(--success);display:none}
+.statusbar.ok .dot{display:block}
+
+/* ── Log section ── */
+.log-section{margin-top:40px;padding-top:28px;border-top:1px solid var(--border)}
+.log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.log-title-row{display:flex;align-items:center;gap:10px}
+.log-title{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--text3);text-transform:uppercase}
+.log-count{font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:2px 8px}
+.log-actions-bar{display:flex;gap:8px;align-items:center}
+.log-filter{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text2);font-family:var(--mono);font-size:12px;padding:5px 10px;outline:none;width:180px}
+.log-filter:focus{border-color:var(--accent2)}
+.btn-sm{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--rad);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;border:1px solid}
+.btn-export{background:none;border-color:var(--border-hi);color:var(--text2)}
+.btn-export:hover{border-color:var(--accent3);color:var(--accent3)}
+.log-empty{font-family:var(--mono);font-size:12px;color:var(--text3);text-align:center;padding:32px;border:1px dashed var(--border);border-radius:var(--rad-lg)}
+.log-wrap{overflow-x:auto}
+.log-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px;min-width:680px}
+.log-table th{text-align:left;padding:8px 12px;color:var(--text3);font-size:10px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);font-weight:400;white-space:nowrap}
+.log-table td{padding:10px 12px;border-bottom:1px solid rgba(42,48,69,.5);color:var(--text2);vertical-align:top;line-height:1.6}
+.log-table tr:last-child td{border-bottom:none}
+.log-table tr:hover td{background:var(--bg3)}
+.log-table td.proj{color:var(--text);font-weight:500}
+.log-table td.frames span{color:var(--accent2);margin-right:4px;display:inline-block;background:rgba(79,142,247,.1);border-radius:3px;padding:1px 5px;margin-bottom:2px}
+.log-table td.date{color:var(--text3);white-space:nowrap}
+.log-table td.op{color:var(--accent3)}
+.log-table td.op.guest{color:#c89050}
+.btn-del-row{background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:2px 6px;border-radius:3px;transition:color .15s}
+.btn-del-row:hover{color:var(--danger)}
+
+/* ── Project detail page ── */
+.back-btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:var(--text3);cursor:pointer;margin-bottom:20px;transition:color .15s}
+.back-btn:hover{color:var(--accent2)}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+.insp-items-box{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:16px}
+.insp-check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;font-family:var(--mono)}
+.insp-check input{width:15px;height:15px;cursor:pointer;accent-color:var(--accent2)}
+.insp-upload-row{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);padding:12px 16px}
+.insp-template-status{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:14px 18px}
+.tmpl-loaded{display:flex;align-items:center;gap:12px}
+.tmpl-icon{font-size:20px}
+.tmpl-info{flex:1}
+.tmpl-name{font-family:var(--mono);font-size:13px;color:var(--text);margin-bottom:2px}
+.tmpl-meta{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.tmpl-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--rad);font-family:var(--mono);font-size:12px;cursor:pointer;background:none;border:1px solid var(--border-hi);color:var(--text2);transition:all .15s}
+.tmpl-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+.tmpl-btn.upload{border-color:var(--accent2);color:var(--accent2)}
+.tmpl-upload-box{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.insp-file{font-family:var(--mono);font-size:12px;color:var(--text2)}
+.insp-upload-hint{font-family:var(--mono);font-size:12px;color:var(--text3)}
+.insp-comp-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+.insp-comp-table th{text-align:left;padding:8px 10px;color:var(--text3);font-size:10px;border-bottom:1px solid var(--border);font-weight:400;background:var(--bg3)}
+.insp-comp-table td{padding:8px 10px;border-bottom:1px solid rgba(42,48,69,.5);color:var(--text2)}
+.insp-comp-table tr:hover td{background:var(--bg3)}
+.insp-comp-table .chk-col{width:36px;text-align:center}
+.insp-comp-table input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--accent2)}
+.insp-comp-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden;max-height:340px;overflow-y:auto}
+.insp-selectall{display:flex;align-items:center;gap:8px;padding:8px 10px;font-family:var(--mono);font-size:11px;color:var(--text3);border-bottom:1px solid var(--border);background:var(--bg3)}
+.bom-textarea{width:100%;min-height:140px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:12px;padding:12px;outline:none;resize:vertical;line-height:1.5;transition:border-color .15s}
+.bom-textarea:focus{border-color:var(--accent2)}
+.bom-textarea::placeholder{color:var(--text3)}
+.bom-parse-actions{display:flex;align-items:center;gap:12px;margin-top:10px}
+.bom-parse-hint{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.bom-result-bar{display:flex;align-items:center;justify-content:space-between;margin:18px 0 12px;flex-wrap:wrap;gap:8px}
+.bom-result-info{font-family:var(--mono);font-size:12px;color:var(--text2)}
+.bom-result-info strong{color:var(--accent2)}
+.bom-result-actions{display:flex;gap:8px}
+.bom-table-wrap{overflow-x:auto;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg)}
+.bom-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px;min-width:760px}
+.bom-table th{text-align:left;padding:9px 12px;color:var(--text3);font-size:10px;letter-spacing:.05em;border-bottom:1px solid var(--border);font-weight:400;white-space:nowrap;background:var(--bg3)}
+.bom-table th.num,.bom-table td.num{text-align:right}
+.bom-table td{padding:9px 12px;border-bottom:1px solid rgba(42,48,69,.5);color:var(--text2);white-space:nowrap}
+.bom-table tr:last-child td{border-bottom:none}
+.bom-table tr:hover td{background:var(--bg3)}
+.bom-table td.spec{color:var(--text);font-weight:500}
+.bom-table td.partno{color:var(--accent2)}
+.bom-table tfoot td{border-top:2px solid var(--border);font-weight:500;color:var(--text);background:var(--bg3)}
+.detail-field{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);padding:14px 16px}
+.detail-field label{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:4px}
+.detail-field value{font-size:14px;color:var(--text)}
+
+@media(max-width:768px){
+  .sidebar{width:60px}
+  .sidebar-brand,.nav-label,.nav-section,.sidebar-user .user-info{display:none}
+  .main-content{margin-left:60px;padding:16px}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .dash-grid,.dash-row{grid-template-columns:1fr}
+  .table-header,.dxf-row{grid-template-columns:24px 1fr 1fr 1fr 28px}
+  .proj-row{grid-template-columns:1fr}
+  .rule-strip{grid-template-columns:1fr}
+  .modal-grid{grid-template-columns:1fr}
+  --sidebar:60px;
+}
+</style>
+</head>
+<body>
+
+<!-- ── Login ── -->
+<div id="login-screen" style="display:none">
+  <div class="login-wrap">
+    <div class="login-brand">鎮山工程</div>
+    <div class="login-brand-sub">Management System</div>
+    <div class="login-card">
+      <div class="login-tabs">
+        <button class="login-tab active" id="tab-login" onclick="switchTab('login')">登入</button>
+        <button class="login-tab" id="tab-register" onclick="switchTab('register')">註冊</button>
+      </div>
+      <div id="panel-login" class="tab-panel">
+        <div class="lf"><label>Email</label><input type="email" id="login-email" placeholder="your@email.com"/></div>
+        <div class="lf"><label>密碼</label><input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+        <button class="btn-primary" onclick="doLogin()" id="btn-do-login">登入</button>
+      </div>
+      <div id="panel-register" class="tab-panel" style="display:none">
+        <div class="lf"><label>姓名</label><input type="text" id="reg-name" placeholder="你的名字"/></div>
+        <div class="lf"><label>Email</label><input type="email" id="reg-email" placeholder="your@email.com"/></div>
+        <div class="lf"><label>密碼</label><input type="password" id="reg-pass" placeholder="至少 6 個字元"/></div>
+        <button class="btn-primary" onclick="doRegister()" id="btn-do-register">建立帳號</button>
+      </div>
+      <div class="login-divider"><span>或</span></div>
+      <button class="btn-google" onclick="loginGoogle()">
+        <svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        使用 Google 帳號登入
+      </button>
+      <div class="login-divider"><span>或</span></div>
+      <button class="btn-guest" onclick="showGuestModal()">👤 訪客登入</button>
+      <div class="login-msg" id="login-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Guest modal ── -->
+<div class="modal-overlay" id="guest-modal">
+  <div class="modal">
+    <div class="modal-title">訪客登入</div>
+    <div class="lf"><label>你的名字</label><input type="text" id="guest-name-input" placeholder="輸入名字" maxlength="30" onkeydown="if(event.key==='Enter')confirmGuest()"/></div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal('guest-modal')">取消</button>
+      <button class="btn-modal-ok" onclick="confirmGuest()">進入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── BOM modal ── -->
+<div class="modal-overlay" id="bom-modal">
+  <div class="modal">
+    <div class="modal-title" id="bom-modal-title">新增工程</div>
+    <div class="modal-grid">
+      <div class="lf"><label>工程編號</label><input type="text" id="bom-proj-num" placeholder="B820-6BB"/></div>
+      <div class="lf"><label>工程名稱</label><input type="text" id="bom-proj-name" placeholder="台北倉儲鋼構"/></div>
+      <div class="lf"><label>業主</label><input type="text" id="bom-client" placeholder="業主名稱"/></div>
+      <div class="lf"><label>銲材</label><input type="text" id="bom-welding" placeholder="ER70S-6"/></div>
+      <div class="lf"><label>工程主辦</label><input type="text" id="bom-proj-mgr" placeholder="姓名"/></div>
+      <div class="lf"><label>品管主辦</label><input type="text" id="bom-qc-mgr" placeholder="姓名"/></div>
+      <div class="lf full"><label>狀態</label>
+        <select id="bom-status">
+          <option value="未開始">未開始</option>
+          <option value="進行中">進行中</option>
+          <option value="已完成">已完成</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal('bom-modal')">取消</button>
+      <button class="btn-modal-ok" onclick="saveBOM()" id="btn-save-bom">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Staff modal ── -->
+<div class="modal-overlay" id="staff-modal">
+  <div class="modal">
+    <div class="modal-title" id="staff-modal-title">新增員工</div>
+    <div class="modal-grid">
+      <div class="lf"><label>姓名</label><input type="text" id="staff-name" placeholder="王大明"/></div>
+      <div class="lf"><label>職稱</label><input type="text" id="staff-role" placeholder="工程主辦"/></div>
+      <div class="lf"><label>部門</label><input type="text" id="staff-dept" placeholder="工程部"/></div>
+      <div class="lf"><label>Email</label><input type="email" id="staff-email" placeholder="wang@company.com"/></div>
+      <div class="lf full"><label>電話</label><input type="text" id="staff-phone" placeholder="0912-345-678"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal('staff-modal')">取消</button>
+      <button class="btn-modal-ok" onclick="saveStaff()" id="btn-save-staff">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Zone modal ── -->
+<div class="modal-overlay" id="zone-modal">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-title" id="zone-modal-title">新增工程區</div>
+    <div class="modal-grid">
+      <div class="lf"><label>工程區代號</label><input type="text" id="zone-code" placeholder="6BB"/></div>
+      <div class="lf"><label>狀態</label>
+        <select id="zone-status">
+          <option value="未開始">未開始</option>
+          <option value="進行中">進行中</option>
+          <option value="已完成">已完成</option>
+        </select>
+      </div>
+    </div>
+    <div class="lf">
+      <label>構件總表（貼上後自動剖析）</label>
+      <textarea id="zone-bom-input" class="bom-textarea" placeholder="直接貼上構件總表的文字資料（含表頭、頁碼、合計都沒關係，會自動忽略）..." oninput="zoneModalParse()"></textarea>
+    </div>
+    <div id="zone-bom-preview" style="font-family:var(--mono);font-size:11px;color:var(--text3)">尚未貼上資料</div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal('zone-modal')">取消</button>
+      <button class="btn-modal-ok" onclick="saveZone()" id="btn-save-zone">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── App ── -->
+<div id="app-screen">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-name">鎮山工程</div>
+      <div class="sidebar-brand-sub">Management System</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">主選單</div>
+      <div class="nav-item active" onclick="navTo('dashboard')" id="nav-dashboard">
+        <span class="nav-icon">📊</span><span class="nav-label">DASHBOARD</span>
+      </div>
+      <div class="nav-section">工程</div>
+      <div class="nav-item" onclick="navTo('bom')" id="nav-bom">
+        <span class="nav-icon">📋</span><span class="nav-label">BOM 工程列表</span>
+      </div>
+      <div class="nav-item" onclick="navTo('bomtool')" id="nav-bomtool">
+        <span class="nav-icon">📑</span><span class="nav-label">BOM 剖析工具</span>
+      </div>
+      <div class="nav-item" onclick="navTo('dxf')" id="nav-dxf">
+        <span class="nav-icon">⚙️</span><span class="nav-label">水電靠模</span>
+      </div>
+      <div class="nav-item" onclick="navTo('inspect')" id="nav-inspect">
+        <span class="nav-icon">📝</span><span class="nav-label">申驗單產生器</span>
+      </div>
+      <div class="nav-section">人員</div>
+      <div class="nav-item" onclick="navTo('staff')" id="nav-staff">
+        <span class="nav-icon">👷</span><span class="nav-label">公司名冊</span>
+      </div>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebar-avatar">—</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebar-name">—</div>
+        <div class="user-role" id="sidebar-role">—</div>
+      </div>
+      <button class="btn-logout-side" onclick="logout()" title="登出">⏻</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main-content">
+    <div class="app-header">
+      <div class="top-clock" id="top-clock">
+        <span class="clock-date" id="clock-date">—</span>
+        <span class="clock-time" id="clock-time">—</span>
+      </div>
+    </div>
+    <div class="content-body">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-title">DASHBOARD</div>
+      <div class="stat-grid">
+        <div class="stat-card orange">
+          <div class="stat-icon">🏗️</div>
+          <div class="stat-value" style="color:var(--accent)" id="stat-projects">—</div>
+          <div class="stat-label">Active Projects</div>
+          <div class="stat-delta up" id="stat-projects-delta"></div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">👷</div>
+          <div class="stat-value" style="color:var(--accent2)" id="stat-staff">—</div>
+          <div class="stat-label">Total Staff</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">📄</div>
+          <div class="stat-value" style="color:var(--green)" id="stat-dxf">—</div>
+          <div class="stat-label">DXF Generated</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" style="color:var(--yellow)" id="stat-done">—</div>
+          <div class="stat-label">Completed Projects</div>
+        </div>
+      </div>
+      <div class="dash-grid">
+        <div class="card">
+          <div class="section-header">
+            <div class="section-title">Active Projects</div>
+            <button class="btn-sm btn-export" onclick="navTo('bom')">View All</button>
+          </div>
+          <table class="project-table">
+            <thead><tr><th>工程編號</th><th>工程名稱</th><th>業主</th><th>狀態</th></tr></thead>
+            <tbody id="dash-projects-body"><tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px">載入中...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-title">最近 DXF 紀錄</div>
+          <div id="dash-recent-logs" style="display:flex;flex-direction:column;gap:0"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOM -->
+    <div class="page" id="page-bom">
+      <div class="page-header">
+        <div class="page-title" style="margin-bottom:0">BOM 工程列表</div>
+        <button class="btn-add-new" onclick="openBOMModal()">＋ 新增工程</button>
+      </div>
+      <div class="search-bar">
+        <input class="search-input" id="bom-search" placeholder="搜尋工程編號、名稱、業主..." oninput="filterBOM()"/>
+        <select class="filter-select" id="bom-filter-status" onchange="filterBOM()">
+          <option value="">全部狀態</option>
+          <option value="未開始">未開始</option>
+          <option value="進行中">進行中</option>
+          <option value="已完成">已完成</option>
+        </select>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="data-table">
+          <thead><tr>
+            <th>工程編號</th><th>工程名稱</th><th>業主</th><th>銲材</th>
+            <th>工程主辦</th><th>品管主辦</th><th>狀態</th><th></th>
+          </tr></thead>
+          <tbody id="bom-table-body"><tr><td colspan="8" class="empty-state">載入中...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Project Detail (zones) -->
+    <div class="page" id="page-project-detail">
+      <div class="back-btn" onclick="navTo('bom')">← 返回工程列表</div>
+      <div class="page-header">
+        <div>
+          <div class="page-title" id="detail-title" style="margin-bottom:4px">—</div>
+          <div id="detail-subtitle" style="font-family:var(--mono);font-size:12px;color:var(--text3)"></div>
+        </div>
+        <button class="btn-add-new" onclick="openZoneModal()">＋ 新增工程區</button>
+      </div>
+      <div class="zone-grid" id="zone-grid"><div class="empty-state">載入中...</div></div>
+    </div>
+
+    <!-- Zone Detail -->
+    <div class="page" id="page-zone-detail">
+      <div class="back-btn" id="zone-back-btn">← 返回工程區</div>
+      <div class="page-title" id="zone-detail-title">—</div>
+      <div class="detail-grid" id="zone-detail-grid"></div>
+
+      <div class="bom-result-bar" style="margin-top:32px">
+        <div class="section-label" style="margin:0">構件總表</div>
+        <div class="bom-result-actions" id="zone-comp-actions"></div>
+      </div>
+      <div id="zone-components"></div>
+    </div>
+
+    <!-- BOM 剖析工具 -->
+    <div class="page" id="page-bomtool">
+      <div class="page-title">BOM 剖析工具</div>
+      <div class="section-label" style="margin-bottom:8px">貼上構件總表（自動擷取工程編號、母件編號、副號）</div>
+      <div class="bom-parse-area">
+        <textarea id="bt-raw-input" class="bom-textarea" placeholder="直接貼上構件總表的文字資料（含表頭、頁碼、合計都沒關係，會自動忽略）..."></textarea>
+        <div class="bom-parse-actions">
+          <button class="btn btn-gen" style="flex:0 0 auto" onclick="parseBTTool()">▶ 剖析成表格</button>
+          <button class="btn btn-add-row" onclick="downloadBTExcel()" id="bt-excel-btn" style="display:none">⬇ 下載 Excel</button>
+          <span class="bom-parse-hint">剖析後可下載成 Excel</span>
+        </div>
+      </div>
+      <div id="bt-parse-result" style="margin-top:18px"></div>
+    </div>
+
+    <!-- 申驗單產生器 -->
+    <div class="page" id="page-inspect">
+      <div class="page-title">申驗單產生器</div>
+
+      <div class="proj-section">
+        <div class="section-label">① 選擇工程與工程區</div>
+        <div class="proj-row">
+          <select class="filter-select" id="insp-proj" onchange="inspLoadZones()" style="width:100%;padding:9px 12px;font-size:14px">
+            <option value="">— 選擇工程 —</option>
+          </select>
+          <select class="filter-select" id="insp-zone" onchange="inspLoadComponents()" style="width:100%;padding:9px 12px;font-size:14px">
+            <option value="">— 選擇工程區 —</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-bottom:8px">② 勾選要報驗的構件</div>
+      <div id="insp-components"><div class="empty-state">請先選擇工程與工程區</div></div>
+
+      <div class="section-label" style="margin-top:24px;margin-bottom:8px">③ 選擇檢驗項目</div>
+      <div class="insp-items-box" id="insp-items-box">
+        <label class="insp-check"><input type="checkbox" data-marker="c1"/> U組蓋板前檢驗</label>
+        <label class="insp-check"><input type="checkbox" data-marker="c2"/> SAW/ESW完成檢驗</label>
+        <label class="insp-check"><input type="checkbox" data-marker="c3"/> 二次加工完成</label>
+        <label class="insp-check"><input type="checkbox" data-marker="c4"/> 噴砂塗裝完成</label>
+        <label class="insp-check"><input type="checkbox" data-marker="c5"/> NDT：UT檢驗</label>
+        <label class="insp-check"><input type="checkbox" data-marker="c6"/> NDT：MT檢驗</label>
+      </div>
+
+      <div class="section-label" style="margin-top:24px;margin-bottom:8px">④ 申驗單範本（上傳原始檔，自動標記）</div>
+      <div class="insp-template-status" id="insp-template-status">
+        <div class="empty-state" style="padding:16px">請先選擇工程</div>
+      </div>
+
+      <div class="dxf-actions" style="margin-top:24px">
+        <button class="btn btn-gen" onclick="generateInspection()">▶ 產生申驗單 Word</button>
+      </div>
+      <div class="statusbar" id="insp-statusbar"><div class="dot"></div><span id="insp-status-text">就緒</span></div>
+
+      <div class="notice-bar" style="margin-top:16px">
+        <strong>範本說明：</strong>直接上傳業主的原始範本（.docx），系統會自動偵測「工程名稱」「申請日期」「檢驗日期」「成品編號／構件編號」欄位並標記，存於雲端。之後選此工程自動載入。申請日期自動帶今天、檢驗日期帶明天。檢驗項目目前保留範本原樣，需手動勾選。
+      </div>
+    </div>
+
+    <!-- DXF -->
+    <div class="page" id="page-dxf">
+      <div class="page-title">水電靠模產生器</div>
+      <div class="rule-strip">
+        <div class="rule-card"><div class="rule-dot inner"></div><div class="rule-label"><strong>內匡</strong>基準 +25 四邊，圓角 R（自訂）</div></div>
+        <div class="rule-card"><div class="rule-dot outer"></div><div class="rule-label"><strong>外匡</strong>基準 +105 四邊，直角矩形</div></div>
+      </div>
+      <div class="proj-section">
+        <div class="section-label">工程資訊</div>
+        <div class="proj-row">
+          <input type="text" id="dxf-proj-name" placeholder="工程名稱" oninput="updateFname()"/>
+          <input type="text" id="dxf-proj-num" placeholder="工程編號（例：B820-6BB）" oninput="updateFname()"/>
+        </div>
+        <div class="fname-preview">檔案名稱：<span id="fname-display">請輸入工程資訊</span></div>
+      </div>
+      <div class="global-r-bar">
+        <label>統一 R 角</label>
+        <input type="number" id="global-r" placeholder="25" min="0" step="0.1"/>
+        <button class="btn-apply" onclick="applyGlobalR()">套用至全部列</button>
+        <span class="hint">套用後仍可對各列單獨修改</span>
+      </div>
+      <div class="table-header">
+        <div>#</div><div>基準 W</div><div>基準 H</div><div>R 角</div>
+        <div>內匡結果</div><div>外匡結果</div><div></div>
+      </div>
+      <div class="dxf-rows" id="dxf-rows"></div>
+      <div class="dxf-actions">
+        <button class="btn btn-add-row" onclick="addDXFRow()">＋ 新增一組</button>
+        <button class="btn btn-gen" onclick="generateDXF()">▶ 產生並下載 DXF</button>
+      </div>
+      <div class="dxf-output" id="dxf-output">
+        <div id="dxf-file-list"></div>
+        <div class="preview-wrap" id="dxf-preview-wrap" style="display:none">
+          <div class="preview-top"><span>框架預覽</span><span id="dxf-prev-info"></span></div>
+          <canvas id="preview-canvas" height="300"></canvas>
+        </div>
+      </div>
+      <div class="notice-bar"><strong>DWG：</strong>下載的 .dxf 用 AutoCAD 另存新檔選 .dwg，或用 ODA File Converter 批次轉換。</div>
+      <div class="statusbar" id="dxf-statusbar"><div class="dot"></div><span id="dxf-status-text">就緒</span></div>
+      <div class="log-section">
+        <div class="log-header">
+          <div class="log-title-row">
+            <div class="log-title">共用產生紀錄</div>
+            <div class="log-count" id="log-count">—</div>
+          </div>
+          <div class="log-actions-bar">
+            <input class="log-filter" id="log-filter" placeholder="搜尋工程 / 人員..." oninput="filterLog()"/>
+            <button class="btn-sm btn-export" onclick="exportCSV()">↓ 匯出 CSV</button>
+            <button class="btn-sm" id="btn-admin-clear" onclick="adminClearAll()" style="display:none;border-color:var(--danger);color:var(--danger)">✕ 清除全部</button>
+          </div>
+        </div>
+        <div id="log-container"><div class="log-empty">載入中...</div></div>
+      </div>
+    </div>
+
+    <!-- Staff -->
+    <div class="page" id="page-staff">
+      <div class="page-header">
+        <div class="page-title" style="margin-bottom:0">公司名冊</div>
+        <button class="btn-add-new" onclick="openStaffModal()">＋ 新增員工</button>
+      </div>
+      <div class="search-bar">
+        <input class="search-input" id="staff-search" placeholder="搜尋姓名、職稱、部門..." oninput="filterStaff()"/>
+      </div>
+      <div class="staff-grid" id="staff-grid"><div class="empty-state">載入中...</div></div>
+    </div>
+
+    </div><!-- /content-body -->
+  </div>
+</div>
+
+<script>
+const SUPA_URL = "https://eblatxdgcxyjvrpixbnr.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVibGF0eGRnY3h5anZycGl4Ym5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODU0OTIsImV4cCI6MjA5NjU2MTQ5Mn0.cSNgpD9etYT4aq2kfXADul3jQDh23Oh2OWE9MLTq3x8";
+const DXF_HEADER = `  0
+SECTION
+  2
+HEADER
+  9
+\$ACADVER
+  1
+AC1024
+  9
+\$ACADMAINTVER
+ 70
+6
+  9
+\$DWGCODEPAGE
+  3
+ANSI_1252
+  9
+\$LASTSAVEDBY
+  1
+ezdxf
+  9
+\$INSBASE
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$EXTMIN
+ 10
+1e+20
+ 20
+1e+20
+ 30
+1e+20
+  9
+\$EXTMAX
+ 10
+-1e+20
+ 20
+-1e+20
+ 30
+-1e+20
+  9
+\$LIMMIN
+ 10
+0.0
+ 20
+0.0
+  9
+\$LIMMAX
+ 10
+420.0
+ 20
+297.0
+  9
+\$ORTHOMODE
+ 70
+0
+  9
+\$REGENMODE
+ 70
+1
+  9
+\$FILLMODE
+ 70
+1
+  9
+\$QTEXTMODE
+ 70
+0
+  9
+\$MIRRTEXT
+ 70
+1
+  9
+\$LTSCALE
+ 40
+1.0
+  9
+\$ATTMODE
+ 70
+1
+  9
+\$TEXTSIZE
+ 40
+2.5
+  9
+\$TRACEWID
+ 40
+1.0
+  9
+\$TEXTSTYLE
+  7
+Standard
+  9
+\$CLAYER
+  8
+0
+  9
+\$CELTYPE
+  6
+ByLayer
+  9
+\$CECOLOR
+ 62
+256
+  9
+\$CELTSCALE
+ 40
+1.0
+  9
+\$DISPSILH
+ 70
+0
+  9
+\$DIMSCALE
+ 40
+1.0
+  9
+\$DIMASZ
+ 40
+2.5
+  9
+\$DIMEXO
+ 40
+0.625
+  9
+\$DIMDLI
+ 40
+3.75
+  9
+\$DIMRND
+ 40
+0.0
+  9
+\$DIMDLE
+ 40
+0.0
+  9
+\$DIMEXE
+ 40
+1.25
+  9
+\$DIMTP
+ 40
+0.0
+  9
+\$DIMTM
+ 40
+0.0
+  9
+\$DIMTXT
+ 40
+2.5
+  9
+\$DIMCEN
+ 40
+2.5
+  9
+\$DIMTSZ
+ 40
+0.0
+  9
+\$DIMTOL
+ 70
+0
+  9
+\$DIMLIM
+ 70
+0
+  9
+\$DIMTIH
+ 70
+0
+  9
+\$DIMTOH
+ 70
+0
+  9
+\$DIMSE1
+ 70
+0
+  9
+\$DIMSE2
+ 70
+0
+  9
+\$DIMTAD
+ 70
+1
+  9
+\$DIMZIN
+ 70
+8
+  9
+\$DIMBLK
+  1
+
+  9
+\$DIMASO
+ 70
+1
+  9
+\$DIMSHO
+ 70
+1
+  9
+\$DIMPOST
+  1
+
+  9
+\$DIMAPOST
+  1
+
+  9
+\$DIMALT
+ 70
+0
+  9
+\$DIMALTD
+ 70
+3
+  9
+\$DIMALTF
+ 40
+0.03937007874
+  9
+\$DIMLFAC
+ 40
+1.0
+  9
+\$DIMTOFL
+ 70
+1
+  9
+\$DIMTVP
+ 40
+0.0
+  9
+\$DIMTIX
+ 70
+0
+  9
+\$DIMSOXD
+ 70
+0
+  9
+\$DIMSAH
+ 70
+0
+  9
+\$DIMBLK1
+  1
+
+  9
+\$DIMBLK2
+  1
+
+  9
+\$DIMSTYLE
+  2
+ISO-25
+  9
+\$DIMCLRD
+ 70
+0
+  9
+\$DIMCLRE
+ 70
+0
+  9
+\$DIMCLRT
+ 70
+0
+  9
+\$DIMTFAC
+ 40
+1.0
+  9
+\$DIMGAP
+ 40
+0.625
+  9
+\$DIMJUST
+ 70
+0
+  9
+\$DIMSD1
+ 70
+0
+  9
+\$DIMSD2
+ 70
+0
+  9
+\$DIMTOLJ
+ 70
+0
+  9
+\$DIMTZIN
+ 70
+8
+  9
+\$DIMALTZ
+ 70
+0
+  9
+\$DIMALTTZ
+ 70
+0
+  9
+\$DIMUPT
+ 70
+0
+  9
+\$DIMDEC
+ 70
+2
+  9
+\$DIMTDEC
+ 70
+2
+  9
+\$DIMALTU
+ 70
+2
+  9
+\$DIMALTTD
+ 70
+3
+  9
+\$DIMTXSTY
+  7
+Standard
+  9
+\$DIMAUNIT
+ 70
+0
+  9
+\$DIMADEC
+ 70
+0
+  9
+\$DIMALTRND
+ 40
+0.0
+  9
+\$DIMAZIN
+ 70
+0
+  9
+\$DIMDSEP
+ 70
+44
+  9
+\$DIMATFIT
+ 70
+3
+  9
+\$DIMFRAC
+ 70
+0
+  9
+\$DIMLDRBLK
+  1
+
+  9
+\$DIMLUNIT
+ 70
+2
+  9
+\$DIMLWD
+ 70
+-2
+  9
+\$DIMLWE
+ 70
+-2
+  9
+\$DIMTMOVE
+ 70
+0
+  9
+\$DIMFXL
+ 40
+1.0
+  9
+\$DIMFXLON
+ 70
+0
+  9
+\$DIMJOGANG
+ 40
+0.785398163397
+  9
+\$DIMTFILL
+ 70
+0
+  9
+\$DIMTFILLCLR
+ 70
+0
+  9
+\$DIMARCSYM
+ 70
+0
+  9
+\$DIMLTYPE
+  6
+
+  9
+\$DIMLTEX1
+  6
+
+  9
+\$DIMLTEX2
+  6
+
+  9
+\$DIMTXTDIRECTION
+ 70
+0
+  9
+\$LUNITS
+ 70
+2
+  9
+\$LUPREC
+ 70
+4
+  9
+\$SKETCHINC
+ 40
+1.0
+  9
+\$FILLETRAD
+ 40
+10.0
+  9
+\$AUNITS
+ 70
+0
+  9
+\$AUPREC
+ 70
+2
+  9
+\$MENU
+  1
+.
+  9
+\$ELEVATION
+ 40
+0.0
+  9
+\$PELEVATION
+ 40
+0.0
+  9
+\$THICKNESS
+ 40
+0.0
+  9
+\$LIMCHECK
+ 70
+0
+  9
+\$CHAMFERA
+ 40
+0.0
+  9
+\$CHAMFERB
+ 40
+0.0
+  9
+\$CHAMFERC
+ 40
+0.0
+  9
+\$CHAMFERD
+ 40
+0.0
+  9
+\$SKPOLY
+ 70
+0
+  9
+\$TDCREATE
+ 40
+2461201.08556713
+  9
+\$TDUCREATE
+ 40
+2458532.153996898
+  9
+\$TDUPDATE
+ 40
+2461201.08556713
+  9
+\$TDUUPDATE
+ 40
+2458532.1544311
+  9
+\$TDINDWG
+ 40
+0.0
+  9
+\$TDUSRTIMER
+ 40
+0.0
+  9
+\$USRTIMER
+ 70
+1
+  9
+\$ANGBASE
+ 50
+0.0
+  9
+\$ANGDIR
+ 70
+0
+  9
+\$PDMODE
+ 70
+0
+  9
+\$PDSIZE
+ 40
+0.0
+  9
+\$PLINEWID
+ 40
+0.0
+  9
+\$SPLFRAME
+ 70
+0
+  9
+\$SPLINETYPE
+ 70
+6
+  9
+\$SPLINESEGS
+ 70
+8
+  9
+\$HANDSEED
+  5
+38
+  9
+\$SURFTAB1
+ 70
+6
+  9
+\$SURFTAB2
+ 70
+6
+  9
+\$SURFTYPE
+ 70
+6
+  9
+\$SURFU
+ 70
+6
+  9
+\$SURFV
+ 70
+6
+  9
+\$UCSBASE
+  2
+
+  9
+\$UCSNAME
+  2
+
+  9
+\$UCSORG
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$UCSXDIR
+ 10
+1.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$UCSYDIR
+ 10
+0.0
+ 20
+1.0
+ 30
+0.0
+  9
+\$UCSORTHOREF
+  2
+
+  9
+\$UCSORTHOVIEW
+ 70
+0
+  9
+\$UCSORGTOP
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$UCSORGBOTTOM
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$UCSORGLEFT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$UCSORGRIGHT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$UCSORGFRONT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$UCSORGBACK
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSBASE
+  2
+
+  9
+\$PUCSNAME
+  2
+
+  9
+\$PUCSORG
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSXDIR
+ 10
+1.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSYDIR
+ 10
+0.0
+ 20
+1.0
+ 30
+0.0
+  9
+\$PUCSORTHOREF
+  2
+
+  9
+\$PUCSORTHOVIEW
+ 70
+0
+  9
+\$PUCSORGTOP
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSORGBOTTOM
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSORGLEFT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSORGRIGHT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSORGFRONT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PUCSORGBACK
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$USERI1
+ 70
+0
+  9
+\$USERI2
+ 70
+0
+  9
+\$USERI3
+ 70
+0
+  9
+\$USERI4
+ 70
+0
+  9
+\$USERI5
+ 70
+0
+  9
+\$USERR1
+ 40
+0.0
+  9
+\$USERR2
+ 40
+0.0
+  9
+\$USERR3
+ 40
+0.0
+  9
+\$USERR4
+ 40
+0.0
+  9
+\$USERR5
+ 40
+0.0
+  9
+\$WORLDVIEW
+ 70
+1
+  9
+\$SHADEDGE
+ 70
+3
+  9
+\$SHADEDIF
+ 70
+70
+  9
+\$TILEMODE
+ 70
+1
+  9
+\$MAXACTVP
+ 70
+64
+  9
+\$PINSBASE
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+\$PLIMCHECK
+ 70
+0
+  9
+\$PEXTMIN
+ 10
+1e+20
+ 20
+1e+20
+ 30
+1e+20
+  9
+\$PEXTMAX
+ 10
+-1e+20
+ 20
+-1e+20
+ 30
+-1e+20
+  9
+\$PLIMMIN
+ 10
+0.0
+ 20
+0.0
+  9
+\$PLIMMAX
+ 10
+420.0
+ 20
+297.0
+  9
+\$UNITMODE
+ 70
+0
+  9
+\$VISRETAIN
+ 70
+1
+  9
+\$PLINEGEN
+ 70
+0
+  9
+\$PSLTSCALE
+ 70
+1
+  9
+\$TREEDEPTH
+ 70
+3020
+  9
+\$CMLSTYLE
+  2
+Standard
+  9
+\$CMLJUST
+ 70
+0
+  9
+\$CMLSCALE
+ 40
+20.0
+  9
+\$PROXYGRAPHICS
+ 70
+1
+  9
+\$MEASUREMENT
+ 70
+1
+  9
+\$CELWEIGHT
+370
+-1
+  9
+\$ENDCAPS
+280
+0
+  9
+\$JOINSTYLE
+280
+0
+  9
+\$LWDISPLAY
+290
+0
+  9
+\$INSUNITS
+ 70
+4
+  9
+\$HYPERLINKBASE
+  1
+
+  9
+\$STYLESHEET
+  1
+
+  9
+\$XEDIT
+290
+1
+  9
+\$CEPSNTYPE
+380
+0
+  9
+\$PSTYLEMODE
+290
+1
+  9
+\$FINGERPRINTGUID
+  2
+{80D2FA0A-D7C6-472D-A385-E21F5859EE55}
+  9
+\$VERSIONGUID
+  2
+{A93C2D88-3940-403D-BC7E-438AD06BC9C5}
+  9
+\$EXTNAMES
+290
+1
+  9
+\$PSVPSCALE
+ 40
+0.0
+  9
+\$OLESTARTUP
+290
+0
+  9
+\$SORTENTS
+280
+127
+  9
+\$INDEXCTL
+280
+0
+  9
+\$HIDETEXT
+280
+1
+  9
+\$XCLIPFRAME
+280
+1
+  9
+\$HALOGAP
+280
+0
+  9
+\$OBSCOLOR
+ 70
+257
+  9
+\$OBSLTYPE
+280
+0
+  9
+\$INTERSECTIONDISPLAY
+280
+0
+  9
+\$INTERSECTIONCOLOR
+ 70
+257
+  9
+\$DIMASSOC
+280
+2
+  9
+\$PROJECTNAME
+  1
+
+  9
+\$CAMERADISPLAY
+290
+0
+  9
+\$LENSLENGTH
+ 40
+50.0
+  9
+\$CAMERAHEIGHT
+ 40
+0.0
+  9
+\$STEPSPERSEC
+ 40
+24.0
+  9
+\$STEPSIZE
+ 40
+100.0
+  9
+\$3DDWFPREC
+ 40
+2.0
+  9
+\$PSOLWIDTH
+ 40
+0.005
+  9
+\$PSOLHEIGHT
+ 40
+0.08
+  9
+\$LOFTANG1
+ 40
+1.570796326795
+  9
+\$LOFTANG2
+ 40
+1.570796326795
+  9
+\$LOFTMAG1
+ 40
+0.0
+  9
+\$LOFTMAG2
+ 40
+0.0
+  9
+\$LOFTPARAM
+ 70
+7
+  9
+\$LOFTNORMALS
+280
+1
+  9
+\$LATITUDE
+ 40
+37.795
+  9
+\$LONGITUDE
+ 40
+-122.394
+  9
+\$NORTHDIRECTION
+ 40
+0.0
+  9
+\$TIMEZONE
+ 70
+-8000
+  9
+\$LIGHTGLYPHDISPLAY
+280
+1
+  9
+\$TILEMODELIGHTSYNCH
+280
+1
+  9
+\$CMATERIAL
+347
+20
+  9
+\$SOLIDHIST
+280
+0
+  9
+\$SHOWHIST
+280
+1
+  9
+\$DWFFRAME
+280
+2
+  9
+\$DGNFRAME
+280
+2
+  9
+\$REALWORLDSCALE
+290
+1
+  9
+\$INTERFERECOLOR
+ 62
+256
+  9
+\$CSHADOW
+280
+0
+  9
+\$SHADOWPLANELOCATION
+ 40
+0.0
+  0
+ENDSEC
+  0
+SECTION
+  2
+CLASSES
+  0
+CLASS
+  1
+ACDBDICTIONARYWDFLT
+  2
+AcDbDictionaryWithDefault
+  3
+ObjectDBX Classes
+ 90
+0
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+SUN
+  2
+AcDbSun
+  3
+SCENEOE
+ 90
+1153
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+VISUALSTYLE
+  2
+AcDbVisualStyle
+  3
+ObjectDBX Classes
+ 90
+4095
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+MATERIAL
+  2
+AcDbMaterial
+  3
+ObjectDBX Classes
+ 90
+1153
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+SCALE
+  2
+AcDbScale
+  3
+ObjectDBX Classes
+ 90
+1153
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+TABLESTYLE
+  2
+AcDbTableStyle
+  3
+ObjectDBX Classes
+ 90
+4095
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+MLEADERSTYLE
+  2
+AcDbMLeaderStyle
+  3
+ACDB_MLEADERSTYLE_CLASS
+ 90
+4095
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+DICTIONARYVAR
+  2
+AcDbDictionaryVar
+  3
+ObjectDBX Classes
+ 90
+0
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+CELLSTYLEMAP
+  2
+AcDbCellStyleMap
+  3
+ObjectDBX Classes
+ 90
+1152
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+MENTALRAYRENDERSETTINGS
+  2
+AcDbMentalRayRenderSettings
+  3
+SCENEOE
+ 90
+1024
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+ACDBDETAILVIEWSTYLE
+  2
+AcDbDetailViewStyle
+  3
+ObjectDBX Classes
+ 90
+1025
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+ACDBSECTIONVIEWSTYLE
+  2
+AcDbSectionViewStyle
+  3
+ObjectDBX Classes
+ 90
+1025
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+RASTERVARIABLES
+  2
+AcDbRasterVariables
+  3
+ISM
+ 90
+0
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+ACDBPLACEHOLDER
+  2
+AcDbPlaceHolder
+  3
+ObjectDBX Classes
+ 90
+0
+ 91
+0
+280
+0
+281
+0
+  0
+CLASS
+  1
+LAYOUT
+  2
+AcDbLayout
+  3
+ObjectDBX Classes
+ 90
+0
+ 91
+0
+280
+0
+281
+0
+  0
+ENDSEC
+  0
+SECTION
+  2
+TABLES
+  0
+TABLE
+  2
+VPORT
+  5
+8
+330
+0
+100
+AcDbSymbolTable
+ 70
+1
+  0
+VPORT
+  5
+23
+330
+8
+100
+AcDbSymbolTableRecord
+100
+AcDbViewportTableRecord
+  2
+*Active
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 11
+1.0
+ 21
+1.0
+ 12
+0.0
+ 22
+0.0
+ 13
+0.0
+ 23
+0.0
+ 14
+0.5
+ 24
+0.5
+ 15
+0.5
+ 25
+0.5
+ 16
+0.0
+ 26
+0.0
+ 36
+1.0
+ 17
+0.0
+ 27
+0.0
+ 37
+0.0
+ 40
+1000.0
+ 41
+1.34
+ 42
+50.0
+ 43
+0.0
+ 44
+0.0
+ 50
+0.0
+ 51
+0.0
+ 71
+0
+ 72
+1000
+ 73
+1
+ 74
+3
+ 75
+0
+ 76
+0
+ 77
+0
+ 78
+0
+281
+0
+ 65
+0
+146
+0.0
+  0
+ENDTAB
+  0
+TABLE
+  2
+LTYPE
+  5
+2
+330
+0
+100
+AcDbSymbolTable
+ 70
+3
+  0
+LTYPE
+  5
+24
+330
+2
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+ByBlock
+ 70
+0
+  3
+
+ 72
+65
+ 73
+0
+ 40
+0.0
+  0
+LTYPE
+  5
+25
+330
+2
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+ByLayer
+ 70
+0
+  3
+
+ 72
+65
+ 73
+0
+ 40
+0.0
+  0
+LTYPE
+  5
+26
+330
+2
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+Continuous
+ 70
+0
+  3
+
+ 72
+65
+ 73
+0
+ 40
+0.0
+  0
+ENDTAB
+  0
+TABLE
+  2
+LAYER
+  5
+1
+330
+0
+100
+AcDbSymbolTable
+ 70
+5
+  0
+LAYER
+  5
+27
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+0
+ 70
+0
+ 62
+7
+  6
+Continuous
+370
+-3
+390
+13
+347
+21
+  0
+LAYER
+  5
+28
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+Defpoints
+ 70
+0
+ 62
+7
+  6
+Continuous
+290
+0
+370
+-3
+390
+13
+347
+21
+  0
+LAYER
+  5
+2F
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+OUTER
+ 70
+0
+ 62
+3
+  6
+Continuous
+370
+-3
+390
+13
+347
+21
+  0
+LAYER
+  5
+30
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+INNER
+ 70
+0
+ 62
+1
+  6
+Continuous
+370
+-3
+390
+13
+347
+21
+  0
+LAYER
+  5
+31
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+LABEL
+ 70
+0
+ 62
+7
+  6
+Continuous
+370
+-3
+390
+13
+347
+21
+  0
+ENDTAB
+  0
+TABLE
+  2
+STYLE
+  5
+5
+330
+0
+100
+AcDbSymbolTable
+ 70
+1
+  0
+STYLE
+  5
+29
+330
+5
+100
+AcDbSymbolTableRecord
+100
+AcDbTextStyleTableRecord
+  2
+Standard
+ 70
+0
+ 40
+0.0
+ 41
+1.0
+ 50
+0.0
+ 71
+0
+ 42
+2.5
+  3
+txt
+  4
+
+  0
+ENDTAB
+  0
+TABLE
+  2
+VIEW
+  5
+7
+330
+0
+100
+AcDbSymbolTable
+ 70
+0
+  0
+ENDTAB
+  0
+TABLE
+  2
+UCS
+  5
+6
+330
+0
+100
+AcDbSymbolTable
+ 70
+0
+  0
+ENDTAB
+  0
+TABLE
+  2
+APPID
+  5
+3
+330
+0
+100
+AcDbSymbolTable
+ 70
+3
+  0
+APPID
+  5
+2A
+330
+3
+100
+AcDbSymbolTableRecord
+100
+AcDbRegAppTableRecord
+  2
+ACAD
+ 70
+0
+  0
+APPID
+  5
+35
+330
+3
+100
+AcDbSymbolTableRecord
+100
+AcDbRegAppTableRecord
+  2
+HATCHBACKGROUNDCOLOR
+ 70
+0
+  0
+APPID
+  5
+36
+330
+3
+100
+AcDbSymbolTableRecord
+100
+AcDbRegAppTableRecord
+  2
+EZDXF
+ 70
+0
+  0
+ENDTAB
+  0
+TABLE
+  2
+DIMSTYLE
+  5
+4
+330
+0
+100
+AcDbSymbolTable
+ 70
+1
+100
+AcDbDimStyleTable
+  0
+DIMSTYLE
+105
+2B
+330
+4
+100
+AcDbSymbolTableRecord
+100
+AcDbDimStyleTableRecord
+  2
+Standard
+ 70
+0
+ 40
+1.0
+ 41
+2.5
+ 42
+0.625
+ 43
+3.75
+ 44
+1.25
+ 45
+0.0
+ 46
+0.0
+ 47
+0.0
+ 48
+0.0
+ 49
+2.5
+140
+2.5
+141
+2.5
+142
+0.0
+143
+0.03937007874
+144
+1.0
+145
+0.0
+146
+1.0
+147
+0.625
+148
+0.0
+ 69
+0
+ 70
+0
+ 71
+0
+ 72
+0
+ 73
+0
+ 74
+0
+ 75
+0
+ 76
+0
+ 77
+1
+ 78
+8
+ 79
+3
+170
+0
+171
+3
+172
+1
+173
+0
+174
+0
+175
+0
+176
+0
+177
+0
+178
+0
+179
+2
+271
+2
+272
+2
+273
+2
+274
+3
+275
+0
+276
+0
+277
+2
+278
+44
+279
+0
+280
+0
+281
+0
+282
+0
+283
+0
+284
+8
+285
+0
+286
+0
+288
+0
+289
+3
+290
+0
+371
+-2
+372
+-2
+  0
+ENDTAB
+  0
+TABLE
+  2
+BLOCK_RECORD
+  5
+9
+330
+0
+100
+AcDbSymbolTable
+ 70
+2
+  0
+BLOCK_RECORD
+  5
+17
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+*Model_Space
+340
+1A
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+1B
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+*Paper_Space
+340
+1E
+ 70
+0
+280
+1
+281
+0
+  0
+ENDTAB
+  0
+ENDSEC
+  0
+SECTION
+  2
+BLOCKS
+  0
+BLOCK
+  5
+18
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+*Model_Space
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+*Model_Space
+  1
+
+  0
+ENDBLK
+  5
+19
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+1C
+330
+1B
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+*Paper_Space
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+*Paper_Space
+  1
+
+  0
+ENDBLK
+  5
+1D
+330
+1B
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+ENDSEC
+`;
+
+const DXF_OBJECTS = `  0
+SECTION
+  2
+OBJECTS
+  0
+DICTIONARY
+  5
+A
+330
+0
+100
+AcDbDictionary
+281
+1
+  3
+ACAD_COLOR
+350
+B
+  3
+ACAD_GROUP
+350
+C
+  3
+ACAD_LAYOUT
+350
+D
+  3
+ACAD_MATERIAL
+350
+E
+  3
+ACAD_MLEADERSTYLE
+350
+F
+  3
+ACAD_MLINESTYLE
+350
+10
+  3
+ACAD_PLOTSETTINGS
+350
+11
+  3
+ACAD_PLOTSTYLENAME
+350
+12
+  3
+ACAD_SCALELIST
+350
+14
+  3
+ACAD_TABLESTYLE
+350
+15
+  3
+ACAD_VISUALSTYLE
+350
+16
+  3
+EZDXF_META
+350
+2D
+  0
+DICTIONARY
+  5
+B
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+DICTIONARY
+  5
+C
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+DICTIONARY
+  5
+D
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+Model
+350
+1A
+  3
+Layout1
+350
+1E
+  0
+DICTIONARY
+  5
+E
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+ByBlock
+350
+1F
+  3
+ByLayer
+350
+20
+  3
+Global
+350
+21
+  0
+DICTIONARY
+  5
+F
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+Standard
+350
+2C
+  0
+DICTIONARY
+  5
+10
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+Standard
+350
+22
+  0
+DICTIONARY
+  5
+11
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+ACDBDICTIONARYWDFLT
+  5
+12
+330
+A
+100
+AcDbDictionary
+281
+1
+  3
+Normal
+350
+13
+100
+AcDbDictionaryWithDefault
+340
+13
+  0
+ACDBPLACEHOLDER
+  5
+13
+330
+12
+  0
+DICTIONARY
+  5
+14
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+DICTIONARY
+  5
+15
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+DICTIONARY
+  5
+16
+330
+A
+100
+AcDbDictionary
+281
+1
+  0
+LAYOUT
+  5
+1A
+330
+D
+100
+AcDbPlotSettings
+  1
+
+  4
+A3
+  6
+
+ 40
+7.5
+ 41
+20.0
+ 42
+7.5
+ 43
+20.0
+ 44
+420.0
+ 45
+297.0
+ 46
+0.0
+ 47
+0.0
+ 48
+0.0
+ 49
+0.0
+140
+0.0
+141
+0.0
+142
+1.0
+143
+1.0
+ 70
+1024
+ 72
+1
+ 73
+0
+ 74
+5
+  7
+
+ 75
+16
+ 76
+0
+ 77
+2
+ 78
+300
+147
+1.0
+148
+0.0
+149
+0.0
+100
+AcDbLayout
+  1
+Model
+ 70
+1
+ 71
+0
+ 10
+0.0
+ 20
+0.0
+ 11
+420.0
+ 21
+297.0
+ 12
+0.0
+ 22
+0.0
+ 32
+0.0
+ 14
+1e+20
+ 24
+1e+20
+ 34
+1e+20
+ 15
+-1e+20
+ 25
+-1e+20
+ 35
+-1e+20
+146
+0.0
+ 13
+0.0
+ 23
+0.0
+ 33
+0.0
+ 16
+1.0
+ 26
+0.0
+ 36
+0.0
+ 17
+0.0
+ 27
+1.0
+ 37
+0.0
+ 76
+1
+330
+17
+  0
+LAYOUT
+  5
+1E
+330
+D
+100
+AcDbPlotSettings
+  1
+
+  4
+A3
+  6
+
+ 40
+7.5
+ 41
+20.0
+ 42
+7.5
+ 43
+20.0
+ 44
+420.0
+ 45
+297.0
+ 46
+0.0
+ 47
+0.0
+ 48
+0.0
+ 49
+0.0
+140
+0.0
+141
+0.0
+142
+1.0
+143
+1.0
+ 70
+0
+ 72
+1
+ 73
+0
+ 74
+5
+  7
+
+ 75
+16
+ 76
+0
+ 77
+2
+ 78
+300
+147
+1.0
+148
+0.0
+149
+0.0
+100
+AcDbLayout
+  1
+Layout1
+ 70
+1
+ 71
+1
+ 10
+0.0
+ 20
+0.0
+ 11
+420.0
+ 21
+297.0
+ 12
+0.0
+ 22
+0.0
+ 32
+0.0
+ 14
+1e+20
+ 24
+1e+20
+ 34
+1e+20
+ 15
+-1e+20
+ 25
+-1e+20
+ 35
+-1e+20
+146
+0.0
+ 13
+0.0
+ 23
+0.0
+ 33
+0.0
+ 16
+1.0
+ 26
+0.0
+ 36
+0.0
+ 17
+0.0
+ 27
+1.0
+ 37
+0.0
+ 76
+1
+330
+1B
+  0
+MATERIAL
+  5
+1F
+102
+{ACAD_REACTORS
+330
+E
+102
+}
+330
+E
+100
+AcDbMaterial
+  1
+ByBlock
+  2
+
+ 70
+0
+ 40
+1.0
+ 71
+1
+ 41
+1.0
+ 91
+-1023410177
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 44
+0.5
+ 73
+0
+ 45
+1.0
+ 46
+1.0
+ 77
+1
+  4
+
+ 78
+1
+ 79
+1
+170
+1
+ 48
+1.0
+171
+1
+  6
+
+172
+1
+173
+1
+174
+1
+140
+1.0
+141
+1.0
+175
+1
+  7
+
+176
+1
+177
+1
+178
+1
+143
+1.0
+179
+1
+  8
+
+270
+1
+271
+1
+272
+1
+145
+1.0
+146
+1.0
+273
+1
+  9
+
+274
+1
+275
+1
+276
+1
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 94
+63
+  0
+MATERIAL
+  5
+20
+102
+{ACAD_REACTORS
+330
+E
+102
+}
+330
+E
+100
+AcDbMaterial
+  1
+ByLayer
+  2
+
+ 70
+0
+ 40
+1.0
+ 71
+1
+ 41
+1.0
+ 91
+-1023410177
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 44
+0.5
+ 73
+0
+ 45
+1.0
+ 46
+1.0
+ 77
+1
+  4
+
+ 78
+1
+ 79
+1
+170
+1
+ 48
+1.0
+171
+1
+  6
+
+172
+1
+173
+1
+174
+1
+140
+1.0
+141
+1.0
+175
+1
+  7
+
+176
+1
+177
+1
+178
+1
+143
+1.0
+179
+1
+  8
+
+270
+1
+271
+1
+272
+1
+145
+1.0
+146
+1.0
+273
+1
+  9
+
+274
+1
+275
+1
+276
+1
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 94
+63
+  0
+MATERIAL
+  5
+21
+102
+{ACAD_REACTORS
+330
+E
+102
+}
+330
+E
+100
+AcDbMaterial
+  1
+Global
+  2
+
+ 70
+0
+ 40
+1.0
+ 71
+1
+ 41
+1.0
+ 91
+-1023410177
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 44
+0.5
+ 73
+0
+ 45
+1.0
+ 46
+1.0
+ 77
+1
+  4
+
+ 78
+1
+ 79
+1
+170
+1
+ 48
+1.0
+171
+1
+  6
+
+172
+1
+173
+1
+174
+1
+140
+1.0
+141
+1.0
+175
+1
+  7
+
+176
+1
+177
+1
+178
+1
+143
+1.0
+179
+1
+  8
+
+270
+1
+271
+1
+272
+1
+145
+1.0
+146
+1.0
+273
+1
+  9
+
+274
+1
+275
+1
+276
+1
+ 42
+1.0
+ 72
+1
+  3
+
+ 73
+1
+ 74
+1
+ 75
+1
+ 94
+63
+  0
+MLINESTYLE
+  5
+22
+102
+{ACAD_REACTORS
+330
+10
+102
+}
+330
+10
+100
+AcDbMlineStyle
+  2
+Standard
+ 70
+0
+  3
+
+ 62
+256
+ 51
+90.0
+ 52
+90.0
+ 71
+2
+ 49
+0.5
+ 62
+256
+  6
+BYLAYER
+ 49
+-0.5
+ 62
+256
+  6
+BYLAYER
+  0
+MLEADERSTYLE
+  5
+2C
+102
+{ACAD_REACTORS
+330
+F
+102
+}
+330
+F
+100
+AcDbMLeaderStyle
+179
+2
+170
+2
+171
+1
+172
+0
+ 90
+2
+ 40
+0.0
+ 41
+0.0
+173
+1
+ 91
+-1056964608
+ 92
+-2
+290
+1
+ 42
+2.0
+291
+1
+ 43
+8.0
+  3
+Standard
+ 44
+4.0
+300
+
+342
+29
+174
+1
+175
+1
+176
+0
+178
+1
+ 93
+-1056964608
+ 45
+4.0
+292
+0
+297
+0
+ 46
+4.0
+ 94
+-1056964608
+ 47
+1.0
+ 49
+1.0
+140
+1.0
+294
+1
+141
+0.0
+177
+0
+142
+1.0
+295
+0
+296
+0
+143
+3.75
+271
+0
+272
+9
+273
+9
+  0
+DICTIONARY
+  5
+2D
+330
+A
+100
+AcDbDictionary
+280
+1
+281
+1
+  3
+CREATED_BY_EZDXF
+350
+2E
+  3
+WRITTEN_BY_EZDXF
+350
+37
+  0
+DICTIONARYVAR
+  5
+2E
+330
+2D
+100
+DictionaryVariables
+280
+0
+  1
+1.4.4 @ 2026-06-09T02:03:13.925169+00:00
+  0
+DICTIONARYVAR
+  5
+37
+330
+2D
+100
+DictionaryVariables
+280
+0
+  1
+1.4.4 @ 2026-06-09T02:03:13.926305+00:00
+  0
+ENDSEC
+  0
+EOF
+`;
+
+const BULGE = 0.41421356237309503;
+
+function fmt(n) {
+  return Number.isInteger(n) ? n.toFixed(1) : String(n);
+}
+function g(code, value) {
+  const c = String(code).padStart(3, ' ');
+  return c + '\n' + value + '\n';
+}
+function buildDXF(frames) {
+  let entities = '';
+  let handle = 0x50;
+  let xOff = 0;
+  const GAP = 50;
+
+  frames.forEach(({w, h, r}) => {
+    const iw = w+25, ih = h+25;
+    const ow = w+105, oh = h+105;
+    const cx = xOff + ow/2, cy = 0;
+
+    // OUTER: plain rectangle
+    entities += g(0,'LWPOLYLINE');
+    entities += g(5, handle.toString(16).toUpperCase()); handle++;
+    entities += g(330,'17');
+    entities += g(100,'AcDbEntity');
+    entities += g(8,'OUTER');
+    entities += g(100,'AcDbPolyline');
+    entities += g(90,'4');
+    entities += g(70,'1');
+    [[cx-ow/2,cy-oh/2],[cx+ow/2,cy-oh/2],[cx+ow/2,cy+oh/2],[cx-ow/2,cy+oh/2]].forEach(([x,y]) => {
+      entities += g(10, fmt(x));
+      entities += g(20, fmt(y));
+    });
+
+    // INNER: rounded rectangle with bulge on arc-start vertices
+    const iPts = [
+      [cx-iw/2+r, cy-ih/2,   0],
+      [cx+iw/2-r, cy-ih/2,   BULGE],
+      [cx+iw/2,   cy-ih/2+r, 0],
+      [cx+iw/2,   cy+ih/2-r, BULGE],
+      [cx+iw/2-r, cy+ih/2,   0],
+      [cx-iw/2+r, cy+ih/2,   BULGE],
+      [cx-iw/2,   cy+ih/2-r, 0],
+      [cx-iw/2,   cy-ih/2+r, BULGE],
+    ];
+    entities += g(0,'LWPOLYLINE');
+    entities += g(5, handle.toString(16).toUpperCase()); handle++;
+    entities += g(330,'17');
+    entities += g(100,'AcDbEntity');
+    entities += g(8,'INNER');
+    entities += g(100,'AcDbPolyline');
+    entities += g(90,'8');
+    entities += g(70,'1');
+    iPts.forEach(([x,y,b]) => {
+      entities += g(10, fmt(x));
+      entities += g(20, fmt(y));
+      if (b) entities += g(42, String(b));
+    });
+
+    // TEXT label
+    const lx = cx - ow/2, ly = cy - oh/2 - 12;
+    const wl = Number.isInteger(w)?w:w, hl = Number.isInteger(h)?h:h, rl = Number.isInteger(r)?r:r;
+    entities += g(0,'TEXT');
+    entities += g(5, handle.toString(16).toUpperCase()); handle++;
+    entities += g(330,'17');
+    entities += g(100,'AcDbEntity');
+    entities += g(8,'LABEL');
+    entities += g(100,'AcDbText');
+    entities += g(10, fmt(lx));
+    entities += g(20, fmt(ly));
+    entities += g(30,'0.0');
+    entities += g(40,'8.0');
+    entities += g(1, `${wl}x${hl} R${rl}`);
+    entities += g(100,'AcDbText');
+
+    xOff += ow + GAP;
+  });
+
+  return (
+    DXF_HEADER +
+    '  0\nSECTION\n  2\nENTITIES\n' +
+    entities +
+    '  0\nENDSEC\n' +
+    DXF_OBJECTS
+  );
+}
+
+
+
+// ── State ──
+let currentSession=null, currentUser=null, isGuest=false;
+let dxfRowCount=0, lastDXFFrames=[], allLogs=[], allBOM=[], allStaff=[];
+let editBOMId=null, editStaffId=null;
+
+// ── Session persistence ──
+const SESSION_KEY = 'zhenshan_session';
+function saveSession() {
+  if (currentSession && !isGuest) {
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({
+        access_token: currentSession.access_token,
+        refresh_token: currentSession.refresh_token || ''
+      }));
+    } catch(e) {}
+  }
+}
+function clearSavedSession() {
+  try { localStorage.removeItem(SESSION_KEY); } catch(e) {}
+}
+async function restoreSession() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch(e) {}
+  if (!saved || !saved.access_token) return false;
+  // Try the access token first
+  currentSession = { access_token: saved.access_token, refresh_token: saved.refresh_token, user: {id:''} };
+  let r = await sbFetch('/auth/v1/user');
+  if (r.ok && r.data && r.data.id) {
+    currentSession.user = r.data;
+    isGuest = false;
+    await loadProfile();
+    return true;
+  }
+  // Access token expired — try refresh
+  if (saved.refresh_token) {
+    const rf = await fetch(SUPA_URL + '/auth/v1/token?grant_type=refresh_token', {
+      method:'POST', headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+      body: JSON.stringify({ refresh_token: saved.refresh_token })
+    });
+    if (rf.ok) {
+      const d = await rf.json();
+      currentSession = d;
+      isGuest = false;
+      saveSession();
+      await loadProfile();
+      return true;
+    }
+  }
+  clearSavedSession();
+  return false;
+}
+
+// ── Supabase ──
+async function sbFetch(path, opts={}) {
+  const headers = {'apikey': SUPA_KEY, 'Content-Type': 'application/json'};
+  if (currentSession) headers['Authorization'] = 'Bearer ' + currentSession.access_token;
+  Object.assign(headers, opts.headers||{});
+  const res = await fetch(SUPA_URL+path, {...opts, headers});
+  const text = await res.text();
+  let data=null; try{data=JSON.parse(text);}catch(e){}
+  return {ok:res.ok, status:res.status, data};
+}
+async function sbAuth(path, body) {
+  const res = await fetch(SUPA_URL+'/auth/v1/'+path, {
+    method:'POST', headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  });
+  return {ok:res.ok, data:await res.json()};
+}
+
+// ── Auth ──
+function switchTab(tab) {
+  document.getElementById('panel-login').style.display = tab==='login'?'':'none';
+  document.getElementById('panel-register').style.display = tab==='register'?'':'none';
+  document.getElementById('tab-login').className = 'login-tab'+(tab==='login'?' active':'');
+  document.getElementById('tab-register').className = 'login-tab'+(tab==='register'?' active':'');
+  document.getElementById('login-msg').textContent = '';
+}
+function setLoginMsg(msg, ok=false) {
+  const el = document.getElementById('login-msg');
+  el.textContent = msg; el.className = 'login-msg '+(ok?'ok':'err');
+}
+async function doLogin() {
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  if(!email||!pass){setLoginMsg('請填寫 Email 和密碼');return;}
+  const btn=document.getElementById('btn-do-login');
+  btn.disabled=true; btn.textContent='登入中...';
+  const r=await sbAuth('token?grant_type=password',{email,password:pass});
+  btn.disabled=false; btn.textContent='登入';
+  if(!r.ok){setLoginMsg(r.data?.error_description||r.data?.msg||'登入失敗');return;}
+  currentSession=r.data; isGuest=false;
+  saveSession();
+  await loadProfile(); enterApp();
+}
+async function doRegister() {
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pass=document.getElementById('reg-pass').value;
+  if(!name||!email||!pass){setLoginMsg('請填寫所有欄位');return;}
+  if(pass.length<6){setLoginMsg('密碼至少 6 個字元');return;}
+  const btn=document.getElementById('btn-do-register');
+  btn.disabled=true; btn.textContent='建立中...';
+  const r=await sbAuth('signup',{email,password:pass});
+  btn.disabled=false; btn.textContent='建立帳號';
+  if(!r.ok){setLoginMsg(r.data?.error_description||r.data?.msg||'註冊失敗');return;}
+  currentSession=r.data.session||r.data; isGuest=false;
+  saveSession();
+  const uid=r.data.user?.id;
+  if(uid) await sbFetch('/rest/v1/profiles',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:uid,name,account:email})});
+  await loadProfile(); setLoginMsg('帳號建立成功！',true); setTimeout(enterApp,800);
+}
+function loginGoogle() {
+  const redirectTo = window.location.origin + window.location.pathname;
+  window.location.href = SUPA_URL+'/auth/v1/authorize?provider=google&redirect_to='+encodeURIComponent(redirectTo);
+}
+function showGuestModal(){document.getElementById('guest-modal').className='modal-overlay show';setTimeout(()=>document.getElementById('guest-name-input').focus(),100);}
+function confirmGuest(){
+  const name=document.getElementById('guest-name-input').value.trim();
+  if(!name){document.getElementById('guest-name-input').style.borderColor='var(--danger)';return;}
+  closeModal('guest-modal'); isGuest=true; currentSession=null;
+  currentUser={id:null,name,isAdmin:false}; enterApp();
+}
+async function loadProfile() {
+  if(!currentSession) return;
+  const uid=currentSession.user?.id; if(!uid) return;
+  const r=await sbFetch(`/rest/v1/profiles?id=eq.${uid}&select=name,account,is_admin`);
+  let name=r.data?.[0]?.name||'', account=r.data?.[0]?.account||currentSession.user?.email||'';
+  let isAdmin=r.data?.[0]?.is_admin||false;
+  if(!name) name=account;
+  if(!r.data?.[0]) {
+    const gname=currentSession.user?.user_metadata?.full_name||currentSession.user?.user_metadata?.name||account;
+    await sbFetch('/rest/v1/profiles',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:uid,name:gname,account})});
+    name=gname;
+  }
+  currentUser={id:uid,name,account,isAdmin};
+}
+async function logout() {
+  if(!isGuest) await sbFetch('/auth/v1/logout',{method:'POST'});
+  clearSavedSession();
+  currentSession=null; currentUser=null; isGuest=false;
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+}
+async function checkOAuthCallback() {
+  const hash=window.location.hash;
+  if(!hash||hash.indexOf('access_token')<0) return;
+  const params={};
+  hash.replace('#','').split('&').forEach(p=>{const kv=p.split('=');params[decodeURIComponent(kv[0])]=decodeURIComponent(kv[1]||'');});
+  if(!params.access_token) return;
+  window.history.replaceState(null,'',window.location.pathname);
+  currentSession={access_token:params.access_token,refresh_token:params.refresh_token||'',user:{id:''}};
+  const r=await sbFetch('/auth/v1/user');
+  if(!r.ok||!r.data){setLoginMsg('Google 登入失敗');return;}
+  currentSession.user=r.data; isGuest=false;
+  saveSession();
+  await loadProfile(); enterApp();
+}
+function enterApp() {
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-screen').style.display='flex';
+  const u=currentUser||{name:'?',isAdmin:false};
+  document.getElementById('sidebar-name').textContent=u.name;
+  document.getElementById('sidebar-role').textContent=isGuest?'訪客':(u.isAdmin?'管理者':'一般使用者');
+  document.getElementById('sidebar-avatar').textContent=(u.name||'?')[0].toUpperCase();
+  const adminBtn=document.getElementById('btn-admin-clear');
+  if(adminBtn) adminBtn.style.display=u.isAdmin?'':'none';
+  loadDashboard(); loadBOM(); loadStaff(); loadLog();
+}
+
+// ── Navigation ──
+function navTo(page) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page)?.classList.add('active');
+  document.getElementById('nav-'+page)?.classList.add('active');
+  if(page==='dashboard') loadDashboard();
+  if(page==='inspect') inspInit();
+}
+
+// ── Modal helpers ──
+function openModal(id){document.getElementById(id).className='modal-overlay show';}
+function closeModal(id){document.getElementById(id).className='modal-overlay';}
+
+// ── Dashboard ──
+async function loadDashboard() {
+  const [pRes, sRes, lRes] = await Promise.all([
+    sbFetch('/rest/v1/projects?select=*&order=created_at.desc'),
+    sbFetch('/rest/v1/staff?select=*'),
+    sbFetch('/rest/v1/gen_logs?select=*&order=created_at.desc&limit=5')
+  ]);
+  const projects=Array.isArray(pRes.data)?pRes.data:[];
+  const staff=Array.isArray(sRes.data)?sRes.data:[];
+  const logs=Array.isArray(lRes.data)?lRes.data:[];
+  const active=projects.filter(p=>p.status==='進行中');
+  const done=projects.filter(p=>p.status==='已完成');
+  document.getElementById('stat-projects').textContent=active.length;
+  document.getElementById('stat-staff').textContent=staff.filter(s=>s.active).length;
+  document.getElementById('stat-dxf').textContent=logs.length;
+  document.getElementById('stat-done').textContent=done.length;
+  // Projects table
+  const tbody=document.getElementById('dash-projects-body');
+  if(!projects.length){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px">無工程資料</td></tr>';return;}
+  tbody.innerHTML=projects.slice(0,6).map(p=>`<tr>
+    <td><span class="proj-num-link" onclick="showProjectDetail(${p.id})">${p.proj_num||'—'}</span></td>
+    <td>${p.proj_name||'—'}</td><td>${p.client||'—'}</td>
+    <td><span class="status-badge ${p.status}">${p.status}</span></td>
+  </tr>`).join('');
+  // Recent logs
+  const logEl=document.getElementById('dash-recent-logs');
+  if(!logs.length){logEl.innerHTML='<div style="text-align:center;color:var(--text3);font-size:13px;padding:20px">尚無紀錄</div>';return;}
+  logEl.innerHTML=logs.map(e=>{
+    const dt=new Date(e.created_at);
+    const time=dt.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return `<div class="crew-item">
+      <div class="crew-dot on"></div>
+      <div class="crew-info"><div class="crew-name">${e.fname||'—'}</div><div class="crew-role">${e.user_name||'—'} · ${e.proj_name||'—'}</div></div>
+      <div class="crew-time">${time}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── BOM ──
+async function loadBOM() {
+  const r=await sbFetch('/rest/v1/projects?select=*&order=created_at.desc');
+  allBOM=Array.isArray(r.data)?r.data:[];
+  renderBOM(allBOM);
+}
+function renderBOM(list) {
+  const tbody=document.getElementById('bom-table-body');
+  if(!list.length){tbody.innerHTML='<tr><td colspan="8" class="empty-state">無工程資料</td></tr>';return;}
+  tbody.innerHTML=list.map(p=>`<tr>
+    <td><span class="proj-num-link" onclick="showProjectDetail(${p.id})">${p.proj_num||'—'}</span></td>
+    <td>${p.proj_name||'—'}</td><td>${p.client||'—'}</td><td>${p.welding_material||'—'}</td>
+    <td>${p.proj_manager||'—'}</td><td>${p.qc_manager||'—'}</td>
+    <td><span class="status-badge ${p.status}">${p.status}</span></td>
+    <td style="white-space:nowrap">
+      <button class="btn-icon edit" onclick="editBOM(${p.id})">✏️</button>
+      <button class="btn-icon del" onclick="deleteBOM(${p.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+}
+function filterBOM() {
+  const q=document.getElementById('bom-search').value.toLowerCase();
+  const s=document.getElementById('bom-filter-status').value;
+  renderBOM(allBOM.filter(p=>{
+    const match=!q||(p.proj_num||'').toLowerCase().includes(q)||(p.proj_name||'').toLowerCase().includes(q)||(p.client||'').toLowerCase().includes(q);
+    const statusMatch=!s||p.status===s;
+    return match&&statusMatch;
+  }));
+}
+function openBOMModal(p=null) {
+  editBOMId=p?p.id:null;
+  document.getElementById('bom-modal-title').textContent=p?'編輯工程':'新增工程';
+  document.getElementById('bom-proj-num').value=p?.proj_num||'';
+  document.getElementById('bom-proj-name').value=p?.proj_name||'';
+  document.getElementById('bom-client').value=p?.client||'';
+  document.getElementById('bom-welding').value=p?.welding_material||'';
+  document.getElementById('bom-proj-mgr').value=p?.proj_manager||'';
+  document.getElementById('bom-qc-mgr').value=p?.qc_manager||'';
+  document.getElementById('bom-status').value=p?.status||'未開始';
+  openModal('bom-modal');
+}
+function editBOM(id) { openBOMModal(allBOM.find(p=>p.id===id)); }
+async function saveBOM() {
+  const data={
+    proj_num:document.getElementById('bom-proj-num').value.trim(),
+    proj_name:document.getElementById('bom-proj-name').value.trim(),
+    client:document.getElementById('bom-client').value.trim(),
+    welding_material:document.getElementById('bom-welding').value.trim(),
+    proj_manager:document.getElementById('bom-proj-mgr').value.trim(),
+    qc_manager:document.getElementById('bom-qc-mgr').value.trim(),
+    status:document.getElementById('bom-status').value
+  };
+  if(!data.proj_num||!data.proj_name){alert('工程編號和名稱為必填');return;}
+  const btn=document.getElementById('btn-save-bom');
+  btn.disabled=true; btn.textContent='儲存中...';
+  let r;
+  if(editBOMId) r=await sbFetch(`/rest/v1/projects?id=eq.${editBOMId}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(data)});
+  else r=await sbFetch('/rest/v1/projects',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(data)});
+  btn.disabled=false; btn.textContent='儲存';
+  if(!r.ok){alert('儲存失敗：'+(r.data?.message||'未知錯誤'));return;}
+  closeModal('bom-modal'); await loadBOM(); await loadDashboard();
+}
+async function deleteBOM(id) {
+  if(!confirm('確定要刪除這筆工程？')) return;
+  await sbFetch(`/rest/v1/projects?id=eq.${id}`,{method:'DELETE'});
+  await loadBOM(); await loadDashboard();
+}
+let currentProjectId=null, allZones=[], editZoneId=null;
+
+async function showProjectDetail(id) {
+  const p=allBOM.find(x=>x.id===id);
+  if(!p) return;
+  currentProjectId=id;
+  document.getElementById('detail-title').textContent=`${p.proj_num}`;
+  document.getElementById('detail-subtitle').textContent=`${p.proj_name} · ${p.client||''} · ${p.status}`;
+  document.querySelectorAll('.page').forEach(pg=>pg.classList.remove('active'));
+  document.getElementById('page-project-detail').classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('nav-bom').classList.add('active');
+  await loadZones(id);
+}
+
+async function loadZones(projectId) {
+  const r=await sbFetch(`/rest/v1/zones?select=*&project_id=eq.${projectId}&order=zone_code`);
+  allZones=Array.isArray(r.data)?r.data:[];
+  renderZones();
+}
+
+function renderZones() {
+  const grid=document.getElementById('zone-grid');
+  if(!allZones.length){grid.innerHTML='<div class="empty-state">此工程尚無工程區，點右上角新增</div>';return;}
+  grid.innerHTML=allZones.map(z=>`<div class="zone-card" onclick="showZoneDetail(${z.id})">
+    <div class="zone-code">${z.zone_code}</div>
+    <div class="zone-card-footer">
+      <span class="status-badge ${z.status}">${z.status}</span>
+      <div class="zone-actions" onclick="event.stopPropagation()">
+        <button class="btn-icon edit" onclick="editZone(${z.id})">✏️</button>
+        <button class="btn-icon del" onclick="deleteZone(${z.id})">🗑</button>
+      </div>
+    </div>
+  </div>`).join('');
+}
+
+function openZoneModal(z=null) {
+  editZoneId=z?z.id:null;
+  document.getElementById('zone-modal-title').textContent=z?'編輯工程區':'新增工程區';
+  document.getElementById('zone-code').value=z?.zone_code||'';
+  document.getElementById('zone-status').value=z?.status||'未開始';
+  document.getElementById('zone-bom-input').value='';
+  document.getElementById('zone-bom-preview').textContent='尚未貼上資料';
+  document.getElementById('zone-bom-preview').style.color='var(--text3)';
+  zoneModalParsed=[];
+  openModal('zone-modal');
+}
+function editZone(id){openZoneModal(allZones.find(z=>z.id===id));}
+async function saveZone() {
+  const data={
+    project_id:currentProjectId,
+    zone_code:document.getElementById('zone-code').value.trim(),
+    status:document.getElementById('zone-status').value
+  };
+  if(!data.zone_code){alert('工程區代號為必填');return;}
+  const btn=document.getElementById('btn-save-zone');
+  btn.disabled=true; btn.textContent='儲存中...';
+  let r, zoneId;
+  if(editZoneId){
+    r=await sbFetch(`/rest/v1/zones?id=eq.${editZoneId}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(data)});
+    zoneId=editZoneId;
+  } else {
+    r=await sbFetch('/rest/v1/zones',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(data)});
+    zoneId=Array.isArray(r.data)&&r.data[0]?r.data[0].id:null;
+  }
+  if(!r.ok){btn.disabled=false;btn.textContent='儲存';alert('儲存失敗：'+(r.data?.message||'未知錯誤'));return;}
+  // Save parsed components if any
+  if(zoneModalParsed.length && zoneId){
+    const comps=zoneModalParsed.map(c=>({
+      zone_id:zoneId,
+      seq:parseInt(c.seq)||null,
+      part_no:c.partNo,
+      common_no:c.commonNo,
+      spec:c.spec,
+      qty:parseInt(c.qty)||null,
+      net_weight:parseFloat(c.netW)||null,
+      drawing_no:c.drawingNo
+    }));
+    await sbFetch('/rest/v1/components',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(comps)});
+  }
+  btn.disabled=false; btn.textContent='儲存';
+  closeModal('zone-modal');
+  await loadZones(currentProjectId);
+}
+async function deleteZone(id) {
+  if(!confirm('確定要刪除這個工程區？')) return;
+  await sbFetch(`/rest/v1/zones?id=eq.${id}`,{method:'DELETE'});
+  await loadZones(currentProjectId);
+}
+
+let currentZone = null, zoneComponents = [];
+async function showZoneDetail(id) {
+  const z=allZones.find(x=>x.id===id);
+  if(!z) return;
+  currentZone = z;
+  const p=allBOM.find(x=>x.id===currentProjectId);
+  document.getElementById('zone-detail-title').textContent=`${p?.proj_num||''} / ${z.zone_code}`;
+  document.getElementById('zone-detail-grid').innerHTML=[
+    ['工程區代號',z.zone_code],
+    ['所屬工程',p?`${p.proj_num} — ${p.proj_name}`:'—'],
+    ['狀態',`<span class="status-badge ${z.status}">${z.status}</span>`],
+    ['建立日期',new Date(z.created_at).toLocaleDateString('zh-TW')]
+  ].map(([l,v])=>`<div class="detail-field"><label>${l}</label><value>${v||'—'}</value></div>`).join('');
+  document.querySelectorAll('.page').forEach(pg=>pg.classList.remove('active'));
+  document.getElementById('page-zone-detail').classList.add('active');
+  document.getElementById('zone-back-btn').onclick=()=>showProjectDetail(currentProjectId);
+  await loadComponents(id);
+}
+
+async function loadComponents(zoneId) {
+  const r=await sbFetch(`/rest/v1/components?select=*&zone_id=eq.${zoneId}&order=seq`);
+  zoneComponents=Array.isArray(r.data)?r.data:[];
+  document.getElementById('zone-components').innerHTML=buildCompTable(zoneComponents);
+  const actions=document.getElementById('zone-comp-actions');
+  if(zoneComponents.length){
+    actions.innerHTML='<button class="btn-sm btn-export" onclick="exportZoneExcel()">⬇ 下載 Excel</button>';
+  } else {
+    actions.innerHTML='';
+  }
+}
+
+// ── Staff ──
+async function loadStaff() {
+  const r=await sbFetch('/rest/v1/staff?select=*&order=name');
+  allStaff=Array.isArray(r.data)?r.data:[];
+  renderStaff(allStaff);
+}
+function renderStaff(list) {
+  const grid=document.getElementById('staff-grid');
+  if(!list.length){grid.innerHTML='<div class="empty-state">無員工資料</div>';return;}
+  grid.innerHTML=list.map(s=>`<div class="staff-card">
+    <div class="staff-card-header">
+      <div class="staff-avatar">${(s.name||'?')[0]}</div>
+      <div><div class="staff-name">${s.name}</div><div class="staff-role">${s.role||'—'}</div></div>
+    </div>
+    <div class="staff-info">
+      ${s.department?`<span>🏢 ${s.department}</span>`:''}
+      ${s.email?`<span>📧 ${s.email}</span>`:''}
+      ${s.phone?`<span>📞 ${s.phone}</span>`:''}
+    </div>
+    <div class="staff-actions">
+      <button class="btn-icon edit" onclick="editStaff(${s.id})" style="flex:1;border:1px solid var(--border)">✏️ 編輯</button>
+      <button class="btn-icon del" onclick="deleteStaff(${s.id})" style="border:1px solid var(--border)">🗑</button>
+    </div>
+  </div>`).join('');
+}
+function filterStaff() {
+  const q=document.getElementById('staff-search').value.toLowerCase();
+  renderStaff(allStaff.filter(s=>(s.name||'').toLowerCase().includes(q)||(s.role||'').toLowerCase().includes(q)||(s.department||'').toLowerCase().includes(q)));
+}
+function openStaffModal(s=null) {
+  editStaffId=s?s.id:null;
+  document.getElementById('staff-modal-title').textContent=s?'編輯員工':'新增員工';
+  document.getElementById('staff-name').value=s?.name||'';
+  document.getElementById('staff-role').value=s?.role||'';
+  document.getElementById('staff-dept').value=s?.department||'';
+  document.getElementById('staff-email').value=s?.email||'';
+  document.getElementById('staff-phone').value=s?.phone||'';
+  openModal('staff-modal');
+}
+function editStaff(id){openStaffModal(allStaff.find(s=>s.id===id));}
+async function saveStaff() {
+  const data={
+    name:document.getElementById('staff-name').value.trim(),
+    role:document.getElementById('staff-role').value.trim(),
+    department:document.getElementById('staff-dept').value.trim(),
+    email:document.getElementById('staff-email').value.trim(),
+    phone:document.getElementById('staff-phone').value.trim()
+  };
+  if(!data.name){alert('姓名為必填');return;}
+  const btn=document.getElementById('btn-save-staff');
+  btn.disabled=true; btn.textContent='儲存中...';
+  let r;
+  if(editStaffId) r=await sbFetch(`/rest/v1/staff?id=eq.${editStaffId}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(data)});
+  else r=await sbFetch('/rest/v1/staff',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(data)});
+  btn.disabled=false; btn.textContent='儲存';
+  if(!r.ok){alert('儲存失敗：'+(r.data?.message||'未知錯誤'));return;}
+  closeModal('staff-modal'); await loadStaff();
+}
+async function deleteStaff(id) {
+  if(!confirm('確定要刪除這位員工？')) return;
+  await sbFetch(`/rest/v1/staff?id=eq.${id}`,{method:'DELETE'});
+  await loadStaff();
+}
+
+// ── BOM 解析共用函式 ──
+function parseBOMText(raw) {
+  const lines = raw.split('\n');
+  const rows = [];
+  const specRe = /^[A-Z]+[0-9X.\-]+$/i;
+  for (const line of lines) {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 11) continue;
+    if (!/^\d+$/.test(parts[0])) continue;
+    const spec = parts[3];
+    if (!specRe.test(spec)) continue;
+    const qty = parts[4], netW = parts[8];
+    const drawingNo = parts[parts.length - 1];
+    if (isNaN(parseFloat(qty)) || isNaN(parseFloat(netW))) continue;
+    rows.push({ seq: parts[0], partNo: parts[1], commonNo: parts[2], spec, qty, netW, drawingNo });
+  }
+  return rows;
+}
+
+// Build a component table HTML from rows (rows use net_weight or netW depending on source)
+function buildCompTable(rows) {
+  if (!rows.length) return '<div class="empty-state">此工程區尚無構件資料</div>';
+  let totalQty = 0, totalW = 0;
+  rows.forEach(r => {
+    totalQty += parseInt(r.qty)||0;
+    totalW += parseFloat(r.netW != null ? r.netW : r.net_weight)||0;
+  });
+  let html = '<div class="bom-table-wrap"><table class="bom-table"><thead><tr>';
+  html += '<th class="num">序號</th><th>構件編號</th><th>共通編號</th><th>規格</th><th class="num">數量</th><th class="num">總重</th><th>圖號</th>';
+  html += '</tr></thead><tbody>';
+  rows.forEach(r => {
+    const pn = r.partNo != null ? r.partNo : r.part_no;
+    const cn = r.commonNo != null ? r.commonNo : r.common_no;
+    const nw = r.netW != null ? r.netW : r.net_weight;
+    const dn = r.drawingNo != null ? r.drawingNo : r.drawing_no;
+    html += '<tr><td class="num">' + r.seq + '</td><td class="partno">' + pn + '</td><td>' + cn + '</td><td class="spec">' + r.spec + '</td><td class="num">' + r.qty + '</td><td class="num">' + nw + '</td><td>' + dn + '</td></tr>';
+  });
+  html += '</tbody><tfoot><tr><td colspan="4">合計</td><td class="num">' + totalQty + '</td><td class="num">' + totalW.toFixed(2) + '</td><td></td></tr></tfoot></table></div>';
+  return html;
+}
+
+// Zone modal: live preview while pasting
+let zoneModalParsed = [];
+function zoneModalParse() {
+  const raw = document.getElementById('zone-bom-input').value;
+  zoneModalParsed = raw.trim() ? parseBOMText(raw) : [];
+  const el = document.getElementById('zone-bom-preview');
+  if (!raw.trim()) { el.textContent = '尚未貼上資料'; el.style.color = 'var(--text3)'; return; }
+  if (!zoneModalParsed.length) { el.textContent = '⚠ 無法解析出構件，請確認格式'; el.style.color = 'var(--danger)'; return; }
+  el.innerHTML = '✓ 已解析 <strong style="color:var(--accent2)">' + zoneModalParsed.length + '</strong> 筆構件';
+  el.style.color = 'var(--green)';
+}
+
+// Export current zone components to Excel
+function exportZoneExcel() {
+  if (!zoneComponents.length) { alert('此工程區無構件資料'); return; }
+  if (typeof XLSX === 'undefined') { alert('Excel 函式庫尚未載入'); return; }
+  const p = allBOM.find(x => x.id === currentProjectId);
+  const projNum = p ? p.proj_num : '';
+  const zoneCode = currentZone ? currentZone.zone_code : '';
+  const fname = ([projNum, zoneCode].filter(Boolean).join('-') || '構件總表') + '.xlsx';
+  const header = ['序號','構件編號','共通編號','規格','數量','總重','圖號'];
+  const data = [header];
+  let totalQty = 0, totalW = 0;
+  zoneComponents.forEach(r => {
+    data.push([r.seq, r.part_no, r.common_no, r.spec, r.qty, parseFloat(r.net_weight)||r.net_weight, r.drawing_no]);
+    totalQty += parseInt(r.qty)||0; totalW += parseFloat(r.net_weight)||0;
+  });
+  data.push(['合計','','','', totalQty, parseFloat(totalW.toFixed(2)), '']);
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [{wch:6},{wch:14},{wch:14},{wch:26},{wch:8},{wch:12},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  const sheetName = ([projNum, zoneCode].filter(Boolean).join('-') || 'BOM').substring(0,31);
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, fname);
+}
+
+// ── BOM 剖析工具（獨立頁）──
+let btParsed = [];
+
+let btHeader = { proj_num:'', mother_num:'', sub_num:'' };
+
+function extractBTHeader(text) {
+  const proj = text.match(/工程編號\s*[:：]\s*(\S+)/);
+  const sub = text.match(/副號\s*[:：]\s*(\S+)/);
+  const mother = text.match(/母件編號\s*[:：]\s*(\S+)/);
+  return {
+    proj_num: proj ? proj[1] : '',
+    sub_num: sub ? sub[1] : '',
+    mother_num: mother ? mother[1] : ''
+  };
+}
+
+function getBTFilename() {
+  const parts = [btHeader.proj_num, btHeader.mother_num, btHeader.sub_num].filter(Boolean);
+  return (parts.join('-') || 'BOM') + '.xlsx';
+}
+
+function parseBTTool() {
+  const raw = document.getElementById('bt-raw-input').value;
+  if (!raw.trim()) { alert('請先貼上構件總表資料'); return; }
+  // Extract header info for filename
+  btHeader = extractBTHeader(raw);
+  const lines = raw.split('\n');
+  const rows = [];
+  const specRe = /^[A-Z]+[0-9X.\-]+$/i;
+  for (const line of lines) {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 11) continue;
+    if (!/^\d+$/.test(parts[0])) continue;
+    const spec = parts[3];
+    if (!specRe.test(spec)) continue;
+    const qty = parts[4], unitW = parts[5], netW = parts[8];
+    const drawingNo = parts[parts.length - 1];
+    if (isNaN(parseFloat(qty)) || isNaN(parseFloat(netW))) continue;
+    rows.push({ seq: parts[0], partNo: parts[1], commonNo: parts[2], spec, qty, netW, drawingNo });
+  }
+  btParsed = rows;
+  renderBTResult();
+  // Update filename hint
+  const hint = document.getElementById('bt-fname-hint');
+  if (rows.length) {
+    const fn = getBTFilename();
+    hint.innerHTML = '檔名：<span style="color:var(--accent3)">' + fn + '</span>';
+  }
+}
+
+function renderBTResult() {
+  const el = document.getElementById('bt-parse-result');
+  const btn = document.getElementById('bt-excel-btn');
+  if (!btParsed.length) {
+    el.innerHTML = '<div class="empty-state">沒有解析到有效的構件資料，請確認貼上的格式</div>';
+    btn.style.display = 'none';
+    return;
+  }
+  btn.style.display = '';
+  let totalQty = 0, totalW = 0;
+  btParsed.forEach(r => { totalQty += parseInt(r.qty)||0; totalW += parseFloat(r.netW)||0; });
+  let html = '<div class="bom-result-bar"><div class="bom-result-info">共解析 <strong>' + btParsed.length + '</strong> 筆構件</div></div>';
+  html += '<div class="bom-table-wrap"><table class="bom-table"><thead><tr>';
+  html += '<th class="num">序號</th><th>構件編號</th><th>共通編號</th><th>規格</th><th class="num">數量</th><th class="num">總重</th><th>圖號</th>';
+  html += '</tr></thead><tbody>';
+  btParsed.forEach(r => {
+    html += '<tr><td class="num">' + r.seq + '</td><td class="partno">' + r.partNo + '</td><td>' + r.commonNo + '</td><td class="spec">' + r.spec + '</td><td class="num">' + r.qty + '</td><td class="num">' + r.netW + '</td><td>' + r.drawingNo + '</td></tr>';
+  });
+  html += '</tbody><tfoot><tr><td colspan="4">合計</td><td class="num">' + totalQty + '</td><td class="num">' + totalW.toFixed(2) + '</td><td></td></tr></tfoot></table></div>';
+  el.innerHTML = html;
+}
+
+function downloadBTExcel() {
+  if (!btParsed.length) { alert('請先剖析資料'); return; }
+  if (typeof XLSX === 'undefined') { alert('Excel 函式庫尚未載入，請檢查網路連線後重試'); return; }
+  // Build sheet data
+  const header = ['序號','構件編號','共通編號','規格','數量','總重','圖號'];
+  const data = [];
+  // Top info row (工程編號 / 母件編號 / 副號 values)
+  data.push([btHeader.proj_num, btHeader.mother_num, btHeader.sub_num,'','','','']);
+  data.push(header);
+  btParsed.forEach(r => {
+    data.push([
+      parseInt(r.seq)||r.seq, r.partNo, r.commonNo, r.spec,
+      parseInt(r.qty)||r.qty, parseFloat(r.netW)||r.netW, r.drawingNo
+    ]);
+  });
+  // total row
+  let totalQty = 0, totalW = 0;
+  btParsed.forEach(r => { totalQty += parseInt(r.qty)||0; totalW += parseFloat(r.netW)||0; });
+  data.push(['合計','','','', totalQty, parseFloat(totalW.toFixed(2)), '']);
+
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [{wch:6},{wch:14},{wch:14},{wch:26},{wch:8},{wch:12},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  const parts = [btHeader.proj_num, btHeader.mother_num, btHeader.sub_num].filter(Boolean);
+  const sheetName = (parts.join('-') || 'BOM').substring(0,31);
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, getBTFilename());
+}
+
+// ── 申驗單產生器 ──
+let inspTemplateBuffer = null;
+let inspComponents = [];
+
+// Populate project dropdown when entering page
+function inspInit() {
+  const sel = document.getElementById('insp-proj');
+  sel.innerHTML = '<option value="">— 選擇工程 —</option>' +
+    allBOM.map(p => '<option value="' + p.id + '">' + p.proj_num + ' — ' + p.proj_name + '</option>').join('');
+  document.getElementById('insp-zone').innerHTML = '<option value="">— 選擇工程區 —</option>';
+  document.getElementById('insp-components').innerHTML = '<div class="empty-state">請先選擇工程與工程區</div>';
+  document.getElementById('insp-template-status').innerHTML = '<div class="empty-state" style="padding:16px">請先選擇工程</div>';
+  inspTemplateBuffer = null;
+}
+
+async function inspLoadZones() {
+  const pid = document.getElementById('insp-proj').value;
+  const zoneSel = document.getElementById('insp-zone');
+  document.getElementById('insp-components').innerHTML = '<div class="empty-state">請選擇工程區</div>';
+  inspTemplateBuffer = null;
+  if (!pid) {
+    zoneSel.innerHTML = '<option value="">— 選擇工程區 —</option>';
+    document.getElementById('insp-template-status').innerHTML = '<div class="empty-state" style="padding:16px">請先選擇工程</div>';
+    return;
+  }
+  const r = await sbFetch('/rest/v1/zones?select=*&project_id=eq.' + pid + '&order=zone_code');
+  const zones = Array.isArray(r.data) ? r.data : [];
+  zoneSel.innerHTML = '<option value="">— 選擇工程區 —</option>' +
+    zones.map(z => '<option value="' + z.id + '">' + z.zone_code + '</option>').join('');
+  // Load template for this project
+  await inspLoadTemplate(pid);
+}
+
+// Load template from Supabase for a project
+async function inspLoadTemplate(pid) {
+  const statusEl = document.getElementById('insp-template-status');
+  const r = await sbFetch('/rest/v1/projects?select=template_name,inspect_template&id=eq.' + pid);
+  const proj = Array.isArray(r.data) && r.data[0] ? r.data[0] : null;
+  if (proj && proj.inspect_template) {
+    // decode base64 to ArrayBuffer
+    inspTemplateBuffer = base64ToArrayBuffer(proj.inspect_template);
+    statusEl.innerHTML = '<div class="tmpl-loaded">' +
+      '<span class="tmpl-icon">📄</span>' +
+      '<div class="tmpl-info"><div class="tmpl-name">' + (proj.template_name || '已上傳範本') + '</div>' +
+      '<div class="tmpl-meta">已從雲端載入，可直接產生</div></div>' +
+      '<label class="tmpl-btn"><input type="file" accept=".docx" style="display:none" onchange="inspUploadTemplate(event)"/>更換範本</label>' +
+      '</div>';
+  } else {
+    inspTemplateBuffer = null;
+    statusEl.innerHTML = '<div class="tmpl-upload-box">' +
+      '<span class="tmpl-meta" style="color:var(--text3);font-family:var(--mono);font-size:12px">此工程尚未上傳範本</span>' +
+      '<label class="tmpl-btn upload"><input type="file" accept=".docx" style="display:none" onchange="inspUploadTemplate(event)"/>⬆ 上傳範本（含標記）</label>' +
+      '</div>';
+  }
+}
+
+// Upload template, save to Supabase for current project
+async function inspUploadTemplate(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const pid = document.getElementById('insp-proj').value;
+  if (!pid) { alert('請先選擇工程'); return; }
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      startTemplateMarking(ev.target.result, pid, file.name);
+    } catch(err) {
+      console.error(err);
+      setInspStatus('範本解析失敗：' + err.message, false);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── Auto-mark template (string-based XML, reliable) ──
+let pendingTemplate = null;  // {zip, xml, pid, fileName, grid, tableInfo}
+
+function xmlGetText(s) {
+  const matches = s.match(/<w:t(?:[^>]*)>([^<]*)<\/w:t>/g) || [];
+  return matches.map(m => m.replace(/<w:t(?:[^>]*)>/, '').replace(/<\/w:t>/, '')).join('');
+}
+
+// inject marker into ONLY the first paragraph of a cell (preserves later paragraphs like 上午/下午)
+function injectFirstPara(cellXml, marker) {
+  const pm = cellXml.match(/<w:p[ >][\s\S]*?<\/w:p>/);
+  if (!pm) return injectMarker(cellXml, marker);
+  const para = pm[0];
+  const pStart = cellXml.indexOf(para);
+  const re = /(<w:t(?:[^>]*)>)([^<]*)(<\/w:t>)/;
+  const m = para.match(re);
+  let newpara;
+  if (m) {
+    const idx = para.indexOf(m[0]);
+    let head = para.slice(0, idx) + m[1] + marker + m[3];
+    let rest = para.slice(idx + m[0].length);
+    rest = rest.replace(/(<w:t(?:[^>]*)>)[^<]*(<\/w:t>)/g, '$1$2');
+    newpara = head + rest;
+  } else {
+    const run = '<w:r><w:t xml:space="preserve">' + marker + '</w:t></w:r>';
+    const ia = para.lastIndexOf('</w:p>');
+    newpara = para.slice(0, ia) + run + para.slice(ia);
+  }
+  return cellXml.slice(0, pStart) + newpara + cellXml.slice(pStart + para.length);
+}
+
+// inject marker into a cell-xml string (replace first <w:t> content, clear rest)
+function injectMarker(cellXml, marker) {
+  const re = /(<w:t(?:[^>]*)>)([^<]*)(<\/w:t>)/;
+  const m = cellXml.match(re);
+  if (m) {
+    const idx = cellXml.indexOf(m[0]);
+    let head = cellXml.slice(0, idx) + m[1] + marker + m[3];
+    let rest = cellXml.slice(idx + m[0].length);
+    rest = rest.replace(/(<w:t(?:[^>]*)>)[^<]*(<\/w:t>)/g, '$1$2');
+    return head + rest;
+  }
+  // no <w:t>: insert a run before </w:p>
+  const pm = cellXml.match(/<w:p[ >][\s\S]*?<\/w:p>/);
+  if (pm) {
+    const run = '<w:r><w:t xml:space="preserve">' + marker + '</w:t></w:r>';
+    const insertAt = cellXml.lastIndexOf('</w:p>');
+    return cellXml.slice(0, insertAt) + run + cellXml.slice(insertAt);
+  }
+  return cellXml;
+}
+
+// Parse first table into grid of cell {text, start, end} positions within the FULL xml
+function parseFirstTableGrid(xml) {
+  const tblStart = xml.indexOf('<w:tbl>');
+  const tblEnd = xml.indexOf('</w:tbl>', tblStart) + 8;
+  if (tblStart < 0) return null;
+  const tbl = xml.slice(tblStart, tblEnd);
+  const rows = [];
+  let pos = 0;
+  while (true) {
+    let rs = tbl.indexOf('<w:tr>', pos);
+    let rs2 = tbl.indexOf('<w:tr ', pos);
+    const cands = [rs, rs2].filter(x => x >= 0);
+    if (!cands.length) break;
+    const rstart = Math.min.apply(null, cands);
+    const rend = tbl.indexOf('</w:tr>', rstart);
+    if (rend < 0) break;
+    const rowXml = tbl.slice(rstart, rend + 7);
+    const cells = [];
+    let cpos = 0;
+    while (true) {
+      const cs = rowXml.indexOf('<w:tc>', cpos);
+      if (cs < 0) break;
+      const ce = rowXml.indexOf('</w:tc>', cs);
+      cells.push({
+        text: xmlGetText(rowXml.slice(cs, ce)).trim(),
+        absStart: tblStart + rstart + cs,
+        absEnd: tblStart + rstart + ce + 7
+      });
+      cpos = ce + 7;
+    }
+    rows.push(cells);
+    pos = rend + 7;
+  }
+  return rows;
+}
+
+// Step 1: read uploaded file, auto-mark label-values, then show column picker
+function startTemplateMarking(buf, pid, fileName) {
+  const zip = new PizZip(buf);
+  let xml = zip.file('word/document.xml').asText();
+  const grid = parseFirstTableGrid(xml);
+  if (!grid) { setInspStatus('無法解析範本表格', false); return; }
+  pendingTemplate = { zip, xml, pid, fileName, grid };
+  renderColumnPicker(grid);
+}
+
+function renderColumnPicker(grid) {
+  const statusEl = document.getElementById('insp-template-status');
+  let html = '<div style="font-family:var(--mono);font-size:12px;color:var(--text2);margin-bottom:10px">請點選「成品編號／構件編號」所在的欄位（點表頭）：</div>';
+  html += '<div style="overflow-x:auto"><table class="insp-comp-table" style="min-width:100%">';
+  // header row = first row that looks like headers (contains 項次 or 成品編號 etc), default row index 4 or detect
+  // We let user click any cell in the header to choose that column
+  grid.slice(0, 8).forEach((row, ri) => {
+    html += '<tr>';
+    row.forEach((cell, ci) => {
+      const safe = (cell.text || '').replace(/</g,'&lt;').substring(0,12) || '·';
+      html += '<td style="cursor:pointer;text-align:center;border:1px solid var(--border)" onclick="pickColumn(' + ri + ',' + ci + ')" title="點此選為成品編號欄">' + safe + '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</table></div>';
+  statusEl.innerHTML = html;
+}
+
+async function pickColumn(headerRow, colIdx) {
+  if (!pendingTemplate) return;
+  const { zip, grid, pid, fileName } = pendingTemplate;
+  let xml = pendingTemplate.xml;
+
+  // Collect all marker injections with absolute positions, apply from end to start
+  const edits = [];  // {start, end, newText}
+
+  // 1. label-value markers
+  for (let ri = 0; ri < grid.length; ri++) {
+    for (let ci = 0; ci < grid[ri].length; ci++) {
+      const t = grid[ri][ci].text;
+      let marker = null;
+      if (t === '工程名稱') marker = '{proj_name}';
+      else if (t === '申請日期') marker = '{apply_date}';
+      else if (t === '檢驗日期') marker = '{inspect_date}';
+      if (marker && ci + 1 < grid[ri].length) {
+        const vc = grid[ri][ci+1];
+        if (marker === '{inspect_date}') {
+          // keep 上午/下午 line: only mark first paragraph
+          const cellXml = xml.slice(vc.absStart, vc.absEnd);
+          edits.push({start: vc.absStart, end: vc.absEnd, newText: injectFirstPara(cellXml, marker)});
+        } else {
+          const cellXml = xml.slice(vc.absStart, vc.absEnd);
+          edits.push({start: vc.absStart, end: vc.absEnd, newText: injectMarker(cellXml, marker)});
+        }
+      }
+    }
+  }
+
+  // 2. component column: from headerRow+1 downward, same colIdx, mark {p1}..{p20}
+  let pnum = 0;
+  for (let rj = headerRow + 1; rj < grid.length; rj++) {
+    if (colIdx >= grid[rj].length) continue;
+    const cell = grid[rj][colIdx];
+    if (cell.text === '') {
+      pnum++;
+      const cellXml = xml.slice(cell.absStart, cell.absEnd);
+      edits.push({start: cell.absStart, end: cell.absEnd, newText: injectMarker(cellXml, '{p'+pnum+'}')});
+      if (pnum >= 20) break;
+    }
+  }
+
+  if (pnum === 0) { setInspStatus('選取的欄位下方沒有可填的空格，請點正確的成品編號欄', false); return; }
+
+  // Apply edits from end to start
+  edits.sort((a,b) => b.start - a.start);
+  for (const ed of edits) {
+    xml = xml.slice(0, ed.start) + ed.newText + xml.slice(ed.end);
+  }
+
+  zip.file('word/document.xml', xml);
+  const markedBuf = zip.generate({type:'arraybuffer'});
+  inspTemplateBuffer = markedBuf;
+
+  // Save to Supabase
+  setInspStatus('範本標記完成，儲存中...', false);
+  const b64 = arrayBufferToBase64(markedBuf);
+  const r = await sbFetch('/rest/v1/projects?id=eq.' + pid, {
+    method: 'PATCH', headers: {'Prefer': 'return=minimal'},
+    body: JSON.stringify({inspect_template: b64, template_name: fileName})
+  });
+  pendingTemplate = null;
+  if (r.ok) {
+    setInspStatus('範本已標記並儲存（' + pnum + ' 格成品編號）', true);
+    await inspLoadTemplate(pid);
+  } else {
+    setInspStatus('儲存失敗：' + (r.data?.message || '未知錯誤'), false);
+  }
+}
+
+// base64 helpers
+function arrayBufferToBase64(buf) {
+  let binary = '';
+  const bytes = new Uint8Array(buf);
+  const chunk = 8192;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+function base64ToArrayBuffer(b64) {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function inspLoadComponents() {
+  const zid = document.getElementById('insp-zone').value;
+  const el = document.getElementById('insp-components');
+  if (!zid) { el.innerHTML = '<div class="empty-state">請選擇工程區</div>'; return; }
+  const r = await sbFetch('/rest/v1/components?select=*&zone_id=eq.' + zid + '&order=seq');
+  inspComponents = Array.isArray(r.data) ? r.data : [];
+  if (!inspComponents.length) { el.innerHTML = '<div class="empty-state">此工程區無構件資料</div>'; return; }
+  let html = '<div class="insp-comp-wrap">';
+  html += '<div class="insp-selectall"><input type="checkbox" id="insp-check-all" onchange="inspToggleAll(this)"/> 全選 / 取消全選</div>';
+  html += '<table class="insp-comp-table"><thead><tr><th class="chk-col"></th><th>序號</th><th>構件編號</th><th>規格</th><th>數量</th><th>圖號</th></tr></thead><tbody>';
+  inspComponents.forEach((c, i) => {
+    html += '<tr><td class="chk-col"><input type="checkbox" class="insp-comp-chk" data-idx="' + i + '"/></td>';
+    html += '<td>' + (c.seq||'') + '</td><td>' + (c.part_no||'') + '</td><td>' + (c.spec||'') + '</td><td>' + (c.qty||'') + '</td><td>' + (c.drawing_no||'') + '</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+function inspToggleAll(cb) {
+  document.querySelectorAll('.insp-comp-chk').forEach(c => c.checked = cb.checked);
+}
+
+function rocDate(d) {
+  const y = d.getFullYear() - 1911;
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return y + '年' + m + '月' + day + '日';
+}
+
+function generateInspection() {
+  // Validate
+  if (!inspTemplateBuffer) { setInspStatus('請先上傳範本 .docx', false); return; }
+  if (typeof PizZip === 'undefined' || typeof docxtemplater === 'undefined') {
+    setInspStatus('Word 函式庫尚未載入，請檢查網路連線', false); return;
+  }
+  const checked = Array.from(document.querySelectorAll('.insp-comp-chk:checked')).map(c => inspComponents[parseInt(c.dataset.idx)]);
+  if (!checked.length) { setInspStatus('請至少勾選一個構件', false); return; }
+  if (checked.length > 20) { setInspStatus('一張申驗單最多 20 項，請分批', false); return; }
+
+  // Project info
+  const pid = document.getElementById('insp-proj').value;
+  const proj = allBOM.find(p => String(p.id) === String(pid));
+  const projName = proj ? proj.proj_name : '';
+
+  // Dates
+  const today = new Date();
+  const tomorrow = new Date(today.getTime() + 86400000);
+
+  // Build data object
+  const data = {
+    proj_name: projName,
+    apply_date: rocDate(today),
+    inspect_date: rocDate(tomorrow)
+  };
+  // Inspection item checkboxes: c1-c6, filled ■ if checked else □
+  document.querySelectorAll('#insp-items-box input[data-marker]').forEach(cb => {
+    data[cb.dataset.marker] = cb.checked ? '■' : '□';
+  });
+  for (let i = 1; i <= 20; i++) {
+    data['p' + i] = checked[i-1] ? (checked[i-1].part_no || '') : '';
+  }
+
+  try {
+    const zip = new PizZip(inspTemplateBuffer);
+    const doc = new docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true,
+      delimiters: {start: '{', end: '}'},
+      nullGetter: function() { return ''; }
+    });
+    doc.render(data);
+    const out = doc.getZip().generate({
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+    const fname = (proj ? proj.proj_num : '申驗單') + '_申驗通知單.docx';
+    const url = URL.createObjectURL(out);
+    const a = document.createElement('a'); a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setInspStatus('已產生 ' + fname + '（' + checked.length + ' 項構件）', true);
+  } catch(err) {
+    console.error(err);
+    let msg = err.message;
+    if (err.properties && err.properties.errors) {
+      msg = err.properties.errors.map(e => e.properties.explanation).join('; ');
+    }
+    setInspStatus('產生失敗：' + msg, false);
+  }
+}
+
+function setInspStatus(msg, ok) {
+  document.getElementById('insp-status-text').textContent = msg;
+  document.getElementById('insp-statusbar').className = 'statusbar' + (ok?' ok':'');
+}
+
+// ── DXF ──
+function updateFname() {
+  const n=document.getElementById('dxf-proj-name').value.trim();
+  const num=document.getElementById('dxf-proj-num').value.trim();
+  const parts=[n,num].filter(Boolean);
+  const el=document.getElementById('fname-display');
+  el.textContent=(parts.join('-')||'frame')+'.dxf';
+  el.style.color=parts.length?'var(--accent3)':'var(--text3)';
+}
+function getFilename(){
+  const n=document.getElementById('dxf-proj-name').value.trim();
+  const num=document.getElementById('dxf-proj-num').value.trim();
+  return([n,num].filter(Boolean).join('-')||'frame')+'.dxf';
+}
+function applyGlobalR(){
+  const r=document.getElementById('global-r').value;
+  if(r==='') return;
+  document.querySelectorAll('[id^="dxfrow-"]').forEach(row=>{
+    const id=row.id.replace('dxfrow-','');
+    const el=document.getElementById('dr-'+id);
+    if(el){el.value=r;updateDXFCalc(id);}
+  });
+  setDXFStatus('已將全部列的 R 角設為 '+r,true);
+}
+function addDXFRow(w,h,r){
+  dxfRowCount++;
+  const id=dxfRowCount;
+  const globalR=document.getElementById('global-r').value;
+  const rVal=(r!==undefined&&r!==null)?r:(globalR!==''?globalR:'');
+  const div=document.createElement('div');
+  div.className='dxf-row'; div.id='dxfrow-'+id;
+  div.innerHTML=`<div class="row-num">${id}</div>
+    <input type="number" id="dw-${id}" placeholder="200" value="${w||''}" min="1" step="0.1"/>
+    <input type="number" id="dh-${id}" placeholder="300" value="${h||''}" min="1" step="0.1"/>
+    <input type="number" id="dr-${id}" class="r-input" placeholder="25" value="${rVal}" min="0" step="0.1"/>
+    <div class="calc-cell" id="dci-${id}">—</div>
+    <div class="calc-cell" id="dco-${id}">—</div>
+    <button class="btn-del" onclick="removeDXFRow(${id})">✕</button>`;
+  document.getElementById('dxf-rows').appendChild(div);
+  ['dw','dh','dr'].forEach(k=>document.getElementById(`${k}-${id}`).addEventListener('input',()=>updateDXFCalc(id)));
+  if(w&&h) updateDXFCalc(id);
+}
+function updateDXFCalc(id){
+  const w=parseFloat(document.getElementById('dw-'+id)?.value);
+  const h=parseFloat(document.getElementById('dh-'+id)?.value);
+  const r=parseFloat(document.getElementById('dr-'+id)?.value);
+  const ci=document.getElementById('dci-'+id), co=document.getElementById('dco-'+id);
+  if(!ci) return;
+  if(isNaN(w)||isNaN(h)){ci.innerHTML='—';co.innerHTML='—';return;}
+  const rLabel=(!isNaN(r)&&r>=0)?`R${r}`:'<span class="err">缺R值</span>';
+  ci.innerHTML=`<span class="iv">${w+25}x${h+25}</span><br>${rLabel}`;
+  co.innerHTML=`<span class="ov">${w+105}x${h+105}</span><br>直角`;
+}
+function removeDXFRow(id){
+  const el=document.getElementById('dxfrow-'+id);
+  if(el){el.style.opacity='0';el.style.transform='translateX(8px)';el.style.transition='all .15s';setTimeout(()=>el.remove(),150);}
+}
+async function generateDXF(){
+  const rows=document.querySelectorAll('[id^="dxfrow-"]');
+  if(!rows.length){setDXFStatus('請先新增尺寸',false);return;}
+  const frames=[]; let errors=0;
+  rows.forEach(row=>{
+    const id=row.id.replace('dxfrow-','');
+    const w=parseFloat(document.getElementById('dw-'+id)?.value);
+    const h=parseFloat(document.getElementById('dh-'+id)?.value);
+    const r=parseFloat(document.getElementById('dr-'+id)?.value);
+    if(!(!isNaN(w)&&!isNaN(h)&&w>0&&h>0&&!isNaN(r)&&r>=0&&r<=Math.min(w+25,h+25)/2)){
+      errors++;row.style.borderColor='var(--danger)';setTimeout(()=>row.style.borderColor='',1400);return;
+    }
+    frames.push({w,h,r});
+  });
+  if(!frames.length){setDXFStatus('沒有有效的尺寸資料',false);return;}
+  const fname=getFilename();
+  try{
+    const dxf=buildDXF(frames);
+    const blob=new Blob([dxf],{type:'application/dxf'});
+    const url=URL.createObjectURL(blob);
+    const fl=document.getElementById('dxf-file-list'); fl.innerHTML='';
+    const desc=frames.map(f=>`<span class="iv">${f.w+25}x${f.h+25}</span> R${f.r} / <span class="ov">${f.w+105}x${f.h+105}</span>`).join(' | ');
+    const item=document.createElement('div'); item.className='file-item';
+    item.innerHTML=`<div class="file-icon">.DXF</div>
+      <div class="file-info"><div class="file-name">${fname}</div><div class="file-desc">${frames.length} 組框架 — ${desc}</div></div>
+      <a class="btn-dl-main" href="${url}" download="${fname}">⬇ 下載</a>`;
+    fl.appendChild(item);
+    lastDXFFrames=frames;
+    document.getElementById('dxf-preview-wrap').style.display='block';
+    document.getElementById('dxf-prev-info').textContent=`${frames.length} 組`;
+    drawPreview(frames);
+    document.getElementById('dxf-output').className='dxf-output visible';
+    const a=document.createElement('a'); a.href=url; a.download=fname;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    const pn=document.getElementById('dxf-proj-name').value.trim();
+    const pnum=document.getElementById('dxf-proj-num').value.trim();
+    await insertLog(pn,pnum,fname,frames);
+    setDXFStatus(`已產生 ${fname}，${frames.length} 組框架${errors?' ('+errors+' 列跳過)':''}`,true);
+  }catch(e){setDXFStatus('產生失敗：'+e.message,false);console.error(e);}
+}
+
+// ── Log ──
+async function insertLog(pn,pnum,fname,frames){
+  if(!currentUser) return;
+  const payload={user_name:currentUser.name+(isGuest?' (訪客)':''),proj_name:pn||'（未填）',proj_num:pnum||'（未填）',fname,frames:frames.map(f=>`${f.w}x${f.h} R${f.r}`)};
+  if(!isGuest&&currentUser.id) payload.user_id=currentUser.id;
+  await sbFetch('/rest/v1/gen_logs',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)});
+  await loadLog();
+}
+async function loadLog(){
+  const r=await sbFetch('/rest/v1/gen_logs?select=*&order=created_at.desc&limit=300');
+  if(!r.ok||!Array.isArray(r.data)){document.getElementById('log-container').innerHTML='<div class="log-empty">無法載入紀錄</div>';return;}
+  allLogs=r.data; renderLog(allLogs);
+}
+async function deleteLogEntry(id){
+  await sbFetch(`/rest/v1/gen_logs?id=eq.${id}`,{method:'DELETE'});
+  await loadLog();
+}
+function filterLog(){
+  const q=document.getElementById('log-filter').value.toLowerCase();
+  renderLog(allLogs.filter(e=>(e.proj_name||'').toLowerCase().includes(q)||(e.proj_num||'').toLowerCase().includes(q)||(e.user_name||'').toLowerCase().includes(q)));
+}
+function renderLog(logs){
+  document.getElementById('log-count').textContent=logs.length+' 筆';
+  if(!logs.length){document.getElementById('log-container').innerHTML='<div class="log-empty">尚無產生紀錄</div>';return;}
+  let html='<div class="log-wrap"><table class="log-table"><thead><tr><th>日期/時間</th><th>人員</th><th>工程名稱</th><th>工程編號</th><th>檔案名稱</th><th>尺寸</th><th></th></tr></thead><tbody>';
+  logs.forEach(e=>{
+    const dt=new Date(e.created_at);
+    const date=dt.toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
+    const time=dt.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+    const fr=Array.isArray(e.frames)?e.frames.map(f=>`<span>${f}</span>`).join(''):(e.frames||'');
+    const isGuestEntry=(e.user_name||'').includes('(訪客)');
+    const canDel=!isGuest&&currentUser&&(currentUser.isAdmin||(e.user_id&&e.user_id===currentUser.id));
+    html+=`<tr><td class="date">${date}<br>${time}</td><td class="op${isGuestEntry?' guest':''}">${e.user_name||'—'}</td><td class="proj">${e.proj_name||'—'}</td><td>${e.proj_num||'—'}</td><td>${e.fname||'—'}</td><td class="frames">${fr}</td><td>${canDel?`<button class="btn-del-row" onclick="deleteLogEntry(${e.id})">✕</button>`:''}</td></tr>`;
+  });
+  html+='</tbody></table></div>';
+  document.getElementById('log-container').innerHTML=html;
+}
+async function adminClearAll(){
+  if(!currentUser?.isAdmin) return;
+  if(!confirm('確定要清除所有產生紀錄？')) return;
+  const r=await sbFetch('/rest/v1/gen_logs?id=gt.0',{method:'DELETE'});
+  if(r.ok){setDXFStatus('已清除所有紀錄',true);await loadLog();}
+}
+function exportCSV(){
+  if(!allLogs.length){setDXFStatus('沒有紀錄可匯出',false);return;}
+  const header=['日期時間','人員','工程名稱','工程編號','檔案名稱','尺寸'];
+  const rows=allLogs.map(e=>{
+    const dt=new Date(e.created_at).toLocaleString('zh-TW');
+    const fr=Array.isArray(e.frames)?e.frames.join(' | '):(e.frames||'');
+    return[dt,e.user_name,e.proj_name,e.proj_num,e.fname,fr].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',');
+  });
+  const csv='\uFEFF'+[header.join(','),...rows].join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='DXF_產生紀錄.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setDXFStatus('已匯出 CSV',true);
+}
+
+// ── Preview ──
+function drawPreview(frames){
+  const canvas=document.getElementById('preview-canvas');
+  const ctx=canvas.getContext('2d');
+  const CW=canvas.offsetWidth||800; canvas.width=CW; canvas.height=300; ctx.clearRect(0,0,CW,300);
+  if(!frames.length) return;
+  const GAP=40,totalW=frames.reduce((s,f)=>s+f.w+105,0)+GAP*(frames.length-1),maxH=Math.max(...frames.map(f=>f.h+105));
+  const pad=40,scale=Math.min((CW-pad*2)/totalW,(300-pad*2-20)/maxH);
+  let xOff=0; const startX=CW/2-totalW*scale/2;
+  frames.forEach(({w,h,r})=>{
+    const ow=w+105,oh=h+105,iw=w+25,ih=h+25;
+    const cx=startX+(xOff+ow/2)*scale,cy=300/2+8;
+    function dr(rw,rh,rx,color,lw){
+      const x=cx-rw*scale/2,y=cy-rh*scale/2,rr=rx*scale;
+      ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=lw;
+      if(rx>0){ctx.moveTo(x+rr,y);ctx.lineTo(x+rw*scale-rr,y);ctx.arcTo(x+rw*scale,y,x+rw*scale,y+rr,rr);ctx.lineTo(x+rw*scale,y+rh*scale-rr);ctx.arcTo(x+rw*scale,y+rh*scale,x+rw*scale-rr,y+rh*scale,rr);ctx.lineTo(x+rr,y+rh*scale);ctx.arcTo(x,y+rh*scale,x,y+rh*scale-rr,rr);ctx.lineTo(x,y+rr);ctx.arcTo(x,y,x+rr,y,rr);ctx.closePath();}
+      else{ctx.rect(x,y,rw*scale,rh*scale);}ctx.stroke();
+    }
+    dr(ow,oh,0,'#7dd3c0',1.5);dr(iw,ih,r,'#4f8ef7',1.5);
+    ctx.font="10px 'IBM Plex Mono',monospace";
+    ctx.fillStyle='#4f8ef7';ctx.fillText(`${iw}x${ih} R${r}`,cx-iw*scale/2,cy-ih*scale/2-5);
+    ctx.fillStyle='#7dd3c0';ctx.fillText(`${ow}x${oh}`,cx-ow*scale/2,cy+oh*scale/2+14);
+    xOff+=ow+GAP;
+  });
+}
+function setDXFStatus(msg,ok){
+  document.getElementById('dxf-status-text').textContent=msg;
+  document.getElementById('dxf-statusbar').className='statusbar'+(ok?' ok':'');
+}
+window.addEventListener('resize',()=>{if(lastDXFFrames.length)drawPreview(lastDXFFrames);});
+
+// ── Clock ──
+function updateClock() {
+  const now = new Date();
+  const days = ['週日','週一','週二','週三','週四','週五','週六'];
+  const y = now.getFullYear();
+  const m = String(now.getMonth()+1).padStart(2,'0');
+  const d = String(now.getDate()).padStart(2,'0');
+  const wd = days[now.getDay()];
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const ss = String(now.getSeconds()).padStart(2,'0');
+  const dateEl = document.getElementById('clock-date');
+  const timeEl = document.getElementById('clock-time');
+  if (dateEl) dateEl.textContent = `${y}/${m}/${d} ${wd}`;
+  if (timeEl) timeEl.textContent = `${hh}:${mm}:${ss}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Init ──
+addDXFRow(200,300,25);
+addDXFRow(150,250,20);
+
+(async function() {
+  // 1. Handle Google OAuth redirect if present
+  const hash = window.location.hash;
+  if (hash && hash.indexOf('access_token') >= 0) {
+    await checkOAuthCallback();
+    return;
+  }
+  // 2. Try restore saved session (survives refresh)
+  const restored = await restoreSession();
+  if (restored) {
+    enterApp();
+  } else {
+    // show login only after we know there's no valid session
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+})();
+</script>
+</body>
+</html>
