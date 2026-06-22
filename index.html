@@ -385,6 +385,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .insp-comp-table input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--accent2)}
 .insp-comp-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden;max-height:340px;overflow-y:auto}
 .insp-selectall{display:flex;align-items:center;gap:8px;padding:8px 10px;font-family:var(--mono);font-size:11px;color:var(--text3);border-bottom:1px solid var(--border);background:var(--bg3)}
+.insp-comp-search-bar{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--bg3)}
+.insp-comp-search-bar input{flex:1;min-width:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 10px;outline:none;transition:border-color .2s}
+.insp-comp-search-bar input:focus{border-color:var(--accent2)}
+.insp-comp-selcount{font-family:var(--mono);font-size:11px;color:var(--accent2);white-space:nowrap}
+.insp-comp-table th,.insp-comp-table td{text-align:center}
+.insp-comp-table .insp-board-col{text-align:center}
+.insp-board-sel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:11px;padding:4px 6px;outline:none;cursor:pointer}
+.insp-board-sel:focus{border-color:var(--accent2)}
+.insp-board-sel:disabled{background:transparent;border-color:transparent;color:transparent;cursor:default;pointer-events:none}
 .bom-textarea{width:100%;min-height:140px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:12px;padding:12px;outline:none;resize:vertical;line-height:1.5;transition:border-color .15s}
 .bom-textarea:focus{border-color:var(--accent2)}
 .bom-textarea::placeholder{color:var(--text3)}
@@ -7010,6 +7019,26 @@ function forceKaiOnMarkerRun(xml, marker) {
     return xml.slice(0, rOpenEnd) + '<w:rPr>' + KAI_RPR + '</w:rPr>' + after;
   }
 }
+// 設定 marker 所在 run 的字級(half-points,16pt = 32)
+function forceSizeOnMarkerRun(xml, marker, sz) {
+  const mi = xml.indexOf('>' + marker + '<');
+  if (mi < 0) return xml;
+  const rStart = Math.max(xml.lastIndexOf('<w:r>', mi), xml.lastIndexOf('<w:r ', mi));
+  if (rStart < 0) return xml;
+  const rOpenEnd = xml.indexOf('>', rStart) + 1;
+  const after = xml.slice(rOpenEnd);
+  const szTag = '<w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/>';
+  const rprMatch = after.match(/^\s*<w:rPr>([\s\S]*?)<\/w:rPr>/);
+  if (rprMatch) {
+    const inner = rprMatch[1].replace(/<w:sz w:val="\d+"\s*\/>/g, '').replace(/<w:szCs w:val="\d+"\s*\/>/g, '');
+    return xml.slice(0, rOpenEnd) + after.replace(rprMatch[0], '<w:rPr>' + inner + szTag + '</w:rPr>');
+  }
+  return xml.slice(0, rOpenEnd) + '<w:rPr>' + szTag + '</w:rPr>' + after;
+}
+// injectMarker 並把該格字級設為 16pt(第一頁被標記的資訊)
+function injectMarker16(cellXml, marker) {
+  return forceSizeOnMarkerRun(injectMarker(cellXml, marker), marker, 32);
+}
 
 // 從關鍵字往前找最近的 □ 並替換 (跨 run 比對,處理 <w:t>□</w:t> 獨立 run)
 function markBoxBefore(cell, keyword, repl) {
@@ -7138,6 +7167,22 @@ function markFixedPages(xml) {
       edits.push({start: cell.absStart, end: cell.absEnd, newText: cx});
     }
   });
+  // NDT 檢驗表「只」標記第4頁(table 3),第2頁(table 1)不填;資料置中
+  const g4 = parseTableGrid(xml, 3);
+  if (g4) {
+    const pushC = (cell, marker) => { if (cell) edits.push({start: cell.absStart, end: cell.absEnd, newText: injectMarkerCentered(xml.slice(cell.absStart, cell.absEnd), marker)}); };
+    // 欄位: [0]列標 [1]工程NO [2]構件編號 [3]施作部位 [4]圖號 [5]檢測長度 [6]備註
+    for (let j = 1; j <= 5; j++) {
+      const r = g4[15 + j];
+      if (!r) continue;
+      if (r[1]) pushC(r[1], '{ndproj'+j+'}');
+      if (r[2]) pushC(r[2], '{ndpart'+j+'}');
+      if (r[3]) pushC(r[3], '{ndloc'+j+'}');
+      if (r[4]) pushC(r[4], '{nddraw'+j+'}');
+      if (r[5]) pushC(r[5], '{ndlen'+j+'}');
+    }
+    if (g4[21] && g4[21][1]) pushC(g4[21][1], '{ndresult}'); // 檢驗結果
+  }
   // Page 3 = table 2
   const t2 = parseTableGrid(xml, 2);
   if (t2) {
@@ -7157,6 +7202,7 @@ function markFixedPages(xml) {
       if (r[4]) pushCell(r[4], '{z'+i+'}');
       if (r[5]) pushCell(r[5], '{h'+i+'}');   // 加工代號
       if (r[6]) pushCell(r[6], '{s'+i+'}');
+      if (r[9]) pushCell(r[9], '{nb'+i+'}');  // 非破壞檢查 是(✓)/否(✓)
     }
     // 合計請驗量 R23 C1 = 支
     if (t2[23] && t2[23][1]) pushCell(t2[23][1], '{pt1} 支');
@@ -7230,7 +7276,8 @@ function markCompanyUnitFields(xml) {
       const nce = ncs >= 0 ? xml.indexOf('</w:tc>', ncs) + 7 : -1;
       if (ncs < 0 || nce < 0) { out += xml.slice(pos, li + label.length); pos = li + label.length; continue; }
       out += xml.slice(pos, ncs);
-      out += injectMarker(xml.slice(ncs, nce), '{company_unit}');
+      // 第一頁的「檢驗地點」旁邊的值 -> 16pt(申請單位等其他頁維持原樣)
+      out += (label === '檢驗地點' ? injectMarker16 : injectMarker)(xml.slice(ncs, nce), '{company_unit}');
       pos = nce;
     }
     xml = out;
@@ -7367,7 +7414,9 @@ async function pickColumn(headerRow, colIdx) {
           edits.push({start: vc.absStart, end: vc.absEnd, newText: injectFirstPara(cellXml, marker)});
         } else {
           const cellXml = xml.slice(vc.absStart, vc.absEnd);
-          edits.push({start: vc.absStart, end: vc.absEnd, newText: injectMarker(cellXml, marker)});
+          // 工程名稱 旁邊的值 -> 16pt
+          const fn = (marker === '{proj_name}') ? injectMarker16 : injectMarker;
+          edits.push({start: vc.absStart, end: vc.absEnd, newText: fn(cellXml, marker)});
         }
       }
     }
@@ -7401,7 +7450,7 @@ async function pickColumn(headerRow, colIdx) {
     if (cell.text === '') {
       pnum++;
       const cellXml = xml.slice(cell.absStart, cell.absEnd);
-      edits.push({start: cell.absStart, end: cell.absEnd, newText: injectMarker(cellXml, '{p'+pnum+'}')});
+      edits.push({start: cell.absStart, end: cell.absEnd, newText: injectMarker16(cellXml, '{p'+pnum+'}')});
       if (pnum >= 20) break;
     }
   }
@@ -7423,8 +7472,28 @@ async function pickColumn(headerRow, colIdx) {
       if (pCell && pCell.text === '') {
         vnum++;
         const vCell = grid[rj][vColIdx];
-        edits.push({start: vCell.absStart, end: vCell.absEnd, newText: injectMarker(xml.slice(vCell.absStart, vCell.absEnd), '{v'+vnum+'}')});
+        edits.push({start: vCell.absStart, end: vCell.absEnd, newText: injectMarker16(xml.slice(vCell.absStart, vCell.absEnd), '{v'+vnum+'}')});
         if (vnum >= 20) break;
+      }
+    }
+  }
+
+  // 2c. 備註 column (第一頁): 標記 {b1}..{b20} 用來填「有/無板」
+  let bColIdx = -1;
+  for (let ci = 0; ci < grid[headerRow].length; ci++) {
+    const t = (grid[headerRow][ci].text || '').replace(/[\s　]/g, '');
+    if (t.indexOf('備註') >= 0) { bColIdx = ci; break; }
+  }
+  if (bColIdx >= 0) {
+    let bnum = 0;
+    for (let rj = headerRow + 1; rj < grid.length; rj++) {
+      if (bColIdx >= grid[rj].length) continue;
+      const pCell = grid[rj][colIdx];
+      if (pCell && pCell.text === '') {
+        bnum++;
+        const bCell = grid[rj][bColIdx];
+        edits.push({start: bCell.absStart, end: bCell.absEnd, newText: injectMarker16(xml.slice(bCell.absStart, bCell.absEnd), '{b'+bnum+'}')});
+        if (bnum >= 20) break;
       }
     }
   }
@@ -7487,18 +7556,95 @@ async function inspLoadComponents() {
   inspComponents = Array.isArray(r.data) ? r.data : [];
   if (!inspComponents.length) { el.innerHTML = '<div class="empty-state">此工程區無構件資料</div>'; return; }
   let html = '<div class="insp-comp-wrap">';
-  html += '<div class="insp-selectall"><input type="checkbox" id="insp-check-all" onchange="inspToggleAll(this)"/> 全選 / 取消全選</div>';
-  html += '<table class="insp-comp-table"><thead><tr><th class="chk-col"></th><th>序號</th><th>構件編號</th><th>規格</th><th>數量</th><th>圖號</th></tr></thead><tbody>';
+  html += '<div class="insp-comp-search-bar"><input type="text" id="insp-comp-search" placeholder="模糊搜尋構件編號 / 規格 / 圖號…(可空白分隔多關鍵字)" oninput="inspFilterComponents()" autocomplete="off"/><span class="insp-comp-selcount" id="insp-comp-selcount"></span></div>';
+  html += '<div class="insp-selectall"><input type="checkbox" id="insp-check-all" onchange="inspToggleAll(this)"/> 全選 / 取消全選(僅目前顯示的)</div>';
+  html += '<table class="insp-comp-table"><thead><tr><th class="chk-col"></th><th>序號</th><th>構件編號</th><th>規格</th><th>數量</th><th>圖號</th><th>有/無板</th></tr></thead><tbody>';
   inspComponents.forEach((c, i) => {
-    html += '<tr><td class="chk-col"><input type="checkbox" class="insp-comp-chk" data-idx="' + i + '"/></td>';
-    html += '<td>' + (c.seq||'') + '</td><td>' + (c.part_no||'') + '</td><td>' + (c.spec||'') + '</td><td>' + (c.qty||'') + '</td><td>' + (c.drawing_no||'') + '</td></tr>';
+    const ds = ((c.part_no||'') + ' ' + (c.spec||'') + ' ' + (c.drawing_no||'')).toLowerCase().replace(/"/g,'');
+    // 規格最前面的英文(RH / BH / Q / BOX …)當作 有板/無板 的前綴
+    const prefix = ((c.spec||'').match(/^[A-Za-z]+/) || [''])[0];
+    const board = c._board || (prefix + '有板');   // 預設一律「有板」
+    const isNo = (board === prefix + '無板');
+    const boardSel = '<select class="insp-board-sel" data-prefix="' + prefix + '" onchange="inspBoardChange(' + i + ',this)" disabled>' +
+      '<option value="' + prefix + '有板"' + (isNo ? '' : ' selected') + '>' + prefix + '有板</option>' +
+      '<option value="' + prefix + '無板"' + (isNo ? ' selected' : '') + '>' + prefix + '無板</option>' +
+      '</select>';
+    html += '<tr class="insp-comp-row" data-search="' + ds + '"><td class="chk-col"><input type="checkbox" class="insp-comp-chk" data-idx="' + i + '" onchange="inspOnCheck(this)"/></td>';
+    html += '<td>' + (c.seq||'') + '</td><td>' + (c.part_no||'') + '</td><td>' + (c.spec||'') + '</td><td>' + (c.qty||'') + '</td><td>' + (c.drawing_no||'') + '</td><td class="insp-board-col">' + boardSel + '</td></tr>';
   });
   html += '</tbody></table></div>';
   el.innerHTML = html;
+  inspUpdateSelCount();
 }
 
+// 模糊搜尋:只顯示/隱藏列(不重建),已勾選的構件不會因為搜尋而消失,可跨多次搜尋累積複選
+function inspFilterComponents() {
+  const q = (document.getElementById('insp-comp-search').value || '').trim().toLowerCase();
+  const terms = q.split(/\s+/).filter(Boolean);
+  document.querySelectorAll('#insp-components .insp-comp-row').forEach(tr => {
+    const ds = tr.getAttribute('data-search') || '';
+    tr.style.display = terms.every(t => ds.indexOf(t) >= 0) ? '' : 'none';
+  });
+  inspSyncCheckAll();
+}
+// 勾選 / 取消單一構件:把已勾的排到最前面,並控制「有/無板」下拉的啟用
+function inspOnCheck(cb) {
+  inspSetBoardEnabled(cb);
+  inspReorderChecked();
+  inspUpdateSelCount();
+}
+// 只有被勾選的列才可以使用「有/無板」下拉;取消勾選就清空並鎖住
+function inspSetBoardEnabled(cb) {
+  const tr = cb.closest('tr'); if (!tr) return;
+  const sel = tr.querySelector('.insp-board-sel'); if (!sel) return;
+  sel.disabled = !cb.checked;
+  const idx = parseInt(cb.dataset.idx || '-1');
+  if (cb.checked) {
+    if (inspComponents[idx]) inspComponents[idx]._board = sel.value;   // 預設帶「有板」
+  } else {
+    const pf = sel.dataset.prefix || '';
+    sel.value = pf + '有板';   // 還原成預設,下次勾選仍是有板
+    if (inspComponents[idx]) inspComponents[idx]._board = '';
+  }
+}
+function inspBoardChange(i, sel) {
+  if (inspComponents[i]) inspComponents[i]._board = sel.value;
+}
+// 已勾選的排在最前面;不論勾選與否,各自都依「序號」由小到大排列
+function inspReorderChecked() {
+  const tbody = document.querySelector('#insp-components .insp-comp-table tbody');
+  if (!tbody) return;
+  const rows = [...tbody.querySelectorAll('.insp-comp-row')];
+  rows.sort((a, b) => {
+    const ca = a.querySelector('.insp-comp-chk'), cbx = b.querySelector('.insp-comp-chk');
+    const ga = (ca && ca.checked) ? 0 : 1, gb = (cbx && cbx.checked) ? 0 : 1;
+    if (ga !== gb) return ga - gb;   // 已勾的整批排前面
+    // 同一組內(都勾或都沒勾)依序號(資料載入時即 order=seq,data-idx 等同序號順序)
+    return parseInt((ca && ca.dataset.idx) || '0') - parseInt((cbx && cbx.dataset.idx) || '0');
+  });
+  rows.forEach(r => tbody.appendChild(r));   // 重新接回(移動節點會保留勾選狀態)
+}
 function inspToggleAll(cb) {
-  document.querySelectorAll('.insp-comp-chk').forEach(c => c.checked = cb.checked);
+  document.querySelectorAll('#insp-components .insp-comp-row').forEach(tr => {
+    if (tr.style.display === 'none') return;   // 只勾選目前顯示(搜尋結果)的列
+    const c = tr.querySelector('.insp-comp-chk'); if (!c) return;
+    c.checked = cb.checked;
+    inspSetBoardEnabled(c);
+  });
+  inspReorderChecked();
+  inspUpdateSelCount();
+}
+function inspSyncCheckAll() {
+  const all = document.getElementById('insp-check-all'); if (!all) return;
+  const vis = [...document.querySelectorAll('#insp-components .insp-comp-row')].filter(tr => tr.style.display !== 'none');
+  const chks = vis.map(tr => tr.querySelector('.insp-comp-chk')).filter(Boolean);
+  all.checked = chks.length > 0 && chks.every(c => c.checked);
+}
+function inspUpdateSelCount() {
+  const n = document.querySelectorAll('.insp-comp-chk:checked').length;
+  const el = document.getElementById('insp-comp-selcount');
+  if (el) el.textContent = n ? ('已選 ' + n + ' 項') : '';
+  inspSyncCheckAll();
 }
 
 function rocDate(d) {
@@ -7620,8 +7766,8 @@ function inspDuplicatePages(xml, nPages) {
   const p3unit = xml.slice(p3s, p3End);
   let p1copies = '', p3copies = '';
   for (let k = 1; k < nPages; k++) {
-    p1copies += inspShiftMarkers(p1unit, ['p','v'], 20*k);
-    let c3 = inspShiftMarkers(p3unit, ['g','n','u','q','z','s','h'], 20*k);
+    p1copies += inspShiftMarkers(p1unit, ['p','v','b'], 20*k);
+    let c3 = inspShiftMarkers(p3unit, ['g','nb','n','u','q','z','s','h'], 20*k);
     c3 = inspShiftMarkers(c3, ['pt'], k);
     p3copies += c3;
   }
@@ -7739,6 +7885,9 @@ async function generateInspection() {
   // Page 1 成品編號 + 協力商檢驗者, Page 3 rows — cover ALL parts (pages auto-duplicated per 20)
   const nParts = checked.length;
   const nPages = Math.ceil(nParts / 20);  // number of page-1/page-3 copies needed
+  // 有/無板符合下列值 -> 非破壞檢查打「是」、並列入 NDT 檢驗表;其他 -> 非破壞檢查打「否」
+  const NDT_BOARD_SET = ['RH有板','BH無板','BH有板','BOX有板','Q有板'];
+  const NB_YES = '是(✓   )否(    )', NB_NO = '是(    )否(✓   )', NB_BLANK = '是(    )否(    )';
   for (let i = 1; i <= nPages * 20; i++) {
     const c = checked[i-1];
     data['p' + i] = c ? (c.part_no || '') : '';
@@ -7750,9 +7899,25 @@ async function generateInspection() {
     data['z' + i] = c ? (c._zone_code || zoneCode || '') : '';
     data['h' + i] = c ? procCode : '';
     data['s' + i] = c ? (c._sub || '') : '';
+    data['b' + i] = c ? (c._board || '') : '';   // 備註 = 有/無板
+    // 第3頁 非破壞檢查:符合 NDT 條件打「是」,其他打「否」,空列維持原樣
+    data['nb' + i] = c ? (NDT_BOARD_SET.indexOf(c._board || '') >= 0 ? NB_YES : NB_NO) : NB_BLANK;
   }
   // Page 2/4 構件類別/編號 box: parts joined (single space)
   data['parts_box'] = checked.map(c => c.part_no).join(' ');
+
+  // NDT 檢驗表(第2、4頁):有/無板符合上述條件的構件才列入,只填前 5 列;超過 5 個 -> 檢驗結果「其餘同上」
+  const projNumVal = proj ? proj.proj_num : '';
+  const ndtParts = checked.filter(c => NDT_BOARD_SET.indexOf(c._board || '') >= 0);
+  for (let j = 1; j <= 5; j++) {
+    const c = ndtParts[j-1];
+    data['ndproj'+j] = c ? projNumVal : '';
+    data['ndpart'+j] = c ? (c.part_no || '') : '';
+    data['ndloc'+j]  = c ? '銲道' : '';
+    data['nddraw'+j] = c ? (c.drawing_no || '') : '';
+    data['ndlen'+j]  = c ? 'MT VT' : '';
+  }
+  data['ndresult'] = ndtParts.length > 5 ? '其餘同上' : '';
 
   try {
     const zip = new PizZip(inspTemplateBuffer);
