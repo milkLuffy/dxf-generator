@@ -262,12 +262,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .dash-trend-lbl.cur{color:var(--accent2);font-weight:600}
 .dash-trend-val{font-family:var(--mono);font-size:9.5px;color:var(--text3);white-space:nowrap}
 /* ── A201/A202 長榮登錄統計 ── */
+.axx-section{margin-bottom:28px}
+.axx-section:last-child{margin-bottom:0}
+.axx-section-title{font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:.04em;color:var(--text);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
 .axx-toolbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px}
 .axx-filter{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text2);cursor:pointer;user-select:none}
 .axx-updated{font-family:var(--mono);font-size:11px;color:var(--text3);margin-left:auto}
 .axx-hint{font-family:var(--mono);font-size:11.5px;color:var(--yellow);margin-bottom:8px}
 .axx-hint:empty{display:none}
-.axx-wrap{overflow:auto;max-height:68vh;border:1px solid var(--border);border-radius:var(--rad-lg);background:var(--bg2)}
+.axx-wrap{overflow:auto;max-height:42vh;border:1px solid var(--border);border-radius:var(--rad-lg);background:var(--bg2)}
 .axx-table{width:100%;border-collapse:collapse;font-size:13px;min-width:820px}
 .axx-table th{position:sticky;top:0;background:var(--bg3);font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--text3);padding:8px 6px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;z-index:1}
 .axx-table td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:center;vertical-align:middle;color:var(--text2)}
@@ -1419,11 +1422,8 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <div class="nav-item" onclick="navTo('inspect')" id="nav-inspect">
         <span class="nav-icon">📝</span><span class="nav-label">報驗</span>
       </div>
-      <div class="nav-item" onclick="navTo('a201')" id="nav-a201">
-        <span class="nav-icon">🧾</span><span class="nav-label">A201 上線統計</span>
-      </div>
-      <div class="nav-item" onclick="navTo('a202')" id="nav-a202">
-        <span class="nav-icon">🗃️</span><span class="nav-label">A202 產量統計</span>
+      <div class="nav-item" onclick="navTo('a201a202')" id="nav-a201a202">
+        <span class="nav-icon">🧾</span><span class="nav-label">A201/A202登記</span>
       </div>
       <div class="nav-section">工具</div>
       <div class="nav-item" onclick="navTo('bomtool')" id="nav-bomtool">
@@ -1848,44 +1848,49 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       </div>
     </div>
 
-    <!-- A201 上線統計:線上進行中輸入的資料,依 日期+工程編號 自動產生一列 -->
-    <div class="page" id="page-a201">
-      <div class="page-title">A201 上線統計</div>
-      <div class="axx-toolbar">
-        <div class="layout-tabs" style="margin-bottom:0">
-          <button class="layout-tab active" id="a201-co-zs" onclick="a201SetCo('鎮山')">鎮山</button>
-          <button class="layout-tab" id="a201-co-ls" onclick="a201SetCo('麗生')">麗生</button>
-        </div>
-        <button class="filter-select" id="a201-showall-btn" onclick="a201ToggleShowAll()">列出全部</button>
-        <span class="axx-updated" id="a201-updated"></span>
-      </div>
-      <div class="axx-hint" id="a201-hint"></div>
-      <div class="axx-wrap">
-        <table class="axx-table">
-          <thead><tr><th style="width:92px">時間</th><th style="width:76px">輸入完成</th><th style="width:60px">日期</th><th style="width:88px">工程編號</th><th style="width:90px">工程區</th><th style="width:90px">代號</th><th style="width:88px">流水編號</th><th style="width:52px">支數</th><th>構件編號</th></tr></thead>
-          <tbody id="a201-body"><tr><td colspan="9" class="axx-empty">載入中…</td></tr></tbody>
-        </table>
-      </div>
-    </div>
+    <!-- A201/A202登記:合併「A201 上線統計」與「A202 產量統計」於同一頁,以分類區塊呈現 -->
+    <div class="page" id="page-a201a202">
+      <div class="page-title">A201/A202登記</div>
 
-    <!-- A202 產量統計:每日產量資料,依 日期+流水編號 自動產生一列 -->
-    <div class="page" id="page-a202">
-      <div class="page-title">A202 產量統計</div>
-      <div class="axx-toolbar">
-        <div class="layout-tabs" style="margin-bottom:0">
-          <button class="layout-tab active" id="a202-co-zs" onclick="a202SetCo('鎮山')">鎮山</button>
-          <button class="layout-tab" id="a202-co-ls" onclick="a202SetCo('麗生')">麗生</button>
+      <!-- 分類:A201 上線統計:線上進行中輸入的資料,依 日期+工程編號 自動產生一列 -->
+      <div class="axx-section" id="page-a201">
+        <div class="axx-section-title">A201 上線統計</div>
+        <div class="axx-toolbar">
+          <div class="layout-tabs" style="margin-bottom:0">
+            <button class="layout-tab active" id="a201-co-zs" onclick="a201SetCo('鎮山')">鎮山</button>
+            <button class="layout-tab" id="a201-co-ls" onclick="a201SetCo('麗生')">麗生</button>
+          </div>
+          <button class="filter-select" id="a201-showall-btn" onclick="a201ToggleShowAll()">列出全部</button>
+          <span class="axx-updated" id="a201-updated"></span>
         </div>
-        <button class="filter-select" id="a202-showall-btn" onclick="a202ToggleShowAll()">列出全部</button>
-        <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">「輸入完成」及「照片」皆勾選才算完成,完成將隱藏</span>
-        <span class="axx-updated" id="a202-updated"></span>
+        <div class="axx-hint" id="a201-hint"></div>
+        <div class="axx-wrap">
+          <table class="axx-table">
+            <thead><tr><th style="width:92px">時間</th><th style="width:76px">輸入完成</th><th style="width:60px">日期</th><th style="width:88px">工程編號</th><th style="width:90px">工程區</th><th style="width:90px">代號</th><th style="width:88px">流水編號</th><th style="width:52px">支數</th><th>構件編號</th></tr></thead>
+            <tbody id="a201-body"><tr><td colspan="9" class="axx-empty">載入中…</td></tr></tbody>
+          </table>
+        </div>
       </div>
-      <div class="axx-hint" id="a202-hint"></div>
-      <div class="axx-wrap">
-        <table class="axx-table">
-          <thead><tr><th style="width:92px">時間</th><th style="width:76px">輸入完成</th><th style="width:60px">日期</th><th style="width:88px">工程編號</th><th style="width:90px">工程區</th><th style="width:90px">代號</th><th style="width:88px">流水編號</th><th style="width:52px">支數</th><th>構件編號</th><th style="width:56px">照片</th></tr></thead>
-          <tbody id="a202-body"><tr><td colspan="10" class="axx-empty">載入中…</td></tr></tbody>
-        </table>
+
+      <!-- 分類:A202 產量統計:每日產量資料,依 日期+流水編號 自動產生一列 -->
+      <div class="axx-section" id="page-a202">
+        <div class="axx-section-title">A202 產量統計</div>
+        <div class="axx-toolbar">
+          <div class="layout-tabs" style="margin-bottom:0">
+            <button class="layout-tab active" id="a202-co-zs" onclick="a202SetCo('鎮山')">鎮山</button>
+            <button class="layout-tab" id="a202-co-ls" onclick="a202SetCo('麗生')">麗生</button>
+          </div>
+          <button class="filter-select" id="a202-showall-btn" onclick="a202ToggleShowAll()">列出全部</button>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">「輸入完成」及「照片」皆勾選才算完成,完成將隱藏</span>
+          <span class="axx-updated" id="a202-updated"></span>
+        </div>
+        <div class="axx-hint" id="a202-hint"></div>
+        <div class="axx-wrap">
+          <table class="axx-table">
+            <thead><tr><th style="width:92px">時間</th><th style="width:76px">輸入完成</th><th style="width:60px">日期</th><th style="width:88px">工程編號</th><th style="width:90px">工程區</th><th style="width:90px">代號</th><th style="width:88px">流水編號</th><th style="width:52px">支數</th><th>構件編號</th><th style="width:56px">照片</th></tr></thead>
+            <tbody id="a202-body"><tr><td colspan="10" class="axx-empty">載入中…</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -2727,10 +2732,10 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="page-title" style="margin-bottom:0">長榮日報（二次加工日報表）</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <label style="font-family:var(--mono);font-size:12px;color:var(--text3)">日期</label>
-          <button class="btn-sm btn-export" onclick="egShiftDay(-1)">‹ 前一天</button>
+          <button class="btn-sm btn-export" id="eg-nav-prev" onclick="egShiftDay(-1)">‹ 前一天</button>
           <input type="date" id="eg-date" class="search-input" style="width:150px" onchange="egGenerate()"/>
-          <button class="btn-sm btn-export" onclick="egShiftDay(1)">後一天 ›</button>
-          <button class="btn-sm btn-export" onclick="egGotoToday()">今天</button>
+          <button class="btn-sm btn-export" id="eg-nav-next" onclick="egShiftDay(1)">後一天 ›</button>
+          <button class="btn-sm btn-export" id="eg-nav-today" onclick="egGotoToday()">今天</button>
           <button class="btn-sm btn-export" onclick="egGenerate()">🔄 重新整理</button>
           <button class="btn-sm btn-export" onclick="egDownloadXLSX()">⬇ 下載 Excel</button>
         </div>
@@ -6489,8 +6494,7 @@ function navTo(page) {
   if(page==='dxf') dxfFillProjNums();
   if(page==='bom') { if(allBOM.length) filterBOM(); loadBOM(); }
   if(page==='inspect') inspInit();
-  if(page==='a201') a201Load();
-  if(page==='a202') a202Load();
+  if(page==='a201a202') { a201Load(); a202Load(); }
   if(page==='layout') layoutInit();
   if(page==='daily') loadDaily();
   if(page==='hazard') hazardInit();
@@ -7291,6 +7295,19 @@ function egShiftDay(delta){
 }
 // 跳回今天
 function egGotoToday(){ const d=document.getElementById('eg-date'); if(!d) return; d.value=egToday(); egGenerate(); }
+// 在「前一天／後一天／今天」按鈕旁標示該日期是星期幾(與「出勤回報」一致)
+function egUpdateNavLabels(){
+  const el=document.getElementById('eg-date');
+  const cur=el&&el.value?new Date(el.value+'T00:00:00'):new Date();
+  const prev=new Date(cur); prev.setDate(prev.getDate()-1);
+  const next=new Date(cur); next.setDate(next.getDate()+1);
+  const prevBtn=document.getElementById('eg-nav-prev');
+  const nextBtn=document.getElementById('eg-nav-next');
+  const todayBtn=document.getElementById('eg-nav-today');
+  if(prevBtn) prevBtn.textContent='‹ 前一天（'+attWeekdayShort(prev)+'）';
+  if(nextBtn) nextBtn.textContent='後一天（'+attWeekdayShort(next)+'） ›';
+  if(todayBtn) todayBtn.textContent='今天（'+attWeekdayShort(new Date())+'）';
+}
 // 手動編輯人力/備註時,即時重繪報表(不重抓資料)
 function egRerender(){ if(!egLast) return; egLast.mp=egReadMP(); document.getElementById('eg-preview').innerHTML=egRenderHTML(egLast); }
 // 出勤回報 team 文字 → 西/焊/研磨 索引
@@ -7318,6 +7335,7 @@ function egFillMP(z){
 }
 async function egGenerate(){
   const dateISO = document.getElementById('eg-date').value || egToday();
+  egUpdateNavLabels();
   egSaveMP();
   const prev=document.getElementById('eg-preview');
   prev.innerHTML='<div class="empty-state">計算中…</div>';
@@ -14358,9 +14376,8 @@ function axxStamp(id) {
 // 頁面開著時每 20 秒自動更新(分頁在背景或未開啟該頁時不打擾)
 setInterval(() => {
   if (document.hidden) return;
-  const p1 = document.getElementById('page-a201'), p2 = document.getElementById('page-a202');
-  if (p1 && p1.classList.contains('active')) a201Load();
-  if (p2 && p2.classList.contains('active')) a202Load();
+  const p0 = document.getElementById('page-a201a202');
+  if (p0 && p0.classList.contains('active')) { a201Load(); a202Load(); }
 }, 20000);
 function axxNowStr() {
   const d = new Date();
@@ -16937,18 +16954,20 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var rows=ovrAttCache[mk];
     if(!rows){
       var from=monthStartOf(dateStr), to=monthEndOf(dateStr);
-      var res=await sbFetchAll('/rest/v1/att_report?select=work_date,staff_name,work_hours&work_date=gte.'+from+'&work_date=lte.'+to);
+      var res=await sbFetchAll('/rest/v1/att_report?select=work_date,staff_name,work_hours,ot_hours&work_date=gte.'+from+'&work_date=lte.'+to);
       rows=Array.isArray(res.data)?res.data:[];
       ovrAttCache[mk]=rows;
     }
     var mStart=monthStartOf(dateStr);
-    var dayRows=0, dayHours=0, dayStaff={}, monRows=0, monHours=0;
+    var dayRows=0, dayHours=0, dayOt=0, dayStaff={}, monRows=0, monHours=0;
     for(var i=0;i<rows.length;i++){
       var a=rows[i], wd=a.work_date;
       if(wd>=mStart && wd<=dateStr){ monRows++; monHours+=num(a.work_hours); }
-      if(wd===dateStr){ dayRows++; dayHours+=num(a.work_hours); if(a.staff_name) dayStaff[a.staff_name]=1; }
+      if(wd===dateStr){ dayRows++; dayHours+=num(a.work_hours); dayOt+=num(a.ot_hours); if(a.staff_name && num(a.work_hours)>0) dayStaff[a.staff_name]=1; }
     }
-    return { dayRows:dayRows, dayHours:dayHours, dayStaff:Object.keys(dayStaff).length, monRows:monRows, monHours:monHours };
+    // 本日工數：與「出勤回報」KPI卡「本日工數」算法一致(工數×8 + 加班×6 換算回工)
+    var dayGong = dayHours/8 + dayOt/6;
+    return { dayRows:dayRows, dayHours:dayHours, dayOt:dayOt, dayGong:dayGong, dayStaff:Object.keys(dayStaff).length, monRows:monRows, monHours:monHours };
   }
 
   window.ovrInit=async function(){
@@ -17043,13 +17062,13 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     Object.keys(monAgg).forEach(function(k){ var o=monAgg[k]; var z=ovrZoneMap[k]||{}; mQty+=o.qty; mKg+=o.kg; mVal+=(o.kg/1000)*num(z.unit_price); });
 
     // 出勤
-    var att={dayRows:0,dayHours:0,dayStaff:0,monRows:0,monHours:0};
+    var att={dayRows:0,dayHours:0,dayOt:0,dayGong:0,dayStaff:0,monRows:0,monHours:0};
     try{ att=await ovrAtt(d); }catch(e){ console.warn('ovrAtt failed',e); }
 
-    // 單位計算(日)
+    // 單位計算(日)：與「當日出勤」KPI卡一致，改用 dayGong(工數，已含加班換算)
     var avgTonPerPc = tQty? (tKg/1000)/tQty : 0;      // 單支噸數
-    var manPerTon   = (tKg/1000)? att.dayRows/(tKg/1000) : 0; // 1噸工數
-    var tonPerMan   = att.dayRows? (tKg/1000)/att.dayRows : 0; // 1工噸數
+    var manPerTon   = (tKg/1000)? att.dayGong/(tKg/1000) : 0; // 1噸工數
+    var tonPerMan   = att.dayGong? (tKg/1000)/att.dayGong : 0; // 1工噸數
 
     // 柱樑比(月累積，不含水電)
     var boxT=cls.BOX.t, bhT=cls.BH.t, boxV=cls.BOX.v, bhV=cls.BH.v;
@@ -17068,7 +17087,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         kpi('k-val','當日產值',money(tVal),'元','<span>本月累積</span><b>'+money(mVal)+' 元</b>')
       + kpi('','當日噸數',t2(tKg/1000),'t','<span>本月累積</span><b>'+t2(mKg/1000)+' t</b>')
       + kpi('','當日支數',intf(tQty),'支','<span>本月累積</span><b>'+intf(mQty)+' 支</b>')
-      + kpi('k-att','當日出勤',intf(att.dayRows),'工','<span>'+intf(att.dayStaff)+' 人 · '+t2(att.dayHours)+' 時</span><b>月 '+intf(att.monRows)+' 工</b>');
+      + kpi('k-att','當日出勤',t2(att.dayGong),'工','<span>'+intf(att.dayStaff)+' 人 · '+t2(att.dayHours)+' 時</span><b>月 '+intf(att.monRows)+' 工</b>');
     var bandEl=document.getElementById('ovr-kpi-band'); if(bandEl) bandEl.innerHTML=band;
 
     // ── 右側:單位計算 / 柱樑比 / 出勤本月累積(精簡,配合單頁不捲動) ──
