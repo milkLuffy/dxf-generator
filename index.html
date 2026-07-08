@@ -883,8 +883,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .zone-list-table .zl-proc{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:13px;padding:5px 8px;outline:none;width:140px}
 .zone-list-table .zl-proc:focus{border-color:var(--accent2)}
 #layout-input-table td input, #layout-input-table td select{text-align:center}
-#layout-input-table .lt-ro{background:transparent;border:1px solid transparent;color:var(--text2);cursor:default;width:100%;box-sizing:border-box}
-#layout-input-table .lt-edit,#layout-input-table .lt-edit-sel,#layout-input-table td:nth-child(7) select{cursor:pointer;background:var(--bg4);border:1px solid var(--border-hi);border-radius:4px;color:var(--text);font-weight:600}
+/* 明細輸入表格字色:深色主題純白、淺色主題純黑(整表統一) */
+#layout-input-table{--lt-fg:#fff}
+[data-theme="light"] #layout-input-table{--lt-fg:#000}
+#layout-input-table .lt-ro{background:transparent;border:1px solid transparent;color:var(--lt-fg);cursor:default;width:100%;box-sizing:border-box}
+/* 可輸入儲存格:不加外框/底色(避免占空間),僅以粗體標示;外框只在游標進入編輯時才淡淡出現 */
+#layout-input-table .lt-edit,#layout-input-table .lt-edit-sel,#layout-input-table td:nth-child(7) select{cursor:pointer;background:transparent;border:1px solid transparent;border-radius:4px;color:var(--lt-fg);font-weight:700}
 #layout-input-table .lt-edit:hover,#layout-input-table .lt-edit-sel:hover,#layout-input-table td:nth-child(7) select:hover{border-color:var(--accent2)}
 /* 狀態下拉依狀態上底色(配置圖同色系) */
 #layout-input-table select.stcell-上線中{background:rgba(245,197,66,.16)!important}
@@ -893,15 +897,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 #layout-input-table select.stcell-HOLD{background:rgba(224,96,96,.16)!important}
 /* 所有可編輯欄(上線日期/工程編號/編號/出貨日期)統一用灰底樣式,
    移除藍色粗框+外陰影(原本會超出到標題列);hover / focus 只淡淡變藍邊,跟床位、數量一致 */
-#layout-input-table .lt-edit:not([readonly]){background:var(--bg4);border:1px solid var(--border-hi);box-shadow:none;border-radius:4px;color:var(--text);font-weight:600;cursor:text}
+#layout-input-table .lt-edit:not([readonly]){background:transparent;border:1px solid transparent;box-shadow:none;border-radius:4px;color:var(--lt-fg);font-weight:700;cursor:text}
 #layout-input-table .lt-edit:hover{border-color:var(--accent2);box-shadow:none}
 #layout-input-table .lt-edit:focus{border-color:var(--accent2);background:var(--bg3);box-shadow:none}
 #layout-input-table td:nth-child(6) input{min-width:0;width:100%;box-sizing:border-box;text-align:left;white-space:normal}
 #layout-input-table td:nth-child(6){white-space:normal}
 /* 明細輸入表格樣式比照構件總表(#zone-components .layout-table):表頭置中、儲存格內距與溢出處理一致 */
-#layout-input-table th{text-align:center;padding:8px 6px}
+#layout-input-table th{text-align:center;padding:8px 6px;position:sticky;top:0;z-index:4}
 #layout-input-table td{padding:3px 6px;overflow:hidden;text-overflow:ellipsis}
 #layout-input-table td:nth-child(6){overflow:visible;text-overflow:clip}
+/* 空白輸入列黏在表頭正下方,捲動長列表時永遠看得到 */
+#layout-input-table tr.lt-input-row td{position:sticky;top:var(--lt-head-h,33px);z-index:3;background:var(--bg2);box-shadow:inset 0 -1px 0 var(--border)}
+/* 內部捲動,讓表頭與輸入列的 sticky 生效(表格自身捲動而非整頁捲動) */
+#layout-input-wrap{max-height:calc(100vh - 260px)}
 /* 每日產量篩選工具列(比照共通編號頁的樣式) */
 #page-daily .toolbar{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
 #page-daily .toolbar select,#page-daily .toolbar input[type=text],#page-daily .toolbar input[type=date]{padding:6px 10px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;font-family:var(--mono);color:var(--text);background:var(--bg3);outline:none;transition:border-color .2s}
@@ -1739,7 +1747,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <!-- 明細輸入 -->
         <div id="layout-input-panel">
           <div class="layout-toolbar">
-            <span class="layout-hint">在最後一列輸入,按 Enter 或 Tab 跳下一格;構件編號輸入會自動帶出 BOM 資料</span>
+            <span class="layout-hint">在最上方那一列輸入,完成後該列往下沉;資料列比照 Excel:方向鍵移動、Enter/雙擊 編輯、Delete 清除、Ctrl+C/V 複製貼上</span>
             <div style="display:flex;gap:8px">
               <button class="btn-sm btn-export" onclick="layoutUndo()" title="復原 (Ctrl+Z)">↶ 復原</button>
               <button class="btn-sm btn-export" onclick="layoutRedo()" title="重做 (Ctrl+Y)">↷ 重做</button>
@@ -1750,7 +1758,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
               <button class="btn-sm btn-export" id="layout-input-expand-btn" onclick="toggleLayoutInputExpand()">收合表格 ▲</button>
             </div>
           </div>
-          <div class="layout-table-wrap" id="layout-input-wrap" style="max-height:none">
+          <div class="layout-table-wrap" id="layout-input-wrap">
             <table class="layout-table" id="layout-input-table" onkeydown="layoutTableKey(event)">
               <thead id="layout-input-head"></thead>
               <tbody id="layout-input-body"></tbody>
@@ -8650,7 +8658,9 @@ function toggleZoneCompExpand() {
 let layoutInputExpanded = true;
 function applyLayoutInputExpand() {
   const wrap = document.getElementById('layout-input-wrap');
-  if (wrap) wrap.style.maxHeight = layoutInputExpanded ? 'none' : '';
+  // 兩種模式都讓表格「內部捲動」,表頭與置頂輸入列的 sticky 才會生效;
+  // 展開=較高(用 CSS 的 max-height),收合=較矮
+  if (wrap) wrap.style.maxHeight = layoutInputExpanded ? '' : '40vh';
 }
 function toggleLayoutInputExpand() {
   layoutInputExpanded = !layoutInputExpanded;
@@ -10716,7 +10726,7 @@ async function layoutInit() {
   layoutRows.forEach(layoutApplyDailyStatus);
   pagerReset('layout');
   layoutEnsureBlankRow();
-  pgState.layout = 999999;   // 開啟時直接跳到最後一頁,讓空白列可見
+  pgState.layout = 0;   // 開啟時停在第一頁;空白輸入列固定顯示在最上方
   renderLayoutInput();
   renderLayoutStats();
 }
@@ -10798,12 +10808,12 @@ function layoutSwitchTab(tab) {
   });
   if (tab==='chart') renderLayoutChart();
   if (tab==='virtual') renderVirtualChart();
-  if (tab==='input') { layoutEnsureBlankRow(); pgState.layout = 999999; renderLayoutInput(); }
+  if (tab==='input') { layoutEnsureBlankRow(); pgState.layout = 0; renderLayoutInput(); }
 }
 
 // 確保「明細輸入」表尾隨時有一列空白列可供輸入;若已存在未儲存的空白列則直接沿用,避免產生多列空白
 function layoutEnsureBlankRow() {
-  let idx = layoutRows.findIndex(r => !r.id && !r.work_date && !r.part_no && !r.proj_num);
+  let idx = layoutRows.findIndex(r => layoutRowIsBlank(r));
   if (idx < 0) {
     layoutRows.push({
       work_date:'', part_no:'', proj_num:'', zone_code:'',
@@ -10818,7 +10828,7 @@ function layoutEnsureBlankRow() {
 function layoutAddRow() {
   layoutSnapshotNow();
   layoutEnsureBlankRow();
-  pgState.layout = 999999;   // 跳到最後一頁,讓空白列可見
+  pgState.layout = 0;   // 回到第一頁;空白輸入列固定顯示在最上方
   renderLayoutInput();
 }
 
@@ -10938,8 +10948,8 @@ const TBL_PAGE_SIZE = 200;              // 每頁筆數
 const pgState = { layout:0, comp:0, daily:0 };
 function pagerReset(name){ pgState[name] = 0; }
 // 依目前頁碼切出該頁資料;回傳 {slice, page, pages, total, size, name}
-function pagerSlice(name, arr){
-  const size = TBL_PAGE_SIZE, total = arr.length;
+function pagerSlice(name, arr, sizeOverride){
+  const size = sizeOverride || TBL_PAGE_SIZE, total = arr.length;
   const pages = Math.max(1, Math.ceil(total / size));
   if (pgState[name] >= pages) pgState[name] = pages - 1;
   if (pgState[name] < 0) pgState[name] = 0;
@@ -10966,6 +10976,12 @@ function pagerGo(name, delta){
   else if (name==='daily') renderDaily();
 }
 
+// 判斷是否為「最上方的空白輸入列」(尚無 id、也還沒填任何主要欄位;含床位/出貨日期都算已有內容,
+// 這樣貼上單一欄位(如床位)溢出而新建的列不會被誤判成空白列而卡在最上方)
+function layoutRowIsBlank(row) {
+  return row && !row.id && !row.work_date && !row.part_no && !row.proj_num && !row.bed && !row.ship_date;
+}
+
 function renderLayoutInput() {
   renderLayoutHead();
   const tbody = document.getElementById('layout-input-body');
@@ -10973,17 +10989,47 @@ function renderLayoutInput() {
   // 先蒐集通過篩選的列(保留在 layoutRows 的絕對索引 i,供編輯/刪除等以索引操作的函式使用)
   const visIdx = [];
   layoutRows.forEach((row, i) => { if (rowVisible(row)) visIdx.push(i); });
-  const pg = pagerSlice('layout', visIdx);
-  pg.slice.forEach(i => {
+  // 空白輸入列固定畫在最上方;已填的資料列排在下方(輸入完成後自然往下沉)
+  const blankIdx = visIdx.filter(i => layoutRowIsBlank(layoutRows[i]));
+  let dataIdx  = visIdx.filter(i => !layoutRowIsBlank(layoutRows[i]));
+  // 「已出貨」檢視:改為由新到舊排序,每頁 50 筆(保留分頁,可往前翻更舊的)
+  const shippedView = layoutStatFilter === 'shipped';
+  if (shippedView) {
+    dataIdx.sort((a, b) => {
+      const da = layoutRows[a].ship_date || '', db = layoutRows[b].ship_date || '';
+      if (da !== db) return da < db ? 1 : -1;          // 出貨日期新(大)者在前
+      return (layoutRows[b].id || 0) - (layoutRows[a].id || 0);
+    });
+  }
+  blankIdx.forEach(i => { html += layoutRowHtml(i); });
+  const pg = pagerSlice('layout', dataIdx, shippedView ? 50 : undefined);
+  pg.slice.forEach(i => { html += layoutRowHtml(i); });
+  if (!html) html = '<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:32px;font-family:var(--mono);font-size:13px">🔍 查無符合的資料</td></tr>';
+  else html += pagerRow(pg, 12);
+  tbody.innerHTML = html;
+  const lt = document.getElementById('layout-input-table');
+  if (lt) {
+    tblInitSelection(lt);
+    // 讓置頂輸入列的 sticky top 對齊實際表頭高度(表頭高度會隨字級/換行變動)
+    const thead = document.getElementById('layout-input-head');
+    if (thead && thead.offsetHeight) lt.style.setProperty('--lt-head-h', thead.offsetHeight + 'px');
+  }
+}
+
+// 產生單一列的 HTML(供 renderLayoutInput 依「空白列在上、資料列在下」的順序組表)
+function layoutRowHtml(i) {
+    let html = '';
     const row = layoutRows[i];
     const bedOpts = '<option value=""></option>' + BEDS.map(b => '<option value="'+b+'"'+(row.bed===b?' selected':'')+'>'+b+'</option>').join('');
     const statusOpts = STATUSES.map(s => '<option value="'+s+'"'+(row.status===s?' selected':'')+'>'+s+'</option>').join('');
-    const RO = ' readonly';
-    html += '<tr data-key="'+row._key+'">';
+    // 資料列的文字格預設唯讀(Excel 式:方向鍵漫遊選取,Enter 進入編輯);最上方空白輸入列保持可直接打字
+    const RO = layoutRowIsBlank(row) ? '' : ' readonly';
+    // 空白輸入列固定黏在表頭下方(捲動時永遠看得到)
+    html += '<tr data-key="'+row._key+'"'+(layoutRowIsBlank(row) ? ' class="lt-input-row"' : '')+'>';
     // 可編輯: 上線日期/工程編號/編號/數量/床位/出貨日期 (Enter 才進入編輯)
     html += '<td><input type="date" class="lt-edit" value="'+(row.work_date||'')+'" onchange="layoutEdit('+i+',\'work_date\',this.value)"/></td>';
-    html += '<td><input type="text" class="lt-edit" value="'+(row.proj_num||'')+'" placeholder="工程編號" oninput="layoutProjInput('+i+',this)" onblur="setTimeout(layoutHideSuggest,200)" autocomplete="off"/></td>';
-    html += '<td><input type="text" class="lt-edit" value="'+(row.part_no||'')+'" placeholder="構件編號" oninput="layoutPartInput('+i+',this)" onblur="layoutPartBlur('+i+',this)" autocomplete="off"/></td>';
+    html += '<td><input type="text" class="lt-edit"'+RO+' value="'+(row.proj_num||'')+'" placeholder="工程編號" oninput="layoutProjInput('+i+',this)" onblur="setTimeout(layoutHideSuggest,200)" autocomplete="off"/></td>';
+    html += '<td><input type="text" class="lt-edit"'+RO+' value="'+(row.part_no||'')+'" placeholder="構件編號" oninput="layoutPartInput('+i+',this)" onblur="layoutPartBlur('+i+',this)" autocomplete="off"/></td>';
     // 唯讀
     html += '<td><input type="text" class="lt-ro" readonly value="'+(row.zone_code||'')+'"/></td>';
     html += '<td><input type="text" class="lt-ro" readonly value="'+(row.drawing_no||'')+'"/></td>';
@@ -10999,15 +11045,10 @@ function renderLayoutInput() {
       html += '<td><select class="lt-edit-sel stcell-'+row.status+'" onchange="this.className=\'lt-edit-sel stcell-\'+this.value;layoutEdit('+i+',\'status\',this.value)">'+statusOpts+'</select></td>';
     else
       html += '<td><input type="text" class="lt-ro" readonly value="-" style="text-align:center;color:var(--text3)"/></td>';
-    html += '<td><input type="date" class="lt-edit" value="'+(row.ship_date||'')+'" onchange="layoutEdit('+i+',\'ship_date\',this.value)"/></td>';
+    html += '<td><input type="date" class="lt-edit" value="'+(row.ship_date||'')+'" onchange="layoutEdit('+i+',\'ship_date\',this.value)" onblur="layoutShipDateBlur()"/></td>';
     html += '<td class="del-col"><button class="btn-del-row" onclick="layoutDelRow('+i+')">✕</button></td>';
     html += '</tr>';
-  });
-  if (!html) html = '<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:32px;font-family:var(--mono);font-size:13px">🔍 查無符合的資料</td></tr>';
-  else html += pagerRow(pg, 12);
-  tbody.innerHTML = html;
-  const lt = document.getElementById('layout-input-table');
-  if (lt) tblInitSelection(lt);
+    return html;
 }
 
 function layoutFilterInput() {
@@ -11025,11 +11066,22 @@ function layoutEdit(i, field, val) {
   else if (field !== 'ship_date' && field !== 'status') layoutApplyDailyStatus(layoutRows[i]);
   // ship_date filled -> auto status 已出貨;清空出貨日期 -> 取消已出貨,回「上線中」
   if (field === 'ship_date') {
-    if (val) { layoutRows[i].status = '已出貨'; renderLayoutInput(); }
-    else if (layoutRows[i].status === '已出貨') { layoutRows[i].status = '上線中'; renderLayoutInput(); }
+    if (val) layoutRows[i].status = '已出貨';
+    else if (layoutRows[i].status === '已出貨') layoutRows[i].status = '上線中';
+    // 只就地更新該列狀態下拉的外觀,「不」整表重繪。整表重繪(tbody.innerHTML=…)會摧毀正在操作中的
+    // 日期選擇器,手機上會導致一點開就被鎖成今天、無法挑日期。整列的移動改到 onblur(選擇器關閉後)再處理。
+    const tr = document.querySelector('#layout-input-body tr[data-key="' + layoutRows[i]._key + '"]');
+    const stSel = tr ? tr.querySelector('select[class*="stcell-"]') : null;
+    if (stSel) { stSel.value = layoutRows[i].status; stSel.className = 'lt-edit-sel stcell-' + layoutRows[i].status; }
   }
   if (field === 'status' || field === 'bed' || field === 'ship_date') renderLayoutStats();
   layoutMarkDirty(i);   // 自動存
+}
+
+// 出貨日期選擇器關閉後才整表重繪:已出貨的列會依此離開「作用中」清單(避免在選擇器開啟時重繪而鎖死日期)
+function layoutShipDateBlur() {
+  renderLayoutInput();
+  renderLayoutStats();
 }
 
 function layoutDelRow(i) {
@@ -11066,9 +11118,8 @@ function layoutTableKey(e) {
   if (e.shiftKey && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(e.key) >= 0) return;
   // Arrow key navigation (Excel-like) — only when not editing mid-text
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(e.key) >= 0) {
-    tblClearSel(); tblSel.anchor = null; tblSel.focus = null;
     const el = e.target;
-    const isText = el.tagName === 'INPUT' && (el.type === 'text');
+    const isText = el.tagName === 'INPUT' && (el.type === 'text') && !el.hasAttribute('readonly');
     // For text inputs, let left/right move cursor unless at boundary
     if (isText && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
       const atStart = el.selectionStart === 0 && el.selectionEnd === 0;
@@ -11076,6 +11127,8 @@ function layoutTableKey(e) {
       if (e.key === 'ArrowLeft' && !atStart) return;
       if (e.key === 'ArrowRight' && !atEnd) return;
     }
+    // 漫遊時清掉多格選取,改成「單格選取跟著目前格走」(否則 Ctrl+C / Delete 會找不到選取格)
+    tblClearSel(); tblSel.anchor = null; tblSel.focus = null;
     const td = el.closest('td');
     const tr = el.closest('tr');
     if (!td || !tr) return;
@@ -11086,10 +11139,13 @@ function layoutTableKey(e) {
     else if (e.key === 'ArrowDown') targetTr = tr.nextElementSibling;
     else if (e.key === 'ArrowLeft') targetIdx = cellIdx - 1;
     else if (e.key === 'ArrowRight') targetIdx = cellIdx + 1;
-    if (targetTr && targetTr.children[targetIdx]) {
-      const inp = targetTr.children[targetIdx].querySelector('input,select');
-      if (inp) { inp.focus(); if (inp.select) try{inp.select();}catch(_){} }
+    let tgtTd = (targetTr && targetTr.children[targetIdx]) ? targetTr.children[targetIdx] : td;
+    if (tgtTd !== td) {
+      const inp = tgtTd.querySelector('input,select');
+      if (inp) { inp.focus(); if (inp.select && inp.hasAttribute('readonly')) try{inp.select();}catch(_){} }
     }
+    const tbl2 = td.closest('.layout-table');
+    if (tbl2) { tblSel.table = tbl2; tblSel.anchor = cellRC(tgtTd); tblSel.focus = tblSel.anchor; tblApplySel(); }
     return;
   }
   if (e.key !== 'Enter') return;
@@ -11100,6 +11156,8 @@ function layoutTableKey(e) {
   const key = parseInt(tr.getAttribute('data-key'));
   const i = layoutRows.findIndex(r => r._key === key);
   if (i < 0) return;
+  // 這一列是不是「最上方的空白輸入列」(尚未從 BOM 帶出資料、也還沒存進資料庫)
+  const wasInputRow = !layoutRows[i].id && !layoutRows[i].zone_code && !layoutRows[i].drawing_no && !layoutRows[i].work_date;
   // Auto-fill this row from BOM by part_no (+proj_num if given)
   const filled = layoutAutofillRow(i);
   layoutHideSuggest();
@@ -11112,21 +11170,22 @@ function layoutTableKey(e) {
     return;
   }
   if (filled) {
-    // re-render to show filled values, keep focus flow: move to next row same as before
     renderLayoutInput();
-    const tbody = document.getElementById('layout-input-body');
-    // find this row again
-    const sameTr = tbody.querySelector('tr[data-key="'+key+'"]');
-    const isLast = sameTr === tbody.lastElementChild;
-    if (isLast) {
-      layoutAddRow();
+    if (wasInputRow) {
+      // 剛完成的列往下沉;於最上方補一列新的空白輸入列,並把焦點移到它的「工程編號」
+      layoutEnsureBlankRow();
+      pgState.layout = 0;
+      renderLayoutInput();
       setTimeout(() => {
-        const rows = tbody.querySelectorAll('tr');
-        const newRow = rows[rows.length-1];
-        const inp = newRow ? newRow.querySelector('input[type=text]') : null;
+        const tbody = document.getElementById('layout-input-body');
+        const firstRow = tbody ? tbody.firstElementChild : null;
+        const inp = firstRow ? firstRow.querySelector('.lt-edit[type=text]') : null;
         if (inp) inp.focus();
       }, 30);
     } else {
+      // 編輯既有列 → 焦點移到下一列(維持原行為)
+      const tbody = document.getElementById('layout-input-body');
+      const sameTr = tbody.querySelector('tr[data-key="'+key+'"]');
       const nextTr = sameTr ? sameTr.nextElementSibling : null;
       if (nextTr) { const inp = nextTr.querySelector('input[type=text]'); if (inp) inp.focus(); }
     }
@@ -11138,21 +11197,11 @@ function layoutTableKey(e) {
     layoutRemoveIncompleteRow(i, '查無此構件編號「' + bad + '」，該列已移除');
     return;
   }
-  // empty part - just move/add row
+  // 構件編號為空:若是最上方空白輸入列就留在原地,不新增列;編輯既有列則移到下一列
+  if (wasInputRow) { layoutEnsureBlankRow(); return; }
   const tbody = document.getElementById('layout-input-body');
-  const isLast = tr === tbody.lastElementChild;
-  if (isLast) {
-    layoutAddRow();
-    setTimeout(() => {
-      const rows = tbody.querySelectorAll('tr');
-      const newRow = rows[rows.length-1];
-      const inp = newRow ? newRow.querySelector('input[type=text]') : null;
-      if (inp) inp.focus();
-    }, 30);
-  } else {
-    const next = tr.nextElementSibling;
-    if (next) { const inp = next.querySelector('input[type=text]'); if (inp) inp.focus(); }
-  }
+  const next = tr.nextElementSibling;
+  if (next) { const inp = next.querySelector('input[type=text]'); if (inp) inp.focus(); }
 }
 
 function layoutClearRowData(i) {
@@ -13885,24 +13934,14 @@ function layoutSelectRangeByKeys(startKey, endKey, startC, endC) {
 function layoutPasteGrid(cells2d, anchor) {
   layoutSnapshotNow();
   const tbody = document.getElementById('layout-input-body');
-  const trs = Array.from(tbody.children);
-  // map visual anchor row -> layoutRows index via data-key
-  const startKeyTr = trs[anchor.r];
-  let startIdx = 0;
-  if (startKeyTr && startKeyTr.dataset.key) {
-    startIdx = layoutRows.findIndex(r => String(r._key) === startKeyTr.dataset.key);
-    if (startIdx < 0) startIdx = 0;
-  } else {
-    startIdx = anchor.r;
-  }
+  const domRows = Array.from(tbody.children);
   const startC = anchor.c;
   const affected = [];
-  cells2d.forEach((line, dr) => {
-    const ri = startIdx + dr;
-    // create row if needed
-    while (ri >= layoutRows.length) {
-      layoutRows.push({ work_date:'', part_no:'', proj_num:'', zone_code:'', drawing_no:'', spec:'', qty:1, bed:'', status:'上線中', inspected:false, inspect_no:'', done_date:'', net_weight:'', ship_date:'', _key: ++layoutRowSeq });
-    }
+  const newBlankRow = () => {
+    layoutRows.push({ work_date:'', part_no:'', proj_num:'', zone_code:'', drawing_no:'', spec:'', qty:1, bed:'', status:'上線中', inspected:false, inspect_no:'', done_date:'', net_weight:'', ship_date:'', _key: ++layoutRowSeq });
+    return layoutRows.length - 1;
+  };
+  const fillRow = (ri, line) => {
     const row = layoutRows[ri];
     line.forEach((val, dc) => {
       const colIdx = startC + dc;
@@ -13913,7 +13952,31 @@ function layoutPasteGrid(cells2d, anchor) {
       else row[key] = val;
     });
     affected.push(ri);
-  });
+  };
+  // 錨點列 -> layoutRows 索引(用 data-key,不用陣列順序;因為最上方空白輸入列在陣列尾端、畫面卻在最上)
+  const anchorTr = domRows[anchor.r];
+  const anchorIdx = (anchorTr && anchorTr.dataset && anchorTr.dataset.key)
+    ? layoutRows.findIndex(r => String(r._key) === anchorTr.dataset.key) : -1;
+  if (anchorIdx < 0 || layoutRowIsBlank(layoutRows[anchorIdx])) {
+    // 從最上方空白輸入列貼上 = 逐列「新建」資料列,不覆蓋既有資料
+    let ri = anchorIdx >= 0 ? anchorIdx : newBlankRow();
+    cells2d.forEach((line, dr) => { if (dr > 0) ri = newBlankRow(); fillRow(ri, line); });
+  } else {
+    // 從既有資料列貼上 = 依「畫面上的資料列順序」往下填,超出最後一列才新增(絕不寫進最上方空白列)
+    const visDataIdx = [];
+    domRows.forEach(tr => {
+      if (!tr.dataset || !tr.dataset.key) return;   // 略過分頁列
+      const idx = layoutRows.findIndex(r => String(r._key) === tr.dataset.key);
+      if (idx >= 0 && !layoutRowIsBlank(layoutRows[idx])) visDataIdx.push(idx);
+    });
+    let startVis = visDataIdx.indexOf(anchorIdx);
+    if (startVis < 0) startVis = 0;
+    cells2d.forEach((line, dr) => {
+      const pos = startVis + dr;
+      const ri = pos < visDataIdx.length ? visDataIdx[pos] : newBlankRow();
+      fillRow(ri, line);
+    });
+  }
   // autofill rows that have part_no (auto-bring BOM info without Enter)
   affected.forEach(ri => {
     const row = layoutRows[ri];
@@ -13930,6 +13993,7 @@ function layoutPasteGrid(cells2d, anchor) {
   const maxCols = cells2d.reduce((m, l) => Math.max(m, l.length), 1);
   const lastC = Math.min(startC + maxCols - 1, LAYOUT_COLS.length - 1);
   const lastKey = layoutRows[lastRi] ? layoutRows[lastRi]._key : null;
+  layoutEnsureBlankRow();   // 貼上會把最上方的空白列填掉,補一列新的空白輸入列回到最上方
   renderLayoutInput();
   renderLayoutStats();
   // 貼上後「不要」自動框選整段範圍,而是把選取狀態指回「最後一個被貼上的格子」這單一格,
@@ -13957,6 +14021,12 @@ document.addEventListener('keydown', function(e) {
   if (!t || (t.tagName !== 'INPUT' && t.tagName !== 'SELECT')) return;
   const table = t.closest('#layout-input-table');
   if (!table) return;
+
+  // Excel 式 Delete:清除目前選取儲存格的內容(正在編輯文字中除外,那時交給瀏覽器刪字)
+  if (e.key === 'Delete') {
+    const editingTxt = t.tagName === 'INPUT' && t.type === 'text' && !t.hasAttribute('readonly');
+    if (!editingTxt) { e.preventDefault(); e.stopPropagation(); layoutDeleteSelection(t); return; }
+  }
 
   // #5 SELECT (床位/數量): Excel 式操作
   if (t.tagName === 'SELECT') {
@@ -13986,12 +14056,17 @@ document.addEventListener('keydown', function(e) {
   if (e.shiftKey && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(e.key) >= 0) {
     e.preventDefault(); layoutExtendSel(t, e.key); return;
   }
+  // Escape = 取消編輯,還原唯讀(必須在下面的「編輯中就放行」之前處理,否則永遠到不了)
+  if (e.key === 'Escape' && editing) {
+    e.preventDefault(); e.stopPropagation(); t.setAttribute('readonly',''); t.focus(); return;
+  }
   if (isEditable && !t.hasAttribute('readonly')) return;
 
   if (e.key === 'Enter') {
     if (isEditable && t.hasAttribute('readonly')) {
-      // enter edit mode
+      // enter edit mode(阻止冒泡,否則 layoutTableKey 會把這個 Enter 當成「完成整列」處理)
       e.preventDefault();
+      e.stopPropagation();
       t.removeAttribute('readonly');
       t.focus();
       if (t.type === 'date' && t.showPicker) { try { t.showPicker(); } catch(err){} }
@@ -14005,9 +14080,6 @@ document.addEventListener('keydown', function(e) {
       layoutMoveCell(t, 1, 0);
       return;
     }
-  }
-  if (e.key === 'Escape' && editing) {
-    e.preventDefault(); t.setAttribute('readonly',''); t.focus(); return;
   }
   // Arrow roam only when NOT editing (readonly) and not holding shift
   if (!e.shiftKey && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(e.key) >= 0) {
@@ -14083,6 +14155,165 @@ function layoutMoveCell(input, dr, dc) {
   }
 }
 
+// ── Excel 式 Delete / 單格複製貼上(明細輸入表)──
+// 瀏覽器的 copy/paste「事件」在 <select>(床位/數量/狀態) 與唯讀 input 上不會觸發,
+// 因此單格複製貼上改由 keydown 直接攔截 Ctrl+C / Ctrl+V 處理,並保留一份內部鏡像作為
+// 剪貼簿讀取權限被拒時的備援(表內互貼永遠可用)。
+let layoutClipMirror = '';
+
+// 目前的選取矩形;沒有拖曳選取時,退回「作用中儲存格」當 1x1 矩形
+function layoutSelRectOrCell(table, active) {
+  let rect = tblSelRect(table);
+  if (rect) return rect;
+  const td = active && active.closest ? active.closest('#layout-input-table td') : null;
+  if (!td) return null;
+  const rc = cellRC(td);
+  return { r1: rc.r, r2: rc.r, c1: rc.c, c2: rc.c };
+}
+
+function layoutSerializeSel(table, active) {
+  const rect = layoutSelRectOrCell(table, active);
+  if (!rect) return null;
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.children);
+  const lines = [];
+  for (let r = rect.r1; r <= rect.r2; r++) {
+    const cells = rows[r] ? Array.from(rows[r].children) : [];
+    const vals = [];
+    for (let c = rect.c1; c <= rect.c2; c++) {
+      const cell = cells[c];
+      const inp = cell ? cell.querySelector('input,select') : null;
+      vals.push(inp ? inp.value : (cell ? cell.textContent.trim() : ''));
+    }
+    lines.push(vals.join('\t'));
+  }
+  return lines.join('\n');
+}
+
+// 把一段文字(可含 \t / \n)貼進明細輸入表,行為與原生 paste 事件相同(單值可填滿選取範圍)
+function layoutPasteFromText(text, active) {
+  const table = document.getElementById('layout-input-table');
+  if (!table || !text) return;
+  tblSel.table = table;
+  const selRect = layoutSelRectOrCell(table, active);
+  if (!selRect) return;
+  const grid = String(text).replace(/\r/g, '').split('\n');
+  while (grid.length > 1 && grid[grid.length - 1] === '') grid.pop();
+  let cells2d = grid.map(l => l.split('\t'));
+  if (cells2d.length === 1 && cells2d[0].length === 1 && (selRect.r2 > selRect.r1 || selRect.c2 > selRect.c1)) {
+    const val = cells2d[0][0];
+    cells2d = [];
+    for (let r = selRect.r1; r <= selRect.r2; r++) {
+      const line = [];
+      for (let c = selRect.c1; c <= selRect.c2; c++) line.push(val);
+      cells2d.push(line);
+    }
+  }
+  layoutPasteGrid(cells2d, { r: selRect.r1, c: selRect.c1 });
+}
+
+// Excel 式 Delete:清除選取範圍內可編輯欄位的內容。
+// 上線日期/床位/出貨日期 → 清空(出貨日期清空連動狀態回「上線中」);
+// 工程編號/構件編號被刪 → 比照既有規則整列移除(超過 5 列先確認);其餘欄位不動。
+function layoutDeleteSelection(activeEl) {
+  const table = document.getElementById('layout-input-table');
+  if (!table) return;
+  tblSel.table = table;
+  const rect = layoutSelRectOrCell(table, activeEl);
+  if (!rect) return;
+  const tbody = document.getElementById('layout-input-body');
+  const rows = Array.from(tbody.children);
+  // 第一輪:只蒐集要做什麼,先不動資料(移除多列前要先確認)
+  const clears = [];            // {key(row._key), fields:[...]}
+  const removeKeys = new Set(); // 要整列移除的 row._key
+  for (let r = rect.r1; r <= rect.r2; r++) {
+    const tr = rows[r];
+    if (!tr || !tr.dataset || !tr.dataset.key) continue;
+    const idx = layoutRows.findIndex(x => String(x._key) === tr.dataset.key);
+    if (idx < 0) continue;
+    const row = layoutRows[idx];
+    const fields = [];
+    for (let c = rect.c1; c <= rect.c2 && c < LAYOUT_COLS.length; c++) {
+      const key = LAYOUT_COLS[c].key;
+      if (key === 'work_date' || key === 'bed' || key === 'ship_date') { if (row[key]) fields.push(key); }
+      else if ((key === 'proj_num' || key === 'part_no') && !layoutRowIsBlank(row)) removeKeys.add(row._key);
+    }
+    if (fields.length) clears.push({ key: row._key, fields });
+  }
+  if (!clears.length && !removeKeys.size) return;
+  if (removeKeys.size > 5 && !confirm('將移除 ' + removeKeys.size + ' 列資料(含資料庫紀錄),確定?')) return;
+  layoutSnapshotNow();   // 支援 Ctrl+Z 復原
+  clears.forEach(cl => {
+    if (removeKeys.has(cl.key)) return;   // 整列要移除的不用再清欄位
+    const i = layoutRows.findIndex(x => x._key === cl.key);
+    if (i < 0) return;
+    cl.fields.forEach(f => {
+      layoutRows[i][f] = '';
+      if (f === 'ship_date' && layoutRows[i].status === '已出貨') layoutRows[i].status = '上線中';
+    });
+    layoutMarkDirty(i);
+  });
+  if (removeKeys.size) {
+    layoutRows.filter(r0 => removeKeys.has(r0._key) && r0.id)
+      .forEach(r0 => { try { sbFetch('/rest/v1/layout_items?id=eq.' + r0.id, {method:'DELETE'}); } catch(_){} });
+    layoutRows = layoutRows.filter(r0 => !removeKeys.has(r0._key));
+  }
+  layoutEnsureBlankRow();
+  tblClearSel(); tblSel.anchor = null; tblSel.focus = null;
+  renderLayoutInput();
+  renderLayoutStats();
+  if (removeKeys.size) layoutToast('已移除 ' + removeKeys.size + ' 列(可 Ctrl+Z 復原畫面,資料庫紀錄已刪除)');
+}
+
+// keydown 攔截 Ctrl/Cmd+C、Ctrl/Cmd+V(僅明細輸入表)
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  const k = (e.key || '').toLowerCase();
+  if (k !== 'c' && k !== 'v') return;
+  const active = document.activeElement;
+  const table = active && active.closest ? active.closest('#layout-input-table') : null;
+  if (!table) return;
+  const isTextEditing = active.tagName === 'INPUT' && active.type === 'text' && !active.hasAttribute('readonly');
+  if (k === 'c') {
+    // 正在編輯文字且真的選了一段文字 → 讓瀏覽器複製那段文字
+    if (isTextEditing && active.selectionStart !== active.selectionEnd) return;
+    const text = layoutSerializeSel(table, active);
+    if (text == null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    layoutClipMirror = text;
+    try { navigator.clipboard.writeText(text).catch(() => {}); } catch (_) {}
+    setTimeout(() => { tblClearSel(); tblSel.anchor = null; tblSel.focus = null; }, 100);
+  } else {
+    // 文字編輯中 → 原生 paste 事件會處理(維持既有流程,含從 Excel 貼入)
+    if (isTextEditing) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const doPaste = txt => { if (txt) layoutPasteFromText(txt, active); };
+    try { navigator.clipboard.readText().then(t => doPaste(t || layoutClipMirror)).catch(() => doPaste(layoutClipMirror)); }
+    catch (_) { doPaste(layoutClipMirror); }
+  }
+}, true);
+
+// 雙擊唯讀文字格 = 進入編輯(與 Enter 相同)
+document.addEventListener('dblclick', e => {
+  const t = e.target;
+  if (!t || t.tagName !== 'INPUT' || !t.classList.contains('lt-edit') || !t.hasAttribute('readonly')) return;
+  if (!t.closest('#layout-input-table')) return;
+  t.removeAttribute('readonly');
+  t.focus();
+  try { t.setSelectionRange(t.value.length, t.value.length); } catch (_) {}
+});
+
+// 離開編輯中的文字格 → 還原唯讀(資料列才需要;最上方空白輸入列保持可直接打字)
+document.addEventListener('focusout', e => {
+  const t = e.target;
+  if (!t || t.tagName !== 'INPUT' || t.type !== 'text' || !t.classList.contains('lt-edit')) return;
+  if (!t.closest('#layout-input-table')) return;
+  const tr = t.closest('tr');
+  if (tr && !tr.classList.contains('lt-input-row')) t.setAttribute('readonly', '');
+});
+
 // #8 Shift+Arrow extends rectangular cell selection
 document.addEventListener('keydown', e => {
   if (!e.shiftKey) return;
@@ -14121,6 +14352,8 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keydown', e => {
   if (e.key !== 'Delete' && e.key !== 'Backspace') return;
   if (!tblSel.table) return;
+  // 明細輸入表由 layoutDeleteSelection(capture 階段)專責處理,這裡不要再清一次
+  if (tblSel.table.id === 'layout-input-table') return;
   const selCells = tblSel.table.querySelectorAll('td.cell-selected');
   if (selCells.length <= 1) return; // single/no selection - normal editing
   // don't fire if user is editing text in a single focused input within selection of 1
