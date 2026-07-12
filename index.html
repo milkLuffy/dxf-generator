@@ -222,6 +222,70 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .stat-icon{font-size:22px;margin-bottom:8px}
 .stat-value{font-family:'Bebas Neue',sans-serif;font-size:40px;line-height:1;margin-bottom:4px}
 .stat-label{font-size:12px;color:var(--text3)}
+/* 主頁:原本灰色的次要文字改為 深色主題純白 / 淺色主題純黑(覆寫灰色變數,連 inline style 一併生效) */
+#page-dashboard{ --text2:#ffffff; --text3:#ffffff; }
+[data-theme="light"] #page-dashboard{ --text2:#000000; --text3:#000000; }
+/* BOM 列表/卡片 顯示切換 */
+.bom-view-toggle{display:inline-flex;border:1px solid var(--border);border-radius:var(--rad);overflow:hidden;flex:none}
+.bom-vbtn{background:var(--bg2);color:var(--text2);border:none;padding:7px 12px;font-size:13px;cursor:pointer;font-family:var(--sans);white-space:nowrap}
+.bom-vbtn+.bom-vbtn{border-left:1px solid var(--border)}
+.bom-vbtn.active{background:var(--accent2);color:#fff}
+.bom-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.bom-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:14px 15px;display:flex;flex-direction:column;gap:10px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
+.bom-card:hover{border-color:var(--accent);box-shadow:0 4px 18px rgba(0,0,0,.18)}
+.bom-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.bom-card-num{font-family:var(--mono);font-weight:800;font-size:22px;letter-spacing:.02em;color:var(--accent2);line-height:1.1}
+.bom-card-name{font-weight:600;color:var(--text);font-size:14px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:2.7em}
+.bom-card-props{display:flex;gap:8px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--border)}
+.bom-cp{flex:1;min-width:96px;background:var(--bg3);border-radius:8px;padding:6px 9px}
+.bom-cp i{display:block;font-style:normal;font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:2px}
+.bom-cp b{font-size:12.5px;font-weight:600;color:var(--text)}
+.bom-card-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:2px}
+/* 小卡:只顯示工程編號 */
+.bom-card-grid.mini{grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.bom-mini{background:var(--bg2);border:1px solid var(--border);border-left:4px solid #8e8e93;border-radius:var(--rad);padding:12px 10px;text-align:center;font-family:var(--mono);font-weight:800;font-size:16px;color:var(--accent2);cursor:pointer;transition:border-color .12s,box-shadow .12s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bom-mini:hover{border-color:var(--accent);box-shadow:0 3px 12px rgba(0,0,0,.18)}
+.bom-mini.st-進行中{border-left-color:var(--green)}
+.bom-mini.st-未開始{border-left-color:var(--yellow)}
+/* 主頁頂列:在職人數 / 產量 / 進行中的工程 / SP備料進度 同一列(窄螢幕自動換行) */
+.dash-top-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:16px;margin-bottom:16px;align-items:stretch}
+/* KPI 卡(在職人數/產量):數字群垂直置中、icon 浮右上角,讓短卡填滿與清單卡等高,底部不再參差 */
+.dash-top-grid>.stat-card{display:flex;flex-direction:column;justify-content:center}
+.dash-top-grid>.stat-card .stat-icon{position:absolute;top:15px;right:16px;margin:0;font-size:20px}
+.dash-top-grid>.stat-card .stat-value{margin-bottom:5px}
+.dash-mini-card{display:flex;flex-direction:column;min-width:0}
+/* 清單卡的捲動區 flex 撐滿,短內容也貼齊整列高度,長清單則封頂捲動不撐爆 */
+.dash-mini-scroll{flex:1 1 auto;min-height:0;max-height:190px;overflow:auto}
+/* 進行中的工程:橫式 chip 快捷列(標題+chips+全部 同一列,小巧貼齊、不占垂直空間) */
+.card.dash-projbar{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;padding:11px 16px;margin-bottom:16px}
+.card.dash-projbar>.section-title{margin:0;white-space:nowrap;flex:none}
+.card.dash-projbar>.dash-proj-chips{flex:1 1 auto;min-width:0}
+.card.dash-projbar>.btn-sm{flex:none;margin-left:auto}
+.date-wk-show{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent2);margin-left:6px;letter-spacing:.02em;white-space:nowrap}
+/* 主頁 SP 備料進度:緊湊卡片網格(自動換行,不占滿整列高度) */
+#dash-sp-progress{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.spp-item{background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:8px 11px;display:flex;flex-direction:column;gap:7px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
+.spp-item:hover{border-color:var(--accent);box-shadow:0 3px 12px rgba(0,0,0,.16)}
+.spp-i-top{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.spp-i-name{font-family:var(--mono);font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spp-i-pct{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text2);flex:none}
+.spp-i-bar{height:6px;background:var(--bg);border-radius:4px;overflow:hidden}
+.spp-i-bar i{display:block;height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
+.spp-item.full .spp-i-bar i{background:var(--green)}
+.spp-item.full .spp-i-pct{color:var(--green)}
+/* 100% 小卡:游標移過時「100%」變成綠色「可上線」按鈕,按下即歸檔上線 */
+.spp-go{display:none;align-items:center;gap:3px;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--green);border:none;border-radius:6px;padding:2px 8px;cursor:pointer;line-height:1.5;white-space:nowrap}
+.spp-go:hover{filter:brightness(1.08)}
+.spp-go:disabled{opacity:.6;cursor:default}
+.spp-item.full:hover .spp-pct-num{display:none}
+.spp-item.full:hover .spp-go{display:inline-flex}
+/* BOM 工程列表:文字高對比(深色純白 / 淺色純黑,比照請款核對) */
+#page-bom{ --text:#ffffff; --text2:#ffffff; --text3:#ffffff; }
+[data-theme="light"] #page-bom{ --text:#000000; --text2:#000000; --text3:#000000; }
+/* 銲材 81TN:整列上底色,81TN 粗體紅字 */
+#page-bom .data-table tr.bom-81tn td{background:rgba(255,69,58,.13)}
+#page-bom .bom-card.bom-81tn{background:rgba(255,69,58,.10);border-color:rgba(255,69,58,.45)}
+.w81{color:var(--red);font-weight:800}
 .stat-delta{font-size:11px;margin-top:6px;display:flex;align-items:center;gap:4px}
 .stat-sub{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--text3);margin-top:6px}
 .stat-sub b{font-family:var(--mono);font-size:12px;color:var(--text2);font-weight:600}
@@ -253,6 +317,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .status-badge.進行中{background:rgba(79,142,247,.15);color:var(--accent2);border:1px solid rgba(79,142,247,.3)}
 .status-badge.已完成{background:rgba(92,184,138,.15);color:var(--green);border:1px solid rgba(92,184,138,.3)}
 .status-badge.未開始{background:rgba(90,98,120,.15);color:var(--text3);border:1px solid var(--border)}
+.status-badge.異常{background:rgba(255,69,58,.16);color:var(--red);border:1px solid rgba(255,69,58,.4);font-weight:700}
 .status-badge.REVIEW{background:rgba(245,197,66,.15);color:var(--yellow);border:1px solid rgba(245,197,66,.3)}
 
 /* dashboard 統計報表 */
@@ -1183,6 +1248,31 @@ table.att-week-grid tr.cat-own .name,table.att-week-grid tr.cat-own .team{backgr
 table.att-week-grid tr.cat-own.grp-h th,table.att-week-grid tr.cat-own.sub-h th,table.att-week-grid tr.cat-own.wk-total td{background:rgba(50,200,110,.20)}
 table.att-week-grid tr.cat-eva .name,table.att-week-grid tr.cat-eva .team{background:rgba(191,120,255,.12)}
 table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,table.att-week-grid tr.cat-eva.wk-total td{background:rgba(191,120,255,.20)}
+/* ── 全域提示 Toast(取代原生 alert)────────────────────────── */
+#toast-wrap{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:10px;align-items:center;pointer-events:none;max-width:calc(100vw - 32px)}
+.toast{pointer-events:auto;min-width:230px;max-width:440px;background:var(--bg2);border:1px solid var(--border-hi);border-left:4px solid var(--accent2);border-radius:12px;box-shadow:0 12px 38px rgba(0,0,0,.42);padding:12px 14px;display:flex;gap:11px;align-items:flex-start;font-size:13.5px;color:var(--text);animation:toastIn .22s cubic-bezier(.2,.9,.3,1);transition:opacity .2s,transform .2s}
+.toast.hide{opacity:0;transform:translateY(-8px)}
+.toast .t-ico{flex:none;font-size:16px;line-height:1.35}
+.toast .t-msg{flex:1;min-width:0;white-space:pre-wrap;line-height:1.5;word-break:break-word}
+.toast .t-x{flex:none;cursor:pointer;color:var(--text3);border:none;background:none;font-size:15px;padding:0 2px;line-height:1.2;margin:-2px -2px 0 0}
+.toast .t-x:hover{color:var(--text)}
+.toast.t-error{border-left-color:var(--red)}
+.toast.t-success{border-left-color:var(--green)}
+.toast.t-warn{border-left-color:var(--yellow)}
+.toast.t-info{border-left-color:var(--accent2)}
+@keyframes toastIn{from{opacity:0;transform:translateY(-12px) scale(.98)}to{opacity:1;transform:none}}
+/* ── 全域確認框 uiConfirm(取代原生 confirm)──────────────────── */
+#confirm-mask{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;animation:cfmFade .15s ease}
+.confirm-box{background:var(--bg2);border:1px solid var(--border-hi);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.5);max-width:410px;width:100%;padding:22px 22px 18px;animation:cfmPop .18s cubic-bezier(.2,.9,.3,1)}
+.confirm-box .cf-ico{font-size:26px;margin-bottom:10px;line-height:1}
+.confirm-box .cf-msg{font-size:14.5px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word;margin-bottom:20px}
+.confirm-box .cf-btns{display:flex;gap:10px;justify-content:flex-end}
+.confirm-box .cf-btn{cursor:pointer;border-radius:9px;padding:9px 18px;font-size:13.5px;font-weight:600;border:1px solid var(--border-hi);background:var(--bg3);color:var(--text);transition:filter .12s}
+.confirm-box .cf-btn:hover{filter:brightness(1.1)}
+.confirm-box .cf-ok{border-color:transparent;background:var(--accent2);color:#fff}
+.confirm-box .cf-ok.danger{background:var(--red)}
+@keyframes cfmFade{from{opacity:0}to{opacity:1}}
+@keyframes cfmPop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -1229,6 +1319,26 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     <div class="modal-actions">
       <button class="btn-modal-cancel" onclick="closeModal('guest-modal')">取消</button>
       <button class="btn-modal-ok" onclick="confirmGuest()">進入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 帳號頁面權限 modal ── -->
+<div class="modal-overlay" id="perm-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title">頁面權限 — <span id="perm-modal-acc" style="color:var(--accent2)">—</span></div>
+    <div id="perm-modal-note" style="font-size:12px;color:var(--text3);margin:4px 0 10px;line-height:1.6"></div>
+    <div style="max-height:52vh;overflow:auto;border:1px solid var(--border,#e5e7eb);border-radius:8px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="position:sticky;top:0;background:var(--bg2,#f3f4f6)">
+          <th style="text-align:left;padding:6px 8px">頁面</th><th style="text-align:right;padding:6px 8px">權限</th>
+        </tr></thead>
+        <tbody id="perm-modal-body"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal('perm-modal')">取消</button>
+      <button class="btn-modal-ok" id="perm-modal-save" onclick="savePermModal()">儲存</button>
     </div>
   </div>
 </div>
@@ -1281,6 +1391,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <option value="未開始">未開始</option>
           <option value="進行中">進行中</option>
           <option value="已完成">已完成</option>
+          <option value="異常">異常</option>
         </select>
       </div>
     </div>
@@ -1304,6 +1415,103 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     <div class="modal-actions">
       <button class="btn-modal-cancel" onclick="closeModal('egst-modal')">取消</button>
       <button class="btn-modal-ok" onclick="egstSaveModal()" id="btn-save-egst">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 員工薪資設定 modal ── -->
+<div class="modal-overlay" id="emp-modal">
+  <div class="modal">
+    <div class="modal-title" id="emp-modal-title">薪資設定</div>
+    <div style="font-size:12px;color:var(--text3);margin:-4px 0 8px" id="emp-modal-sub">—</div>
+    <div class="modal-grid">
+      <div class="lf"><label>薪別</label>
+        <select id="emp-f-paytype" onchange="empToggleWage()">
+          <option value="daily">日薪</option>
+          <option value="monthly">月薪</option>
+        </select>
+      </div>
+      <div class="lf" id="emp-wrap-daily"><label>日給 (元/日)</label><input type="number" id="emp-f-daily" placeholder="例 2200" min="0" step="1" oninput="empAutoInsured()"/></div>
+      <div class="lf" id="emp-wrap-month"><label>月底薪 (元/月)</label><input type="number" id="emp-f-base" placeholder="例 36000" min="0" step="1" oninput="empAutoInsured()"/></div>
+      <div class="lf"><label>投保方式</label>
+        <select id="emp-f-insure">
+          <option value="company">公司投保</option>
+          <option value="union">公會投保</option>
+          <option value="none">未投保</option>
+        </select>
+      </div>
+      <div class="lf"><label>投保薪資 (級距)</label>
+        <div style="display:flex;gap:4px;align-items:stretch">
+          <input type="text" inputmode="numeric" id="emp-f-insured" placeholder="依薪資自動帶入" style="flex:1"
+                 onkeydown="empInsuredKey(event)" oninput="empInsuredMark()"/>
+          <button type="button" onclick="empInsuredStep(1)" title="上一級(勞保級距)" style="width:34px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text);cursor:pointer">▲</button>
+          <button type="button" onclick="empInsuredStep(-1)" title="下一級(勞保級距)" style="width:34px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text);cursor:pointer">▼</button>
+        </div>
+        <span style="font-size:11px;color:var(--text3)">依薪資自動帶入該級距;▲▼ 或鍵盤上下鍵按勞保投保薪資分級表跳動</span>
+      </div>
+      <div class="lf"><label>眷屬人數 (健保)</label><input type="number" id="emp-f-dep" value="0" min="0" step="1"/></div>
+      <div class="lf"><label>匯款帳號</label><input type="text" id="emp-f-bank" placeholder="選填"/></div>
+      <div class="lf full"><label>備註</label><input type="text" id="emp-f-note" placeholder="選填"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal('emp-modal')">取消</button>
+      <button class="btn-modal-ok" onclick="empSaveModal()" id="btn-save-emp">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 請假・特休 登記 modal ── -->
+<div class="modal-overlay" id="leave-modal">
+  <div class="modal">
+    <div class="modal-title" id="leave-modal-title">登記</div>
+    <div style="font-size:12px;color:var(--text3);margin:-4px 0 8px" id="leave-modal-sub">—</div>
+    <div style="font-size:11px;color:var(--text3);margin:-2px 0 8px">此頁專記「特休」;日常休特休請在出勤回報選假別『特休』即可自動計入。</div>
+    <div class="modal-grid">
+      <div class="lf"><label>類型</label>
+        <select id="leave-f-entry">
+          <option value="use">補登休假(扣剩餘)</option>
+          <option value="payout">折現(未休結算)</option>
+          <option value="grant">手動加給(特殊)</option>
+        </select>
+      </div>
+      <div class="lf"><label>天數</label><input type="number" id="leave-f-days" placeholder="例 1 或 0.5" min="0" step="0.5"/></div>
+      <div class="lf"><label>日期</label><input type="date" id="leave-f-date"/></div>
+      <div class="lf full"><label>備註</label><input type="text" id="leave-f-note" placeholder="選填"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal('leave-modal')">取消</button>
+      <button class="btn-modal-ok" onclick="leaveSaveModal()" id="btn-save-leave">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 個人薪資明細單 modal(可列印/存PDF) ── -->
+<style>
+  #payslip-print{font-family:var(--mono);color:var(--text);font-size:13px;line-height:1.7}
+  #payslip-print h3{margin:0 0 2px;font-size:17px}
+  #payslip-print .ps-sub{color:var(--text3);font-size:12px;margin-bottom:10px}
+  #payslip-print table{width:100%;border-collapse:collapse;margin:6px 0}
+  #payslip-print td{padding:4px 6px;border-bottom:1px solid var(--border)}
+  #payslip-print td:last-child{text-align:right}
+  #payslip-print .ps-sec{margin-top:10px;font-weight:700;color:var(--accent2)}
+  #payslip-print .ps-net{font-size:16px;font-weight:800}
+  #payslip-print .ps-net td{border:none}
+  @media print{
+    body *{visibility:hidden !important;}
+    #payslip-modal, #payslip-modal *{visibility:visible !important;}
+    #payslip-modal{position:absolute;inset:0;background:#fff;}
+    #payslip-modal .modal{box-shadow:none;max-width:none;width:100%;background:#fff;color:#000}
+    #payslip-print, #payslip-print *{color:#000 !important}
+    #payslip-print td{border-color:#999 !important}
+    .modal-actions{display:none !important;}
+  }
+</style>
+<div class="modal-overlay" id="payslip-modal">
+  <div class="modal" style="max-width:560px">
+    <div id="payslip-print"></div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal('payslip-modal')">關閉</button>
+      <button class="btn-modal-ok" onclick="window.print()">🖨 列印 / 存 PDF</button>
     </div>
   </div>
 </div>
@@ -1494,6 +1702,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <button class="rail-item" data-sec="tools" onclick="onRailClick('tools')" title="工具">🛠️</button>
         <button class="rail-item" data-sec="staff" onclick="onRailClick('staff')" title="人員管理">👥</button>
         <button class="rail-item" data-sec="eg" onclick="onRailClick('eg')" title="長榮專區">🏢</button>
+        <button class="rail-item" data-sec="hr" id="rail-hr" style="display:none" onclick="onRailClick('hr')" title="人事薪資">💼</button>
         <button class="rail-item" data-sec="admin" id="rail-admin" style="display:none" onclick="onRailClick('admin')" title="管理員">⚙️</button>
       </div>
       <div class="rail-foot">
@@ -1574,6 +1783,20 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
             <span class="nav-icon">📅</span><span class="nav-label">長榮日報</span>
           </div>
         </div>
+        <div class="nav-sec" data-sec="hr" hidden>
+          <div class="nav-item" onclick="navTo('emp')" id="nav-emp">
+            <span class="nav-icon">🧑‍💼</span><span class="nav-label">員工薪資設定</span>
+          </div>
+          <div class="nav-item" onclick="navTo('payroll')" id="nav-payroll">
+            <span class="nav-icon">🧾</span><span class="nav-label">薪資計算</span>
+          </div>
+          <div class="nav-item" onclick="navTo('leave')" id="nav-leave">
+            <span class="nav-icon">🏖️</span><span class="nav-label">請假・特休</span>
+          </div>
+          <div class="nav-item" onclick="navTo('payrollcfg')" id="nav-payrollcfg">
+            <span class="nav-icon">⚙️</span><span class="nav-label">費率設定</span>
+          </div>
+        </div>
         <div class="nav-sec" data-sec="admin" hidden>
           <div class="nav-item" onclick="navTo('output')" id="nav-output">
             <span class="nav-icon">📊</span><span class="nav-label">產值</span>
@@ -1597,6 +1820,19 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
   </div>
 
   <div class="nav-backdrop" id="nav-backdrop" onclick="closeNav()"></div>
+
+  <!-- 唯讀模式徽章 -->
+  <div id="ro-badge" style="display:none">🔒 唯讀模式</div>
+  <style>
+    #ro-badge{position:fixed;right:16px;bottom:16px;z-index:9000;background:#334155;color:#fff;
+      font-size:12px;font-weight:600;padding:7px 12px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.25);
+      pointer-events:none;letter-spacing:.5px}
+    /* 唯讀頁:資料輸入元件停用(保留搜尋/篩選/日期瀏覽) */
+    .perm-ro input:not(.search-input):not(.filter-select):not([type=date]):not([type=search]),
+    .perm-ro textarea,
+    .perm-ro select:not(.filter-select){ pointer-events:none !important; opacity:.7; }
+    .perm-ro [contenteditable]{ pointer-events:none !important; opacity:.7; }
+  </style>
 
   <!-- Main -->
   <div class="main-content">
@@ -1625,13 +1861,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
 
     <!-- Dashboard -->
     <div class="page active" id="page-dashboard">
-      <div class="stat-grid">
-        <div class="stat-card orange">
-          <div class="stat-icon">🏗️</div>
-          <div class="stat-value" style="color:var(--accent)" id="stat-projects">—</div>
-          <div class="stat-label">進行中的工程</div>
-          <div class="stat-delta up" id="stat-projects-delta"></div>
-        </div>
+      <div class="dash-top-grid">
         <div class="stat-card blue">
           <div class="stat-icon">👷</div>
           <div class="stat-value" style="color:var(--accent2)" id="stat-staff">—</div>
@@ -1644,22 +1874,30 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="stat-label">本月總產量（噸）</div>
           <div class="stat-sub"><span>今日 <b id="stat-today-ton">—</b> t</span><span>本月 <b id="stat-month-qty">—</b> 支</span></div>
         </div>
-      </div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="section-header" style="margin-bottom:12px">
-          <div class="section-title">進行中的工程 <span class="dash-proj-count" id="dash-projects-count"></span></div>
-          <button class="btn-sm btn-export" onclick="navTo('bom')">View All</button>
+        <div class="card dash-mini-card">
+          <div class="section-header" style="margin-bottom:10px">
+            <div class="section-title">SP 備料進度 <span class="dash-proj-count" id="dash-sp-count"></span></div>
+            <button class="btn-sm btn-export" onclick="navTo('prod')">SP 表</button>
+          </div>
+          <div id="dash-sp-progress" class="dash-mini-scroll"><span style="color:var(--text3);font-size:13px">載入中...</span></div>
         </div>
+      </div>
+
+      <!-- 進行中的工程:橫式 chip 快捷列(小巧貼齊,不占垂直空間) -->
+      <div class="card dash-projbar">
+        <div class="section-title">進行中的工程 <span class="dash-proj-count" id="dash-projects-count"></span></div>
         <div id="dash-projects-chips" class="dash-proj-chips"><span style="color:var(--text3);font-size:13px">載入中...</span></div>
+        <button class="btn-sm btn-export" onclick="navTo('bom')">全部</button>
       </div>
 
       <!-- 共用日期工具 (每日產量 + 線上進度 共用) -->
       <div class="dash-date-nav" style="margin-bottom:16px">
         <span style="font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.05em">統計日期</span>
         <button class="dash-nav-btn" onclick="dashNavDate(-1)">« 前一天</button>
-        <input type="date" id="dash-shared-date" class="dash-date" onchange="dashOnDateChange()"/>
+        <input type="date" id="dash-shared-date" class="dash-date date-wk" data-wk="dash-date-show" onchange="dashOnDateChange()"/>
         <button class="dash-nav-btn" onclick="dashNavDate(1)">後一天 »</button>
         <button class="dash-nav-btn" onclick="dashNavDate(0)">今日</button>
+        <span class="date-wk-show" id="dash-date-show">—</span>
       </div>
 
       <!-- 每日產量 + 線上進度 左右並排(窄螢幕自動堆疊) -->
@@ -1717,9 +1955,9 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="card" style="overflow-x:auto">
           <div class="section-header" style="margin-bottom:8px">
             <div class="section-title">線上進度統計</div>
-            <button class="btn-sm btn-export" id="dash-prog-toggle" onclick="dashToggleProgCols()">顯示支數明細 ▼</button>
+            <button class="btn-sm btn-export" id="dash-prog-toggle" onclick="dashToggleProgCols()">收合支數明細 ▲</button>
           </div>
-          <table class="project-table dash-prog-collapsed" id="dash-progress-table">
+          <table class="project-table" id="dash-progress-table">
             <thead><tr>
               <th>工程編號</th><th>工程區</th><th class="dash-prog-sec">進料</th><th class="dash-prog-sec">上線</th><th class="dash-prog-sec">已完成</th><th class="dash-prog-sec">BOM</th><th class="dash-prog-sec">差異</th><th>完成進度</th><th>已完成噸數</th><th>未完成噸數</th><th>預計完成噸數</th>
             </tr></thead>
@@ -1748,9 +1986,15 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <option value="未開始">未開始</option>
           <option value="進行中">進行中</option>
           <option value="已完成">已完成</option>
+          <option value="異常">異常</option>
         </select>
+        <div class="bom-view-toggle">
+          <button type="button" id="bom-view-list" class="bom-vbtn active" onclick="setBomView('list')" title="列表顯示">☰ 列表</button>
+          <button type="button" id="bom-view-card" class="bom-vbtn" onclick="setBomView('card')" title="卡片顯示">▦ 卡片</button>
+          <button type="button" id="bom-view-mini" class="bom-vbtn" onclick="setBomView('mini')" title="小卡(只顯示工程編號)">▫ 小卡</button>
+        </div>
       </div>
-      <div class="card" style="padding:0;overflow:hidden">
+      <div class="card" id="bom-list-wrap" style="padding:0;overflow:hidden">
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr>
@@ -1761,6 +2005,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           </table>
         </div>
       </div>
+      <div id="bom-card-wrap" class="bom-card-grid" style="display:none"></div>
       <div id="bom-done-section" style="margin-top:16px;display:none">
         <button class="filter-select" id="bom-done-toggle" onclick="toggleBomDone()">顯示已完成 (0)</button>
         <div class="card" id="bom-done-card" style="padding:0;overflow:hidden;display:none;margin-top:10px">
@@ -1774,6 +2019,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
             </table>
           </div>
         </div>
+        <div id="bom-done-card-wrap" class="bom-card-grid" style="display:none;margin-top:10px"></div>
       </div>
     </div>
 
@@ -2272,10 +2518,10 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div id="ovr-daily-view">
           <div class="ovr-toolbar">
             <button class="btn" onclick="ovrDailyShift(-1)">‹ 前一天</button>
-            <input type="date" id="ovr-date" onchange="ovrRenderDaily()"/>
+            <input type="date" id="ovr-date" class="date-wk" data-wk="ovr-weekday" onchange="ovrRenderDaily()"/>
             <button class="btn" onclick="ovrDailyShift(1)">後一天 ›</button>
             <button class="btn" onclick="ovrDailyToday()">今日</button>
-            <span class="ovr-wd" id="ovr-weekday"></span>
+            <span class="ovr-wd date-wk-show" id="ovr-weekday">—</span>
           </div>
           <!-- KPI 儀表板(當日大數字 + 本月累積小字) -->
           <div class="ovd-kpis" id="ovr-kpi-band"></div>
@@ -2487,6 +2733,201 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <div class="staff-grid" id="egst-table"><div class="empty-state">載入中...</div></div>
     </div>
 
+    <!-- 員工薪資設定 (HR) -->
+    <div class="page" id="page-emp">
+      <div class="page-header">
+        <div class="page-title" style="margin-bottom:0">員工薪資設定</div>
+        <span style="font-size:12px;color:var(--text3)">身分資料請至「公司名冊」維護;此頁只設定薪資機密欄位</span>
+      </div>
+      <div class="search-bar">
+        <input class="search-input" id="emp-search" placeholder="搜尋姓名、部門..." oninput="empRender()"/>
+        <label style="font-size:12px;color:var(--text3);display:inline-flex;align-items:center;gap:5px;margin-left:8px">
+          <input type="checkbox" id="emp-only-active" checked onchange="empRender()"/>只顯示在職
+        </label>
+        <span id="emp-scope" style="font-size:12px;color:var(--accent2);margin-left:8px"></span>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="table-scroll">
+          <table class="data-table" id="emp-table">
+            <thead><tr>
+              <th>姓名</th><th>部門</th><th>加班規則</th><th>到職日</th><th>年資</th><th>本期特休</th>
+              <th>薪別</th><th>底薪 / 日給</th><th>投保</th><th>投保薪資</th><th>眷屬</th><th>設定</th>
+            </tr></thead>
+            <tbody id="emp-body"><tr><td colspan="12" class="empty-state">載入中...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:10px;line-height:1.7">
+        ※ 加班規則:部門含「辦公」→ 勞基法平日加班(前2h×1.34、3h起×1.67);其餘(本工/外勞)→ 現場慣例(半薪/全薪)。<br>
+        ※ 特休依到職日、勞基法38條自動估算(滿6月3天…10年以上逐年+1、上限30)。<br>
+        ※ 投保方式「公會」= 員工向職業工會自行投保,公司不代扣勞健保。
+      </div>
+    </div>
+
+    <!-- 薪資計算 (HR) -->
+    <div class="page" id="page-payroll">
+      <div class="page-header">
+        <div class="page-title" style="margin-bottom:0">薪資計算</div>
+        <span id="pr-status" style="font-size:12px;color:var(--text3)"></span>
+      </div>
+      <div class="toolbar" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        <label style="font-size:12px;color:var(--text2)">計薪月份</label>
+        <input type="month" id="pr-month" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--rad);font-family:var(--mono);color:var(--text);background:var(--bg3)"/>
+        <button class="btn btn-primary" onclick="payrollCalc()" style="padding:7px 14px;border-radius:var(--rad);background:var(--accent2);border:1px solid var(--accent2);color:#fff;cursor:pointer">🧮 計算</button>
+        <div style="flex:1"></div>
+        <span id="pr-count" style="font-size:12px;color:var(--text2)"></span>
+        <button class="btn" onclick="payrollSaveDraft()" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">💾 儲存草稿</button>
+        <button class="btn" onclick="payrollLock()" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">🔒 鎖定本月</button>
+        <button class="btn" id="pr-unlock-btn" onclick="payrollUnlock()" style="display:none;padding:7px 14px;border-radius:var(--rad);border:1px solid var(--danger);background:var(--bg3);color:var(--danger);cursor:pointer">🔓 解鎖</button>
+        <button class="btn" onclick="payrollExportCsv()" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">⬇ 薪資 CSV</button>
+        <button class="btn" onclick="payrollExportInsuranceCsv()" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">🏦 投保申報 CSV</button>
+      </div>
+      <div id="pr-warn" style="font-size:12px;color:var(--danger);margin-bottom:8px"></div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="table-scroll">
+          <table class="data-table" id="pr-table">
+            <thead><tr>
+              <th>姓名</th><th>類別</th><th>出勤天</th><th>底薪</th><th>加班費</th><th>應發</th>
+              <th>勞保</th><th>健保</th><th>二代</th><th>請假扣</th><th>實發</th><th>雇主成本</th>
+            </tr></thead>
+            <tbody id="pr-body"><tr><td colspan="12" class="empty-state">選擇月份後按「計算」</td></tr></tbody>
+            <tfoot id="pr-foot"></tfoot>
+          </table>
+        </div>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:10px;line-height:1.7">
+        ※ 出勤來源為「出勤回報」att_report(work_hours/ot_hours/night_hours/leave_hours),此頁只讀不改。<br>
+        ※ 未在「員工薪資設定」設定薪別者不列入計算(見上方紅字提醒)。<br>
+        ※ 雇主成本 = 勞保雇主 + 健保雇主 + 勞退6%(非員工扣款,供成本估算)。<br>
+        ※ 鎖定後該月薪資單標記 locked;要重算請先改回草稿(之後可加解鎖鈕)。
+      </div>
+    </div>
+
+    <!-- 請假・特休 (HR) -->
+    <div class="page" id="page-leave">
+      <div class="page-header">
+        <div class="page-title" style="margin-bottom:0">請假・特休台帳</div>
+        <span style="font-size:12px;color:var(--text3)">特休依到職週年自動計算;已休自動抓出勤回報的「特休」</span>
+      </div>
+      <div class="search-bar">
+        <input class="search-input" id="leave-search" placeholder="搜尋姓名、部門..." oninput="leaveRender()"/>
+        <label style="font-size:12px;color:var(--text3);display:inline-flex;align-items:center;gap:5px;margin-left:8px">
+          <input type="checkbox" id="leave-only-active" checked onchange="leaveRender()"/>只顯示在職
+        </label>
+        <span id="leave-year" style="font-size:12px;color:var(--text3);margin-left:8px"></span>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="table-scroll">
+          <table class="data-table" id="leave-table">
+            <thead><tr>
+              <th>姓名</th><th>部門</th><th>到職日</th><th>本期(到職週年)</th>
+              <th>應給</th><th>已休</th><th>已折現</th><th>剩餘</th><th>登記</th>
+            </tr></thead>
+            <tbody id="leave-body"><tr><td colspan="9" class="empty-state">載入中...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:10px;line-height:1.7">
+        ※ <b>特休採到職週年制</b>:每過一次到職日,自動依勞基法38條重算「本期應給」(滿6月3天…10年以上逐年+1、上限30)。<br>
+        ※ <b>已休 = 出勤回報中「特休」的時數(本期內)＋此頁補登</b>。所以員工休特休,只要在「出勤回報」把假別選『特休』,這裡就會自動扣;不必雙重輸入。<br>
+        ※ 剩餘 = 應給 − 已休 − 已折現(1天=8時)。＋登記 用於「折現」或補登未入出勤的特休。<br>
+        ※ 事假/病假等其他假別不佔特休,只影響薪資扣款(依費率設定的請假扣薪比例,由出勤回報時數計算)。
+      </div>
+    </div>
+
+    <!-- 費率設定 (HR) -->
+    <style>
+      #page-payrollcfg .pcfg-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:14px 16px;margin-bottom:12px}
+      #page-payrollcfg .pcfg-card h4{margin:0 0 10px;font-size:13px;color:var(--accent2)}
+      #page-payrollcfg .pcfg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+      #page-payrollcfg .pcfg-f{display:flex;flex-direction:column;gap:3px}
+      #page-payrollcfg .pcfg-f label{font-size:11px;color:var(--text3)}
+      #page-payrollcfg .pcfg-f input{padding:6px 8px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text);font-family:var(--mono);font-size:13px;outline:none}
+      #page-payrollcfg .pcfg-f input:focus{border-color:var(--accent2)}
+      #page-payrollcfg .pcfg-grade{display:inline-flex;align-items:center;gap:4px;margin:3px}
+      #page-payrollcfg .pcfg-grade input{width:80px;padding:5px 6px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text);font-family:var(--mono);font-size:13px;text-align:right}
+      #page-payrollcfg .pcfg-grade button{border:1px solid var(--danger);color:var(--danger);background:transparent;border-radius:4px;cursor:pointer;width:20px;height:24px;line-height:1}
+    </style>
+    <div class="page" id="page-payrollcfg">
+      <div class="page-header">
+        <div class="page-title" style="margin-bottom:0">費率設定</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:12px;color:var(--text3)">生效日</label>
+          <input type="date" id="pcfg-eff" class="date-wk" data-wk="pcfg-eff-show" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text);font-family:var(--mono)"/>
+          <span class="date-wk-show" id="pcfg-eff-show" style="font-size:12px;color:var(--text3)"></span>
+          <button class="btn-add-new" onclick="pcfgSave()">💾 儲存費率</button>
+        </div>
+      </div>
+      <div id="pcfg-hint" style="font-size:12px;color:var(--text3);margin-bottom:10px">載入中...</div>
+
+      <div class="pcfg-card">
+        <h4>加班倍率</h4>
+        <div class="pcfg-grid">
+          <div class="pcfg-f"><label>辦公 前2小時(倍)</label><input type="number" id="pcfg-ot-first2" step="0.01"/></div>
+          <div class="pcfg-f"><label>辦公 第3小時起(倍)</label><input type="number" id="pcfg-ot-rest" step="0.01"/></div>
+          <div class="pcfg-f"><label>辦公 月加班上限(時)</label><input type="number" id="pcfg-ot-cap" step="1"/></div>
+          <div class="pcfg-f"><label>現場 17:30~20:30(日薪比)</label><input type="number" id="pcfg-ot-half" step="0.1"/></div>
+          <div class="pcfg-f"><label>現場 ~23:00(日薪比)</label><input type="number" id="pcfg-ot-full" step="0.1"/></div>
+        </div>
+      </div>
+
+      <div class="pcfg-card">
+        <h4>保險費率(比例填小數,例 0.2 = 20%)</h4>
+        <div class="pcfg-grid">
+          <div class="pcfg-f"><label>勞保 費率</label><input type="number" id="pcfg-labor-rate" step="0.001"/></div>
+          <div class="pcfg-f"><label>勞保 員工負擔比</label><input type="number" id="pcfg-labor-emp" step="0.01"/></div>
+          <div class="pcfg-f"><label>勞保 雇主負擔比</label><input type="number" id="pcfg-labor-er" step="0.01"/></div>
+          <div class="pcfg-f"><label>健保 費率</label><input type="number" id="pcfg-health-rate" step="0.0001"/></div>
+          <div class="pcfg-f"><label>健保 員工負擔比</label><input type="number" id="pcfg-health-emp" step="0.01"/></div>
+          <div class="pcfg-f"><label>健保 雇主負擔比</label><input type="number" id="pcfg-health-er" step="0.01"/></div>
+          <div class="pcfg-f"><label>健保 眷屬計費上限</label><input type="number" id="pcfg-health-depcap" step="1"/></div>
+          <div class="pcfg-f"><label>二代健保 費率</label><input type="number" id="pcfg-h2nd-rate" step="0.0001"/></div>
+          <div class="pcfg-f"><label>二代健保 門檻(投保額倍)</label><input type="number" id="pcfg-h2nd-thr" step="0.5"/></div>
+          <div class="pcfg-f"><label>勞退 雇主提繳率</label><input type="number" id="pcfg-pension-rate" step="0.01"/></div>
+        </div>
+      </div>
+
+      <div class="pcfg-card">
+        <h4>基本工資</h4>
+        <div class="pcfg-grid">
+          <div class="pcfg-f"><label>月基本工資</label><input type="number" id="pcfg-minm" step="1"/></div>
+          <div class="pcfg-f"><label>時基本工資</label><input type="number" id="pcfg-minh" step="1"/></div>
+        </div>
+      </div>
+
+      <div class="pcfg-card">
+        <h4>請假扣薪比例(0=不扣、0.5=半薪扣、1=全額扣;假別對應出勤回報的中文)</h4>
+        <div class="pcfg-grid">
+          <div class="pcfg-f"><label>特休</label><input type="number" id="pcfg-lr-annual" step="0.1"/></div>
+          <div class="pcfg-f"><label>公假</label><input type="number" id="pcfg-lr-official" step="0.1"/></div>
+          <div class="pcfg-f"><label>婚假</label><input type="number" id="pcfg-lr-marriage" step="0.1"/></div>
+          <div class="pcfg-f"><label>喪假</label><input type="number" id="pcfg-lr-funeral" step="0.1"/></div>
+          <div class="pcfg-f"><label>病假</label><input type="number" id="pcfg-lr-sick" step="0.1"/></div>
+          <div class="pcfg-f"><label>事假</label><input type="number" id="pcfg-lr-personal" step="0.1"/></div>
+          <div class="pcfg-f"><label>生理假</label><input type="number" id="pcfg-lr-menstrual" step="0.1"/></div>
+          <div class="pcfg-f"><label>產假</label><input type="number" id="pcfg-lr-maternity" step="0.1"/></div>
+          <div class="pcfg-f"><label>補休</label><input type="number" id="pcfg-lr-comp" step="0.1"/></div>
+          <div class="pcfg-f"><label>曠職</label><input type="number" id="pcfg-lr-absent" step="0.1"/></div>
+          <div class="pcfg-f"><label>過年</label><input type="number" id="pcfg-lr-newyear" step="0.1"/></div>
+          <div class="pcfg-f"><label>颱風</label><input type="number" id="pcfg-lr-typhoon" step="0.1"/></div>
+        </div>
+      </div>
+
+      <div class="pcfg-card">
+        <h4>投保薪資分級表(勞保級距;員工薪資設定的 ▲▼ 依此跳動)</h4>
+        <div id="pcfg-grades"></div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button class="btn" onclick="pcfgAddGrade()" style="padding:6px 12px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text);cursor:pointer">＋ 新增級距</button>
+          <button class="btn" onclick="pcfgSortGrades()" style="padding:6px 12px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text);cursor:pointer">↕ 由小到大排序</button>
+        </div>
+      </div>
+
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text3);line-height:1.7">
+        ※ 儲存後以「生效日」建立/更新一版設定;薪資計算會自動採用生效日最新的一版(舊版保留供歷史月份重算)。<br>
+        ※ 所有數字皆為範例,請以勞保局/健保署最新公告為準。比例欄位填小數(0.2 代表 20%)。
+      </div>
+    </div>
+
     <!-- 帳號管理 (管理員) -->
     <div class="page" id="page-accounts">
       <div class="page-header">
@@ -2500,16 +2941,18 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr>
-              <th>帳號 (Email)</th><th>顯示名稱</th><th>綁定公司名冊</th><th>管理員</th>
+              <th>帳號 (Email)</th><th>顯示名稱</th><th>綁定公司名冊</th><th>管理員</th><th>狀態</th><th>頁面權限</th>
             </tr></thead>
-            <tbody id="accounts-body"><tr><td colspan="4" class="empty-state">載入中...</td></tr></tbody>
+            <tbody id="accounts-body"><tr><td colspan="6" class="empty-state">載入中...</td></tr></tbody>
           </table>
         </div>
       </div>
       <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:10px;line-height:1.7">
         ※ 顯示名稱留空時,會自動使用綁定的公司名冊姓名。<br>
-        ※ 改好後按右上角「儲存全部」一次存檔;使用者下次登入(或重新整理)會套用新名稱。<br>
-        ※ 綁定公司名冊後,會自動把該帳號的 Email 寫入名冊中該員工的 Email 欄。
+        ※ 名稱/綁定/管理員改好後,按右上角「儲存全部」一次存檔。<br>
+        ※ 綁定公司名冊後,會自動把該帳號的 Email 寫入名冊中該員工的 Email 欄。<br>
+        ※ <b>停用</b>與<b>頁面權限</b>為即時生效(按下即存),對方下次登入/重新整理套用。<br>
+        ※ <b>離職員工請按「停用」</b>,資料庫端會拒絕其一切讀寫;<b>切勿刪除該列</b>(刪掉等於解除封鎖)。
       </div>
     </div>
 
@@ -2519,9 +2962,10 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <!-- 第一列:日期導覽 + 日期區間 -->
       <div class="toolbar daily-row1" id="daily-toolbar-1">
         <button class="btn" onclick="dailyShiftDay(-1)" title="前一天">‹ 前一天</button>
-        <input type="date" id="daily-view-date" onchange="dailyOnDateChange()" title="顯示日期"/>
+        <input type="date" id="daily-view-date" class="date-wk" data-wk="daily-date-show" onchange="dailyOnDateChange()" title="顯示日期"/>
         <button class="btn" id="daily-next-btn" onclick="dailyShiftDay(1)" title="後一天">後一天 ›</button>
         <button class="btn" onclick="dailyToday()">今日</button>
+        <span class="date-wk-show" id="daily-date-show">—</span>
         <span class="daily-range-label">日期區間</span>
         <input type="date" id="daily-range-start" onchange="dailyOnRangeChange()" title="起始日"/>
         <span style="color:var(--text3)">~</span>
@@ -2655,8 +3099,16 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     #page-prod .prod-toolbar select,#page-prod .prod-toolbar input[type=text]{padding:6px 10px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;color:var(--text);background:var(--bg2);outline:none}
     #page-prod .prod-toolbar input[type=text]{min-width:180px}
     #page-prod .prod-count{font-size:12px;color:var(--text2);font-family:var(--mono)}
-    #page-prod .prod-legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;font-size:11px;color:var(--text2)}
+    #page-prod .prod-legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;font-size:11px;color:var(--text2);align-items:center}
     #page-prod .prod-legend .chip{cursor:default}
+    /* 狀態篩選鈕(由原圖例改成) */
+    #page-prod .prod-stflabel{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--text3);margin-right:2px}
+    #page-prod .prod-stbtn{cursor:pointer;border:1px solid transparent;font-family:var(--mono);font-size:11px;padding:3px 11px;border-radius:10px;line-height:1.5;white-space:nowrap;transition:opacity .12s,outline .12s}
+    #page-prod .prod-stbtn:hover{filter:brightness(1.06)}
+    #page-prod .prod-stbtn.active{outline:2px solid var(--accent);outline-offset:1px;font-weight:700}
+    #page-prod .prod-legend.has-filter .prod-stbtn:not(.active){opacity:.4}
+    #page-prod .prod-stbtn.st-sub{border-style:dashed;border-color:rgba(191,90,242,.5)}   /* 轉包預設隱藏,虛線提示 */
+    #page-prod .prod-stbtn.st-sub.active{border-style:solid}
     #page-prod .prod-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg2)}
     #page-prod table.prod-table{border-collapse:collapse;width:auto;max-width:100%;font-size:12.5px;white-space:nowrap}
     #page-prod table.prod-table th{background:var(--bg3);color:var(--text2);font-weight:500;text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);position:sticky;top:0;font-size:11.5px;font-family:var(--mono)}
@@ -2668,6 +3120,14 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     #page-prod .st-ok{background:rgba(50,215,75,.16);color:var(--green)}
     #page-prod .st-ship{background:rgba(10,132,255,.16);color:var(--accent2)}
     #page-prod .st-sub{background:rgba(191,90,242,.16);color:var(--purple)}
+    /* 已上線標籤(可點取消上線)+ 與狀態 chip 並排的小容器 */
+    #page-prod .st-online{background:rgba(10,132,255,.16);color:var(--accent2);border:1px solid rgba(10,132,255,.45);cursor:pointer;font-weight:700}
+    #page-prod .st-online:hover{background:rgba(10,132,255,.28)}
+    #page-prod .pc-status,#page-prod .pm-status{display:inline-flex;align-items:center;gap:5px}
+    /* 顯示已上線 切換鈕 */
+    #page-prod .prod-online-toggle{padding:6px 10px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;color:var(--text2);background:var(--bg2);cursor:pointer;white-space:nowrap}
+    #page-prod .prod-online-toggle:hover{border-color:var(--accent2);color:var(--accent2)}
+    #page-prod .prod-online-toggle.on{background:rgba(10,132,255,.14);border-color:var(--accent2);color:var(--accent2)}
     #page-prod .st-na{color:var(--text3);font-family:var(--mono)}
     #page-prod .prod-zone{font-family:var(--mono);font-weight:600;color:var(--accent3)}
     #page-prod .prod-doc{font-family:var(--mono);color:var(--text)}
@@ -2803,10 +3263,10 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <datalist id="prodProjList"></datalist>
 
       <div class="prod-tabs">
-        <div class="prod-tab active" id="prodtab-board" onclick="prodTab('board')">📊 總表看板</div>
-        <div class="prod-tab" id="prodtab-track" onclick="prodTab('track')">📐 SP狀態表</div>
-        <div class="prod-tab" id="prodtab-reserved" onclick="prodTab('reserved')">♻️ 保留料</div>
-        <div class="prod-tab" id="prodtab-product" onclick="prodTab('product')">🔩 成品材領料</div>
+        <div class="prod-tab active" id="prodtab-board" onclick="prodGoTab('board')">📊 總表看板</div>
+        <div class="prod-tab" id="prodtab-track" onclick="prodGoTab('track')">📐 SP狀態表</div>
+        <div class="prod-tab" id="prodtab-reserved" onclick="prodGoTab('reserved')">♻️ 保留料</div>
+        <div class="prod-tab" id="prodtab-product" onclick="prodGoTab('product')">🔩 成品材領料</div>
       </div>
 
       <!-- ── 生產看板 ── -->
@@ -2823,24 +3283,18 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
             <option value="zone">依 工程區（合併）</option>
           </select>
           <select id="prodFilterProj" onchange="prodRenderBoard()"><option value="">全部工程編號</option></select>
-          <select id="prodFilterStatus" onchange="prodRenderBoard()">
-            <option value="">全部整體狀態</option>
-            <option value="未開始">未開始</option>
-            <option value="進行中">進行中</option>
-            <option value="備妥">備妥</option>
-            <option value="已送工地">已送工地</option>
-            <option value="轉包">轉包</option>
-          </select>
           <input type="text" id="prodSearch" placeholder="搜尋工程編號／工程區／單號…" oninput="prodRenderBoard()">
+          <button type="button" class="prod-online-toggle" id="prodOnlineToggle" onclick="prodToggleShowOnline()" style="display:none"></button>
           <div style="flex:1"></div>
           <span class="prod-count" id="prodBoardCount"></span>
         </div>
-        <div class="prod-legend">
-          <span class="chip st-none">未開始 -</span>
-          <span class="chip st-count">清點中</span>
-          <span class="chip st-ok">OK 備妥</span>
-          <span class="chip st-ship">送工地</span>
-          <span class="chip st-sub">轉包</span>
+        <div class="prod-legend" id="prodStatusFilterBar">
+          <span class="prod-stflabel">篩選狀態</span>
+          <button type="button" class="prod-stbtn st-none" data-st="未開始"  onclick="prodSetStatusFilter('未開始')">未開始</button>
+          <button type="button" class="prod-stbtn st-count" data-st="進行中"  onclick="prodSetStatusFilter('進行中')">進行中</button>
+          <button type="button" class="prod-stbtn st-ok"   data-st="備妥"    onclick="prodSetStatusFilter('備妥')">備妥</button>
+          <button type="button" class="prod-stbtn st-ship" data-st="已送工地" onclick="prodSetStatusFilter('已送工地')">已送工地</button>
+          <button type="button" class="prod-stbtn st-sub"  data-st="轉包"    onclick="prodSetStatusFilter('轉包')" title="轉包預設隱藏,點此篩選顯示">轉包</button>
         </div>
         <div class="prod-table-wrap" id="prodTableWrap">
           <table class="prod-table">
@@ -3163,9 +3617,10 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="dash-date-nav" style="margin-bottom:12px">
             <span style="font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.05em">出勤日期</span>
             <button class="dash-nav-btn" id="att-nav-prev" onclick="attNavDate(-1)">« 前一天</button>
-            <input type="date" id="att-date" class="dash-date" onchange="attRenderDailyGrid();attRenderKpi()"/>
+            <input type="date" id="att-date" class="dash-date date-wk" data-wk="att-date-show" onchange="attRenderDailyGrid();attRenderKpi()"/>
             <button class="dash-nav-btn" id="att-nav-next" onclick="attNavDate(1)">後一天 »</button>
             <button class="dash-nav-btn" id="att-nav-today" onclick="attNavDate(0)">今日</button>
+            <span class="date-wk-show" id="att-date-show">—</span>
             <button class="dash-nav-btn" onclick="attBatchImport()" title="從 JSON 批次匯入出勤(att_report 欄位格式)">📥 批次輸入</button>
             <span style="flex:1"></span>
             <span id="att-save-hint" style="font-family:var(--mono);font-size:11px;color:var(--text3)"></span>
@@ -3266,9 +3721,10 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <label style="font-family:var(--mono);font-size:12px;color:var(--text3)">日期</label>
           <button class="btn-sm btn-export" id="eg-nav-prev" onclick="egShiftDay(-1)">‹ 前一天</button>
-          <input type="date" id="eg-date" class="search-input" style="width:150px" onchange="egGenerate()"/>
+          <input type="date" id="eg-date" class="search-input date-wk" data-wk="eg-date-show" style="width:150px" onchange="egGenerate()"/>
           <button class="btn-sm btn-export" id="eg-nav-next" onclick="egShiftDay(1)">後一天 ›</button>
           <button class="btn-sm btn-export" id="eg-nav-today" onclick="egGotoToday()">今天</button>
+          <span class="date-wk-show" id="eg-date-show">—</span>
           <button class="btn-sm btn-export" onclick="egGenerate()">🔄 重新整理</button>
           <button class="btn-sm btn-export" onclick="egDownloadXLSX()">⬇ 下載 Excel</button>
         </div>
@@ -3496,6 +3952,57 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
 </div>
 
 <script>
+/* ── 全域 Toast:取代原生 alert(所有既有 alert 呼叫自動套用新樣式)────── */
+(function(){
+  function wrap(){ let w=document.getElementById('toast-wrap'); if(!w){ w=document.createElement('div'); w.id='toast-wrap'; (document.body||document.documentElement).appendChild(w); } return w; }
+  function typeOf(m){
+    if(/失敗|錯誤|無法|封鎖|不是有效|尚未載入|沒有偵測到|不能|停用|未登入|無寫入/.test(m)) return 'error';
+    if(/^\s*已|完成|成功|✔|✓/.test(m)) return 'success';
+    if(/^\s*請|尚未|沒有|已存在|已在|必填|需|超過|唯讀|先/.test(m)) return 'warn';
+    return 'info';
+  }
+  const ICO={error:'⚠️',success:'✅',warn:'❗',info:'ℹ️'};
+  window.showToast=function(msg,type){
+    msg=(msg==null?'':String(msg));
+    type=type||typeOf(msg);
+    const w=wrap();
+    const t=document.createElement('div'); t.className='toast t-'+type;
+    const ico=document.createElement('span'); ico.className='t-ico'; ico.textContent=ICO[type]||'ℹ️';
+    const mo=document.createElement('div'); mo.className='t-msg'; mo.textContent=msg;
+    const x=document.createElement('button'); x.className='t-x'; x.type='button'; x.textContent='✕';
+    let done=false; const close=()=>{ if(done)return; done=true; t.classList.add('hide'); setTimeout(()=>t.remove(),200); };
+    x.onclick=close;
+    t.appendChild(ico); t.appendChild(mo); t.appendChild(x); w.appendChild(t);
+    setTimeout(close, Math.min(6500, Math.max(2800, msg.length*95)));   // 依訊息長度停留 2.8~6.5s
+    return t;
+  };
+  window.alert=function(m){ return window.showToast(m); };   // 全站 alert → 樣式化 toast
+})();
+/* ── 全域確認框:Promise 版 uiConfirm(取代原生 confirm,用 await uiConfirm(...))── */
+window.uiConfirm=function(message,opts){
+  opts=opts||{};
+  return new Promise(function(resolve){
+    const danger = (opts.danger!=null) ? opts.danger : /刪除|移除|停用|清除|封存|無法復原|回扣|回補|負數/.test(String(message||''));
+    const mask=document.createElement('div'); mask.id='confirm-mask';
+    const box=document.createElement('div'); box.className='confirm-box';
+    const ico=document.createElement('div'); ico.className='cf-ico'; ico.textContent=danger?'🗑️':'❓';
+    const msg=document.createElement('div'); msg.className='cf-msg'; msg.textContent=String(message==null?'':message);
+    const btns=document.createElement('div'); btns.className='cf-btns';
+    const cancel=document.createElement('button'); cancel.className='cf-btn cf-cancel'; cancel.type='button'; cancel.textContent=opts.cancelText||'取消';
+    const ok=document.createElement('button'); ok.className='cf-btn cf-ok'+(danger?' danger':''); ok.type='button'; ok.textContent=opts.okText||'確定';
+    btns.appendChild(cancel); btns.appendChild(ok);
+    box.appendChild(ico); box.appendChild(msg); box.appendChild(btns); mask.appendChild(box);
+    (document.body||document.documentElement).appendChild(mask);
+    let done=false;
+    const finish=function(v){ if(done)return; done=true; document.removeEventListener('keydown',onKey,true); mask.remove(); resolve(v); };
+    function onKey(e){ e.stopPropagation(); if(e.key==='Escape'){ e.preventDefault(); finish(false); } else if(e.key==='Enter'){ e.preventDefault(); finish(true); } }
+    cancel.onclick=function(){ finish(false); };
+    ok.onclick=function(){ finish(true); };
+    mask.addEventListener('mousedown',function(e){ if(e.target===mask) finish(false); });
+    document.addEventListener('keydown',onKey,true);
+    setTimeout(function(){ ok.focus(); },30);
+  });
+};
 const SUPA_URL = "https://eblatxdgcxyjvrpixbnr.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVibGF0eGRnY3h5anZycGl4Ym5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODU0OTIsImV4cCI6MjA5NjU2MTQ5Mn0.cSNgpD9etYT4aq2kfXADul3jQDh23Oh2OWE9MLTq3x8";
 const DXF_HEADER = `  0
@@ -6758,6 +7265,10 @@ async function applyView(v) {
       if (!allBOM.length) await loadBOM();
       await showProjectDetail(v.proj);
       if (v.zone) await showZoneDetail(v.zone);
+    } else if (v && v.page==='prod' && (v.ptab || v.pdetail)) {   // SP 頁子狀態(分頁/工程區詳情)
+      const onProd = document.getElementById('page-prod')?.classList.contains('active');
+      if(!onProd){ navTo('prod'); _prodPendingView=v; prodMaybeApplyPending(); }   // 從別頁回來:載入後套用
+      else { prodApplyViewNow(v); }                                                // 已在 SP 頁:直接套用,不重載
     } else {
       navTo((v && v.page) ? v.page : 'dashboard');
     }
@@ -6811,6 +7322,12 @@ async function restoreSession() {
 
 // ── Supabase ──
 async function sbFetch(path, opts={}, _retried) {
+  // 唯讀頁面:攔截所有寫入(新增/修改/刪除)。真正的把關在資料庫 RLS,這裡只是即時提示。
+  const _m=(opts.method||'GET').toUpperCase();
+  if(window._roActive && _m!=='GET' && _m!=='HEAD'){
+    if(!window._roAlerted){ window._roAlerted=true; setTimeout(()=>{window._roAlerted=false;},1500); alert('此頁面為唯讀模式,無法新增或修改。'); }
+    return {ok:false,status:403,data:null};
+  }
   const headers = {'apikey': SUPA_KEY, 'Content-Type': 'application/json'};
   if (currentSession) headers['Authorization'] = 'Bearer ' + currentSession.access_token;
   Object.assign(headers, opts.headers||{});
@@ -6980,9 +7497,10 @@ function confirmGuest(){
 async function loadProfile() {
   if(!currentSession) return;
   const uid=currentSession.user?.id; if(!uid) return;
-  const r=await sbFetch(`/rest/v1/profiles?id=eq.${uid}&select=name,account,is_admin,staff_id`);
+  const r=await sbFetch(`/rest/v1/profiles?id=eq.${uid}&select=name,account,is_admin,staff_id,perms,disabled`);
   let name=r.data?.[0]?.name||'', account=r.data?.[0]?.account||currentSession.user?.email||'';
   let isAdmin=r.data?.[0]?.is_admin||false;
+  const perms=r.data?.[0]?.perms||null, disabled=!!r.data?.[0]?.disabled;
   const staffId=r.data?.[0]?.staff_id||null;
   // 兩者結合: 顯示名稱留空時,改用綁定的公司名冊姓名
   if(!name && staffId){
@@ -6995,7 +7513,7 @@ async function loadProfile() {
     await sbFetch('/rest/v1/profiles',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:uid,name:gname,account})});
     name=gname;
   }
-  currentUser={id:uid,name,account,isAdmin};
+  currentUser={id:uid,name,account,isAdmin,perms,disabled};
 }
 async function logout() {
   if(!isGuest) await sbFetch('/auth/v1/logout',{method:'POST'});
@@ -7019,6 +7537,10 @@ async function checkOAuthCallback() {
   await loadProfile(); enterApp();
 }
 function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整理);登入/登出後重新登入一律進主頁
+  if(!isGuest && currentUser && currentUser.disabled){   // 離職/停用帳號:直接擋在門外(資料庫端 RLS 也會擋)
+    alert('此帳號已被停用,請聯絡管理員。');
+    logout(); return;
+  }
   _notifPopped=false;   // 每次登入都可重新彈通知
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app-screen').style.display='flex';
@@ -7033,8 +7555,12 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
   const railAdmin=document.getElementById('rail-admin');
   if(railAdmin) railAdmin.style.display=showAdmin?'':'none';
   initPanel();
-  loadDashboard(); loadBOM(); loadStaff(); loadLog();
-  if (restore) restoreLastView();   // 重新整理:回到上次所在頁面
+  applyPermsUI();   // 依帳號權限顯示/隱藏各頁面與分類
+  // 只預載輕量的公司名冊(各頁下拉會用到)與通知紀錄。
+  // 主頁統計、BOM 等「重資料」改由 navTo 進到該頁時才載,避免登入瞬間併發抓一堆大表,
+  // 拖慢緊接著要開的頁面(例如帳號管理)。
+  loadStaff(); loadLog();
+  if (restore) restoreLastView();   // 重新整理:回到上次所在頁面(該頁的資料由 navTo 載入)
   else goHome();                    // 登入(含 Google/帳密):一律進主頁
 }
 // 直接進主頁,並重設網址與歷史起點
@@ -7047,17 +7573,77 @@ function goHome() {
 }
 
 // ── 兩欄式導覽:圖示軌(分類) + 子選單面板 ──
-const SECTION_TITLE={main:'主選單',prod:'產量與報驗',tools:'工具',staff:'人員管理',eg:'長榮專區',admin:'管理員'};
+const SECTION_TITLE={main:'主選單',prod:'產量與報驗',tools:'工具',staff:'人員管理',eg:'長榮專區',hr:'人事薪資',admin:'管理員'};
 const PAGE_SECTION={
   dashboard:'main', labor:'main', hardware:'main',
   bom:'prod', layout:'prod', daily:'prod', inspect:'prod', a201a202:'prod', prod:'prod',
   bomtool:'tools', sp:'tools', dxf:'tools', hazard:'tools',
   staff:'staff', egstaff:'staff', attend:'staff', attendlog:'staff',
   attendance:'eg', egdaily:'eg',
+  emp:'hr', payroll:'hr', leave:'hr', payrollcfg:'hr',
   output:'admin', pricing:'admin', accounts:'admin'
 };
 // 每個分類的「首頁」(點圖示或觸控時導向)
-const SECTION_FIRST={main:'dashboard',prod:'bom',tools:'bomtool',staff:'staff',eg:'attendance',admin:'output'};
+const SECTION_FIRST={main:'dashboard',prod:'bom',tools:'bomtool',staff:'staff',eg:'attendance',hr:'emp',admin:'output'};
+
+// ── 頁面權限 ──────────────────────────────────────────────
+// 每個頁面三態:hide(隱藏) / read(唯讀) / edit(可編輯)
+const PAGE_META=[
+  {k:'dashboard',    label:'主頁',           sec:'main'},
+  {k:'evergreen-sys',label:'長榮系統(外部)', sec:'main'},
+  {k:'hardware',     label:'五金庫存',       sec:'main'},
+  {k:'labor',        label:'點工單',         sec:'main'},
+  {k:'bom',          label:'BOM 工程列表',   sec:'prod'},
+  {k:'layout',       label:'線上進度表',     sec:'prod'},
+  {k:'daily',        label:'每日產量',       sec:'prod'},
+  {k:'inspect',      label:'報驗',           sec:'prod'},
+  {k:'a201a202',     label:'A201/A202登記',  sec:'prod'},
+  {k:'prod',         label:'SP狀態追蹤表',   sec:'prod'},
+  {k:'bomtool',      label:'BOM 剖析工具',   sec:'tools'},
+  {k:'sp',           label:'S/P 板厚分類剖析',sec:'tools'},
+  {k:'dxf',          label:'水電靠模生產器', sec:'tools'},
+  {k:'hazard',       label:'列印危害告知',   sec:'tools'},
+  {k:'staff',        label:'公司名冊',       sec:'staff'},
+  {k:'egstaff',      label:'長榮人員',       sec:'staff'},
+  {k:'attend',       label:'人臉打卡',       sec:'staff'},
+  {k:'attendlog',    label:'打卡紀錄',       sec:'staff'},
+  {k:'attendance',   label:'出勤回報',       sec:'eg'},
+  {k:'egdaily',      label:'長榮日報',       sec:'eg'},
+  {k:'emp',          label:'員工薪資設定',   sec:'hr'},
+  {k:'payroll',      label:'薪資計算',       sec:'hr'},
+  {k:'leave',        label:'請假・特休',     sec:'hr'},
+  {k:'payrollcfg',   label:'費率設定',       sec:'hr'},
+  {k:'output',       label:'產值',           sec:'admin'},
+  {k:'pricing',      label:'計價',           sec:'admin'},
+  {k:'accounts',     label:'帳號管理',       sec:'admin'},
+];
+const ADMIN_PAGES=new Set(['output','pricing','accounts']);   // 一般帳號預設隱藏的管理頁
+// 人事薪資專區:整區用單一 perms 鍵 'payroll' 控管(與資料庫 is_hr() 一致),未授權一律隱藏
+const HR_PAGES=new Set(['emp','leave','payroll','payslip','payrollcfg']);
+// 訪客固定可見(唯讀):主頁、長榮系統、BOM工程列表、工具整區。其餘一律隱藏。
+const GUEST_PERMS={dashboard:'read','evergreen-sys':'read',bom:'read',bomtool:'read',sp:'read',dxf:'read',hazard:'read'};
+// 解析某頁面對「目前使用者」的權限
+function pagePerm(k){
+  if(isGuest) return GUEST_PERMS[k]||'hide';
+  const u=currentUser; if(!u) return 'hide';
+  if(u.isAdmin) return 'edit';                         // 管理員:全部可編輯
+  const p=u.perms||{};
+  if(HR_PAGES.has(k)){ const pv=p.payroll; return (pv==='read'||pv==='edit')?pv:'hide'; } // 人事薪資:未授權隱藏
+  if(p[k]==='hide'||p[k]==='read'||p[k]==='edit') return p[k];   // 帳號自訂
+  return ADMIN_PAGES.has(k)?'hide':'edit';             // 未設定:管理頁隱藏、其餘可編輯
+}
+// 依權限顯示/隱藏 nav 項目與分類圖示;整區皆隱藏 → 連圖示一起藏
+function applyPermsUI(){
+  PAGE_META.forEach(pm=>{
+    const el=document.getElementById('nav-'+pm.k);
+    if(el) el.style.display=(pagePerm(pm.k)==='hide')?'none':'';
+  });
+  ['main','prod','tools','staff','eg','hr','admin'].forEach(sec=>{
+    const anyVisible=PAGE_META.some(p=>p.sec===sec && pagePerm(p.k)!=='hide');
+    const rail=document.querySelector('.rail-item[data-sec="'+sec+'"]');
+    if(rail) rail.style.display=anyVisible?'':'none';
+  });
+}
 let _currentSection='main';   // 右欄目前顯示的分類
 let _pageSection='main';      // 目前所在頁面所屬分類(游標移開時回到這個)
 // 只切換右欄顯示的分類(不導頁)
@@ -7112,18 +7698,28 @@ window.addEventListener('resize', ()=>{ if(window.innerWidth>768) closeNav(); })
 window.addEventListener('keydown', e=>{ if(e.key==='Escape') closeNav(); });
 
 function navTo(page) {
-  if((page==='pricing'||page==='accounts'||page==='output') && !(currentUser&&currentUser.isAdmin&&!isGuest)) return; // 僅限管理員
+  if(pagePerm(page)==='hide'){          // 無權限的頁面:改導向第一個可見頁,避免空白畫面
+    const fb=PAGE_META.find(pm=>pm.k!=='evergreen-sys' && pagePerm(pm.k)!=='hide');
+    if(fb && fb.k!==page) return navTo(fb.k);
+    return;
+  }
   setView({page});   // 記住目前頁面,重新整理後回到此頁
   closeNav(); // 手機版:選完自動收回側欄
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('page-'+page)?.classList.add('active');
+  const _pel=document.getElementById('page-'+page);
+  _pel?.classList.add('active');
   document.getElementById('nav-'+page)?.classList.add('active');
+  // 唯讀模式:標記頁面 + 啟用寫入攔截 + 顯示唯讀徽章
+  const _perm=pagePerm(page);
+  window._roActive=(_perm==='read');
+  if(_pel) _pel.classList.toggle('perm-ro', _perm==='read');
+  const _rb=document.getElementById('ro-badge'); if(_rb) _rb.style.display=(_perm==='read')?'':'none';
   if(PAGE_SECTION[page]){ _pageSection=PAGE_SECTION[page]; selectSection(_pageSection); }   // 右欄切到當前頁所屬分類
   if(page!=='attend') attendStop(); // 離開打卡機就關相機
   if(page==='dashboard') loadDashboard();
   if(page==='dxf') dxfFillProjNums();
-  if(page==='bom') { if(allBOM.length) filterBOM(); loadBOM(); }
+  if(page==='bom') { if(allBOM.length) setBomView(bomView); loadBOM(); }
   if(page==='inspect') inspInit();
   if(page==='a201a202') { a201Load(); a202Load(); }
   if(page==='layout') layoutInit();
@@ -7140,6 +7736,10 @@ function navTo(page) {
   if(page==='labor') laborInit();
   if(page==='prod') prodInit();
   if(page==='egstaff') egstInit();
+  if(page==='emp') empInit();
+  if(page==='payroll') payrollInit();
+  if(page==='leave') leaveInit();
+  if(page==='payrollcfg') pcfgInit();
   var _lb=document.getElementById('labor-autosave'); if(_lb && page!=='labor') _lb.style.display='none';  // 離開點工單頁隱藏自動儲存提示
 }
 
@@ -7323,7 +7923,7 @@ async function hwUpdateItem(id,field,val){
 }
 async function hwDeleteItem(id){
   const it=hwItems.find(x=>x.id===id); if(!it) return;
-  if(!confirm('確定刪除品項「'+it.name+'」?(僅刪除庫存品項,不影響進貨/領用歷史)')) return;
+  if(!await uiConfirm('確定刪除品項「'+it.name+'」?(僅刪除庫存品項,不影響進貨/領用歷史)')) return;
   const r=await sbFetch('/rest/v1/hw_items?id=eq.'+id,{method:'DELETE'});
   if(!r.ok){ alert('刪除失敗'); return; }
   hwItems=hwItems.filter(x=>x.id!==id); hwPopulateSelects(); hwRender();
@@ -7431,7 +8031,7 @@ async function hwAddPurchase(){
 }
 async function hwDeletePurchase(id){
   const p=hwPurchases.find(x=>x.id===id); if(!p) return;
-  if(!confirm('刪除此筆進貨會回扣對應庫存,確定?')) return;
+  if(!await uiConfirm('刪除此筆進貨會回扣對應庫存,確定?')) return;
   const r=await sbFetch('/rest/v1/hw_purchases?id=eq.'+id,{method:'DELETE'});
   if(!r.ok){ alert('刪除失敗'); return; }
   hwPurchases=hwPurchases.filter(x=>x.id!==id);
@@ -7524,7 +8124,7 @@ async function hwAddUsage(){
   const person=document.getElementById('hw-us-person').value.trim();
   if(!cat||!name||!qty){ alert('請填寫種類、品項、數量'); return; }
   const it=hwItems.find(i=>i.name===name && i.category===cat);
-  if(it && hwNum(it.stock)<qty){ if(!confirm('庫存不足(目前 '+hwNum(it.stock)+'),仍要領用?庫存將變為負數。')) return; }
+  if(it && hwNum(it.stock)<qty){ if(!await uiConfirm('庫存不足(目前 '+hwNum(it.stock)+'),仍要領用?庫存將變為負數。')) return; }
   const remaining = it? hwNum(it.stock)-qty : null;
   const r=await sbFetch('/rest/v1/hw_usage',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({tx_date:date,category:cat,name,qty,unit,person,remaining})});
   if(!r.ok||!r.data){ alert('新增領用失敗'); return; }
@@ -7535,7 +8135,7 @@ async function hwAddUsage(){
 }
 async function hwDeleteUsage(id){
   const u=hwUsage.find(x=>x.id===id); if(!u) return;
-  if(!confirm('刪除此筆領用會回補對應庫存,確定?')) return;
+  if(!await uiConfirm('刪除此筆領用會回補對應庫存,確定?')) return;
   const r=await sbFetch('/rest/v1/hw_usage?id=eq.'+id,{method:'DELETE'});
   if(!r.ok){ alert('刪除失敗'); return; }
   hwUsage=hwUsage.filter(x=>x.id!==id);
@@ -7583,7 +8183,7 @@ function hwEditUsage(id){
     if(oldIt) await hwAdjustStock(oldIt, hwNum(u.qty));
     const newIt=hwItems.find(i=>i.name===name && i.category===cat);
     if(newIt && hwNum(newIt.stock)<qty){
-      if(!confirm('庫存不足(目前 '+hwNum(newIt.stock)+'),仍要領用?庫存將變為負數。')){ if(oldIt) await hwAdjustStock(oldIt, -hwNum(u.qty)); return; }
+      if(!await uiConfirm('庫存不足(目前 '+hwNum(newIt.stock)+'),仍要領用?庫存將變為負數。')){ if(oldIt) await hwAdjustStock(oldIt, -hwNum(u.qty)); return; }
     }
     if(newIt) await hwAdjustStock(newIt, -qty);
     const remaining = newIt? hwNum(newIt.stock) : null;
@@ -7645,7 +8245,7 @@ async function hwAddStocktake(){
 }
 async function hwDeleteStocktake(id){
   const s=hwStocktake.find(x=>x.id===id); if(!s) return;
-  if(!confirm('刪除此筆盤點紀錄?(僅刪除紀錄,不會還原當時的庫存修正)')) return;
+  if(!await uiConfirm('刪除此筆盤點紀錄?(僅刪除紀錄,不會還原當時的庫存修正)')) return;
   const r=await sbFetch('/rest/v1/hw_stocktake?id=eq.'+id,{method:'DELETE'});
   if(!r.ok){ alert('刪除失敗'); return; }
   hwStocktake=hwStocktake.filter(x=>x.id!==id); hwRender();
@@ -7723,7 +8323,7 @@ async function hwAddVendor(){
   document.getElementById('hw-nv-name').value=''; hwPopulateSelects(); hwRenderParty();
 }
 async function hwDeleteVendor(id){
-  const v=hwVendors.find(x=>x.id===id); if(!v)return; if(!confirm('刪除廠商「'+v.name+'」?'))return;
+  const v=hwVendors.find(x=>x.id===id); if(!v)return; if(!await uiConfirm('刪除廠商「'+v.name+'」?'))return;
   const r=await sbFetch('/rest/v1/hw_vendors?id=eq.'+id,{method:'DELETE'}); if(!r.ok){alert('刪除失敗');return;}
   hwVendors=hwVendors.filter(x=>x.id!==id); hwPopulateSelects(); hwRenderParty();
 }
@@ -7790,7 +8390,7 @@ async function hwAddEquip(){
   hwRenderEquip(); hwRenderStats();
 }
 async function hwDeleteEquip(id){
-  const e=hwEquip.find(x=>x.id===id); if(!e)return; if(!confirm('刪除設備「'+e.name+'」?'))return;
+  const e=hwEquip.find(x=>x.id===id); if(!e)return; if(!await uiConfirm('刪除設備「'+e.name+'」?'))return;
   const r=await sbFetch('/rest/v1/hw_equipment?id=eq.'+id,{method:'DELETE'}); if(!r.ok){alert('刪除失敗');return;}
   hwEquip=hwEquip.filter(x=>x.id!==id); hwRenderEquip(); hwRenderStats();
 }
@@ -7968,6 +8568,7 @@ function egFillMP(z){
 async function egGenerate(){
   const dateISO = document.getElementById('eg-date').value || egToday();
   egUpdateNavLabels();
+  refreshDateWk();   // 更新「日期（星期）」顯示
   egSaveMP();
   const prev=document.getElementById('eg-preview');
   prev.innerHTML='<div class="empty-state">計算中…</div>';
@@ -8298,6 +8899,7 @@ function closeModal(id){document.getElementById(id).className='modal-overlay';}
 
 // ── Dashboard ──
 async function loadDashboard() {
+  dashLoadMonthTon();   // 先用「當月」輕量查詢秒顯示噸數 KPI,不必等下方 7 張大表全載完
   dashStatsInit();   // 兩種統計報表(每日產量/線上進度) 獨立載入,不受下方提前 return 影響
   const attMonth = dashTodayStr().slice(0,7);   // 本月出勤統計區間
   const [pRes, sRes, aRes] = await Promise.all([
@@ -8308,7 +8910,6 @@ async function loadDashboard() {
   const projects=Array.isArray(pRes.data)?pRes.data:[];
   const staff=Array.isArray(sRes.data)?sRes.data:[];
   const active=projects.filter(p=>p.status==='進行中');
-  document.getElementById('stat-projects').textContent=active.length;
   document.getElementById('stat-staff').textContent=staff.filter(s=>s.status!=='離職').length;  // 只算在職
   // 出勤統計:當月有任一天出勤(工數或加班>0)就算出勤員工;本日出勤=今天有出勤的人數
   const attRows=Array.isArray(aRes.data)?aRes.data:[];
@@ -8326,14 +8927,78 @@ async function loadDashboard() {
     chipsEl.innerHTML=active.length
       ? active.map(p=>`<span class="dash-proj-chip" onclick="showProjectDetail(${p.id})" title="${String(p.proj_name||'').replace(/"/g,'&quot;')}">
           <span class="chip-num">${p.proj_num||'—'}</span>
-          <span class="chip-name">${p.proj_name||'—'}</span>
         </span>`).join('')
       : '<span style="color:var(--text3);font-size:13px">目前沒有進行中的工程</span>';
   }
+  dashLoadSPProgress();   // SP 備料進度(獨立載入,不阻塞主頁其他區塊)
+}
+// 主頁:SP 鋼材備料進度(讀 sp_progress 彙總 view,回傳幾十列,很輕)
+async function dashLoadSPProgress(){
+  const el=document.getElementById('dash-sp-progress'); if(!el) return;
+  const r=await sbFetch('/rest/v1/sp_progress?select=*');
+  let rows=Array.isArray(r.data)?r.data:[];
+  const cntEl=document.getElementById('dash-sp-count');
+  rows.forEach(r=>{ r._pct = (+r.total>0)?Math.round((+r.done)/(+r.total)*100):0; });
+  rows=rows.filter(r=>r._pct>0);   // 只顯示有進度的,0% 不列
+  if(!rows.length){ if(cntEl)cntEl.textContent=''; el.innerHTML='<span style="color:var(--text3);font-size:13px">目前沒有進行中的備料進度</span>'; return; }
+  rows.sort((a,b)=> a._pct-b._pct || String(a.proj_no||'').localeCompare(String(b.proj_no||''),undefined,{numeric:true}));   // 完成度低排前
+  if(cntEl) cntEl.textContent='· '+rows.length+' 件';
+  el.innerHTML=rows.map(r=>{
+    const total=+r.total||0, done=+r.done||0, pct=r._pct, full=pct>=100;
+    const label=(r.proj_no||'—')+(r.zone?('-'+r.zone):'');
+    const pctHtml = full
+      ? `<span class="spp-i-pct"><span class="spp-pct-num">${pct}%</span><button class="spp-go" onclick="event.stopPropagation();dashMarkOnline(this)" title="標記此工程區已上線 → 從清單移除、歸檔到總表看板">可上線 ✓</button></span>`
+      : `<span class="spp-i-pct">${pct}%</span>`;
+    return `<div class="spp-item${full?' full':''}" data-proj="${esc(r.proj_no||'')}" data-zone="${esc(r.zone||'')}" onclick="dashGoSP(this.dataset.proj,this.dataset.zone)" title="${esc(r.proj_name||r.proj_no||'')} · ${done}/${total} 備妥 · 點擊看總表看板">
+      <div class="spp-i-top"><span class="spp-i-name">${esc(label)}</span>${pctHtml}</div>
+      <div class="spp-i-bar"><i style="width:${pct}%"></i></div>
+    </div>`;
+  }).join('');
+}
+// 主頁 SP 小卡點擊 → 跳到 SP 頁,開啟該工程區在總表看板對應的詳情
+function dashGoSP(proj, zone){
+  navTo('prod');                                                         // 進 SP 頁(觸發 prodInit 載入)
+  _prodPendingView = {page:'prod', pdetail:1, pproj:proj||'', pzone:zone||''};
+  prodMaybeApplyPending();                                               // 資料已在→立即;否則 prodInit 完成後套用
+}
+// 主頁 SP 小卡「可上線」:把該工程區寫入 sp_online → 從主頁清單移除、總表看板歸檔(可於看板取消)
+async function dashMarkOnline(btn){
+  const it=btn.closest('.spp-item'); if(!it) return;
+  const proj=it.dataset.proj||'', zone=it.dataset.zone||'';
+  btn.disabled=true; btn.textContent='上線中…';
+  const r=await sbFetch('/rest/v1/sp_online',{method:'POST',headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify({proj_no:proj,zone:zone,online_by:(currentUser&&currentUser.name)||null})});
+  if(r.ok || r.status===409){   // 409 = 已存在,視同已上線
+    it.style.transition='opacity .18s'; it.style.opacity='0';
+    // 同步看板端已上線集合(若 SP 頁已載入過),避免不一致
+    if(typeof prodOnline!=='undefined'){
+      if(!prodOnline.some(o=>(o.proj_no||'')===proj && (o.zone||'')===zone)) prodOnline.push({proj_no:proj,zone:zone});
+      if(typeof prodRebuildOnline==='function') prodRebuildOnline();
+    }
+    setTimeout(()=>{ dashLoadSPProgress(); if(typeof prodRenderBoard==='function' && document.getElementById('prodBoardBody')) prodRenderBoard(); }, 200);
+  }else{
+    btn.disabled=false; btn.textContent='可上線 ✓';
+    alert('上線失敗('+r.status+')');
+  }
+}
+
+// 上方噸數 KPI:只抓「當月」daily_output(輕量)即可算 本月/今日噸數、本月支數 → 秒顯示,
+// 不必等下方 dashLoadStats 的 7 張全歷史大表。之後 dashRenderKpiTon 會用完整資料再算一次(數字一致,不閃動)。
+async function dashLoadMonthTon(){
+  const month=dashTodayStr().slice(0,7), today=dashTodayStr();
+  const r=await sbFetchAll('/rest/v1/daily_output?select=date,net_weight&date=gte.'+month+'-01&date=lte.'+month+'-31');
+  const rows=Array.isArray(r.data)?r.data:[];
+  let monTon=0,monQty=0,dayTon=0;
+  rows.forEach(x=>{ const w=parseFloat(x.net_weight)||0; monTon+=w; monQty++; if(String(x.date)===today) dayTon+=w; });
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('stat-month-ton',(monTon/1000).toFixed(2));
+  set('stat-today-ton',(dayTon/1000).toFixed(2));
+  set('stat-month-qty',monQty);
 }
 
 // ── Dashboard 統計報表 (每日產量 / 線上進度) ──
 let dashDailyRows = [], dashLayoutRows = [], dashComponents = [], dashCompExt = {}, dashZoneMap = {}, dashReceipts = {};
+let dashProjStatus = {};   // proj_num(UPPER) -> 專案狀態(用於線上進度統計排除「異常」)
 
 function dashTodayStr() {
   const d = new Date();
@@ -8355,7 +9020,7 @@ async function dashLoadStats() {
     sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,qty'),
     sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no,extra'),
     sbFetchAll('/rest/v1/zones?select=id,zone_code,project_id'),
-    sbFetchAll('/rest/v1/projects?select=id,proj_num'),
+    sbFetchAll('/rest/v1/projects?select=id,proj_num,status'),
     sbFetchAll('/rest/v1/material_receipts?select=zone_id,part_no,date,qty')
   ]);
   dashDailyRows = Array.isArray(dRes.data) ? dRes.data : [];
@@ -8369,7 +9034,11 @@ async function dashLoadStats() {
   if (Array.isArray(eRes.data)) eRes.data.forEach(e => { dashCompExt[e.zone_id + '|' + e.part_no] = e.extra || {}; });
   // proj_num|zone_code -> zone_id (沿用 layoutLoadBOM 對照法)
   const projById = {};
-  if (Array.isArray(pRes.data)) pRes.data.forEach(p => { projById[p.id] = p.proj_num; });
+  dashProjStatus = {};
+  if (Array.isArray(pRes.data)) pRes.data.forEach(p => {
+    projById[p.id] = p.proj_num;
+    dashProjStatus[String(p.proj_num||'').trim().toUpperCase()] = p.status || '';
+  });
   dashZoneMap = {};
   if (Array.isArray(zRes.data)) zRes.data.forEach(z => {
     const pn = projById[z.project_id] || '';
@@ -8397,6 +9066,7 @@ function dashNavDate(delta) {
 async function dashStatsInit() {
   const today = dashTodayStr();
   const dp = document.getElementById('dash-shared-date'); if (dp && !dp.value) dp.value = today;
+  refreshDateWk();   // 顯示選中日期 + 星期
   try { await dashLoadStats(); } catch(e) { console.warn('dashLoadStats failed', e); }
   dashRenderKpiTon();   // 上方 KPI 卡片:本月/今日總產量(噸),固定用當月今日,不隨統計日期切換
   dashRenderDaily(); dashRenderProgress();
@@ -8417,7 +9087,23 @@ function dashRenderKpiTon() {
   set('stat-month-qty', monQty);
 }
 
-function dashOnDateChange() { dashRenderDaily(); dashRenderProgress(); }
+// ══════════ 通用:日期選擇器旁「日期（星期）· 今日」顯示 ══════════
+// 用法:<input type="date" class="date-wk" data-wk="labelId"> 搭配 <span id="labelId" class="date-wk-show">
+//  · 手動改選(picker):由下方 change 事件委派自動更新,免寫程式。
+//  · 程式改 input.value(前一天/後一天/今日/初始化):改完呼叫 refreshDateWk()。
+function fmtDateWk(v){
+  if(!v) return '—';
+  const d=new Date(v+'T00:00:00'); if(isNaN(d)) return '—';
+  const wk=['週日','週一','週二','週三','週四','週五','週六'][d.getDay()];
+  const s=d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0');
+  const t=new Date(), today=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  return s+'（'+wk+'）'+(v===today?' · 今日':'');
+}
+function setDateWk(inp){ if(!inp||!inp.dataset) return; const lab=document.getElementById(inp.dataset.wk); if(lab) lab.textContent=fmtDateWk(inp.value); }
+function refreshDateWk(root){ (root||document).querySelectorAll('input.date-wk[data-wk]').forEach(setDateWk); }
+document.addEventListener('change', function(e){ const t=e.target; if(t && t.matches && t.matches('input.date-wk[data-wk]')) setDateWk(t); });
+
+function dashOnDateChange() { refreshDateWk(); dashRenderDaily(); dashRenderProgress(); }
 
 function dashSelectedDate() {
   const dp = document.getElementById('dash-shared-date');
@@ -8582,7 +9268,9 @@ function dashRenderProgress() {
     const maxDate = zoneMaxDate[k] || '';
     const hide100 = bom > 0 && done >= bom && maxDate < today;
     return { proj, zone, feed, needQty, online, done, bom, diff, pct, doneT, leftT, planT, hide100 };
-  }).filter(r => !r.hide100).sort((a,b) => a.proj.localeCompare(b.proj) || a.zone.localeCompare(b.zone));
+  }).filter(r => !r.hide100)
+    .filter(r => dashProjStatus[String(r.proj||'').trim().toUpperCase()] !== '異常')   // 工程狀態為「異常」的不列入線上進度統計
+    .sort((a,b) => a.proj.localeCompare(b.proj) || a.zone.localeCompare(b.zone));
   const body = document.getElementById('dash-progress-body');
   body.innerHTML = rows.length ? rows.map(r => {
     const diffColor = r.diff < 0 ? 'var(--red)' : 'var(--green)';
@@ -8685,8 +9373,10 @@ async function applyProjectStatus(projectId) {
   if (!projectId) return;
   const zr = await sbFetch('/rest/v1/zones?select=status&project_id=eq.' + projectId);
   const zones = Array.isArray(zr.data) ? zr.data : [];
-  const st = calcProjectStatus(zones.map(z => z.status));
   const p = allBOM.find(x => x.id === projectId);
+  if (p && p.status === '異常') return;   // 「異常」為手動狀態,不被生產資料自動重算覆寫
+  if (!zones.length) return;              // 沒有工程區=無生產資料可推導,保留手動狀態(不強制歸為未開始)
+  const st = calcProjectStatus(zones.map(z => z.status));
   if (p && p.status !== st) {
     await sbFetch('/rest/v1/projects?id=eq.' + projectId, {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({status:st})});
     p.status = st;
@@ -8795,7 +9485,10 @@ async function syncBOMProjectStatusFromLayout() {
   }
   // compute project status
   for (const p of allBOM) {
-    const st = calcProjectStatus(projZoneStatuses[p.id] || []);
+    if (p.status === '異常') continue;   // 「異常」為手動狀態,保留不覆寫
+    const zs = projZoneStatuses[p.id];
+    if (!zs || !zs.length) continue;     // 沒有工程區=無生產資料可推導,保留手動狀態
+    const st = calcProjectStatus(zs);
     if (p.status !== st) {
       p.status = st;
       await sbFetch('/rest/v1/projects?id=eq.' + p.id, {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({status:st})});
@@ -8807,19 +9500,23 @@ async function loadBOM() {
   const r=await sbFetchAll('/rest/v1/projects?select=*&order=created_at.desc');
   allBOM=Array.isArray(r.data)?r.data:[];
   await syncBOMProjectStatusFromLayout();
-  filterBOM();
+  setBomView(bomView);   // 套用目前顯示模式(列表/卡片)並重繪
 }
 // 狀態排序:進行中 > 未開始 > 已完成
-const BOM_STATUS_ORDER={ '進行中':0, '未開始':1, '已完成':2 };
+const BOM_STATUS_ORDER={ '進行中':0, '未開始':1, '已完成':2, '異常':5 };   // 異常排最下(未完成清單中)
 function bomStatusIdx(s){ const i=BOM_STATUS_ORDER[String(s||'').trim()]; return i==null?9:i; }
 let bomShowDone=false;
+function bomIs81(p){ return (p.welding_material||'').trim().toUpperCase()==='81TN'; }
+function bomWeldHTML(p){ return bomIs81(p)?'<b class="w81">81TN</b>':(p.welding_material||'—'); }
+// 公司上色:比照「請款核對」coStyle — 鎮山=青(accent3)、麗生=黃(yellow),粗體
+function bomCoHTML(co){ co=co||''; const s=co==='鎮山'?'color:var(--accent3);font-weight:700':co==='麗生'?'color:var(--yellow);font-weight:700':''; return s?`<span style="${s}">${co}</span>`:(co||'—'); }
 function bomRowHTML(p){
-  return `<tr>
+  return `<tr class="${bomIs81(p)?'bom-81tn':''}">
     <td><span class="proj-num-link" onclick="showProjectDetail(${p.id})">${p.proj_num||'—'}</span></td>
-    <td>${p.proj_name||'—'}</td><td>${p.client||'—'}</td><td>${p.welding_material||'—'}</td>
+    <td>${p.proj_name||'—'}</td><td>${p.client||'—'}</td><td>${bomWeldHTML(p)}</td>
     <td>${p.proj_manager||'—'}</td><td>${p.qc_manager||'—'}</td>
     <td><span class="status-badge ${p.status}">${p.status}</span></td>
-    <td>${p.company||'—'}</td>
+    <td>${bomCoHTML(p.company)}</td>
     <td style="white-space:nowrap">
       <button class="btn-icon edit" onclick="editBOM(${p.id})">✏️</button>
       <button class="btn-icon del" onclick="deleteBOM(${p.id})">🗑</button>
@@ -8828,11 +9525,57 @@ function bomRowHTML(p){
 }
 // 工程編號 A-Z (numeric: B2 排在 B10 之前)
 function bomProjCmp(a,b){ return String(a.proj_num||'').localeCompare(String(b.proj_num||''), undefined, {numeric:true, sensitivity:'base'}); }
+// ── 列表 / 卡片 / 小卡 顯示切換 ──
+let bomView = 'list';
+try { const _v=localStorage.getItem('bom_view'); bomView = (_v==='card'||_v==='mini')?_v:'list'; } catch(e) {}
+// 完整卡片:整張可點進工程詳情,工程編號為大標題,形式比照「工程區」卡
+function bomCardHTML(p){
+  return `<div class="bom-card${bomIs81(p)?' bom-81tn':''}" onclick="showProjectDetail(${p.id})" title="點卡片開啟工程詳情">
+    <div class="bom-card-top">
+      <span class="bom-card-num">${p.proj_num||'—'}</span>
+      <span class="status-badge ${p.status}">${p.status}</span>
+    </div>
+    <div class="bom-card-name" title="${(p.proj_name||'').replace(/"/g,'&quot;')}">${p.proj_name||'—'}</div>
+    <div class="bom-card-props">
+      <div class="bom-cp"><i>業主</i><b>${p.client||'—'}</b></div>
+      <div class="bom-cp"><i>公司</i><b>${bomCoHTML(p.company)}</b></div>
+      <div class="bom-cp"><i>銲材</i><b>${bomWeldHTML(p)}</b></div>
+      <div class="bom-cp"><i>工程主辦</i><b>${p.proj_manager||'—'}</b></div>
+      <div class="bom-cp"><i>品管主辦</i><b>${p.qc_manager||'—'}</b></div>
+    </div>
+    <div class="bom-card-actions" onclick="event.stopPropagation()">
+      <button class="btn-icon edit" onclick="event.stopPropagation();editBOM(${p.id})">✏️</button>
+      <button class="btn-icon del" onclick="event.stopPropagation();deleteBOM(${p.id})">🗑</button>
+    </div>
+  </div>`;
+}
+// 小卡:只顯示工程編號
+function bomMiniHTML(p){
+  return `<div class="bom-mini st-${p.status}${bomIs81(p)?' bom-81tn':''}" onclick="showProjectDetail(${p.id})" title="${(p.proj_name||'').replace(/"/g,'&quot;')} · ${p.status}">${p.proj_num||'—'}</div>`;
+}
+function setBomView(v){
+  bomView = (v==='card'||v==='mini') ? v : 'list';
+  try { localStorage.setItem('bom_view', bomView); } catch(e) {}
+  document.getElementById('bom-view-list')?.classList.toggle('active', bomView==='list');
+  document.getElementById('bom-view-card')?.classList.toggle('active', bomView==='card');
+  document.getElementById('bom-view-mini')?.classList.toggle('active', bomView==='mini');
+  const isTable = bomView==='list';
+  const lw=document.getElementById('bom-list-wrap'), cw=document.getElementById('bom-card-wrap');
+  if(lw) lw.style.display = isTable ? '' : 'none';
+  if(cw){ cw.style.display = isTable ? 'none' : ''; cw.classList.toggle('mini', bomView==='mini'); }
+  filterBOM();   // 依目前模式重繪(含已完成區)
+}
+function bomCardsHTML(list){ return (bomView==='mini'?list.map(bomMiniHTML):list.map(bomCardHTML)).join(''); }
 function renderBOM(list) {
-  const tbody=document.getElementById('bom-table-body');
-  if(!list.length){tbody.innerHTML='<tr><td colspan="9" class="empty-state">無工程資料</td></tr>';return;}
   // 排序:進行中 > 未開始 (同狀態再依工程編號)
   list = list.slice().sort((a,b)=> bomStatusIdx(a.status)-bomStatusIdx(b.status) || bomProjCmp(a,b));
+  if(bomView!=='list'){
+    const cw=document.getElementById('bom-card-wrap');
+    cw.innerHTML = list.length ? bomCardsHTML(list) : '<div class="empty-state" style="grid-column:1/-1">無工程資料</div>';
+    return;
+  }
+  const tbody=document.getElementById('bom-table-body');
+  if(!list.length){tbody.innerHTML='<tr><td colspan="9" class="empty-state">無工程資料</td></tr>';return;}
   // 保留捲動位置:編輯存檔後重繪表格不要跳回第一筆
   const sc=tbody.closest('.table-scroll'); const st=sc?sc.scrollTop:0;
   tbody.innerHTML=list.map(bomRowHTML).join('');
@@ -8841,14 +9584,19 @@ function renderBOM(list) {
 function renderBOMDone(list) {
   const section=document.getElementById('bom-done-section');
   const card=document.getElementById('bom-done-card');
+  const cardWrap=document.getElementById('bom-done-card-wrap');
   const toggle=document.getElementById('bom-done-toggle');
   const tbody=document.getElementById('bom-done-body');
   if(!list.length){ section.style.display='none'; return; }
   section.style.display='';
   toggle.textContent=(bomShowDone?'隱藏已完成 (':'顯示已完成 (')+list.length+')';
-  card.style.display=bomShowDone?'':'none';
   list=list.slice().sort(bomProjCmp);
-  tbody.innerHTML=list.map(bomRowHTML).join('');
+  const isCardish = bomView!=='list';
+  card.style.display    = (bomShowDone && !isCardish) ? '' : 'none';
+  cardWrap.style.display= (bomShowDone &&  isCardish) ? '' : 'none';
+  cardWrap.classList.toggle('mini', bomView==='mini');
+  if(isCardish) cardWrap.innerHTML=bomCardsHTML(list);
+  else          tbody.innerHTML=list.map(bomRowHTML).join('');
 }
 function toggleBomDone(){ bomShowDone=!bomShowDone; filterBOM(); }
 function filterBOM() {
@@ -8948,7 +9696,7 @@ async function saveBOM() {
   loadDashboard();       // 背景更新,不擋畫面
 }
 async function deleteBOM(id) {
-  if(!confirm('確定要刪除這筆工程？')) return;
+  if(!await uiConfirm('確定要刪除這筆工程？')) return;
   const r=await sbFetch(`/rest/v1/projects?id=eq.${id}`,{method:'DELETE'});
   if(r && r.ok===false){ alert('刪除失敗：'+(r.data?.message||'未知錯誤')); return; }
   allBOM=allBOM.filter(p=>p.id!==id);
@@ -8958,6 +9706,7 @@ async function deleteBOM(id) {
 let currentProjectId=null, allZones=[], editZoneId=null;
 
 async function showProjectDetail(id) {
+  if(!allBOM.length){ try{ await loadBOM(); }catch(e){} }   // 未預載時自載,確保能查到工程
   const p=allBOM.find(x=>x.id===id);
   if(!p) return;
   currentProjectId=id;
@@ -9205,7 +9954,7 @@ function confirmZoneBomUpdate(){
   }
 }
 async function deleteZone(id) {
-  if(!confirm('確定要刪除這個工程區？')) return;
+  if(!await uiConfirm('確定要刪除這個工程區？')) return;
   await sbFetch(`/rest/v1/zones?id=eq.${id}`,{method:'DELETE'});
   await loadZones(currentProjectId);
 }
@@ -9569,7 +10318,7 @@ async function applyMatDelete() {
   if (!zoneMatChecked.size) { alert('請先勾選要刪除進料的構件'); return; }
   const withData = Array.from(zoneMatChecked).filter(p => (zoneReceipts[p]||[]).length);
   if (!withData.length) { alert('勾選的構件都沒有進料紀錄'); return; }
-  if (!confirm('確定刪除 '+withData.length+' 支構件的所有進料紀錄?')) return;
+  if (!await uiConfirm('確定刪除 '+withData.length+' 支構件的所有進料紀錄?')) return;
   zonePushUndo();   // 進料刪除前先存快照,供復原/重做
   let ok = 0;
   for (let i = 0; i < withData.length; i += 80) {
@@ -9877,7 +10626,7 @@ function compRenameCol(enc) {
 // 刪除自訂欄位:一併清除所有構件在該欄位的資料,並即時存檔
 async function compDeleteCol(enc) {
   const name = decodeURIComponent(enc);
-  if (!confirm('確定刪除欄位「'+name+'」?此欄位在所有構件的內容都會一併刪除。')) return;
+  if (!await uiConfirm('確定刪除欄位「'+name+'」?此欄位在所有構件的內容都會一併刪除。')) return;
   const idx = zoneCompCustomCols.indexOf(name);
   if (idx < 0) return;
   zoneCompCustomCols.splice(idx, 1);
@@ -10032,7 +10781,7 @@ async function addMaterialReceipt() {
   renderCompActions();   // 更新復原/重做按鈕狀態
 }
 async function delMaterialReceipt(id) {
-  if (!confirm('刪除這筆進料紀錄?')) return;
+  if (!await uiConfirm('刪除這筆進料紀錄?')) return;
   zonePushUndo();   // 單支進料刪除前先存快照,供復原/重做
   const res = await sbFetch('/rest/v1/material_receipts?id=eq.'+id, {method:'DELETE'});
   if (!res.ok) { zoneExtUndoStack.pop(); alert('刪除失敗'); return; }
@@ -10664,7 +11413,7 @@ async function saveStaff() {
   closeModal('staff-modal'); await loadStaff();
 }
 async function deleteStaff(id) {
-  if(!confirm('確定要刪除這位員工？')) return;
+  if(!await uiConfirm('確定要刪除這位員工？')) return;
   await sbFetch(`/rest/v1/staff?id=eq.${id}`,{method:'DELETE'});
   await loadStaff();
 }
@@ -10777,14 +11526,14 @@ async function staffSenSave(){
 let allAccounts=[], accStaffList=[];
 async function loadAccounts() {
   const body=document.getElementById('accounts-body');
-  body.innerHTML='<tr><td colspan="4" class="empty-state">載入中...</td></tr>';
+  body.innerHTML='<tr><td colspan="6" class="empty-state">載入中...</td></tr>';
   const [pRes,sRes]=await Promise.all([
-    sbFetchAll('/rest/v1/profiles?select=id,name,account,is_admin,staff_id&order=account'),
+    sbFetchAll('/rest/v1/profiles?select=id,name,account,is_admin,staff_id,perms,disabled&order=account'),
     sbFetchAll('/rest/v1/staff?select=id,name&order=name')
   ]);
   allAccounts=Array.isArray(pRes.data)?pRes.data:[];
   accStaffList=Array.isArray(sRes.data)?sRes.data:[];
-  if(!pRes.ok){body.innerHTML='<tr><td colspan="4" class="empty-state">讀取帳號失敗('+pRes.status+')，請確認 profiles 的讀取權限</td></tr>';return;}
+  if(!pRes.ok){body.innerHTML='<tr><td colspan="6" class="empty-state">讀取帳號失敗('+pRes.status+')，請確認 profiles 的讀取權限</td></tr>';return;}
   renderAccounts(allAccounts);
 }
 function filterAccounts(){
@@ -10793,16 +11542,92 @@ function filterAccounts(){
 }
 function renderAccounts(list){
   const body=document.getElementById('accounts-body');
-  if(!list.length){body.innerHTML='<tr><td colspan="4" class="empty-state">無帳號資料</td></tr>';return;}
+  if(!list.length){body.innerHTML='<tr><td colspan="6" class="empty-state">無帳號資料</td></tr>';return;}
   const staffOpts=id=>['<option value="">— 未綁定 —</option>'].concat(
     (accStaffList||[]).map(s=>`<option value="${s.id}"${String(s.id)===String(id)?' selected':''}>${(s.name||'').replace(/</g,'&lt;')}</option>`)
   ).join('');
-  body.innerHTML=list.map(a=>`<tr data-id="${a.id}">
+  body.innerHTML=list.map(a=>{
+    const off=!!a.disabled, jid=String(a.id).replace(/'/g,'');
+    return `<tr data-id="${a.id}"${off?' style="opacity:.55"':''}>
     <td style="font-family:var(--mono);font-size:12px">${(a.account||'—').replace(/</g,'&lt;')}</td>
     <td><input type="text" class="acc-name search-input" style="width:140px;padding:6px 8px" value="${(a.name||'').replace(/"/g,'&quot;')}" placeholder="(用名冊姓名)"/></td>
     <td><select class="acc-staff filter-select" style="min-width:130px">${staffOpts(a.staff_id)}</select></td>
     <td style="text-align:center"><input type="checkbox" class="acc-admin" ${a.is_admin?'checked':''} style="width:16px;height:16px;cursor:pointer"/></td>
-  </tr>`).join('');
+    <td style="text-align:center">${off
+      ? `<button class="btn" style="padding:4px 10px;color:#b91c1c;border-color:#f1c0c0" onclick="toggleAccountDisabled('${jid}',false)">已停用·點擊啟用</button>`
+      : `<button class="btn" style="padding:4px 10px" onclick="toggleAccountDisabled('${jid}',true)">停用</button>`}</td>
+    <td style="text-align:center"><button class="btn" style="padding:4px 10px" onclick="openPermModal('${jid}')">🔑 設定</button></td>
+  </tr>`;}).join('');
+}
+// ── 停用 / 啟用帳號(即時 PATCH)──
+async function toggleAccountDisabled(id,disabled){
+  const acc=allAccounts.find(a=>String(a.id)===String(id)); if(!acc) return;
+  if(disabled){
+    if(currentUser&&String(currentUser.id)===String(id)){ alert('不能停用自己的帳號。'); return; }
+    if(acc.is_admin){
+      const otherAdmins=allAccounts.filter(a=>a.is_admin&&!a.disabled&&String(a.id)!==String(id)).length;
+      if(otherAdmins===0){ alert('這是最後一個有效的管理員,不能停用。'); return; }
+    }
+    if(!await uiConfirm(`確定停用「${acc.account||acc.name||id}」?\n停用後該帳號將無法登入,且資料庫端會拒絕其一切讀寫。`)) return;
+  }
+  const r=await sbFetch(`/rest/v1/profiles?id=eq.${id}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({disabled})});
+  if(!r.ok){ alert('更新失敗('+r.status+')'); return; }
+  acc.disabled=disabled;
+  renderAccounts(allAccounts.filter(a=>{const q=(document.getElementById('accounts-search').value||'').toLowerCase();return !q||(a.account||'').toLowerCase().includes(q)||(a.name||'').toLowerCase().includes(q);}));
+}
+// ── 頁面權限設定視窗 ──
+let _permEditId=null;
+function openPermModal(id){
+  const acc=allAccounts.find(a=>String(a.id)===String(id)); if(!acc) return;
+  _permEditId=id;
+  document.getElementById('perm-modal-acc').textContent=acc.account||acc.name||id;
+  const perms=acc.perms||{};
+  const isAdmin=acc.is_admin;
+  const rowFor=pm=>{
+    // 顯示「目前實際套用值」:管理員一律 edit;未設定則帶預設
+    const cur = isAdmin ? 'edit' : (perms[pm.k]||(ADMIN_PAGES.has(pm.k)?'hide':'edit'));
+    const opt=(v,t)=>`<option value="${v}"${cur===v?' selected':''}>${t}</option>`;
+    return `<tr>
+      <td style="padding:4px 8px">${pm.label}</td>
+      <td style="padding:4px 8px;text-align:right">
+        <select class="perm-sel" data-k="${pm.k}" ${isAdmin?'disabled':''} style="padding:4px 8px;min-width:110px">
+          ${opt('hide','🚫 隱藏')}${opt('read','👁 唯讀')}${opt('edit','✏️ 可編輯')}
+        </select></td></tr>`;
+  };
+  // 人事薪資是「整區」用單一 key=payroll 控管 → 個別 HR 頁不各自列出,合併成一列
+  const pageRows = PAGE_META.filter(pm=>!HR_PAGES.has(pm.k)).map(rowFor).join('');
+  const hrCur = isAdmin ? 'edit' : (perms.payroll || 'hide');
+  const hopt=(v,t)=>`<option value="${v}"${hrCur===v?' selected':''}>${t}</option>`;
+  const hrRow = `<tr>
+    <td style="padding:4px 8px">💼 人事薪資（整區）<div style="font-size:11px;color:var(--text3)">員工薪資設定/薪資計算/請假特休</div></td>
+    <td style="padding:4px 8px;text-align:right"><select class="perm-sel" data-k="payroll" ${isAdmin?'disabled':''} style="padding:4px 8px;min-width:110px">
+      ${hopt('hide','🚫 隱藏')}${hopt('read','👁 唯讀')}${hopt('edit','✏️ 可編輯')}</select></td></tr>`;
+  // 薪資可視範圍(scope):限制此帳號在人事薪資頁能看到誰的薪資
+  const scope = isAdmin ? 'all' : (perms.payroll_scope||'all');
+  const sopt=(v,t)=>`<option value="${v}"${scope===v?' selected':''}>${t}</option>`;
+  const scopeRow = `<tr style="background:var(--bg3)">
+    <td style="padding:6px 8px"><b>💼 薪資可視範圍</b><div style="font-size:11px;color:var(--text3)">「人事薪資」各頁只顯示此範圍的員工薪資</div></td>
+    <td style="padding:4px 8px;text-align:right"><select id="perm-scope-sel" ${isAdmin?'disabled':''} style="padding:4px 8px;min-width:130px">
+      ${sopt('all','全部')}${sopt('office','只辦公人員')}${sopt('field','只現場/外勞')}</select></td></tr>`;
+  document.getElementById('perm-modal-body').innerHTML=pageRows+hrRow+scopeRow;
+  document.getElementById('perm-modal-note').innerHTML = isAdmin
+    ? '⚠ 此帳號為<b>管理員</b>,一律擁有全部頁面的編輯權與全部薪資範圍;要限制請先取消其管理員身分並儲存。'
+    : '未設定的頁面預設:管理頁(產值/計價/帳號管理)隱藏,其餘可編輯。「人事薪資」需設可編輯/唯讀才會出現,並受「薪資可視範圍」限制。';
+  openModal('perm-modal');
+}
+async function savePermModal(){
+  const acc=allAccounts.find(a=>String(a.id)===String(_permEditId)); if(!acc){ closeModal('perm-modal'); return; }
+  const perms={};
+  document.querySelectorAll('#perm-modal-body .perm-sel').forEach(s=>{ perms[s.dataset.k]=s.value; });
+  const sc=document.getElementById('perm-scope-sel'); if(sc) perms.payroll_scope=sc.value;   // 薪資可視範圍
+  const btn=document.getElementById('perm-modal-save'); btn.disabled=true; btn.textContent='儲存中...';
+  const r=await sbFetch(`/rest/v1/profiles?id=eq.${_permEditId}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({perms})});
+  btn.disabled=false; btn.textContent='儲存';
+  if(!r.ok){ alert('儲存失敗('+r.status+')'); return; }
+  acc.perms=perms;
+  // 若改到自己,立即重套介面
+  if(currentUser&&String(currentUser.id)===String(_permEditId)){ currentUser.perms=perms; applyPermsUI(); }
+  closeModal('perm-modal');
 }
 // 統一儲存:逐列 PATCH profiles;有綁定名冊者,把登入 Email 寫入該員工的 email
 async function saveAllAccounts(){
@@ -11165,7 +11990,7 @@ async function saveAttendEdit(){
   closeModal('attend-edit-modal'); await loadAttendLog();
 }
 async function deleteAttend(id){
-  if(!confirm('確定要刪除這筆打卡紀錄？')) return;
+  if(!await uiConfirm('確定要刪除這筆打卡紀錄？')) return;
   const r=await sbFetch(`/rest/v1/attendance?id=eq.${id}`,{method:'DELETE'});
   if(!r.ok){ alert('刪除失敗：'+(r.data?.message||'未知錯誤')); return; }
   await loadAttendLog();
@@ -11723,11 +12548,20 @@ function specLength(spec) {
   return isNaN(v) ? null : v;
 }
 
+let layoutRefLoaded = false;   // 參考資料(每日產量鍵、BOM/元件/工程區)是否已載入;切走再回來沿用,不重抓
 async function layoutInit() {
-  await layoutLoadDailyOutputKeys();
-  // 只載入「進行中(未出貨)」的列;已出貨歷史(可達上萬筆)改為點「已出貨」統計卡時才載入,避免拖慢頁面
   layoutShippedLoaded = false;
-  const r = await sbFetchAll('/rest/v1/layout_items?select=*&ship_date=is.null&order=id');
+  // 只載入「進行中(未出貨)」的列;已出貨歷史(可達上萬筆)改為點「已出貨」統計卡時才載入。
+  // 一律要抓的:未出貨明細 + 已出貨計數。首次進頁才抓「重的參考資料」(每日產量全表鍵、元件全表)。
+  // 全部並行,避免逐一串行等待;參考資料快取後,切走再回來幾乎秒開。
+  const jobs = [
+    sbFetchAll('/rest/v1/layout_items?select=*&ship_date=is.null&order=id'),
+    sbCount('/rest/v1/layout_items?select=id&ship_date=not.is.null')
+  ];
+  if (!layoutRefLoaded) jobs.push(layoutLoadDailyOutputKeys(), layoutLoadBOM());
+  const [r, shippedCount] = await Promise.all(jobs);
+  layoutRefLoaded = true;
+  layoutShippedCount = shippedCount || 0;
   layoutRows = (Array.isArray(r.data) ? r.data : []).map(it => ({
     id: it.id, work_date: it.work_date || '', part_no: it.part_no || '',
     proj_num: it.proj_num || '', zone_code: it.zone_code || '', drawing_no: it.drawing_no || '',
@@ -11736,10 +12570,6 @@ async function layoutInit() {
     done_date: it.done_date || '', net_weight: it.net_weight || '',
     qty: it.qty || 1, ship_date: it.ship_date || '', _key: ++layoutRowSeq
   }));
-  // 已出貨筆數(供統計卡顯示),只取計數不抓資料
-  layoutShippedCount = await sbCount('/rest/v1/layout_items?select=id&ship_date=not.is.null');
-  // Load all components for autofill, map zone->code and proj
-  await layoutLoadBOM();
   layoutRows.forEach(layoutApplyDailyStatus);
   pagerReset('layout');
   layoutEnsureBlankRow();
@@ -12629,7 +13459,7 @@ function layoutBatchImport() {
     try { recs = JSON.parse(await file.text()); }
     catch (e) { alert('檔案不是有效的 JSON：' + e.message); return; }
     if (!Array.isArray(recs) || !recs.length) { alert('檔案內容為空或格式不符（需為陣列）'); return; }
-    if (!confirm('將批次匯入 ' + recs.length + ' 筆到線上進度表。\n（重複執行會重覆新增，請勿按兩次）\n確定要匯入嗎？')) return;
+    if (!await uiConfirm('將批次匯入 ' + recs.length + ' 筆到線上進度表。\n（重複執行會重覆新增，請勿按兩次）\n確定要匯入嗎？')) return;
     const B = 500;
     let ok = 0, fail = 0;
     layoutBatchProgress('準備匯入 ' + recs.length + ' 筆…');
@@ -12665,7 +13495,7 @@ function genericBatchImport(table, label, onDone) {
     try { recs = JSON.parse(await file.text()); }
     catch (e) { alert('檔案不是有效的 JSON：' + e.message); return; }
     if (!Array.isArray(recs) || !recs.length) { alert('檔案內容為空或格式不符（需為陣列）'); return; }
-    if (!confirm('將批次匯入 ' + recs.length + ' 筆到「' + (label || table) + '」。\n（重複執行會重覆新增，請勿按兩次）\n確定要匯入嗎？')) return;
+    if (!await uiConfirm('將批次匯入 ' + recs.length + ' 筆到「' + (label || table) + '」。\n（重複執行會重覆新增，請勿按兩次）\n確定要匯入嗎？')) return;
     const B = 500;
     let ok = 0, fail = 0, firstErr = null;
     layoutBatchProgress('準備匯入 ' + recs.length + ' 筆…');
@@ -14603,7 +15433,7 @@ function renderLog(logs){
 }
 async function adminClearAll(){
   if(!currentUser?.isAdmin) return;
-  if(!confirm('確定要清除所有產生紀錄？')) return;
+  if(!await uiConfirm('確定要清除所有產生紀錄？')) return;
   const r=await sbFetch('/rest/v1/gen_logs?id=gt.0',{method:'DELETE'});
   if(r.ok){setDXFStatus('已清除所有紀錄',true);await loadLog();}
 }
@@ -15345,7 +16175,7 @@ function layoutPasteFromText(text, active) {
 // Excel 式 Delete:清除選取範圍內可編輯欄位的內容。
 // 上線日期/床位/出貨日期 → 清空(出貨日期清空連動狀態回「上線中」);
 // 工程編號/構件編號被刪 → 比照既有規則整列移除(超過 5 列先確認);其餘欄位不動。
-function layoutDeleteSelection(activeEl) {
+async function layoutDeleteSelection(activeEl) {
   const table = document.getElementById('layout-input-table');
   if (!table) return;
   tblSel.table = table;
@@ -15371,7 +16201,7 @@ function layoutDeleteSelection(activeEl) {
     if (fields.length) clears.push({ key: row._key, fields });
   }
   if (!clears.length && !removeKeys.size) return;
-  if (removeKeys.size > 5 && !confirm('將移除 ' + removeKeys.size + ' 列資料(含資料庫紀錄),確定?')) return;
+  if (removeKeys.size > 5 && !await uiConfirm('將移除 ' + removeKeys.size + ' 列資料(含資料庫紀錄),確定?')) return;
   layoutSnapshotNow();   // 支援 Ctrl+Z 復原
   clears.forEach(cl => {
     if (removeKeys.has(cl.key)) return;   // 整列要移除的不用再清欄位
@@ -15653,6 +16483,7 @@ function dailyGetFiltered(){
 }
 let dailyLastSig = null;
 function renderDaily() {
+  refreshDateWk();   // 更新「日期（星期）」顯示
   const tbody = dailyEl('daily-body'); if (!tbody) return;
   const rs=(dailyEl('daily-range-start')||{}).value||'', re=(dailyEl('daily-range-end')||{}).value||'';
   const nb=dailyEl('daily-next-btn'); if (nb) nb.disabled = !!(rs&&re) || !dailyViewDate || dailyViewDate >= dailyTodayStr();
@@ -15675,7 +16506,7 @@ function renderDaily() {
   if (dTbl) tblInitSelection(dTbl);
 }
 async function delDaily(id) {
-  if (!confirm('刪除這筆每日產量記錄?')) return;
+  if (!await uiConfirm('刪除這筆每日產量記錄?')) return;
   await sbFetch('/rest/v1/daily_output?id=eq.' + id, { method:'DELETE', headers:{'Prefer':'return=minimal'} });
   dailyRows = dailyRows.filter(r => r.id !== id);
   dailyFillFilterOptions();
@@ -16738,7 +17569,7 @@ function clearAll() {
    設計：以單一 attendance 資料表記錄「一天一人一筆」，
    不再每月新建工作表；日報/回報/ESG年資統計全部即時計算。
    ============================================================ */
-const ATT_LEAVE = ['','特休','事假','病假','喪假','公假','婚假','產假','曠職','補休'];
+const ATT_LEAVE = ['','特休','事假','病假','喪假','公假','婚假','產假','曠職','補休','過年','颱風'];
 const ATT_CATORD = {'辦公人員':0,'本工':1,'自有外勞':2,'長榮外勞':3};
 const ATT_WK = ['日','一','二','三','四','五','六'];
 let attRoster = [];
@@ -16872,6 +17703,7 @@ function attUpdateNavLabels(){
 
 function attRenderDailyGrid(){
   attUpdateNavLabels();
+  refreshDateWk();   // 更新「日期（星期）」顯示
   const date=document.getElementById('att-date').value;
   const body=document.getElementById('att-daily-body');
   if(!date){ body.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:16px">請選擇日期</td></tr>'; document.getElementById('att-daily-foot').innerHTML=''; return; }
@@ -17883,9 +18715,9 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     state.items.splice(idx,1);
     pricingRender();
   };
-  window.pricingReset=function(){
+  window.pricingReset=async function(){
     if(!state) return;
-    if(!confirm('確定要重設為表定項目嗎？目前的數量與自訂項目將清除（僅此工程區）。')) return;
+    if(!await uiConfirm('確定要重設為表定項目嗎？目前的數量與自訂項目將清除（僅此工程區）。')) return;
     state.items=defaultItems();
     pricingRender();
   };
@@ -18425,7 +19257,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   window.ovrRenderDaily=async function(){
     var dp=document.getElementById('ovr-date'); if(!dp) return;
     var d=dp.value||todayStr();
-    var wd=document.getElementById('ovr-weekday'); if(wd) wd.textContent=weekdayName(d);
+    refreshDateWk();   // 統一顯示「日期（星期）· 今日」
     var mStart=monthStartOf(d);
 
     var dayAgg=aggRange(d,d);
@@ -19108,7 +19940,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       });
     });
     if(!items.length){ blSaved('本月沒有「已請款」資料可封存','var(--text3)'); return; }
-    if(!window.confirm('確定封存本月 '+items.length+' 筆已請款資料?封存後於「請款紀錄」分頁為唯讀。')) return;
+    if(!await uiConfirm('確定封存本月 '+items.length+' 筆已請款資料?封存後於「請款紀錄」分頁為唯讀。')) return;
     if(blDemo){
       items.forEach(function(it){
         var idx=-1; for(var j=0;j<blDemoArc.length;j++){ if(blDemoArc[j].ym===it.ym&&blDemoArc[j].round===it.round&&blDemoArc[j].zone_id===it.zone_id){ idx=j; break; } }
@@ -19185,7 +20017,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
 
   // 刪除單筆封存紀錄
   window.arDelete=async function(id, btn){
-    if(!window.confirm('確定刪除這筆封存紀錄?此動作無法復原。')) return;
+    if(!await uiConfirm('確定刪除這筆封存紀錄?此動作無法復原。')) return;
     if(btn){ btn.disabled=true; btn.textContent='刪除中...'; }
     if(blDemo){ blDemoArc=blDemoArc.filter(function(a){ return String(a.id)!==String(id); }); arRender(); return; }
     var r=await sbFetch('/rest/v1/billing_archive?id=eq.'+id, {method:'DELETE', headers:{'Prefer':'return=minimal'}});
@@ -19473,7 +20305,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
 
   window.laborDelete=async function(rid){
     var r=findRow(rid); if(!r) return;
-    if(!window.confirm('確定刪除這筆點工單?')) return;
+    if(!await uiConfirm('確定刪除這筆點工單?')) return;
     laborPushHist();
     if(r.id){
       var res=await sbFetch('/rest/v1/labor_orders?id=eq.'+r.id, {method:'DELETE', headers:{'Prefer':'return=minimal'}});
@@ -19686,12 +20518,606 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
 
   window.egstDelete=async function(id){
     var r=egstRows.filter(function(x){ return x.id===id; })[0]; if(!r) return;
-    if(!window.confirm('確定刪除「'+(r.name||'此人')+'」?')) return;
+    if(!await uiConfirm('確定刪除「'+(r.name||'此人')+'」?')) return;
     var res=await sbFetch('/rest/v1/eg_staff?id=eq.'+id, {method:'DELETE', headers:{'Prefer':'return=minimal'}});
     if(!res.ok){ console.warn('egst delete failed',res.status,res.data); alert('刪除失敗'+(res.data&&res.data.message?(':'+res.data.message):'')); return; }
     egstRows=egstRows.filter(function(x){ return x.id!==id; });
     if(typeof window.__invalidateEgStaff==='function') window.__invalidateEgStaff();
     egstRender();
+  };
+})();
+</script>
+
+<!-- ═══════════ 人事薪資:計算引擎 + 員工薪資設定 ═══════════ -->
+<script src="payroll_calc.js?v=20260712d"></script>
+<script>
+(function(){
+  var empStaff=[];      // 公司名冊
+  var empPayMap={};     // staff_id -> employee_pay 列
+  var empCfg=null;      // Payroll.buildConfig 產物(含級距)
+  var empEditSid=null;
+  var empInsuredTouched=false;   // 投保薪資是否被手動改過(改過就不自動蓋掉)
+
+  function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
+  function cleanStr(v){ if(v==null) return null; var s=String(v).trim(); return s||null; }
+  function today(){ return new Date().toISOString().slice(0,10); }
+  // 部門排序:辦公人員 → 本工 → 自有外勞 → 長榮外勞(供人事薪資各頁共用)
+  window.hrDeptRank=function(d){ var o=['辦公人員','本工','自有外勞','長榮外勞']; var i=o.indexOf(String(d||'').trim()); return i<0?99:i; };
+  // 部門分類(與 SQL dept_class 一致):含「辦公」→office,其餘→field
+  window.deptClass=function(dep){ return String(dep||'').indexOf('辦公')>=0?'office':'field'; };
+  // 目前登入者薪資可視範圍(與 SQL hr_scope 一致):all|office|field
+  window.hrScope=function(){ try{ if(currentUser&&currentUser.isAdmin) return 'all'; var s=currentUser&&currentUser.perms&&currentUser.perms.payroll_scope; return s||'all'; }catch(e){ return 'all'; } };
+  // 依範圍判斷是否可見某員工的薪資
+  window.hrInScope=function(dep){ var sc=window.hrScope(); return sc==='all'||window.deptClass(dep)===sc; };
+  window.hrScopeLabel=function(){ var sc=window.hrScope(); return sc==='office'?'（範圍:只辦公人員）':(sc==='field'?'（範圍:只現場/外勞）':''); };
+  function tenure(hire){
+    if(!hire) return '—';
+    var m=Payroll.monthsBetween(hire, today());
+    var y=Math.floor(m/12), mm=m%12;
+    return (y>0?(y+'年'):'')+(mm>0?(mm+'月'):'')||'未滿1月';
+  }
+  function money(n){ n=num(n); return n?('$'+n.toLocaleString('en-US')):'—'; }
+
+  window.empInit=async function(){
+    var body=document.getElementById('emp-body');
+    if(body) body.innerHTML='<tr><td colspan="12" class="empty-state">載入中...</td></tr>';
+    try{
+      var rs=await sbFetchAll('/rest/v1/staff?select=*&order=name');
+      empStaff=Array.isArray(rs.data)?rs.data:[];
+      var rp=await sbFetch('/rest/v1/employee_pay?select=*');
+      empPayMap={};
+      if(rp.ok && Array.isArray(rp.data)) rp.data.forEach(function(x){ empPayMap[x.staff_id]=x; });
+      else if(rp.status===401||rp.status===404){
+        if(body) body.innerHTML='<tr><td colspan="12" class="empty-state">尚未建立資料表,請先在 Supabase 執行 hr_payroll_migration.sql</td></tr>';
+      }
+      var rc=await sbFetch('/rest/v1/payroll_config?select=key,value,meta&order=eff_date.desc');
+      empCfg=Payroll.buildConfig((rc.ok&&Array.isArray(rc.data))?rc.data:[]);
+    }catch(e){ console.warn('empInit failed',e); if(body) body.innerHTML='<tr><td colspan="12" class="empty-state">載入失敗</td></tr>'; return; }
+    empRender();
+  };
+
+  window.empRender=function(){
+    var body=document.getElementById('emp-body'); if(!body) return;
+    var q=(document.getElementById('emp-search').value||'').trim().toLowerCase();
+    var onlyActive=document.getElementById('emp-only-active').checked;
+    var rows=empStaff.filter(function(s){
+      if(!window.hrInScope(s.department)) return false;   // 薪資可視範圍
+      if(onlyActive && s.status==='離職') return false;
+      if(!q) return true;
+      return [s.name,s.department,s.role].some(function(v){ return String(v||'').toLowerCase().indexOf(q)>=0; });
+    });
+    // 排序:辦公人員 → 本工 → 自有外勞 → 長榮外勞,同部門再依姓名
+    rows.sort(function(a,b){ return window.hrDeptRank(a.department)-window.hrDeptRank(b.department)
+      || String(a.name||'').localeCompare(String(b.name||''),'zh-Hant'); });
+    var sb=document.getElementById('emp-scope'); if(sb) sb.textContent=window.hrScopeLabel();
+    if(!rows.length){ body.innerHTML='<tr><td colspan="12" class="empty-state">沒有符合的員工</td></tr>'; return; }
+    body.innerHTML=rows.map(function(s){
+      var pay=empPayMap[s.id]||{};
+      var otRule=Payroll.empTypeFromDept(s.department)==='office'?'勞基法':'現場慣例';
+      var days=s.hire_date?Payroll.annualLeaveDays(s.hire_date, today()):'—';
+      var amt = pay.pay_type==='monthly' ? money(pay.base_salary) : (pay.pay_type==='daily' ? money(pay.daily_wage)+' /日' : '—');
+      var payLabel = pay.pay_type==='monthly'?'月薪':(pay.pay_type==='daily'?'日薪':'—');
+      var insLabel = {company:'公司',union:'公會',none:'未保'}[pay.insure_via]||'—';
+      var set = pay.pay_type ? '' : ' style="color:var(--danger)"';
+      return '<tr>'
+        +'<td>'+esc(s.name||'—')+'</td>'
+        +'<td>'+esc(s.department||'—')+'</td>'
+        +'<td>'+otRule+'</td>'
+        +'<td>'+esc(s.hire_date||'—')+'</td>'
+        +'<td>'+tenure(s.hire_date)+'</td>'
+        +'<td>'+(days===''?'—':days)+(typeof days==='number'?' 天':'')+'</td>'
+        +'<td'+set+'>'+payLabel+'</td>'
+        +'<td>'+amt+'</td>'
+        +'<td>'+insLabel+'</td>'
+        +'<td>'+(num(pay.insured_salary)?money(pay.insured_salary):'—')+'</td>'
+        +'<td>'+(pay.dependents!=null?pay.dependents:'—')+'</td>'
+        +'<td><button class="btn-icon edit" onclick="empOpenModal('+s.id+')" style="border:1px solid var(--border)">⚙️ 設定</button></td>'
+        +'</tr>';
+    }).join('');
+  };
+
+  window.empOpenModal=function(sid){
+    var s=empStaff.filter(function(x){ return String(x.id)===String(sid); })[0]; if(!s) return;
+    empEditSid=s.id;
+    var pay=empPayMap[s.id]||{};
+    var otRule=Payroll.empTypeFromDept(s.department)==='office'?'辦公(勞基法加班)':'現場(半薪/全薪)';
+    document.getElementById('emp-modal-title').textContent='薪資設定 — '+(s.name||'');
+    document.getElementById('emp-modal-sub').textContent='部門:'+(s.department||'—')+' · 加班規則:'+otRule+' · 到職:'+(s.hire_date||'—');
+    document.getElementById('emp-f-paytype').value=pay.pay_type||'daily';
+    document.getElementById('emp-f-daily').value=pay.daily_wage!=null?pay.daily_wage:'';
+    document.getElementById('emp-f-base').value=pay.base_salary!=null?pay.base_salary:'';
+    document.getElementById('emp-f-insure').value=pay.insure_via||'company';
+    document.getElementById('emp-f-insured').value=pay.insured_salary!=null?pay.insured_salary:'';
+    document.getElementById('emp-f-dep').value=pay.dependents!=null?pay.dependents:0;
+    document.getElementById('emp-f-bank').value=pay.bank_acct||'';
+    document.getElementById('emp-f-note').value=pay.note||'';
+    // 已存有投保薪資 → 尊重原值(視為已手動);未存 → 自動依薪資帶入
+    empInsuredTouched = !!(pay.insured_salary);
+    empToggleWage();
+    if(!empInsuredTouched) empAutoInsured();
+    openModal('emp-modal');
+  };
+
+  window.empToggleWage=function(){
+    var t=document.getElementById('emp-f-paytype').value;
+    document.getElementById('emp-wrap-daily').style.display=(t==='daily')?'':'none';
+    document.getElementById('emp-wrap-month').style.display=(t==='monthly')?'':'none';
+    empAutoInsured();   // 薪別切換 → 計費基準改變,未手動改過就重算級距
+  };
+
+  // 標記使用者手動調整投保薪資(之後不再自動蓋掉)
+  window.empInsuredMark=function(){ empInsuredTouched=true; };
+
+  // 依目前薪別/薪資自動帶入對應勞保級距(未手動改過時才動)
+  window.empAutoInsured=function(){
+    if(empInsuredTouched) return;
+    var t=document.getElementById('emp-f-paytype').value;
+    var avg = t==='monthly' ? num(document.getElementById('emp-f-base').value)
+                            : num(document.getElementById('emp-f-daily').value)*30;   // 日薪估月平均
+    if(!avg){ document.getElementById('emp-f-insured').value=''; return; }
+    document.getElementById('emp-f-insured').value=Payroll.suggestInsuredGrade(avg,(empCfg&&empCfg.grades)||[]);
+  };
+
+  // ▲▼ / 上下鍵:依勞保投保薪資分級表(payroll_config.ins_grades)跳到上/下一級
+  window.empInsuredStep=function(dir){
+    var input=document.getElementById('emp-f-insured');
+    var grades=(empCfg&&empCfg.grades)||[];
+    if(!grades.length){ alert('尚無級距表,請先在 payroll_config 設定 ins_grades'); return; }
+    var cur=num(input.value), next;
+    if(dir>0){ next=grades.find(function(g){ return g>cur; }); if(next==null) next=grades[grades.length-1]; }
+    else { var below=grades.filter(function(g){ return g<cur; }); next=below.length?below[below.length-1]:grades[0]; }
+    input.value=next; empInsuredTouched=true;
+  };
+  window.empInsuredKey=function(e){
+    if(e.key==='ArrowUp'){ e.preventDefault(); empInsuredStep(1); }
+    else if(e.key==='ArrowDown'){ e.preventDefault(); empInsuredStep(-1); }
+  };
+
+  window.empSaveModal=async function(){
+    if(empEditSid==null) return;
+    var payload={
+      staff_id: empEditSid,
+      pay_type: document.getElementById('emp-f-paytype').value,
+      base_salary: num(document.getElementById('emp-f-base').value)||null,
+      daily_wage: num(document.getElementById('emp-f-daily').value)||null,
+      insure_via: document.getElementById('emp-f-insure').value,
+      insured_salary: num(document.getElementById('emp-f-insured').value)||null,
+      dependents: parseInt(document.getElementById('emp-f-dep').value)||0,
+      bank_acct: cleanStr(document.getElementById('emp-f-bank').value)||null,
+      note: cleanStr(document.getElementById('emp-f-note').value)||null,
+      updated_at: new Date().toISOString()
+    };
+    var btn=document.getElementById('btn-save-emp'); var old=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='儲存中...'; }
+    var exist=empPayMap[empEditSid];
+    var res;
+    if(exist && exist.id){
+      res=await sbFetch('/rest/v1/employee_pay?id=eq.'+exist.id,{method:'PATCH',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)});
+    }else{
+      res=await sbFetch('/rest/v1/employee_pay',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)});
+    }
+    if(btn){ btn.disabled=false; btn.textContent=old; }
+    if(!res.ok){
+      console.warn('emp save failed',res.status,res.data);
+      var msg='儲存失敗(HTTP '+res.status+')'+(res.data&&res.data.message?(' '+res.data.message):'');
+      if(res.status===401||res.status===403) msg+='\n→ 資料庫判定此帳號非 HR。請在「帳號管理」把本帳號 perms 加 {"payroll":"edit"},或確認 hr_payroll_migration.sql 已用最新版(is_hr 含 is_admin)重跑。';
+      else if(res.status===404) msg+='\n→ 找不到資料表。請執行 hr_payroll_migration.sql;若剛建表,到 Supabase 執行 NOTIFY pgrst, \'reload schema\'; 或稍等數秒再試。';
+      alert(msg); return;
+    }
+    var saved=(Array.isArray(res.data)&&res.data[0])?res.data[0]:null;
+    if(saved) empPayMap[empEditSid]=saved;
+    closeModal('emp-modal');
+    empRender();
+  };
+})();
+</script>
+
+<!-- ═══════════ 人事薪資:薪資計算 ═══════════ -->
+<script>
+(function(){
+  var prStaff=[], prPayMap={}, prAttByName={}, prCfg=null, prRun=null, prRows=[];
+  function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
+  function money(n){ n=num(n); return '$'+Math.round(n).toLocaleString('en-US'); }
+  function pad2(n){ return (n<10?'0':'')+n; }
+  function monthRange(period){
+    var y=+period.slice(0,4), m=+period.slice(5,7);
+    var last=new Date(y,m,0).getDate();
+    return { first:period+'-01', last:period+'-'+pad2(last) };
+  }
+
+  window.payrollInit=function(){
+    var mi=document.getElementById('pr-month');
+    if(mi && !mi.value){
+      var t=(typeof currentDate==='string'&&currentDate)?currentDate:new Date().toISOString().slice(0,10);
+      mi.value=t.slice(0,7);
+    }
+    document.getElementById('pr-body').innerHTML='<tr><td colspan="12" class="empty-state">選擇月份後按「計算」</td></tr>';
+    document.getElementById('pr-foot').innerHTML='';
+    document.getElementById('pr-status').textContent='';
+    document.getElementById('pr-warn').textContent='';
+    document.getElementById('pr-count').textContent='';
+    prRows=[];
+  };
+
+  window.payrollCalc=async function(){
+    var period=document.getElementById('pr-month').value;
+    if(!period){ alert('請先選擇計薪月份'); return; }
+    var r=monthRange(period);
+    var body=document.getElementById('pr-body');
+    body.innerHTML='<tr><td colspan="12" class="empty-state">計算中...</td></tr>';
+    try{
+      var rs=await sbFetchAll('/rest/v1/staff?select=*&order=name');
+      prStaff=Array.isArray(rs.data)?rs.data:[];
+      var rp=await sbFetch('/rest/v1/employee_pay?select=*'); prPayMap={};
+      if(rp.ok&&Array.isArray(rp.data)) rp.data.forEach(function(x){ prPayMap[x.staff_id]=x; });
+      var ra=await sbFetchAll('/rest/v1/att_report?select=staff_name,work_date,work_hours,ot_hours,night_hours,leave_type,leave_hours&work_date=gte.'+r.first+'&work_date=lte.'+r.last);
+      prAttByName={}; (Array.isArray(ra.data)?ra.data:[]).forEach(function(a){ (prAttByName[a.staff_name]=prAttByName[a.staff_name]||[]).push(a); });
+      var rc=await sbFetch('/rest/v1/payroll_config?select=key,value,meta&order=eff_date.desc');
+      prCfg=Payroll.buildConfig((rc.ok&&Array.isArray(rc.data))?rc.data:[]);
+      var rr=await sbFetch('/rest/v1/payroll_run?period=eq.'+period+'&select=*');
+      prRun=(rr.ok&&Array.isArray(rr.data)&&rr.data[0])?rr.data[0]:null;
+    }catch(e){ console.warn('payrollCalc load failed',e); body.innerHTML='<tr><td colspan="12" class="empty-state">載入失敗(請確認已執行 hr_payroll_migration.sql 且帳號有 payroll 權限)</td></tr>'; return; }
+
+    prStaff.sort(function(a,b){ return window.hrDeptRank(a.department)-window.hrDeptRank(b.department)
+      || String(a.name||'').localeCompare(String(b.name||''),'zh-Hant'); });
+    prRows=[]; var noset=[];
+    prStaff.forEach(function(s){
+      if(!window.hrInScope(s.department)) return;   // 薪資可視範圍:範圍外不計算也不顯示
+      var pay=prPayMap[s.id];
+      if(!pay||!pay.pay_type){ if(s.status!=='離職') noset.push(s.name); return; }
+      var emp={ id:s.id, emp_type:Payroll.empTypeFromDept(s.department), pay_type:pay.pay_type,
+                base_salary:pay.base_salary, daily_wage:pay.daily_wage, insure_via:pay.insure_via,
+                insured_salary:pay.insured_salary, dependents:pay.dependents };
+      var att=prAttByName[s.name]||[];
+      var ps=Payroll.calcPayslip(emp, att, prCfg, period);
+      ps._name=s.name; ps._type=(emp.emp_type==='office'?'辦公':'現場')+'/'+(pay.pay_type==='monthly'?'月':'日');
+      prRows.push(ps);
+    });
+    payrollRender(noset, period);
+  };
+
+  function payrollRender(noset, period){
+    var body=document.getElementById('pr-body'), foot=document.getElementById('pr-foot');
+    if(!prRows.length){ body.innerHTML='<tr><td colspan="12" class="empty-state">此月無可計算的員工(請先在「員工薪資設定」設定薪別)</td></tr>'; foot.innerHTML=''; }
+    else{
+      body.innerHTML=prRows.map(function(p){
+        var ec=p.employer_cost||{}; var ecTot=num(ec.labor)+num(ec.health)+num(ec.pension);
+        return '<tr>'
+          +'<td><a href="#" onclick="payrollDetail(\''+p.emp_id+'\');return false" style="color:var(--accent2)" title="檢視/列印明細單">'+esc(p._name)+'</a></td><td>'+esc(p._type)+'</td>'
+          +'<td style="text-align:center">'+p.work_days+'</td>'
+          +'<td>'+money(p.breakdown&&p.breakdown.base)+'</td>'
+          +'<td>'+money(p.ot_pay)+'</td>'
+          +'<td>'+money(p.gross)+'</td>'
+          +'<td>'+money(p.labor_ins_emp)+'</td>'
+          +'<td>'+money(p.health_ins_emp)+'</td>'
+          +'<td>'+money(p.health_2nd)+'</td>'
+          +'<td>'+money(p.leave_deduct)+'</td>'
+          +'<td style="font-weight:600">'+money(p.net)+'</td>'
+          +'<td title="勞保'+money(ec.labor)+' 健保'+money(ec.health)+' 勞退'+money(ec.pension)+'">'+money(ecTot)+'</td>'
+          +'</tr>';
+      }).join('');
+      var sum=function(k){ return prRows.reduce(function(a,p){ return a+num(p[k]); },0); };
+      var ecSum=prRows.reduce(function(a,p){ var e=p.employer_cost||{}; return a+num(e.labor)+num(e.health)+num(e.pension); },0);
+      foot.innerHTML='<tr style="font-weight:700;background:var(--bg3)">'
+        +'<td colspan="4">合計 '+prRows.length+' 人</td>'
+        +'<td>'+money(sum('ot_pay'))+'</td><td>'+money(sum('gross'))+'</td>'
+        +'<td>'+money(sum('labor_ins_emp'))+'</td><td>'+money(sum('health_ins_emp'))+'</td>'
+        +'<td>'+money(sum('health_2nd'))+'</td><td>'+money(sum('leave_deduct'))+'</td>'
+        +'<td>'+money(sum('net'))+'</td><td>'+money(ecSum)+'</td></tr>';
+    }
+    document.getElementById('pr-count').textContent=prRows.length+' 人 · '+period+' '+window.hrScopeLabel();
+    document.getElementById('pr-status').textContent=prRun?('狀態:'+(prRun.status==='locked'?'🔒 已鎖定':'草稿')):'尚未儲存';
+    var ub=document.getElementById('pr-unlock-btn'); if(ub) ub.style.display=(prRun&&prRun.status==='locked')?'':'none';
+    document.getElementById('pr-warn').textContent=noset.length?('⚠ 以下在職員工尚未設定薪別,未列入計算:'+noset.join('、')):'';
+  }
+
+  window.payrollSaveDraft=function(){ return payrollSave('draft'); };
+  window.payrollLock=async function(){ if(!await uiConfirm('確定鎖定本月薪資?薪資單將標記為 locked。')) return; return payrollSave('locked'); };
+
+  async function payrollSave(status){
+    if(!prRows.length){ alert('尚未計算,請先按「計算」'); return; }
+    var period=document.getElementById('pr-month').value;
+    if(prRun){
+      var up=await sbFetch('/rest/v1/payroll_run?id=eq.'+prRun.id,{method:'PATCH',headers:{'Prefer':'return=representation'},body:JSON.stringify({status:status})});
+      if(up.ok&&Array.isArray(up.data)&&up.data[0]) prRun=up.data[0];
+    }else{
+      var pr=await sbFetch('/rest/v1/payroll_run',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({period:period,status:status})});
+      if(!pr.ok){ alert('建立薪資批次失敗'+(pr.data&&pr.data.message?(':'+pr.data.message):'')); return; }
+      prRun=(Array.isArray(pr.data)&&pr.data[0])?pr.data[0]:null;
+    }
+    if(!prRun){ alert('薪資批次建立失敗'); return; }
+    await sbFetch('/rest/v1/payslip?period=eq.'+period,{method:'DELETE',headers:{'Prefer':'return=minimal'}});
+    var recs=prRows.map(function(p){ return {
+      run_id:prRun.id, staff_id:p.emp_id, period:period,
+      work_days:p.work_days, work_hours:p.work_hours, ot_pay:p.ot_pay, gross:p.gross,
+      labor_ins_emp:p.labor_ins_emp, health_ins_emp:p.health_ins_emp, health_2nd:p.health_2nd,
+      leave_deduct:p.leave_deduct, net:p.net, employer_cost:p.employer_cost, breakdown:p.breakdown,
+      locked: status==='locked'
+    }; });
+    var ins=await sbFetch('/rest/v1/payslip',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(recs)});
+    if(!ins.ok){ alert('儲存薪資單失敗'+(ins.data&&ins.data.message?(':'+ins.data.message):'')); return; }
+    document.getElementById('pr-status').textContent='狀態:'+(status==='locked'?'🔒 已鎖定':'草稿')+' · 已存 '+recs.length+' 筆';
+    alert((status==='locked'?'已鎖定並儲存 ':'已儲存草稿 ')+recs.length+' 筆薪資單');
+  }
+
+  window.payrollExportCsv=function(){
+    if(!prRows.length){ alert('尚未計算'); return; }
+    var period=document.getElementById('pr-month').value;
+    var head=['姓名','類別','出勤天','底薪','加班費','應發','勞保','健保','二代健保','請假扣','實發','雇主成本'];
+    var lines=[head.join(',')];
+    prRows.forEach(function(p){
+      var ec=p.employer_cost||{}; var ecTot=num(ec.labor)+num(ec.health)+num(ec.pension);
+      lines.push([p._name,p._type,p.work_days,Math.round(num(p.breakdown&&p.breakdown.base)),p.ot_pay,p.gross,p.labor_ins_emp,p.health_ins_emp,p.health_2nd,p.leave_deduct,p.net,Math.round(ecTot)].join(','));
+    });
+    var blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='薪資_'+period+'.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(a.href);
+  };
+
+  function csvDownload(name, lines){
+    var blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(a.href);
+  }
+
+  // 個人薪資明細單(可列印/存 PDF)
+  window.payrollDetail=function(sid){
+    var p=prRows.filter(function(x){ return String(x.emp_id)===String(sid); })[0];
+    if(!p){ alert('請先計算'); return; }
+    var period=document.getElementById('pr-month').value;
+    var bd=p.breakdown||{}, ec=p.employer_cost||{};
+    var m=function(n){ return '$'+Math.round(num(n)).toLocaleString('en-US'); };
+    var otRows=(bd.otItems||[]).filter(function(x){ return num(x.pay)>0; })
+      .map(function(x){ return '<tr><td>加班 '+esc(x.date)+'</td><td>'+m(x.pay)+'</td></tr>'; }).join('');
+    var lvRows=(bd.leaveItems||[]).map(function(x){ return '<tr><td>請假 '+esc(x.date)+' '+esc(x.type||'')+' '+num(x.hours)+'時</td><td>-'+m(x.deduct)+'</td></tr>'; }).join('');
+    document.getElementById('payslip-print').innerHTML=''
+      +'<h3>薪資明細單</h3>'
+      +'<div class="ps-sub">'+esc(p._name)+' · '+esc(p._type)+' · '+period+'</div>'
+      +'<div class="ps-sec">給付</div><table>'
+      +'<tr><td>底薪('+p.work_days+'天 / '+num(p.work_hours)+'時)</td><td>'+m(bd.base)+'</td></tr>'
+      +otRows
+      +'<tr><td>加班費 小計</td><td>'+m(p.ot_pay)+'</td></tr></table>'
+      +(lvRows?('<div class="ps-sec">請假扣款</div><table>'+lvRows+'<tr><td>小計</td><td>-'+m(p.leave_deduct)+'</td></tr></table>'):'')
+      +'<table><tr><td><b>應發合計</b></td><td><b>'+m(p.gross)+'</b></td></tr></table>'
+      +'<div class="ps-sec">代扣</div><table>'
+      +'<tr><td>勞保(員工)</td><td>-'+m(p.labor_ins_emp)+'</td></tr>'
+      +'<tr><td>健保(員工)</td><td>-'+m(p.health_ins_emp)+'</td></tr>'
+      +'<tr><td>二代健保補充保費</td><td>-'+m(p.health_2nd)+'</td></tr></table>'
+      +'<table class="ps-net"><tr><td>實發金額</td><td>'+m(p.net)+'</td></tr></table>'
+      +'<div class="ps-sec">雇主負擔(參考,不從薪資扣)</div><table>'
+      +'<tr><td>勞保雇主</td><td>'+m(ec.labor)+'</td></tr>'
+      +'<tr><td>健保雇主</td><td>'+m(ec.health)+'</td></tr>'
+      +'<tr><td>勞退提繳</td><td>'+m(ec.pension)+'</td></tr></table>'
+      +'<div class="ps-sub">投保薪資 '+m(bd.insBase)+'</div>';
+    openModal('payslip-modal');
+  };
+
+  // 投保申報 CSV(含身分證、投保薪資、勞健保勞退各負擔)
+  window.payrollExportInsuranceCsv=function(){
+    if(!prRows.length){ alert('尚未計算'); return; }
+    var period=document.getElementById('pr-month').value;
+    var byId={}; prStaff.forEach(function(s){ byId[s.id]=s; });
+    var head=['姓名','身分證字號','投保方式','投保薪資','勞保_員工','勞保_雇主','健保_員工','健保_雇主','勞退_雇主'];
+    var lines=[head.join(',')];
+    prRows.forEach(function(p){
+      var s=byId[p.emp_id]||{}, pay=prPayMap[p.emp_id]||{}, ec=p.employer_cost||{};
+      var iv={company:'公司',union:'公會',none:'未保'}[pay.insure_via]||'';
+      lines.push([s.name||p._name, s.id_number||'', iv, Math.round(num(p.breakdown&&p.breakdown.insBase)),
+                  p.labor_ins_emp, Math.round(num(ec.labor)), p.health_ins_emp, Math.round(num(ec.health)), Math.round(num(ec.pension))].join(','));
+    });
+    csvDownload('投保申報_'+period+'.csv', lines);
+  };
+
+  // 解鎖:批次狀態回 draft、薪資單 locked=false
+  window.payrollUnlock=async function(){
+    var period=document.getElementById('pr-month').value;
+    if(!prRun || prRun.status!=='locked'){ alert('本月未鎖定'); return; }
+    if(!await uiConfirm('確定解鎖 '+period+'?解鎖後可重新計算與儲存。')) return;
+    var up=await sbFetch('/rest/v1/payroll_run?id=eq.'+prRun.id,{method:'PATCH',headers:{'Prefer':'return=representation'},body:JSON.stringify({status:'draft'})});
+    if(!up.ok){ alert('解鎖失敗(HTTP '+up.status+')'+(up.data&&up.data.message?(' '+up.data.message):'')); return; }
+    await sbFetch('/rest/v1/payslip?period=eq.'+period,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({locked:false})});
+    prRun=(Array.isArray(up.data)&&up.data[0])?up.data[0]:Object.assign(prRun,{status:'draft'});
+    document.getElementById('pr-status').textContent='狀態:草稿';
+    var ub=document.getElementById('pr-unlock-btn'); if(ub) ub.style.display='none';
+    alert('已解鎖 '+period+',可重新計算/儲存。');
+  };
+})();
+</script>
+
+<!-- ═══════════ 人事薪資:請假・特休台帳 ═══════════ -->
+<script>
+(function(){
+  var lvStaff=[], lvByStaff={}, lvAnnualByName={}, lvEditSid=null;
+  function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
+  function cleanStr(v){ if(v==null) return null; var s=String(v).trim(); return s||null; }
+  function today(){ return (typeof currentDate==='string'&&currentDate)?currentDate:new Date().toISOString().slice(0,10); }
+  function d2(h){ return Math.round(h/8*100)/100; }   // 時→天(2位小數)
+  function isAnnual(t){ return t==='特休'||t==='annual'; }
+  function inPeriod(dateStr, p){ return !!dateStr && dateStr>=p.start && dateStr<p.end; }
+
+  // 某員工「本期(到職週年年度)」特休結算:應給(自動,週年制) − 已休(att_report特休+台帳補登) − 折現
+  function annualSummary(s){
+    var period = s.hire_date ? Payroll.annualPeriod(s.hire_date, today()) : {start:'',end:''};
+    var estDays = s.hire_date ? Payroll.annualLeaveDays(s.hire_date, today()) : 0;
+    var usedAtt=0;
+    (lvAnnualByName[s.name]||[]).forEach(function(a){ if(inPeriod(a.date, period)) usedAtt+=num(a.hours); });
+    var ledgerUse=0, payout=0, grantAdj=0;
+    (lvByStaff[s.id]||[]).forEach(function(r){
+      if(!isAnnual(r.leave_type) || !inPeriod(r.ref_date, period)) return;
+      var h=num(r.hours);
+      if(r.entry_type==='use') ledgerUse+=h;
+      else if(r.entry_type==='payout') payout+=h;
+      else if(r.entry_type==='grant') grantAdj+=h;   // 手動加給(特殊情況)
+    });
+    var granted=estDays*8+grantAdj, used=usedAtt+ledgerUse;
+    return { period:period, estDays:estDays, granted:granted, used:used, usedAtt:usedAtt, ledgerUse:ledgerUse, payout:payout, remain:granted-used-payout };
+  }
+
+  window.leaveInit=async function(){
+    var body=document.getElementById('leave-body');
+    if(body) body.innerHTML='<tr><td colspan="9" class="empty-state">載入中...</td></tr>';
+    try{
+      var rs=await sbFetchAll('/rest/v1/staff?select=*&order=name');
+      lvStaff=Array.isArray(rs.data)?rs.data:[];
+      var rl=await sbFetch('/rest/v1/leave_ledger?select=*'); lvByStaff={};
+      if(rl.ok&&Array.isArray(rl.data)) rl.data.forEach(function(x){ (lvByStaff[x.staff_id]=lvByStaff[x.staff_id]||[]).push(x); });
+      else if(rl.status===401||rl.status===403||rl.status===404){
+        if(body) body.innerHTML='<tr><td colspan="9" class="empty-state">無法讀取(HTTP '+rl.status+'):請確認已執行 hr_payroll_migration.sql 且帳號為 HR</td></tr>'; return;
+      }
+      // 打通:從出勤回報 att_report 抓「特休」時數(近13個月,涵蓋每個人的當前週年期),自動計入已休
+      var d=new Date(today()); d.setMonth(d.getMonth()-13);
+      var from=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      var ra=await sbFetchAll('/rest/v1/att_report?select=staff_name,work_date,leave_hours&leave_type=eq.'+encodeURIComponent('特休')+'&leave_hours=gt.0&work_date=gte.'+from);
+      lvAnnualByName={}; (Array.isArray(ra.data)?ra.data:[]).forEach(function(a){ (lvAnnualByName[a.staff_name]=lvAnnualByName[a.staff_name]||[]).push({date:a.work_date, hours:a.leave_hours}); });
+    }catch(e){ console.warn('leaveInit failed',e); if(body) body.innerHTML='<tr><td colspan="9" class="empty-state">載入失敗</td></tr>'; return; }
+    var yl=document.getElementById('leave-year'); if(yl) yl.textContent='特休採到職週年制 '+window.hrScopeLabel();
+    leaveRender();
+  };
+
+  window.leaveRender=function(){
+    var body=document.getElementById('leave-body'); if(!body) return;
+    var q=(document.getElementById('leave-search').value||'').trim().toLowerCase();
+    var onlyActive=document.getElementById('leave-only-active').checked;
+    var rows=lvStaff.filter(function(s){
+      if(!window.hrInScope(s.department)) return false;   // 薪資可視範圍
+      if(onlyActive && s.status==='離職') return false;
+      if(!q) return true;
+      return [s.name,s.department].some(function(v){ return String(v||'').toLowerCase().indexOf(q)>=0; });
+    });
+    rows.sort(function(a,b){ return window.hrDeptRank(a.department)-window.hrDeptRank(b.department)
+      || String(a.name||'').localeCompare(String(b.name||''),'zh-Hant'); });
+    if(!rows.length){ body.innerHTML='<tr><td colspan="9" class="empty-state">沒有符合的員工</td></tr>'; return; }
+    body.innerHTML=rows.map(function(s){
+      var sm=annualSummary(s);
+      var remainCls=sm.remain<0?' style="text-align:center;font-weight:700;color:var(--danger)"':' style="text-align:center;font-weight:700"';
+      var per=sm.period.start?('<span style="font-size:11px;color:var(--text3)">'+sm.period.start+'<br>~'+sm.period.end+'</span>'):'—';
+      var usedTip=sm.usedAtt?(' title="出勤回報特休 '+d2(sm.usedAtt)+' 天'+(sm.ledgerUse?(' + 台帳補登 '+d2(sm.ledgerUse)+' 天'):'')+'"'):'';
+      return '<tr>'
+        +'<td>'+esc(s.name||'—')+'</td><td>'+esc(s.department||'—')+'</td>'
+        +'<td>'+esc(s.hire_date||'—')+'</td>'
+        +'<td style="text-align:center">'+per+'</td>'
+        +'<td style="text-align:center">'+sm.estDays+' 天</td>'
+        +'<td style="text-align:center"'+usedTip+'>'+d2(sm.used)+'</td>'
+        +'<td style="text-align:center">'+d2(sm.payout)+'</td>'
+        +'<td'+remainCls+'>'+d2(sm.remain)+' 天</td>'
+        +'<td><button class="btn-icon edit" onclick="leaveOpenModal('+s.id+')" style="border:1px solid var(--border)">＋ 登記</button></td>'
+        +'</tr>';
+    }).join('');
+  };
+
+  window.leaveOpenModal=function(sid){
+    var s=lvStaff.filter(function(x){ return String(x.id)===String(sid); })[0]; if(!s) return;
+    lvEditSid=s.id;
+    var sm=annualSummary(s);
+    document.getElementById('leave-modal-title').textContent='特休登記 — '+(s.name||'');
+    document.getElementById('leave-modal-sub').textContent='本期 '+(sm.period.start||'—')+' ~ '+(sm.period.end||'—')+' · 應給 '+sm.estDays+' 天 · 剩餘 '+d2(sm.remain)+' 天(日常特休請直接記在出勤回報)';
+    document.getElementById('leave-f-entry').value='use';
+    document.getElementById('leave-f-days').value='';
+    document.getElementById('leave-f-date').value=today();
+    document.getElementById('leave-f-note').value='';
+    openModal('leave-modal');
+  };
+
+  window.leaveSaveModal=async function(){
+    if(lvEditSid==null) return;
+    var days=num(document.getElementById('leave-f-days').value);
+    if(!days){ alert('請填天數'); return; }
+    var payload={
+      staff_id:lvEditSid,
+      leave_type:'特休',
+      entry_type:document.getElementById('leave-f-entry').value,
+      hours:days*8,
+      ref_date:document.getElementById('leave-f-date').value||today(),
+      note:cleanStr(document.getElementById('leave-f-note').value)||null
+    };
+    var btn=document.getElementById('btn-save-leave'); var old=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='儲存中...'; }
+    var res=await sbFetch('/rest/v1/leave_ledger',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)});
+    if(btn){ btn.disabled=false; btn.textContent=old; }
+    if(!res.ok){ console.warn('leave save failed',res.status,res.data); alert('儲存失敗(HTTP '+res.status+')'+(res.data&&res.data.message?(' '+res.data.message):'')+((res.status===401||res.status===403)?'\n→ 帳號需為 HR(perms.payroll 或管理員)':'')); return; }
+    var saved=(Array.isArray(res.data)&&res.data[0])?res.data[0]:payload;
+    (lvByStaff[lvEditSid]=lvByStaff[lvEditSid]||[]).push(saved);
+    closeModal('leave-modal'); leaveRender();
+  };
+})();
+</script>
+
+<!-- ═══════════ 人事薪資:費率設定 ═══════════ -->
+<script>
+(function(){
+  var pcfgGrades=[];
+  // 請假扣薪比例:輸入框後綴 ↔ att_report 中文假別 ↔ 預設值(0不扣/0.5半/1全)
+  var PCFG_LR=[['annual','特休',0],['official','公假',0],['marriage','婚假',0],['funeral','喪假',0],
+               ['sick','病假',0.5],['personal','事假',1],['menstrual','生理假',0.5],
+               ['maternity','產假',0],['comp','補休',0],['absent','曠職',1],
+               ['newyear','過年',0],['typhoon','颱風',0]];
+  function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
+  function val(id){ var e=document.getElementById(id); return e?e.value:''; }
+  function setv(id,v){ var e=document.getElementById(id); if(e) e.value=(v==null?'':v); }
+  function today(){ return (typeof currentDate==='string'&&currentDate)?currentDate:new Date().toISOString().slice(0,10); }
+  function mv(o,k,d){ return (o&&o[k]!=null)?o[k]:d; }
+
+  window.pcfgInit=async function(){
+    var hint=document.getElementById('pcfg-hint');
+    try{
+      var r=await sbFetch('/rest/v1/payroll_config?select=eff_date,key,value,meta&order=eff_date.desc');
+      if(!r.ok){ hint.textContent='讀取失敗(HTTP '+r.status+')'+((r.status===401||r.status===403)?' — 需 HR 權限':(r.status===404?' — 請先執行 hr_payroll_migration.sql':'')); return; }
+      var rows=Array.isArray(r.data)?r.data:[];
+      var latest={}; rows.forEach(function(x){ if(!(x.key in latest)) latest[x.key]=x; });   // 新到舊,取第一次=最新
+      pcfgFill(latest);
+      setv('pcfg-eff', today());
+      if(typeof refreshDateWk==='function') refreshDateWk();
+      hint.textContent='目前最新版生效日:'+(rows.length?rows[0].eff_date:'—')+'。修改後按「儲存費率」會以上方「生效日」建立/更新一版(舊版保留)。';
+    }catch(e){ console.warn('pcfgInit failed',e); hint.textContent='載入失敗'; }
+  };
+
+  function pcfgFill(L){
+    var of=(L.ot_office&&L.ot_office.meta)||{}, ff=(L.ot_field&&L.ot_field.meta)||{};
+    setv('pcfg-ot-first2', mv(of,'first2',1.34)); setv('pcfg-ot-rest', mv(of,'rest',1.67)); setv('pcfg-ot-cap', mv(of,'monthly_cap_hours',54));
+    setv('pcfg-ot-half', mv(ff,'half_day',0.5)); setv('pcfg-ot-full', mv(ff,'full_day',1.0));
+    var lm=(L.labor_ins&&L.labor_ins.meta)||{}, hm=(L.health_ins&&L.health_ins.meta)||{}, h2=(L.health_2nd&&L.health_2nd.meta)||{};
+    setv('pcfg-labor-rate', L.labor_ins?L.labor_ins.value:0.125); setv('pcfg-labor-emp', mv(lm,'emp',0.2)); setv('pcfg-labor-er', mv(lm,'employer',0.7));
+    setv('pcfg-health-rate', L.health_ins?L.health_ins.value:0.0517); setv('pcfg-health-emp', mv(hm,'emp',0.3)); setv('pcfg-health-er', mv(hm,'employer',0.6)); setv('pcfg-health-depcap', mv(hm,'dependent_cap',3));
+    setv('pcfg-h2nd-rate', L.health_2nd?L.health_2nd.value:0.0211); setv('pcfg-h2nd-thr', mv(h2,'threshold_ratio',4));
+    setv('pcfg-pension-rate', L.pension?L.pension.value:0.06);
+    setv('pcfg-minm', L.min_wage_month?L.min_wage_month.value:28590); setv('pcfg-minh', L.min_wage_hour?L.min_wage_hour.value:190);
+    var lr=(L.leave_rate&&L.leave_rate.meta)||{};
+    PCFG_LR.forEach(function(p){   // p=[inputId後綴, 中文key, 預設]
+      setv('pcfg-lr-'+p[0], mv(lr, p[1], p[2]));
+    });
+    pcfgGrades=((L.ins_grades&&L.ins_grades.meta&&L.ins_grades.meta.grades)||[]).slice();
+    pcfgRenderGrades();
+  }
+
+  function pcfgRenderGrades(){
+    var c=document.getElementById('pcfg-grades'); if(!c) return;
+    c.innerHTML=pcfgGrades.length ? pcfgGrades.map(function(g,i){
+      return '<span class="pcfg-grade"><input type="number" value="'+g+'" onchange="pcfgGradeChange('+i+',this.value)"/><button onclick="pcfgRemoveGrade('+i+')" title="刪除">✕</button></span>';
+    }).join('') : '<span style="color:var(--text3);font-size:12px">尚無級距,按「＋ 新增級距」</span>';
+  }
+  window.pcfgGradeChange=function(i,v){ pcfgGrades[i]=num(v); };
+  window.pcfgAddGrade=function(){ pcfgGrades.push(0); pcfgRenderGrades(); };
+  window.pcfgRemoveGrade=function(i){ pcfgGrades.splice(i,1); pcfgRenderGrades(); };
+  window.pcfgSortGrades=function(){ pcfgGrades=Array.from(new Set(pcfgGrades.map(num).filter(function(x){return x>0;}))).sort(function(a,b){return a-b;}); pcfgRenderGrades(); };
+
+  window.pcfgSave=async function(){
+    var eff=val('pcfg-eff'); if(!eff){ alert('請選生效日'); return; }
+    var grades=Array.from(new Set(pcfgGrades.map(num).filter(function(x){return x>0;}))).sort(function(a,b){return a-b;});
+    var n=function(id){ return num(val(id)); };
+    var rows=[
+      {eff_date:eff, key:'ot_office', value:null, meta:{first2:n('pcfg-ot-first2'),rest:n('pcfg-ot-rest'),monthly_cap_hours:n('pcfg-ot-cap')}},
+      {eff_date:eff, key:'ot_field', value:null, meta:{half_day:n('pcfg-ot-half'),full_day:n('pcfg-ot-full')}},
+      {eff_date:eff, key:'labor_ins', value:n('pcfg-labor-rate'), meta:{emp:n('pcfg-labor-emp'),employer:n('pcfg-labor-er')}},
+      {eff_date:eff, key:'health_ins', value:n('pcfg-health-rate'), meta:{emp:n('pcfg-health-emp'),employer:n('pcfg-health-er'),dependent_cap:n('pcfg-health-depcap')}},
+      {eff_date:eff, key:'health_2nd', value:n('pcfg-h2nd-rate'), meta:{threshold_ratio:n('pcfg-h2nd-thr')}},
+      {eff_date:eff, key:'pension', value:n('pcfg-pension-rate'), meta:{employer:n('pcfg-pension-rate')}},
+      {eff_date:eff, key:'min_wage_month', value:n('pcfg-minm'), meta:null},
+      {eff_date:eff, key:'min_wage_hour', value:n('pcfg-minh'), meta:null},
+      {eff_date:eff, key:'leave_rate', value:null, meta:(function(){ var o={}; PCFG_LR.forEach(function(p){ o[p[1]]=n('pcfg-lr-'+p[0]); }); return o; })()},
+      {eff_date:eff, key:'ins_grades', value:null, meta:{grades:grades}}
+    ];
+    var res=await sbFetch('/rest/v1/payroll_config?on_conflict=eff_date,key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(rows)});
+    if(!res.ok){ alert('儲存失敗(HTTP '+res.status+')'+(res.data&&res.data.message?(' '+res.data.message):'')+((res.status===401||res.status===403)?'\n→ 需 HR(perms.payroll=edit 或管理員)':'')); return; }
+    alert('已儲存費率(生效日 '+eff+')');
+    pcfgInit();
   };
 })();
 </script>
@@ -19702,6 +21128,33 @@ let prodTrack=[], prodReserved=[], prodProduct=[], prodCurTab='board', prodBusy=
 const PROD_ITEMS=['SP','L','FB','P','Q','Z'];
 let prodExpanded=new Set();
 let prodMiniProj=null;   // 小卡下鑽:null=工程層,設值=顯示該工程的工程區小卡
+// ── 已上線(歸檔)工程區:預設隱藏,可用工具列「顯示已上線」切換 ──
+let prodOnline=[];              // sp_online 資料列
+let prodOnlineKeys=new Set();   // "proj|zone" 快查集合
+let prodShowOnline=false;       // 是否顯示已上線工程區
+function prodOnlineKey(proj,zone){ return (proj||'').trim()+'|'+(zone||'').trim(); }
+function prodRebuildOnline(){ prodOnlineKeys=new Set(prodOnline.map(o=>prodOnlineKey(o.proj_no,o.zone))); }
+function prodIsOnline(proj,zone){ return prodOnlineKeys.has(prodOnlineKey(proj,zone)); }
+// 「已上線」標籤(與狀態 chip 同樣式);點擊可取消上線、放回主頁清單
+function prodOnlineBadge(proj,zone){
+  if(!prodIsOnline(proj,zone)) return '';
+  return '<span class="chip st-online" title="已上線 · 點擊取消上線,放回主頁 SP 進度清單" '+
+    'onclick="event.stopPropagation();prodUnonline(\''+esc(prodOnlineKey(proj,zone))+'\')">已上線 ✕</span>';
+}
+// 取消上線:自 sp_online 刪除該工程區 → 主頁清單與看板恢復顯示
+async function prodUnonline(key){
+  const i=key.indexOf('|'); const proj=key.slice(0,i), zone=key.slice(i+1);
+  const r=await sbFetch('/rest/v1/sp_online?proj_no=eq.'+encodeURIComponent(proj)+'&zone=eq.'+encodeURIComponent(zone),{method:'DELETE'});
+  if(r.ok || r.status===404){
+    prodOnline=prodOnline.filter(o=>prodOnlineKey(o.proj_no,o.zone)!==key); prodRebuildOnline();
+    prodRenderBoard();
+    if(typeof dashLoadSPProgress==='function' && document.getElementById('dash-sp-progress')) dashLoadSPProgress();
+  }else alert('取消上線失敗('+r.status+')');
+}
+function prodToggleShowOnline(){ prodShowOnline=!prodShowOnline; prodRenderBoard(); }
+// ── 狀態篩選(圖例改成的按鈕):單選切換,再按一次清除;轉包預設隱藏,選轉包才顯示 ──
+let prodStatusFilter='';   // '' | 未開始|進行中|備妥|已送工地|轉包
+function prodSetStatusFilter(st){ prodStatusFilter=(prodStatusFilter===st)?'':st; prodRenderBoard(); }
 // 卡片排序優先序:進行中最前
 const PROD_OV_RANK={'進行中':0,'未開始':1,'備妥':2,'已送工地':3,'轉包':4};
 function prodOvRank(l){ return PROD_OV_RANK[l]!=null?PROD_OV_RANK[l]:9; }
@@ -19712,14 +21165,17 @@ async function prodInit(){
   prodBusy=true;
   document.getElementById('prodBoardBody').innerHTML='<tr><td colspan="12" class="prod-empty">載入中…</td></tr>';
   try{
-    const [rt,rr,rp]=await Promise.all([
+    const [rt,rr,rp,ro]=await Promise.all([
       sbFetchAll('/rest/v1/sp_track?select=*'),
       sbFetchAll('/rest/v1/reserved_material?select=*'),
-      sbFetchAll('/rest/v1/product_material?select=*')
+      sbFetchAll('/rest/v1/product_material?select=*'),
+      sbFetch('/rest/v1/sp_online?select=*')
     ]);
     prodTrack    = (rt.ok&&Array.isArray(rt.data))?rt.data:[];
     prodReserved = (rr.ok&&Array.isArray(rr.data))?rr.data:[];
     prodProduct  = (rp.ok&&Array.isArray(rp.data))?rp.data:[];
+    prodOnline   = (ro.ok&&Array.isArray(ro.data))?ro.data:[];
+    prodRebuildOnline();
   }catch(e){ console.error(e); }
   prodBusy=false;
   prodBuildProjOptions();
@@ -19727,6 +21183,7 @@ async function prodInit(){
   prodRenderTrack();
   prodRenderReserved();
   prodRenderProduct();
+  prodMaybeApplyPending();   // 若由 back/forward 回到某子狀態,資料載好後套用
 }
 
 function prodTab(t){
@@ -19743,6 +21200,7 @@ function prodTab(t){
 // ── 狀態燈號 ──
 function prodStatusMeta(status, remark){
   const s=(status||'').trim();
+  if(s==='轉包') return {label:'轉包',cls:'st-sub'};   // 狀態即為轉包(下拉選轉包)
   if((remark||'').indexOf('轉包')>=0 && (s===''||s==='-')) return {label:'轉包',cls:'st-sub'};
   if(s==='OK')    return {label:'OK',cls:'st-ok'};
   if(s==='送工地') return {label:'送工地',cls:'st-ship'};
@@ -19765,6 +21223,7 @@ function prodStatusLevel(status){
 function prodOverall(items){
   const rel = items.filter(i=>{
     const s=(i.status||'').trim();
+    if(s==='轉包') return false;   // 狀態=轉包 的料件不計入整體(比照 remark 轉包)
     return !((i.remark||'').indexOf('轉包')>=0 && (s===''||s==='-'));
   });
   if(!rel.length) return {label:'轉包',cls:'st-sub'};
@@ -19861,7 +21320,7 @@ function prodRenderCards(units, f){
     return '<div class="prod-card" data-proj="'+esc(z.proj)+'" data-zone="'+esc(z.zone)+'" onclick="prodOpenZoneDetail(this.dataset.proj,this.dataset.zone)" title="點擊 → 開啟此工程區詳情(SP狀態/保留料/成品材)">'+
       '<div class="pc-head"><div><div class="pc-title"><span class="pc-proj">'+esc(z.proj||'—')+'</span>-'+esc(z.zone||'—')+'</div>'+
         '<div class="pc-sub">'+z.us.length+' 個 CP編號 · '+ready+'/'+z.us.length+' 備妥</div></div>'+
-        '<span class="chip '+z.ov.cls+'">'+esc(z.ov.label)+'</span></div>'+
+        '<span class="pc-status">'+prodOnlineBadge(z.proj,z.zone)+'<span class="chip '+z.ov.cls+'">'+esc(z.ov.label)+'</span></span></div>'+
       (itemTags?('<div class="pc-items">'+itemTags+'</div>'):'')+
       '<div class="pc-props">'+
         '<div class="pc-prop"><div class="pp-lbl">成品材領用</div><div class="pp-val">'+pmCell+'</div></div>'+
@@ -19917,7 +21376,7 @@ function prodRenderMiniZones(wrap, units, f){
   wrap.innerHTML=head+zones.map(z=>{
     const bar=prodStatusColor(z.ov.cls);
     return '<div class="prod-mini" data-proj="'+esc(z.proj)+'" data-zone="'+esc(z.zone)+'" onclick="prodOpenZoneDetail(this.dataset.proj,this.dataset.zone)" title="點擊 → 開啟 '+esc(z.proj)+'-'+esc(z.zone)+' 詳情">'+
-      '<div class="pm-head"><div class="pm-title"><span class="pm-tproj">'+esc(z.proj)+'-</span>'+esc(z.zone||'—')+'</div><span class="chip '+z.ov.cls+'">'+esc(z.ov.label)+'</span></div>'+
+      '<div class="pm-head"><div class="pm-title"><span class="pm-tproj">'+esc(z.proj)+'-</span>'+esc(z.zone||'—')+'</div><span class="pm-status">'+prodOnlineBadge(z.proj,z.zone)+'<span class="chip '+z.ov.cls+'">'+esc(z.ov.label)+'</span></span></div>'+
       '<div class="pm-sub">'+z.us.length+' 個 CP編號</div>'+
       '<div class="pm-bar"><div class="pm-fill" style="width:'+z.pct+'%;background:'+bar+'"></div></div>'+
       '<div class="pm-foot"><span>'+z.done+'/'+z.us.length+' 備妥</span><span class="pm-pct">'+z.pct+'%</span></div>'+
@@ -19928,21 +21387,29 @@ function prodMiniOpen(el){ prodMiniProj=(el&&el.dataset)?el.dataset.proj:el; pro
 function prodMiniBack(){ prodMiniProj=null; prodRenderBoard(); }
 
 // 跳到某分頁(track/reserved/product)並只顯示某工程編號(+工程區)——「去分頁編輯」用
+let prodProductZoneReason='';   // 成品材:以「事由包含此工程區」篩選(成品材無 zone 欄,工程區寫在事由裡)
 function prodDrillToTab(tabKey, proj, zone){
   proj=proj||''; zone=zone||'';
   colFilterState[tabKey]={};
+  prodProductZoneReason='';
   if(proj) colFilterState[tabKey].proj_no=new Set([proj]);
-  if(zone) colFilterState[tabKey].zone=new Set([zone]);
+  // 有「工程區(zone)」欄的表(SP狀態表/保留料)直接套欄位篩選;
+  // 成品材沒有 zone 欄,工程區寫在「事由」裡 → 改以事由包含工程區來篩。
+  const _hasZone=(SPX[tabKey]?.cols||[]).some(c=>c.k==='zone');
+  if(zone && _hasZone) colFilterState[tabKey].zone=new Set([zone]);
+  else if(zone && tabKey==='product') prodProductZoneReason=zone;
   const s=document.getElementById('spxSearch-'+tabKey); if(s){ s.value=''; spxFilterText[tabKey]=''; }
   const det=document.getElementById('prodview-detail'); if(det) det.style.display='none';
   prodTab(tabKey);
   spxRender(tabKey);
   prodTabBanner(tabKey);
+  setView({page:'prod', ptab:tabKey, pproj:proj, pzone:zone});   // 推入歷史 → 可用上一頁/下一頁
 }
 // 舊呼叫相容:卡片→SP狀態表
 function prodDrillToTrack(cardEl){ const p=cardEl&&cardEl.dataset?cardEl.dataset.proj:''; const z=cardEl&&cardEl.dataset?cardEl.dataset.zone:''; prodDrillToTab('track',p,z); }
 function prodClearTabFilter(tabKey){
   if(colFilterState[tabKey]){ delete colFilterState[tabKey].proj_no; delete colFilterState[tabKey].zone; }
+  if(tabKey==='product') prodProductZoneReason='';
   spxRender(tabKey);
   prodTabBanner(tabKey);
 }
@@ -19952,6 +21419,7 @@ function prodTabBanner(tabKey){
   const parts=[];
   if(f.proj_no) parts.push([...f.proj_no].join('、'));
   if(f.zone)    parts.push([...f.zone].join('、'));
+  if(tabKey==='product' && prodProductZoneReason) parts.push(prodProductZoneReason+'(事由)');
   if(!parts.length){ el.style.display='none'; el.innerHTML=''; return; }
   el.style.display='';
   el.innerHTML='<span class="ptfb-lbl">🔍 目前只顯示</span><span class="ptfb-val">'+esc(parts.join(' / '))+'</span>'+
@@ -19982,8 +21450,24 @@ function prodOpenZoneDetail(proj, zone){
   prodRenderDetail();
   spxRender('detail');
   window.scrollTo(0,0);
+  setView({page:'prod', pdetail:1, pproj:proj||'', pzone:zone||''});   // 推入歷史 → 可用上一頁/下一頁
 }
-function prodDetailBack(){ const det=document.getElementById('prodview-detail'); if(det) det.style.display='none'; prodTab('board'); prodRenderBoard(); }
+function prodDetailBack(){ const det=document.getElementById('prodview-detail'); if(det) det.style.display='none'; prodTab('board'); prodRenderBoard(); setView({page:'prod', ptab:'board'}); }
+// 上方分頁按鈕(使用者點擊):切換 + 推入歷史
+function prodGoTab(t){ const det=document.getElementById('prodview-detail'); if(det) det.style.display='none'; prodTab(t); if(t==='board') prodRenderBoard(); setView({page:'prod', ptab:t}); }
+// 依 view 還原 SP 頁子狀態(不推歷史;呼叫端已在 _applyingPop 保護下)
+function prodApplyViewNow(v){
+  if(v.pdetail){ prodOpenZoneDetail(v.pproj||'', v.pzone||''); }
+  else if(v.pproj || v.pzone){ prodDrillToTab(v.ptab||'track', v.pproj||'', v.pzone||''); }
+  else { const det=document.getElementById('prodview-detail'); if(det) det.style.display='none'; prodTab(v.ptab||'board'); prodTabBanner(v.ptab||'board'); }
+}
+let _prodPendingView=null;   // 從其他頁 back/forward 回 SP 子狀態時,待資料載入後套用
+function prodMaybeApplyPending(){
+  if(!_prodPendingView || prodBusy) return;
+  const v=_prodPendingView; _prodPendingView=null;
+  const prev=_applyingPop; _applyingPop=true;      // 套用期間不要再推歷史
+  try{ prodApplyViewNow(v); } finally { _applyingPop=prev; }
+}
 function prodRenderDetailHeader(){
   const {proj,zone}=prodDetailCtx;
   const m=prodZoneMatched(proj,zone);
@@ -20045,9 +21529,23 @@ function prodRenderBoard(){
   if(view!=='mini') prodMiniProj=null;
   const mode=document.getElementById('prodGroupMode').value;
   const proj=document.getElementById('prodFilterProj').value;
-  const stf =document.getElementById('prodFilterStatus').value;
+  const stf =prodStatusFilter;
   const kw  =(document.getElementById('prodSearch').value||'').trim().toLowerCase();
+  // 狀態篩選鈕 active 樣式 + 有選取時淡化其他
+  const barEl=document.getElementById('prodStatusFilterBar');
+  if(barEl){ barEl.classList.toggle('has-filter', !!stf);
+    barEl.querySelectorAll('.prod-stbtn').forEach(b=>b.classList.toggle('active', b.dataset.st===stf)); }
   let units=prodBuildUnits();
+
+  // 已上線工程區:預設隱藏(含統計);更新工具列切換鈕的顯示與筆數
+  const hiddenKeys=new Set(units.filter(u=>prodIsOnline(u.proj,u.zone)).map(u=>prodOnlineKey(u.proj,u.zone)));
+  const tgl=document.getElementById('prodOnlineToggle');
+  if(tgl){
+    if(hiddenKeys.size){ tgl.style.display=''; tgl.classList.toggle('on',prodShowOnline);
+      tgl.textContent=(prodShowOnline?'✓ 顯示已上線':'顯示已上線')+' ('+hiddenKeys.size+')'; }
+    else tgl.style.display='none';
+  }
+  if(!prodShowOnline) units=units.filter(u=>!prodIsOnline(u.proj,u.zone));
 
   // 上方統計固定以「生產單位」為分母(不受分組模式影響)
   const counts={未開始:0,進行中:0,備妥:0,已送工地:0,轉包:0};
@@ -20059,6 +21557,9 @@ function prodRenderBoard(){
     prodMetric('備妥',counts['備妥'],'var(--green)')+
     prodMetric('已送工地',counts['已送工地'],'var(--accent2)')+
     prodMetric('轉包',counts['轉包'],'var(--purple)');
+
+  // 轉包預設隱藏(整體=轉包的單位);只有按「轉包」篩選鈕時才顯示
+  if(stf!=='轉包') units=units.filter(u=>prodOverall(u.items).label!=='轉包');
 
   // 列表 / 卡片 / 小卡 切換
   const tWrap=document.getElementById('prodTableWrap'), cWrap=document.getElementById('prodCardWrap');
@@ -20096,7 +21597,7 @@ function prodRenderBoard(){
         '<td class="prod-doc" style="color:var(--text3)">'+z.us.length+' 單</td>'+
         itemCells+
         '<td>'+pmCell+'</td><td>'+rmCell+'</td>'+
-        '<td><span class="chip '+z.ov.cls+'">'+esc(z.ov.label)+'</span><span class="prod-frac">'+ready+'/'+z.us.length+' 備妥</span></td>'+
+        '<td>'+prodOnlineBadge(z.proj,z.zone)+'<span class="chip '+z.ov.cls+'">'+esc(z.ov.label)+'</span><span class="prod-frac">'+ready+'/'+z.us.length+' 備妥</span></td>'+
       '</tr>';
       if(open){
         html+=z.us.slice().sort((a,b)=>a.doc.localeCompare(b.doc,'zh-Hant')).map(u=>
@@ -20259,7 +21760,7 @@ async function prodGridSave(key,id){
 }
 
 async function prodDel(table, id){
-  if(!confirm('確定刪除這一列？')) return;
+  if(!await uiConfirm('確定刪除這一列？')) return;
   const r=await sbFetch('/rest/v1/'+table+'?id=eq.'+id,{method:'DELETE'});
   if(!r.ok){ alert('刪除失敗（需登入）'); return; }
   prodTrack=prodTrack.filter(x=>x.id!==id); prodReserved=prodReserved.filter(x=>x.id!==id); prodProduct=prodProduct.filter(x=>x.id!==id);
@@ -20429,6 +21930,7 @@ function spxHint(msg,err){ if(typeof layoutSaveHint==='function' && !err){ layou
 function spxRowVisible(key,r,kw){ const cfg=SPX[key];
   if(spxRowIsBlank(cfg,r)) return true;
   if(!rowPassesColFilters(key, ck=>{ const c=cfg.cols.find(x=>x.k===ck); return c?spxColStr(r,c):''; })) return false;
+  if(key==='product' && prodProductZoneReason && String(r.reason||'').indexOf(prodProductZoneReason)<0) return false;   // 成品材:事由需含工程區
   if(kw) return cfg.cols.map(c=>spxColStr(r,c)).join(' ').toLowerCase().indexOf(kw)>=0;
   return true;
 }
