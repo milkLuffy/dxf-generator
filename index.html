@@ -62,9 +62,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .login-tab.active{background:var(--accent2);color:#fff}
 .tab-panel{display:flex;flex-direction:column;gap:10px}
 .lf label{display:block;font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
-.lf input,.lf select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:14px;padding:9px 12px;outline:none;transition:border-color .15s}
-.lf input:focus,.lf select:focus{border-color:var(--accent2)}
-.lf input::placeholder{color:var(--text3)}
+.lf input,.lf select,.lf textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:14px;padding:9px 12px;outline:none;transition:border-color .15s}
+.lf textarea{resize:vertical;line-height:1.5}
+.lf input:focus,.lf select:focus,.lf textarea:focus{border-color:var(--accent2)}
+.lf input::placeholder,.lf textarea::placeholder{color:var(--text3)}
 .btn-primary{width:100%;padding:11px;background:var(--accent2);border:1px solid var(--accent2);border-radius:var(--rad);color:#fff;font-family:var(--mono);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
 .btn-primary:hover{background:#6fa0ff}.btn-primary:disabled{opacity:.5;cursor:not-allowed}
 .btn-google{width:100%;padding:10px;background:#fff;border:1px solid #dadce0;border-radius:var(--rad);color:#3c4043;font-family:var(--sans);font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .15s}
@@ -124,6 +125,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .nav-item .nav-badge{margin-left:auto;font-size:10px;background:var(--nav-green);color:var(--nav-on-green);border-radius:8px;padding:1px 6px;font-family:var(--mono);font-weight:600}
 .sidebar-user{padding:12px;border-top:1px solid var(--nav-border);display:flex;align-items:center;gap:8px}
 .user-avatar{width:32px;height:32px;border-radius:50%;background:var(--nav-green);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--nav-on-green);flex-shrink:0}
+.user-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;background:var(--nav-bg2)}
 .user-info{flex:1;min-width:0}
 .user-name{font-size:12px;color:var(--nav-text-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .user-role{font-family:var(--mono);font-size:10px;color:var(--nav-text)}
@@ -247,15 +249,93 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .bom-mini:hover{border-color:var(--accent);box-shadow:0 3px 12px rgba(0,0,0,.18)}
 .bom-mini.st-進行中{border-left-color:var(--green)}
 .bom-mini.st-未開始{border-left-color:var(--yellow)}
-/* 主頁頂列:在職人數 / 產量 / 進行中的工程 / SP備料進度 同一列(窄螢幕自動換行) */
-.dash-top-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:16px;margin-bottom:16px;align-items:stretch}
-/* KPI 卡(在職人數/產量):數字群垂直置中、icon 浮右上角,讓短卡填滿與清單卡等高,底部不再參差 */
+/* 主頁頂列:在職人數 / 產量 / SP備料 / 天氣 / 今日行程，同一列緊湊呈現 */
+.dash-top-grid{display:grid;grid-template-columns:minmax(130px,.64fr) minmax(145px,.72fr) minmax(350px,1.85fr) minmax(145px,.72fr) minmax(220px,1.07fr);gap:12px;margin-bottom:16px;align-items:stretch}
+.dash-top-grid>.card,.dash-top-grid>.stat-card{padding:12px;min-height:146px}
+/* KPI 卡(在職人數/產量):數字群垂直置中、icon 浮右上角 */
 .dash-top-grid>.stat-card{display:flex;flex-direction:column;justify-content:center}
-.dash-top-grid>.stat-card .stat-icon{position:absolute;top:15px;right:16px;margin:0;font-size:20px}
-.dash-top-grid>.stat-card .stat-value{margin-bottom:5px}
+.dash-top-grid>.stat-card .stat-icon{position:absolute;top:12px;right:13px;margin:0;font-size:18px}
+.dash-top-grid>.stat-card .stat-value{font-size:34px;margin-bottom:4px}
 .dash-mini-card{display:flex;flex-direction:column;min-width:0}
 /* 清單卡的捲動區 flex 撐滿,短內容也貼齊整列高度,長清單則封頂捲動不撐爆 */
-.dash-mini-scroll{flex:1 1 auto;min-height:0;max-height:190px;overflow:auto}
+.dash-mini-scroll{flex:1 1 auto;min-height:0;max-height:122px;overflow:auto}
+/* 主頁：小型目前天氣 + Apple 行事曆風格今日條列 */
+.dash-weather-card,.dash-agenda-card{min-width:0;display:flex;flex-direction:column}
+.dash-brief-head{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-bottom:8px;min-height:25px}
+.dash-brief-head .section-title{display:flex;align-items:center;gap:7px}
+.dash-weather-place,.dash-agenda-count{font-family:var(--mono);font-size:9px;color:var(--text3);white-space:nowrap}
+.dash-weather-main{display:flex;align-items:center;gap:9px;min-height:42px}
+.dash-weather-icon{font-size:28px;line-height:1;flex:none}
+.dash-weather-temp{font-family:'Bebas Neue',sans-serif;font-size:34px;line-height:1;color:var(--text)}
+.dash-weather-desc{font-size:11px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-weather-hilo{display:flex;gap:9px;margin-top:7px;padding-top:7px;border-top:1px solid var(--border);font-family:var(--mono);font-size:9px;color:var(--text2);white-space:nowrap}
+.dash-weather-foot{font-size:8px;color:var(--text3);margin-top:auto;padding-top:6px;display:flex;justify-content:space-between;gap:5px;white-space:nowrap;overflow:hidden}
+.dash-weather-foot a{color:var(--text3);text-decoration:none}
+.dash-weather-foot a:hover{color:var(--accent2)}
+.dash-agenda-actions{display:flex;gap:6px;align-items:center}
+.dash-agenda-addbtn{width:25px;height:25px;padding:0;border-radius:50%;font-size:17px;line-height:1}
+.dash-agenda-list{flex:1;min-height:0;overflow:hidden}
+.dash-agenda-row{display:grid;grid-template-columns:38px 3px minmax(0,1fr) auto;gap:7px;align-items:center;padding:5px 1px;border-top:1px solid var(--border);min-height:31px}
+.dash-agenda-row:first-child{border-top:none}
+.dash-agenda-row.done{opacity:.48}
+.dash-agenda-row.done .dash-agenda-title{text-decoration:line-through}
+.dash-agenda-time{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--text)}
+.dash-agenda-dot{width:3px;height:21px;border-radius:3px;background:var(--accent2)}
+.dash-agenda-dot.type-報驗{background:var(--yellow)}
+.dash-agenda-dot.type-出貨{background:var(--green)}
+.dash-agenda-dot.type-會議{background:var(--purple)}
+.dash-agenda-dot.type-提醒{background:var(--danger)}
+.dash-agenda-body{min-width:0;cursor:pointer}
+.dash-agenda-title{font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dash-agenda-meta{font-size:8px;color:var(--text3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dash-agenda-row-actions{display:none;gap:3px}
+.dash-agenda-row:hover .dash-agenda-row-actions,.dash-agenda-row:focus-within .dash-agenda-row-actions{display:flex}
+.dash-agenda-iconbtn{width:21px;height:21px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text3);cursor:pointer;align-items:center;justify-content:center;font-size:10px}
+.dash-agenda-row:hover .dash-agenda-iconbtn,.dash-agenda-row:focus-within .dash-agenda-iconbtn{display:flex}
+.dash-agenda-iconbtn:hover{border-color:var(--accent2);color:var(--text)}
+.dash-agenda-empty{min-height:82px;display:flex;align-items:center;justify-content:center;gap:6px;color:var(--text3);font-size:10px;text-align:center}
+.dash-agenda-empty .empty-ico{font-size:16px;opacity:.7}
+.dash-agenda-more{font-size:9px;color:var(--accent2);padding:4px 1px 0;text-align:right}
+@media(max-width:1180px){.dash-top-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.dash-mini-card{grid-column:span 2}.dash-agenda-card{grid-column:span 2}}
+@media(max-width:900px){.dash-top-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-mini-card{grid-column:1/-1}.dash-agenda-card{grid-column:span 1}}
+@media(max-width:700px){.dash-top-grid{grid-template-columns:1fr 1fr}.dash-agenda-card{grid-column:1/-1}.dash-agenda-row-actions{display:flex}.dash-agenda-iconbtn{display:flex}}
+@media(max-width:520px){.dash-top-grid{grid-template-columns:1fr}.dash-agenda-card{grid-column:auto}.dash-agenda-row{grid-template-columns:38px 3px minmax(0,1fr) auto}}
+/* 主頁公佈欄 */
+.dash-ann-board{padding:0!important;overflow:hidden;margin-bottom:16px}
+.dash-ann-head{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.dash-ann-head .section-title{white-space:nowrap}
+.dash-ann-count{font-family:var(--mono);font-size:9px;color:var(--text3)}
+.dash-ann-head-actions{margin-left:auto;display:flex;gap:6px}
+.dash-ann-list{display:flex;flex-direction:column}
+.dash-ann-row{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 14px;border-top:1px solid var(--border);cursor:pointer;transition:background .12s}
+.dash-ann-row:first-child{border-top:0}
+.dash-ann-row:hover{background:var(--bg3)}
+.dash-ann-priority{font-family:var(--mono);font-size:9px;border-radius:999px;padding:3px 7px;text-align:center;background:var(--bg3);color:var(--text2)}
+.dash-ann-priority.緊急{background:rgba(255,69,58,.16);color:var(--danger)}
+.dash-ann-priority.重要{background:rgba(255,214,10,.14);color:var(--yellow)}
+.dash-ann-title{font-size:12px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dash-ann-excerpt{font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.dash-ann-date{font-family:var(--mono);font-size:9px;color:var(--text3);white-space:nowrap}
+.dash-ann-empty{padding:13px 16px;text-align:center;color:var(--text3);font-size:11px}
+/* 公告／通知管理清單 */
+.info-manage-list{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto}
+.info-manage-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+.info-manage-title{font-size:12px;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.info-manage-sub{font-size:9px;color:var(--text3);margin-top:2px}
+.info-manage-actions{display:flex;gap:4px}
+.notif-setting-row{display:grid;grid-template-columns:minmax(0,1fr) 74px;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border)}
+.notif-setting-label{font-size:12px;color:var(--text);line-height:1.45}
+/* 通知設定內容較長：視窗固定在可視範圍內，整張表單可明確上下捲動，底部關閉鈕常駐。 */
+#notification-settings-modal{padding:12px;align-items:flex-start;overflow:hidden}
+#notification-settings-modal>.modal{width:min(650px,100%);max-height:calc(100dvh - 24px);margin:auto;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding-bottom:18px}
+#notification-settings-modal>.modal>.modal-title{position:sticky;top:0;z-index:3;background:var(--bg2);padding:2px 0 10px;border-bottom:1px solid var(--border)}
+#notification-settings-modal>.modal>.modal-actions:last-child{position:sticky;bottom:-18px;z-index:3;background:var(--bg2);padding:10px 0 0;border-top:1px solid var(--border)}
+@media(max-height:700px){#notification-settings-modal>.modal{gap:10px;padding:18px;max-height:calc(100dvh - 16px)}#notification-settings-modal{padding:8px}}
+.notif-setting-row:first-child{border-top:0}
+.notif-setting-row input[type=number]{width:74px}
+.notif-setting-label{font-size:12px;color:var(--text)}
+.notif-setting-label small{display:block;color:var(--text3);font-size:9px;margin-top:2px}
+@media(max-width:600px){.dash-ann-row{grid-template-columns:50px minmax(0,1fr)}.dash-ann-date{grid-column:2}.dash-ann-head{flex-wrap:wrap}.dash-ann-head-actions{margin-left:0}.info-manage-row{grid-template-columns:1fr}.info-manage-actions{justify-content:flex-end}}
 /* 進行中的工程:橫式 chip 快捷列(標題+chips+全部 同一列,小巧貼齊、不占垂直空間) */
 .card.dash-projbar{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;padding:11px 16px;margin-bottom:16px}
 .card.dash-projbar>.section-title{margin:0;white-space:nowrap;flex:none}
@@ -1311,6 +1391,84 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
   </div>
 </div>
 
+<!-- ── 主頁行程 modal ── -->
+<div class="modal-overlay" id="dash-event-modal">
+  <div class="modal">
+    <div class="modal-title" id="dash-event-modal-title">新增行程</div>
+    <div class="modal-grid">
+      <div class="lf"><label>日期</label><input type="date" id="dash-event-date"/></div>
+      <div class="lf"><label>時間</label><input type="time" id="dash-event-time"/></div>
+      <div class="lf"><label>類型</label>
+        <select id="dash-event-type">
+          <option value="工程">工程</option><option value="報驗">報驗</option><option value="出貨">出貨</option><option value="會議">會議</option><option value="提醒">提醒</option><option value="其他">其他</option>
+        </select>
+      </div>
+      <div class="lf"><label>工程編號</label><input type="text" id="dash-event-project" placeholder="選填，例如 B820-6BB"/></div>
+      <div class="lf full"><label>行程名稱</label><input type="text" id="dash-event-title" placeholder="例如：構件報驗" maxlength="100"/></div>
+      <div class="lf full"><label>備註</label><textarea id="dash-event-note" rows="3" placeholder="選填"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal('dash-event-modal')">取消</button>
+      <button class="btn-modal-ok" id="dash-event-save" onclick="dashSaveEvent()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 公告管理 modal ── -->
+<div class="modal-overlay" id="announcement-modal">
+  <div class="modal" style="max-width:650px">
+    <div class="modal-title" id="announcement-modal-title">公佈欄管理</div>
+    <div id="announcement-admin-form">
+      <div class="modal-grid">
+        <div class="lf full"><label>公告標題</label><input type="text" id="ann-title" maxlength="120" placeholder="輸入公告標題"/></div>
+        <div class="lf full"><label>公告內容</label><textarea id="ann-content" rows="4" placeholder="輸入完整公告內容"></textarea></div>
+        <div class="lf"><label>重要程度</label><select id="ann-priority"><option value="一般">一般</option><option value="重要">重要</option><option value="緊急">緊急</option></select></div>
+        <div class="lf"><label>到期日期</label><input type="date" id="ann-expires"/></div>
+        <label class="full" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)"><input type="checkbox" id="ann-notify" checked/> 同步顯示在通知鈴鐺</label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-cancel" type="button" onclick="announcementResetForm()">清空</button>
+        <button class="btn-modal-ok" type="button" id="ann-save" onclick="announcementSave()">發布公告</button>
+      </div>
+      <div class="login-divider"><span>目前公告</span></div>
+    </div>
+    <div class="info-manage-list" id="announcement-manage-list"></div>
+    <div class="modal-actions"><button class="btn-modal-cancel" onclick="closeModal('announcement-modal')">關閉</button></div>
+  </div>
+</div>
+
+<!-- ── 通知設定 modal ── -->
+<div class="modal-overlay" id="notification-settings-modal">
+  <div class="modal" style="max-width:650px">
+    <div class="modal-title">通知設定</div>
+    <div id="notification-rule-settings">
+      <div class="notif-setting-row">
+        <label class="notif-setting-label"><input type="checkbox" id="noti-birthday-enabled"/> 生日通知<small>0 代表當天通知，其他數字代表提前天數</small></label>
+        <div class="lf"><input type="number" id="noti-birthday-days" min="0" max="30"/></div>
+      </div>
+      <div class="notif-setting-row">
+        <label class="notif-setting-label"><input type="checkbox" id="noti-anniv-enabled"/> 到職週年通知<small>設定在週年前幾天開始提醒</small></label>
+        <div class="lf"><input type="number" id="noti-anniv-days" min="0" max="30"/></div>
+      </div>
+      <div class="modal-actions"><button class="btn-modal-ok" type="button" id="noti-rule-save" onclick="notificationConfigSave()">儲存規則</button></div>
+      <div class="login-divider"><span>建立通知訊息</span></div>
+      <div class="modal-grid">
+        <div class="lf full"><label>通知標題</label><input type="text" id="noti-title" maxlength="100" placeholder="例如：明日停電通知"/></div>
+        <div class="lf full"><label>通知內容</label><textarea id="noti-message" rows="3" placeholder="輸入通知內容"></textarea></div>
+        <div class="lf"><label>重要程度</label><select id="noti-priority"><option value="一般">一般</option><option value="重要">重要</option><option value="緊急">緊急</option></select></div>
+        <div class="lf"><label>開始日期</label><input type="date" id="noti-starts"/></div>
+        <div class="lf"><label>循環方式</label><select id="noti-repeat-unit" onchange="manualNotificationRepeatToggle()"><option value="none">不循環</option><option value="day">按天循環</option><option value="week">按週循環</option><option value="month">按月循環</option></select></div>
+        <div class="lf" id="noti-repeat-interval-wrap"><label>循環間隔</label><input type="number" id="noti-repeat-interval" min="1" max="365" value="1"/><small style="color:var(--text3)">例如填 2，就是每 2 天／每 2 週／每 2 個月</small></div>
+        <div class="lf"><label>結束日期（選填）</label><input type="date" id="noti-expires"/></div>
+      </div>
+      <div class="modal-actions"><button class="btn-modal-ok" type="button" id="noti-send" onclick="manualNotificationSave()">發布通知</button></div>
+      <div class="login-divider"><span>已發布通知</span></div>
+    </div>
+    <div class="info-manage-list" id="manual-notification-list"></div>
+    <div class="modal-actions"><button class="btn-modal-cancel" onclick="closeModal('notification-settings-modal')">關閉</button></div>
+  </div>
+</div>
+
 <!-- ── Guest modal ── -->
 <div class="modal-overlay" id="guest-modal">
   <div class="modal">
@@ -1881,6 +2039,46 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           </div>
           <div id="dash-sp-progress" class="dash-mini-scroll"><span style="color:var(--text3);font-size:13px">載入中...</span></div>
         </div>
+
+        <div class="card dash-weather-card">
+          <div class="dash-brief-head">
+            <div class="section-title">🌤️ 目前天氣</div>
+            <span class="dash-weather-place" id="dash-weather-place">新竹廠</span>
+          </div>
+          <div class="dash-weather-main">
+            <div class="dash-weather-icon" id="dash-weather-icon">—</div>
+            <div>
+              <div class="dash-weather-temp" id="dash-weather-temp">—°</div>
+              <div class="dash-weather-desc" id="dash-weather-desc">正在取得天氣...</div>
+            </div>
+          </div>
+          <div class="dash-weather-hilo"><span id="dash-weather-high">最高 —°</span><span id="dash-weather-low">最低 —°</span></div>
+          <div class="dash-weather-foot"><span id="dash-weather-updated">—</span><a href="https://open-meteo.com/" target="_blank" rel="noopener">天氣資料：Open-Meteo</a></div>
+        </div>
+
+        <div class="card dash-agenda-card">
+          <div class="dash-brief-head">
+            <div class="section-title">📅 今日行程 <span class="dash-agenda-count" id="dash-agenda-count">0 項</span></div>
+            <div class="dash-agenda-actions">
+              <span class="dash-weather-place" id="dash-agenda-source" style="display:none">本機</span>
+              <button class="btn-sm btn-export dash-agenda-addbtn" id="dash-agenda-add" onclick="dashOpenEventModal()" title="新增行程">＋</button>
+            </div>
+          </div>
+          <div class="dash-agenda-list" id="dash-agenda-list"><div class="dash-agenda-empty"><span class="empty-ico">⏳</span><span>正在載入今日行程...</span></div></div>
+        </div>
+      </div>
+
+      <!-- 公司公佈欄：有公告或管理員登入時顯示 -->
+      <div class="card dash-ann-board" id="dash-ann-board" style="display:none">
+        <div class="dash-ann-head">
+          <div class="section-title">📢 公司公佈欄</div>
+          <span class="dash-ann-count" id="dash-ann-count"></span>
+          <div class="dash-ann-head-actions">
+            <button class="btn-sm btn-export" id="dash-ann-all" onclick="openAnnouncementManager()">查看全部</button>
+            <button class="btn-sm btn-export" id="dash-ann-manage" style="display:none" onclick="openAnnouncementManager(true)">＋ 發布公告</button>
+          </div>
+        </div>
+        <div class="dash-ann-list" id="dash-ann-list"></div>
       </div>
 
       <!-- 進行中的工程:橫式 chip 快捷列(小巧貼齊,不占垂直空間) -->
@@ -7513,7 +7711,11 @@ async function loadProfile() {
     await sbFetch('/rest/v1/profiles',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:uid,name:gname,account})});
     name=gname;
   }
-  currentUser={id:uid,name,account,isAdmin,perms,disabled};
+  const meta=currentSession.user?.user_metadata||{};
+  const googleIdentity=(currentSession.user?.identities||[]).find(x=>x.provider==='google');
+  const identityMeta=googleIdentity?.identity_data||{};
+  const avatarUrl=meta.avatar_url||meta.picture||identityMeta.avatar_url||identityMeta.picture||'';
+  currentUser={id:uid,name,account,isAdmin,perms,disabled,avatarUrl};
 }
 async function logout() {
   if(!isGuest) await sbFetch('/auth/v1/logout',{method:'POST'});
@@ -7547,7 +7749,7 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
   const u=currentUser||{name:'?',isAdmin:false};
   document.getElementById('sidebar-name').textContent=u.name;
   document.getElementById('sidebar-role').textContent=isGuest?'訪客':(u.isAdmin?'管理者':'一般使用者');
-  document.getElementById('sidebar-avatar').textContent=(u.name||'?')[0].toUpperCase();
+  renderUserAvatar(u);
   const adminBtn=document.getElementById('btn-admin-clear');
   if(adminBtn) adminBtn.style.display=u.isAdmin?'':'none';
   document.getElementById('sidebar-avatar').setAttribute('title', u.name||'使用者');
@@ -7560,8 +7762,19 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
   // 主頁統計、BOM 等「重資料」改由 navTo 進到該頁時才載,避免登入瞬間併發抓一堆大表,
   // 拖慢緊接著要開的頁面(例如帳號管理)。
   loadStaff(); loadLog();
+  loadNotificationData();
+  loadAnnouncements();
   if (restore) restoreLastView();   // 重新整理:回到上次所在頁面(該頁的資料由 navTo 載入)
   else goHome();                    // 登入(含 Google/帳密):一律進主頁
+}
+function renderUserAvatar(u){
+  const el=document.getElementById('sidebar-avatar'); if(!el)return;
+  const fallback=()=>{ el.innerHTML=''; el.textContent=(u?.name||'?')[0].toUpperCase(); };
+  const src=u?.avatarUrl||'';
+  if(!src){ fallback(); return; }
+  const img=document.createElement('img');
+  img.alt=(u?.name||'使用者')+'的頭貼'; img.referrerPolicy='no-referrer'; img.src=src;
+  img.onerror=fallback; el.innerHTML=''; el.appendChild(img);
 }
 // 直接進主頁,並重設網址與歷史起點
 function goHome() {
@@ -8573,7 +8786,7 @@ async function egGenerate(){
   const prev=document.getElementById('eg-preview');
   prev.innerHTML='<div class="empty-state">計算中…</div>';
   const [pj,zn,cp,ce,mr,ly,dl,at] = await Promise.all([
-    sbFetchAll('/rest/v1/projects?select=id,proj_num'),
+    sbFetchAll('/rest/v1/projects?select=id,proj_num,status'),
     sbFetchAll('/rest/v1/zones?select=id,zone_code,project_id'),
     sbFetchAll('/rest/v1/components?select=zone_id,part_no,spec,qty'),
     sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no,extra'),
@@ -8588,14 +8801,23 @@ async function egGenerate(){
   // 出工/加班 一律依當日出勤回報帶入;當日無資料則清空(避免切換日期殘留前一天數字)
   const att=egAttFromRecs(at.data||[]);
   egFillMP(att || {w:[0,0,0,0],t:[0,0,0],ow:[0,0,0,0],ot:[0,0,0]});
-  const projById={}; (pj.data||[]).forEach(p=>projById[p.id]=p.proj_num||'');
-  const zoneById={}; (zn.data||[]).forEach(z=>zoneById[z.id]={code:z.zone_code||'', proj:projById[z.project_id]||''});
+  const projById={},egAbnormalProjIds=new Set(),egAbnormalProjNums=new Set();
+  (pj.data||[]).forEach(p=>{
+    projById[p.id]=p.proj_num||'';
+    if(String(p.status||'').trim()==='異常'){
+      egAbnormalProjIds.add(String(p.id));
+      egAbnormalProjNums.add(egUp(p.proj_num));
+    }
+  });
+  // 異常工程在來源階段就排除，避免畫面雖隱藏但合計仍被計入。
+  const zoneById={}; (zn.data||[]).forEach(z=>{if(!egAbnormalProjIds.has(String(z.project_id)))zoneById[z.id]={code:z.zone_code||'', proj:projById[z.project_id]||''};});
   const comps=cp.data||[], receipts=mr.data||[], layout=ly.data||[], daily=dl.data||[];
 
   // ── Section A：進料統計 ──
   const partCat={};                 // zoneId|part -> spec 類別
   const aByZone={};                 // zoneId -> { cat -> {req,got,maxDate} }
   comps.forEach(c=>{
+    if(!zoneById[c.zone_id]) return;                         // 異常工程不列入長榮日報
     if(egNonco.has(c.zone_id+'|'+c.part_no)) return;   // 非本公司製作構件不列入進料統計(需求/進料皆略過)
     const cat=egSpecCat(c.spec);
     partCat[c.zone_id+'|'+c.part_no]=cat;
@@ -8626,11 +8848,11 @@ async function egGenerate(){
   // ── Section C：上線 / 完成統計 ──
   const key=(p,z)=>egUp(p)+'|'+egUp(z);
   const bomByZone={};               // zoneId -> BOM 支數（不含非本公司製作構件）
-  comps.forEach(c=>{ if(egNonco.has(c.zone_id+'|'+c.part_no)) return; bomByZone[c.zone_id]=(bomByZone[c.zone_id]||0)+(parseInt(c.qty)||0); });
+  comps.forEach(c=>{ if(!zoneById[c.zone_id]||egNonco.has(c.zone_id+'|'+c.part_no)) return; bomByZone[c.zone_id]=(bomByZone[c.zone_id]||0)+(parseInt(c.qty)||0); });
   const onlineByKey={};
-  layout.forEach(l=>{ if(l.work_date && String(l.work_date).trim() && l.work_date<=dateISO){ const k=key(l.proj_num,l.zone_code); onlineByKey[k]=(onlineByKey[k]||0)+1; } });
+  layout.forEach(l=>{ if(egAbnormalProjNums.has(egUp(l.proj_num)))return;if(l.work_date && String(l.work_date).trim() && l.work_date<=dateISO){ const k=key(l.proj_num,l.zone_code); onlineByKey[k]=(onlineByKey[k]||0)+1; } });
   const doneTot={}, doneToday={}, doneMax={};
-  daily.forEach(d=>{ if(!d.date || d.date>dateISO) return; const k=key(d.proj_num,d.zone_code); doneTot[k]=(doneTot[k]||0)+1; if(d.date===dateISO) doneToday[k]=(doneToday[k]||0)+1; if(d.date>(doneMax[k]||'')) doneMax[k]=d.date; });
+  daily.forEach(d=>{ if(egAbnormalProjNums.has(egUp(d.proj_num))||!d.date || d.date>dateISO) return; const k=key(d.proj_num,d.zone_code); doneTot[k]=(doneTot[k]||0)+1; if(d.date===dateISO) doneToday[k]=(doneToday[k]||0)+1; if(d.date>(doneMax[k]||'')) doneMax[k]=d.date; });
   const secC=[];
   Object.keys(zoneById).forEach(zid=>{
     const zi=zoneById[zid]; const k=key(zi.proj,zi.code);
@@ -8899,6 +9121,8 @@ function closeModal(id){document.getElementById(id).className='modal-overlay';}
 
 // ── Dashboard ──
 async function loadDashboard() {
+  dashBriefInit();     // 目前天氣 + 今日行程獨立載入，不阻塞原有統計
+  loadAnnouncements(); // 公司公佈欄
   dashLoadMonthTon();   // 先用「當月」輕量查詢秒顯示噸數 KPI,不必等下方 7 張大表全載完
   dashStatsInit();   // 兩種統計報表(每日產量/線上進度) 獨立載入,不受下方提前 return 影響
   const attMonth = dashTodayStr().slice(0,7);   // 本月出勤統計區間
@@ -8931,6 +9155,240 @@ async function loadDashboard() {
       : '<span style="color:var(--text3);font-size:13px">目前沒有進行中的工程</span>';
   }
   dashLoadSPProgress();   // SP 備料進度(獨立載入,不阻塞主頁其他區塊)
+}
+
+// ── 主頁：目前天氣 + 今日行程 ─────────────────────────────
+const DASH_WEATHER_CACHE_KEY='zs_dash_weather_hukou_v2';
+const DASH_AGENDA_LOCAL_KEY='zs_calendar_events_v1';
+let dashAgendaRows=[];
+let dashAgendaDbAvailable=null;
+let dashAgendaEditingId=null;
+
+function dashBriefInit(){
+  const add=document.getElementById('dash-agenda-add');
+  if(add) add.style.display=(!isGuest && pagePerm('dashboard')==='edit')?'':'none';
+  dashLoadWeather();
+  dashLoadAgenda();
+}
+function dashWeatherInfo(code){
+  code=Number(code);
+  if(code===0) return ['☀️','晴朗'];
+  if(code===1||code===2) return ['🌤️','晴時多雲'];
+  if(code===3) return ['☁️','陰天'];
+  if(code===45||code===48) return ['🌫️','有霧'];
+  if(code===51||code===53||code===55) return ['🌦️','毛毛雨'];
+  if(code===61||code===63||code===65||code===80||code===81||code===82) return ['🌧️','有雨'];
+  if(code===71||code===73||code===75||code===77||code===85||code===86) return ['🌨️','降雪'];
+  if(code===95||code===96||code===99) return ['⛈️','雷雨'];
+  return ['🌤️','多雲'];
+}
+function dashRenderWeather(data,stale){
+  if(!data||!data.current) return;
+  const c=data.current, info=dashWeatherInfo(c.weather_code);
+  const daily=data.daily||{};
+  document.getElementById('dash-weather-icon').textContent=info[0];
+  document.getElementById('dash-weather-temp').textContent=Math.round(Number(c.temperature_2m))+'°';
+  document.getElementById('dash-weather-desc').textContent=info[1];
+  const hi=Array.isArray(daily.temperature_2m_max)?daily.temperature_2m_max[0]:null;
+  const lo=Array.isArray(daily.temperature_2m_min)?daily.temperature_2m_min[0]:null;
+  document.getElementById('dash-weather-high').textContent='最高 '+(hi==null?'—':Math.round(Number(hi)))+'°';
+  document.getElementById('dash-weather-low').textContent='最低 '+(lo==null?'—':Math.round(Number(lo)))+'°';
+  const t=data._savedAt?new Date(data._savedAt):new Date();
+  document.getElementById('dash-weather-updated').textContent=(stale?'離線快取 · ':'更新於 ')+t.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+}
+async function dashLoadWeather(){
+  // 新竹廠預設位置：新竹縣湖口鄉行政區中心點
+  const url='https://api.open-meteo.com/v1/forecast?latitude=24.88566341&longitude=121.0517242&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=Asia%2FTaipei';
+  let cached=null;
+  try{ cached=JSON.parse(sessionStorage.getItem(DASH_WEATHER_CACHE_KEY)||'null'); }catch(e){}
+  if(cached && Date.now()-Number(cached._savedAt||0)<20*60*1000){ dashRenderWeather(cached,false); return; }
+  try{
+    const res=await fetch(url); if(!res.ok) throw new Error('weather '+res.status);
+    const data=await res.json(); data._savedAt=Date.now();
+    try{sessionStorage.setItem(DASH_WEATHER_CACHE_KEY,JSON.stringify(data));}catch(e){}
+    dashRenderWeather(data,false);
+  }catch(e){
+    if(cached) dashRenderWeather(cached,true);
+    else{
+      document.getElementById('dash-weather-icon').textContent='⚠️';
+      document.getElementById('dash-weather-desc').textContent='目前無法取得天氣';
+      document.getElementById('dash-weather-updated').textContent='請稍後再試';
+    }
+  }
+}
+function dashAgendaLocalRead(){ try{ const v=JSON.parse(localStorage.getItem(DASH_AGENDA_LOCAL_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
+function dashAgendaLocalWrite(rows){ try{ localStorage.setItem(DASH_AGENDA_LOCAL_KEY,JSON.stringify(rows)); }catch(e){} }
+function dashAgendaEscape(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function dashAgendaToday(){ return dashTodayStr(); }
+async function dashLoadAgenda(){
+  const list=document.getElementById('dash-agenda-list'); if(!list) return;
+  const today=dashAgendaToday();
+  let rows=[];
+  if(!isGuest && currentSession){
+    const r=await sbFetch('/rest/v1/calendar_events?select=*&event_date=eq.'+today+'&order=event_time.asc,created_at.asc');
+    if(r.ok && Array.isArray(r.data)){ dashAgendaDbAvailable=true; rows=r.data; }
+    else{ dashAgendaDbAvailable=false; rows=dashAgendaLocalRead().filter(x=>x.event_date===today); }
+  }else{
+    dashAgendaDbAvailable=false; rows=dashAgendaLocalRead().filter(x=>x.event_date===today);
+  }
+  dashAgendaRows=rows.sort((a,b)=>String(a.event_time||'99:99').localeCompare(String(b.event_time||'99:99')));
+  const src=document.getElementById('dash-agenda-source');
+  if(src){ src.style.display=dashAgendaDbAvailable?'none':''; src.textContent='僅此裝置'; }
+  dashRenderAgenda();
+}
+function dashRenderAgenda(){
+  const list=document.getElementById('dash-agenda-list'), count=document.getElementById('dash-agenda-count'); if(!list||!count)return;
+  const done=dashAgendaRows.filter(x=>x.is_done).length;
+  count.textContent=dashAgendaRows.length+' 項'+(done?' · '+done+' 完成':'');
+  if(!dashAgendaRows.length){
+    const canEdit=!isGuest&&pagePerm('dashboard')==='edit';
+    list.innerHTML='<div class="dash-agenda-empty"><span class="empty-ico">📭</span><span>今天沒有行程'+(canEdit?'，可按「新增行程」建立':'')+'</span></div>';
+    return;
+  }
+  const canEdit=!isGuest&&pagePerm('dashboard')==='edit';
+  const visible=dashAgendaRows.slice(0,3);
+  list.innerHTML=visible.map((e,i)=>{
+    const meta=[e.event_type||'其他',e.project_no||''].filter(Boolean).map(dashAgendaEscape).join(' · ');
+    return '<div class="dash-agenda-row'+(e.is_done?' done':'')+'">'
+      +'<span class="dash-agenda-time">'+dashAgendaEscape(String(e.event_time||'').slice(0,5)||'全天')+'</span>'
+      +'<i class="dash-agenda-dot type-'+dashAgendaEscape(e.event_type||'其他')+'"></i>'
+      +'<div class="dash-agenda-body" '+(canEdit?'onclick="dashEditEventAt('+i+')"':'')+'><div class="dash-agenda-title">'+dashAgendaEscape(e.title||'未命名行程')+'</div><div class="dash-agenda-meta">'+meta+'</div></div>'
+      +(canEdit?'<div class="dash-agenda-row-actions"><button class="dash-agenda-iconbtn" onclick="dashToggleAgenda('+i+')" title="'+(e.is_done?'取消完成':'標示完成')+'">'+(e.is_done?'↩':'✓')+'</button><button class="dash-agenda-iconbtn" onclick="dashDeleteAgenda('+i+')" title="刪除">✕</button></div>':'')
+      +'</div>';
+  }).join('')+(dashAgendaRows.length>visible.length?'<div class="dash-agenda-more">另有 '+(dashAgendaRows.length-visible.length)+' 項行程</div>':'');
+}
+function dashOpenEventModal(row){
+  if(isGuest||pagePerm('dashboard')!=='edit'){ alert('此帳號沒有新增行程權限'); return; }
+  const now=new Date();
+  dashAgendaEditingId=row?row.id:null;
+  document.getElementById('dash-event-modal-title').textContent=row?'編輯行程':'新增行程';
+  document.getElementById('dash-event-date').value=row?.event_date||dashAgendaToday();
+  document.getElementById('dash-event-time').value=String(row?.event_time||String(now.getHours()).padStart(2,'0')+':00').slice(0,5);
+  document.getElementById('dash-event-type').value=row?.event_type||'工程';
+  document.getElementById('dash-event-project').value=row?.project_no||'';
+  document.getElementById('dash-event-title').value=row?.title||'';
+  document.getElementById('dash-event-note').value=row?.note||'';
+  openModal('dash-event-modal'); setTimeout(()=>document.getElementById('dash-event-title').focus(),80);
+}
+function dashEditEventAt(i){ const row=dashAgendaRows[i]; if(row) dashOpenEventModal(row); }
+async function dashSaveEvent(){
+  const title=document.getElementById('dash-event-title').value.trim();
+  const event_date=document.getElementById('dash-event-date').value;
+  const event_time=document.getElementById('dash-event-time').value||null;
+  if(!title||!event_date){ alert('請填寫日期與行程名稱'); return; }
+  const payload={event_date,event_time,title,event_type:document.getElementById('dash-event-type').value,project_no:document.getElementById('dash-event-project').value.trim()||null,note:document.getElementById('dash-event-note').value.trim()||null};
+  const btn=document.getElementById('dash-event-save'); btn.disabled=true; btn.textContent='儲存中...';
+  let ok=false;
+  if(dashAgendaDbAvailable){
+    let r;
+    if(dashAgendaEditingId!=null) r=await sbFetch('/rest/v1/calendar_events?id=eq.'+encodeURIComponent(dashAgendaEditingId),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)});
+    else r=await sbFetch('/rest/v1/calendar_events',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({...payload,created_by:currentUser?.id||null})});
+    ok=r.ok;
+    if(!ok) alert('行程儲存失敗，請確認 calendar_events 資料表與權限設定');
+  }else{
+    const all=dashAgendaLocalRead();
+    if(dashAgendaEditingId!=null){ const ix=all.findIndex(x=>String(x.id)===String(dashAgendaEditingId)); if(ix>=0) all[ix]={...all[ix],...payload}; }
+    else all.push({...payload,id:'local-'+Date.now(),is_done:false,created_at:new Date().toISOString()});
+    dashAgendaLocalWrite(all); ok=true;
+  }
+  btn.disabled=false; btn.textContent='儲存';
+  if(ok){ closeModal('dash-event-modal'); await dashLoadAgenda(); alert('已儲存行程'+(dashAgendaDbAvailable?'':'（目前僅此裝置）')); }
+}
+async function dashToggleAgenda(i){
+  const row=dashAgendaRows[i]; if(!row)return; const val=!row.is_done;
+  if(dashAgendaDbAvailable){ const r=await sbFetch('/rest/v1/calendar_events?id=eq.'+encodeURIComponent(row.id),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({is_done:val})}); if(!r.ok){alert('更新行程失敗');return;} }
+  else{ const all=dashAgendaLocalRead(), ix=all.findIndex(x=>String(x.id)===String(row.id)); if(ix>=0){all[ix].is_done=val;dashAgendaLocalWrite(all);} }
+  await dashLoadAgenda();
+}
+async function dashDeleteAgenda(i){
+  const row=dashAgendaRows[i]; if(!row)return;
+  if(!await uiConfirm('確定刪除「'+(row.title||'此行程')+'」？',{danger:true}))return;
+  if(dashAgendaDbAvailable){ const r=await sbFetch('/rest/v1/calendar_events?id=eq.'+encodeURIComponent(row.id),{method:'DELETE'}); if(!r.ok){alert('刪除行程失敗');return;} }
+  else dashAgendaLocalWrite(dashAgendaLocalRead().filter(x=>String(x.id)!==String(row.id)));
+  await dashLoadAgenda(); alert('已刪除行程');
+}
+
+// ── 主頁：公司公佈欄 ─────────────────────────────────────
+const ANNOUNCEMENT_LOCAL_KEY='zs_announcements_v1';
+let allAnnouncements=[];
+let announcementDbAvailable=null;
+let announcementEditingId=null;
+function announcementLocalRead(){ try{const v=JSON.parse(localStorage.getItem(ANNOUNCEMENT_LOCAL_KEY)||'[]');return Array.isArray(v)?v:[];}catch(e){return [];} }
+function announcementLocalWrite(v){ try{localStorage.setItem(ANNOUNCEMENT_LOCAL_KEY,JSON.stringify(v));}catch(e){} }
+function announcementIsActive(a){
+  if(a.is_active===false)return false;
+  const today=dashTodayStr();
+  if(a.starts_at && String(a.starts_at).slice(0,10)>today)return false;
+  if(a.expires_at && String(a.expires_at).slice(0,10)<today)return false;
+  return true;
+}
+async function loadAnnouncements(){
+  const r=await sbFetch('/rest/v1/announcements?select=*&order=priority_rank.desc,created_at.desc&limit=100');
+  if(r.ok&&Array.isArray(r.data)){announcementDbAvailable=true;allAnnouncements=r.data;}
+  else{announcementDbAvailable=false;allAnnouncements=announcementLocalRead();}
+  allAnnouncements.sort((a,b)=>(Number(b.priority_rank)||0)-(Number(a.priority_rank)||0)||String(b.created_at||'').localeCompare(String(a.created_at||'')));
+  renderAnnouncementBoard();
+  updateNotifBadge();
+}
+function renderAnnouncementBoard(){
+  const board=document.getElementById('dash-ann-board'),list=document.getElementById('dash-ann-list'); if(!board||!list)return;
+  const active=allAnnouncements.filter(announcementIsActive);
+  const admin=!!currentUser?.isAdmin&&!isGuest;
+  board.style.display=(active.length||admin)?'':'none';
+  document.getElementById('dash-ann-count').textContent=active.length?active.length+' 則':'';
+  const manage=document.getElementById('dash-ann-manage'); if(manage)manage.style.display=admin?'':'none';
+  const allBtn=document.getElementById('dash-ann-all'); if(allBtn)allBtn.style.display=(active.length||admin)?'':'none';
+  if(!active.length){list.innerHTML='<div class="dash-ann-empty">目前沒有公告'+(admin?'，可按「發布公告」建立':'')+'</div>';return;}
+  list.innerHTML=active.slice(0,3).map(a=>{
+    const ix=allAnnouncements.indexOf(a),date=String(a.created_at||'').slice(0,10).replace(/-/g,'/');
+    return '<div class="dash-ann-row" onclick="openAnnouncementManager(false,'+ix+')"><span class="dash-ann-priority '+announcementEsc(a.priority||'一般')+'">'+announcementEsc(a.priority||'一般')+'</span><div><div class="dash-ann-title">'+announcementEsc(a.title||'未命名公告')+'</div><div class="dash-ann-excerpt">'+announcementEsc(a.content||'')+'</div></div><span class="dash-ann-date">'+date+'</span></div>';
+  }).join('');
+}
+function announcementEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function announcementResetForm(){
+  announcementEditingId=null;
+  ['ann-title','ann-content','ann-expires'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ann-priority').value='一般'; document.getElementById('ann-notify').checked=true;
+  document.getElementById('ann-save').textContent='發布公告';
+}
+function openAnnouncementManager(addMode,index){
+  const admin=!!currentUser?.isAdmin&&!isGuest;
+  document.getElementById('announcement-modal-title').textContent=admin?'公佈欄管理':'全部公告';
+  document.getElementById('announcement-admin-form').style.display=admin?'':'none';
+  announcementRenderManager(index);
+  openModal('announcement-modal');
+  if(admin&&addMode){announcementResetForm();setTimeout(()=>document.getElementById('ann-title').focus(),80);}
+}
+function announcementRenderManager(highlight){
+  const el=document.getElementById('announcement-manage-list'); if(!el)return;
+  const admin=!!currentUser?.isAdmin&&!isGuest;
+  if(!allAnnouncements.length){el.innerHTML='<div class="dash-ann-empty">目前沒有公告</div>';return;}
+  el.innerHTML=allAnnouncements.map((a,i)=>'<div class="info-manage-row"'+(i===highlight?' style="border-color:var(--accent2)"':'')+'><div><div class="info-manage-title">['+announcementEsc(a.priority||'一般')+'] '+announcementEsc(a.title||'')+'</div><div class="info-manage-sub">'+announcementEsc(a.content||'')+(a.expires_at?'　・到期 '+announcementEsc(String(a.expires_at).slice(0,10)):'')+'</div></div>'+(admin?'<div class="info-manage-actions"><button class="dash-agenda-iconbtn" onclick="announcementEdit('+i+')">編</button><button class="dash-agenda-iconbtn" onclick="announcementDelete('+i+')">刪</button></div>':'')+'</div>').join('');
+}
+function announcementEdit(i){
+  const a=allAnnouncements[i];if(!a)return;announcementEditingId=a.id;
+  document.getElementById('ann-title').value=a.title||'';document.getElementById('ann-content').value=a.content||'';
+  document.getElementById('ann-priority').value=a.priority||'一般';document.getElementById('ann-expires').value=String(a.expires_at||'').slice(0,10);
+  document.getElementById('ann-notify').checked=a.notify_in_app!==false;document.getElementById('ann-save').textContent='更新公告';
+  document.getElementById('ann-title').focus();
+}
+async function announcementSave(){
+  if(!currentUser?.isAdmin||isGuest){alert('只有管理員可以發布公告');return;}
+  const title=document.getElementById('ann-title').value.trim(),content=document.getElementById('ann-content').value.trim();
+  if(!title||!content){alert('請填寫公告標題與內容');return;}
+  const priority=document.getElementById('ann-priority').value;
+  const payload={title,content,priority,priority_rank:priority==='緊急'?3:priority==='重要'?2:1,expires_at:document.getElementById('ann-expires').value||null,notify_in_app:document.getElementById('ann-notify').checked,is_active:true,created_name:currentUser.name||''};
+  const btn=document.getElementById('ann-save');btn.disabled=true;btn.textContent='儲存中...';let ok=false;
+  if(announcementDbAvailable){const r=announcementEditingId!=null?await sbFetch('/rest/v1/announcements?id=eq.'+encodeURIComponent(announcementEditingId),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)}):await sbFetch('/rest/v1/announcements',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({...payload,created_by:currentUser.id})});ok=r.ok;}
+  else{const rows=announcementLocalRead();if(announcementEditingId!=null){const i=rows.findIndex(x=>String(x.id)===String(announcementEditingId));if(i>=0)rows[i]={...rows[i],...payload};}else rows.push({...payload,id:'local-'+Date.now(),created_at:new Date().toISOString()});announcementLocalWrite(rows);ok=true;}
+  btn.disabled=false;if(!ok){btn.textContent='發布公告';alert('公告儲存失敗，請確認資料表權限');return;}
+  announcementResetForm();await loadAnnouncements();announcementRenderManager();alert('已儲存公告'+(announcementDbAvailable?'':'（目前僅此裝置）'));
+}
+async function announcementDelete(i){
+  const a=allAnnouncements[i];if(!a||!await uiConfirm('確定刪除「'+a.title+'」？',{danger:true}))return;
+  if(announcementDbAvailable){const r=await sbFetch('/rest/v1/announcements?id=eq.'+encodeURIComponent(a.id),{method:'DELETE'});if(!r.ok){alert('刪除公告失敗');return;}}
+  else announcementLocalWrite(announcementLocalRead().filter(x=>String(x.id)!==String(a.id)));
+  await loadAnnouncements();announcementRenderManager();
 }
 // 主頁:SP 鋼材備料進度(讀 sp_progress 彙總 view,回傳幾十列,很輕)
 async function dashLoadSPProgress(){
@@ -9048,6 +9506,9 @@ async function dashLoadStats() {
 
 function dashKey(proj, val) {
   return String(proj || '').trim().toUpperCase() + '|' + String(val || '').trim().toUpperCase();
+}
+function dashProjectIsAbnormal(proj) {
+  return String(dashProjStatus[String(proj||'').trim().toUpperCase()]||'').trim()==='異常';
 }
 
 function dashNavDate(delta) {
@@ -9208,21 +9669,21 @@ function dashRenderProgress() {
   // 已報驗支數 (proj|zone|part -> 支數) — 累計至 progressDate (daily_output 一列 = 一支)
   const doneCount = {};
   dashDailyRows.filter(r => r.date && r.date <= progressDate).forEach(r => {
-    if (!r.proj_num || !r.part_no) return;
+    if (!r.proj_num || !r.part_no || dashProjectIsAbnormal(r.proj_num)) return;
     const k = dashKey(r.proj_num, r.zone_code) + '|' + String(r.part_no).trim().toUpperCase();
     doneCount[k] = (doneCount[k]||0) + 1;
   });
   // 每個工程區最後報驗日期 (用來判斷 100% 是否已過當日)
   const zoneMaxDate = {};
   dashDailyRows.forEach(r => {
-    if (!r.proj_num || !r.zone_code || !r.date) return;
+    if (!r.proj_num || !r.zone_code || !r.date || dashProjectIsAbnormal(r.proj_num)) return;
     const k = dashKey(r.proj_num, r.zone_code);
     if (!zoneMaxDate[k] || r.date > zoneMaxDate[k]) zoneMaxDate[k] = r.date;
   });
   // 上線: proj|part -> 最早上線日期 (依 progressDate 過濾)
   const onlineDate = {};
   dashLayoutRows.forEach(r => {
-    if (!r.proj_num || !r.part_no || !r.work_date) return;
+    if (!r.proj_num || !r.part_no || !r.work_date || dashProjectIsAbnormal(r.proj_num)) return;
     const k = dashKey(r.proj_num, r.part_no);
     if (!onlineDate[k] || r.work_date < onlineDate[k]) onlineDate[k] = r.work_date;
   });
@@ -9232,7 +9693,7 @@ function dashRenderProgress() {
   // 列來源: layout_items 出現的 distinct proj_num+zone_code (明細輸入)
   const zoneKeys = {};
   dashLayoutRows.forEach(r => {
-    if (!r.proj_num || !r.zone_code) return;
+    if (!r.proj_num || !r.zone_code || dashProjectIsAbnormal(r.proj_num)) return;
     zoneKeys[dashKey(r.proj_num, r.zone_code)] = { proj: r.proj_num, zone: r.zone_code };
   });
   const rows = Object.keys(zoneKeys).map(k => {
@@ -9269,7 +9730,7 @@ function dashRenderProgress() {
     const hide100 = bom > 0 && done >= bom && maxDate < today;
     return { proj, zone, feed, needQty, online, done, bom, diff, pct, doneT, leftT, planT, hide100 };
   }).filter(r => !r.hide100)
-    .filter(r => dashProjStatus[String(r.proj||'').trim().toUpperCase()] !== '異常')   // 工程狀態為「異常」的不列入線上進度統計
+    .filter(r => !dashProjectIsAbnormal(r.proj))   // 工程狀態為「異常」的不列入線上進度統計
     .sort((a,b) => a.proj.localeCompare(b.proj) || a.zone.localeCompare(b.zone));
   const body = document.getElementById('dash-progress-body');
   body.innerHTML = rows.length ? rows.map(r => {
@@ -11144,50 +11605,122 @@ async function loadStaff() {
   renderStaff();
   updateNotifBadge();
 }
-// ── 通知 ──
+// ── 通知：可設定生日／到職週年規則 + 手動通知 + 公告連動 ──
+const NOTIFICATION_CONFIG_LOCAL_KEY='zs_notification_config_v1';
+const MANUAL_NOTIFICATION_LOCAL_KEY='zs_manual_notifications_v1';
+const NOTIFICATION_READ_LOCAL_KEY='zs_notification_reads_v1';
+const NOTIFICATION_DEFAULTS={birthday_enabled:true,birthday_days_before:0,anniversary_enabled:true,anniversary_days_before:7};
+let notificationConfig={...NOTIFICATION_DEFAULTS};
+let notificationConfigDbAvailable=null;
+let manualNotificationDbAvailable=null;
+let manualNotifications=[];
+let notificationReadKeys=new Set();
+let notificationReadDbAvailable=null;
+let notificationReadLoaded=false;
+function notifEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function notificationConfigLocalRead(){try{return {...NOTIFICATION_DEFAULTS,...JSON.parse(localStorage.getItem(NOTIFICATION_CONFIG_LOCAL_KEY)||'{}')};}catch(e){return {...NOTIFICATION_DEFAULTS};}}
+function manualNotificationLocalRead(){try{const v=JSON.parse(localStorage.getItem(MANUAL_NOTIFICATION_LOCAL_KEY)||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}}
+function manualNotificationLocalWrite(v){try{localStorage.setItem(MANUAL_NOTIFICATION_LOCAL_KEY,JSON.stringify(v));}catch(e){}}
+function notificationReadStorageKey(){return NOTIFICATION_READ_LOCAL_KEY+':'+(currentUser?.id||currentUser?.email||'guest');}
+function notificationReadLocalRead(){try{const v=JSON.parse(localStorage.getItem(notificationReadStorageKey())||'[]');return new Set(Array.isArray(v)?v:[]);}catch(e){return new Set();}}
+function notificationReadLocalWrite(){try{localStorage.setItem(notificationReadStorageKey(),JSON.stringify(Array.from(notificationReadKeys)));}catch(e){}}
+async function loadNotificationData(){
+  notificationReadLoaded=false;
+  _notifPopped=false;
+  await Promise.all([notificationConfigLoad(),manualNotificationLoad(),notificationReadLoad()]);
+  updateNotifBadge();
+}
+async function notificationConfigLoad(){
+  const r=await sbFetch('/rest/v1/notification_settings?id=eq.1&select=*');
+  if(r.ok&&Array.isArray(r.data)&&r.data[0]){notificationConfigDbAvailable=true;notificationConfig={...NOTIFICATION_DEFAULTS,...r.data[0]};}
+  else{notificationConfigDbAvailable=false;notificationConfig=notificationConfigLocalRead();}
+}
+async function manualNotificationLoad(){
+  const r=await sbFetch('/rest/v1/app_notifications?select=*&order=created_at.desc&limit=100');
+  if(r.ok&&Array.isArray(r.data)){manualNotificationDbAvailable=true;manualNotifications=r.data;}
+  else{manualNotificationDbAvailable=false;manualNotifications=manualNotificationLocalRead();}
+  updateNotifBadge();
+}
+async function notificationReadLoad(){
+  notificationReadKeys=notificationReadLocalRead();
+  if(!currentUser?.id||isGuest){notificationReadDbAvailable=false;notificationReadLoaded=true;return;}
+  const r=await sbFetch('/rest/v1/notification_reads?select=notification_key&user_id=eq.'+encodeURIComponent(currentUser.id));
+  if(r.ok&&Array.isArray(r.data)){
+    notificationReadDbAvailable=true;
+    r.data.forEach(x=>{if(x.notification_key)notificationReadKeys.add(x.notification_key);});
+    notificationReadLocalWrite();
+  }else notificationReadDbAvailable=false;
+  notificationReadLoaded=true;
+}
+async function notificationMarkRead(items){
+  const fresh=(items||[]).filter(x=>x&&x.key&&!notificationReadKeys.has(x.key));
+  if(!fresh.length)return;
+  fresh.forEach(x=>notificationReadKeys.add(x.key));
+  notificationReadLocalWrite();
+  if(notificationReadDbAvailable&&currentUser?.id&&!isGuest){
+    const payload=fresh.map(x=>({user_id:currentUser.id,notification_key:x.key}));
+    const r=await sbFetch('/rest/v1/notification_reads?on_conflict=user_id,notification_key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
+    if(!r.ok)notificationReadDbAvailable=false;
+  }
+}
+function annualTargetDays(dateStr){
+  const d=new Date(String(dateStr).slice(0,10)+'T00:00:00');if(isNaN(d))return null;
+  const today=new Date();today.setHours(0,0,0,0);
+  let target=new Date(today.getFullYear(),d.getMonth(),d.getDate());
+  if(target<today)target=new Date(today.getFullYear()+1,d.getMonth(),d.getDate());
+  return {days:Math.round((target-today)/86400000),target,origin:d};
+}
+function notifYmd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function notifItem(key,text){return {key:String(key),text:String(text)};}
 function staffBirthdaysToday(){
-  if(!Array.isArray(allStaff)) return [];
-  const n=new Date(), mm=n.getMonth()+1, dd=n.getDate();
-  const out=[];
-  allStaff.forEach(s=>{
-    if(s.status==='離職' || !s.birth_date) return;
-    const m=String(s.birth_date).match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return;
-    if(parseInt(m[2])===mm && parseInt(m[3])===dd) out.push('🎂 今天是 '+s.name+' '+staffAge(s.birth_date)+' 歲的生日！');
-  });
+  if(!notificationConfig.birthday_enabled||!Array.isArray(allStaff))return [];
+  const limit=Math.max(0,parseInt(notificationConfig.birthday_days_before)||0),out=[];
+  allStaff.forEach(s=>{if(s.status==='離職'||!s.birth_date)return;const x=annualTargetDays(s.birth_date);if(!x||x.days>limit)return;const age=x.target.getFullYear()-x.origin.getFullYear();out.push(notifItem('birthday:'+(s.id||s.name)+':'+notifYmd(x.target),x.days===0?'🎂 今天是 '+s.name+' '+age+' 歲生日！':'🎂 還有 '+x.days+' 天是 '+s.name+' 的生日'));});
   return out;
 }
-// 快到職滿週年(未來 7 天內,含當天)
 function staffAnnivSoon(){
-  if(!Array.isArray(allStaff)) return [];
-  const today=new Date(); today.setHours(0,0,0,0);
-  const out=[];
-  allStaff.forEach(s=>{
-    if(s.status==='離職' || !s.hire_date) return;
-    const h=new Date(s.hire_date+'T00:00:00'); if(isNaN(h)) return;
-    let anniv=new Date(today.getFullYear(), h.getMonth(), h.getDate());
-    if(anniv<today) anniv=new Date(today.getFullYear()+1, h.getMonth(), h.getDate());
-    const days=Math.round((anniv-today)/86400000);
-    const years=anniv.getFullYear()-h.getFullYear();
-    if(days>=0 && days<=7 && years>0){
-      out.push(days===0
-        ? '🎉 今天是 '+s.name+' 到職滿 '+years+' 週年！'
-        : '🎉 還有 '+days+' 天，'+s.name+' 將到職滿 '+years+' 週年');
-    }
-  });
+  if(!notificationConfig.anniversary_enabled||!Array.isArray(allStaff))return [];
+  const limit=Math.max(0,parseInt(notificationConfig.anniversary_days_before)||0),out=[];
+  allStaff.forEach(s=>{if(s.status==='離職'||!s.hire_date)return;const x=annualTargetDays(s.hire_date);if(!x||x.days>limit)return;const years=x.target.getFullYear()-x.origin.getFullYear();if(years<=0)return;out.push(notifItem('anniversary:'+(s.id||s.name)+':'+notifYmd(x.target),x.days===0?'🎉 今天是 '+s.name+' 到職滿 '+years+' 週年！':'🎉 還有 '+x.days+' 天，'+s.name+' 將到職滿 '+years+' 週年'));});
   return out;
 }
-// 全部通知來源合併(之後要加證照到期等,在這裡 concat 即可)
-function notifItems(){ return staffBirthdaysToday().concat(staffAnnivSoon()); }
-function updateNotifBadge(){
+function manualNotificationOccurrence(n){
+  if(!n||n.is_active===false)return null;
+  const today=dashTodayStr(),start=String(n.starts_at||n.created_at||today).slice(0,10),end=n.expires_at?String(n.expires_at).slice(0,10):'';
+  if(today<start||(end&&today>end))return null;
+  const unit=n.recurrence_unit||'none',interval=Math.max(1,parseInt(n.recurrence_interval)||1);
+  if(unit==='none')return 'once';
+  const td=new Date(today+'T00:00:00'),sd=new Date(start+'T00:00:00');
+  if(isNaN(td)||isNaN(sd))return null;
+  if(unit==='day'){
+    const diff=Math.round((Date.UTC(td.getFullYear(),td.getMonth(),td.getDate())-Date.UTC(sd.getFullYear(),sd.getMonth(),sd.getDate()))/86400000);
+    return diff>=0&&diff%interval===0?today:null;
+  }
+  if(unit==='week'){
+    const diff=Math.round((Date.UTC(td.getFullYear(),td.getMonth(),td.getDate())-Date.UTC(sd.getFullYear(),sd.getMonth(),sd.getDate()))/86400000);
+    return diff>=0&&diff%(interval*7)===0?today:null;
+  }
+  if(unit==='month'){
+    const diff=(td.getFullYear()-sd.getFullYear())*12+(td.getMonth()-sd.getMonth());
+    const lastDay=new Date(td.getFullYear(),td.getMonth()+1,0).getDate();
+    return diff>=0&&diff%interval===0&&td.getDate()===Math.min(sd.getDate(),lastDay)?today:null;
+  }
+  return 'once';
+}
+function manualNotificationActive(n){return manualNotificationOccurrence(n)!==null;}
+function manualNotificationItems(){return manualNotifications.map(n=>({n,occ:manualNotificationOccurrence(n)})).filter(x=>x.occ!==null).map(x=>notifItem('manual:'+(x.n.id||x.n.created_at||x.n.title)+':'+x.occ,(x.n.priority==='緊急'?'🚨 ':x.n.priority==='重要'?'❗ ':'🔔 ')+(x.n.title||'通知')+(x.n.message?' — '+x.n.message:'')));}
+function announcementNotificationItems(){return (allAnnouncements||[]).filter(a=>a.notify_in_app!==false&&announcementIsActive(a)).map(a=>notifItem('announcement:'+(a.id||a.created_at||a.title),(a.priority==='緊急'?'🚨 ':a.priority==='重要'?'❗ ':'📢 ')+(a.title||'公司公告')));}
+function notifItems(){return staffBirthdaysToday().concat(staffAnnivSoon(),manualNotificationItems(),announcementNotificationItems());}
+function updateNotifBadge(skipPopup){
   const b=document.getElementById('notif-badge');
   if(!b) return;
-  const n=notifItems().length;
+  const n=notifItems().filter(x=>!notificationReadKeys.has(x.key)).length;
   b.textContent=n>99?'99+':String(n);
   b.style.display=n?'block':'none';
-  notifMaybePopup();   // 登入後若有通知,自動彈一次
+  if(notificationReadLoaded&&!skipPopup)notifMaybePopup();   // 登入後若有未讀通知,自動彈一次
 }
 let _notifPopped=false;
-function notifTodayKey(){ return 'notif-dismiss-'+new Date().toISOString().slice(0,10); }
+function notifTodayKey(){ return 'notif-dismiss-'+dashTodayStr(); }
 function notifDismissedToday(){ try{ return localStorage.getItem(notifTodayKey())==='1'; }catch(e){ return false; } }
 function notifDismissToday(){
   try{ localStorage.setItem(notifTodayKey(),'1'); }catch(e){}
@@ -11196,7 +11729,7 @@ function notifDismissToday(){
 function notifMaybePopup(){
   if(_notifPopped) return;
   if(notifDismissedToday()){ _notifPopped=true; return; }   // 今天已按「不再顯示」
-  const items=notifItems();
+  const items=notifItems().filter(x=>!notificationReadKeys.has(x.key));
   if(!items.length) return;
   _notifPopped=true;
   let t=document.getElementById('notif-toast');
@@ -11205,7 +11738,7 @@ function notifMaybePopup(){
     t.style.cssText='position:fixed;top:64px;right:24px;z-index:700;background:var(--bg2);border:1px solid var(--accent2);border-radius:var(--rad-lg);box-shadow:0 8px 30px rgba(0,0,0,.45);padding:12px 16px;max-width:300px;transition:opacity .3s';
     document.body.appendChild(t);
   }
-  t.innerHTML='<div id="notif-toast-body" style="cursor:pointer;font-size:13px;color:var(--text);line-height:1.6">'+items.join('<br>')
+  t.innerHTML='<div id="notif-toast-body" style="cursor:pointer;font-size:13px;color:var(--text);line-height:1.6">'+items.map(x=>notifEsc(x.text)).join('<br>')
     +'<div style="font-size:11px;color:var(--text3);margin-top:6px">點此查看全部通知</div></div>'
     +'<div style="display:flex;justify-content:flex-end;margin-top:8px">'
     +'<button onclick="notifDismissToday()" style="background:none;border:1px solid var(--border);border-radius:var(--rad);color:var(--text3);font-size:11px;padding:4px 10px;cursor:pointer">今日不再顯示</button></div>';
@@ -11220,12 +11753,58 @@ async function toggleNotifPanel(){
   if(p.style.display==='block'){ p.style.display='none'; return; }
   if(!Array.isArray(allStaff) || !allStaff.length){ try{ await loadStaff(); }catch(e){} }
   const items=notifItems();
-  let html='<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border)">🔔 通知</div>';
+  let html='<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between"><span>🔔 通知</span>'+(currentUser?.isAdmin&&!isGuest?'<button onclick="openNotificationSettings()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer">⚙ 設定</button>':'')+'</div>';
   html+= items.length
-    ? items.map(t=>'<div style="padding:11px 12px;font-size:13px;color:var(--text);border-bottom:1px solid var(--border)">'+t+'</div>').join('')
+    ? items.map(t=>'<div style="padding:11px 12px;font-size:13px;color:var(--text);border-bottom:1px solid var(--border)">'+notifEsc(t.text)+'</div>').join('')
     : '<div style="padding:18px 12px;font-size:13px;color:var(--text3);text-align:center">目前沒有通知</div>';
   p.innerHTML=html; p.style.display='block';
-  updateNotifBadge();
+  await notificationMarkRead(items);
+  updateNotifBadge(true);
+}
+function openNotificationSettings(){
+  if(!currentUser?.isAdmin||isGuest){alert('只有管理員可以設定通知');return;}
+  const p=document.getElementById('notif-panel');if(p)p.style.display='none';
+  document.getElementById('noti-birthday-enabled').checked=notificationConfig.birthday_enabled!==false;
+  document.getElementById('noti-birthday-days').value=parseInt(notificationConfig.birthday_days_before)||0;
+  document.getElementById('noti-anniv-enabled').checked=notificationConfig.anniversary_enabled!==false;
+  document.getElementById('noti-anniv-days').value=parseInt(notificationConfig.anniversary_days_before)||0;
+  document.getElementById('noti-title').value='';document.getElementById('noti-message').value='';document.getElementById('noti-priority').value='一般';document.getElementById('noti-starts').value=dashTodayStr();document.getElementById('noti-repeat-unit').value='none';document.getElementById('noti-repeat-interval').value='1';document.getElementById('noti-expires').value='';manualNotificationRepeatToggle();
+  manualNotificationRenderList();openModal('notification-settings-modal');
+  requestAnimationFrame(()=>{const m=document.querySelector('#notification-settings-modal>.modal');if(m)m.scrollTop=0;});
+}
+function manualNotificationRepeatToggle(){
+  const unit=document.getElementById('noti-repeat-unit')?.value||'none',wrap=document.getElementById('noti-repeat-interval-wrap'),input=document.getElementById('noti-repeat-interval');
+  if(wrap)wrap.style.opacity=unit==='none'?'.45':'1';
+  if(input)input.disabled=unit==='none';
+}
+async function notificationConfigSave(){
+  const payload={id:1,birthday_enabled:document.getElementById('noti-birthday-enabled').checked,birthday_days_before:Math.max(0,parseInt(document.getElementById('noti-birthday-days').value)||0),anniversary_enabled:document.getElementById('noti-anniv-enabled').checked,anniversary_days_before:Math.max(0,parseInt(document.getElementById('noti-anniv-days').value)||0)};
+  const btn=document.getElementById('noti-rule-save');btn.disabled=true;btn.textContent='儲存中...';let ok=false;
+  if(notificationConfigDbAvailable){const r=await sbFetch('/rest/v1/notification_settings?on_conflict=id',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});ok=r.ok;}
+  else{try{localStorage.setItem(NOTIFICATION_CONFIG_LOCAL_KEY,JSON.stringify(payload));ok=true;}catch(e){}}
+  btn.disabled=false;btn.textContent='儲存規則';if(!ok){alert('通知規則儲存失敗');return;}notificationConfig={...notificationConfig,...payload};updateNotifBadge();alert('已儲存通知規則'+(notificationConfigDbAvailable?'':'（目前僅此裝置）'));
+}
+function manualNotificationRenderList(){
+  const el=document.getElementById('manual-notification-list');if(!el)return;
+  if(!manualNotifications.length){el.innerHTML='<div class="dash-ann-empty">尚未發布手動通知</div>';return;}
+  el.innerHTML=manualNotifications.map((n,i)=>'<div class="info-manage-row"><div><div class="info-manage-title">['+notifEsc(n.priority||'一般')+'] '+notifEsc(n.title||'')+'</div><div class="info-manage-sub">'+notifEsc(n.message||'')+'　・'+notifEsc(manualNotificationRepeatLabel(n))+(n.starts_at?'　・開始 '+notifEsc(String(n.starts_at).slice(0,10)):'')+(n.expires_at?'　・結束 '+notifEsc(String(n.expires_at).slice(0,10)):'')+'</div></div><div class="info-manage-actions"><button class="dash-agenda-iconbtn" onclick="manualNotificationDelete('+i+')">刪</button></div></div>').join('');
+}
+function manualNotificationRepeatLabel(n){const unit=n.recurrence_unit||'none',v=Math.max(1,parseInt(n.recurrence_interval)||1);return unit==='day'?'每 '+v+' 天':unit==='week'?'每 '+v+' 週':unit==='month'?'每 '+v+' 個月':'不循環';}
+async function manualNotificationSave(){
+  const title=document.getElementById('noti-title').value.trim(),message=document.getElementById('noti-message').value.trim();if(!title||!message){alert('請填寫通知標題與內容');return;}
+  const starts=document.getElementById('noti-starts').value||dashTodayStr(),expires=document.getElementById('noti-expires').value||null,unit=document.getElementById('noti-repeat-unit').value||'none',interval=Math.max(1,parseInt(document.getElementById('noti-repeat-interval').value)||1);
+  if(expires&&expires<starts){alert('結束日期不可早於開始日期');return;}
+  const payload={title,message,priority:document.getElementById('noti-priority').value,starts_at:starts,expires_at:expires,recurrence_unit:unit,recurrence_interval:interval,is_active:true,created_name:currentUser?.name||'',created_by:currentUser?.id||null};
+  const btn=document.getElementById('noti-send');btn.disabled=true;btn.textContent='發布中...';let ok=false;
+  if(manualNotificationDbAvailable){const r=await sbFetch('/rest/v1/app_notifications',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)});ok=r.ok;}
+  else{const rows=manualNotificationLocalRead();rows.unshift({...payload,id:'local-'+Date.now(),created_at:new Date().toISOString()});manualNotificationLocalWrite(rows);ok=true;}
+  btn.disabled=false;btn.textContent='發布通知';if(!ok){alert('通知發布失敗，請確認資料表權限及更新通知資料表');return;}await manualNotificationLoad();manualNotificationRenderList();document.getElementById('noti-title').value='';document.getElementById('noti-message').value='';alert('已發布通知'+(manualNotificationDbAvailable?'':'（目前僅此裝置）'));
+}
+async function manualNotificationDelete(i){
+  const n=manualNotifications[i];if(!n||!await uiConfirm('確定刪除「'+n.title+'」？',{danger:true}))return;
+  if(manualNotificationDbAvailable){const r=await sbFetch('/rest/v1/app_notifications?id=eq.'+encodeURIComponent(n.id),{method:'DELETE'});if(!r.ok){alert('刪除通知失敗');return;}}
+  else manualNotificationLocalWrite(manualNotificationLocalRead().filter(x=>String(x.id)!==String(n.id)));
+  await manualNotificationLoad();manualNotificationRenderList();
 }
 document.addEventListener('mousedown',e=>{
   const p=document.getElementById('notif-panel');
@@ -11657,7 +12236,7 @@ async function saveAllAccounts(){
   if(currentUser&&allAccounts.some(a=>String(a.id)===String(currentUser.id))){
     await loadProfile();
     document.getElementById('sidebar-name').textContent=currentUser.name;
-    document.getElementById('sidebar-avatar').textContent=(currentUser.name||'?')[0].toUpperCase();
+    renderUserAvatar(currentUser);
   }
   btn.disabled=false;
   btn.textContent = fail ? ('⚠ '+okCount+' 筆成功 / '+fail+' 筆失敗') : '✓ 已全部儲存';
@@ -12555,7 +13134,7 @@ async function layoutInit() {
   // 一律要抓的:未出貨明細 + 已出貨計數。首次進頁才抓「重的參考資料」(每日產量全表鍵、元件全表)。
   // 全部並行,避免逐一串行等待;參考資料快取後,切走再回來幾乎秒開。
   const jobs = [
-    sbFetchAll('/rest/v1/layout_items?select=*&ship_date=is.null&order=id'),
+    sbFetchAll('/rest/v1/layout_items?select=*&ship_date=is.null&order=id.desc'),
     sbCount('/rest/v1/layout_items?select=id&ship_date=not.is.null')
   ];
   if (!layoutRefLoaded) jobs.push(layoutLoadDailyOutputKeys(), layoutLoadBOM());
@@ -12595,7 +13174,7 @@ let layoutShippedLoaded = false, layoutShippedCount = 0;
 async function layoutLoadShipped() {
   if (layoutShippedLoaded) return;
   layoutBatchProgress('載入已出貨歷史…');
-  const r = await sbFetchAll('/rest/v1/layout_items?select=*&ship_date=not.is.null&order=id');
+  const r = await sbFetchAll('/rest/v1/layout_items?select=*&ship_date=not.is.null&order=id.desc');
   const rows = Array.isArray(r.data) ? r.data : [];
   // 已在表中的列(含本次剛標記出貨、尚未重新整理的)不要重複加入,否則同一編號會顯示兩次
   const existIds = new Set(layoutRows.filter(x => x.id != null).map(x => x.id));
@@ -12660,16 +13239,34 @@ function layoutSwitchTab(tab) {
 
 // 確保「明細輸入」表尾隨時有一列空白列可供輸入;若已存在未儲存的空白列則直接沿用,避免產生多列空白
 function layoutEnsureBlankRow() {
-  let idx = layoutRows.findIndex(r => layoutRowIsBlank(r));
+  let idx = layoutRows.findIndex(r => layoutRowIsInput(r));
+  if (idx < 0) idx = layoutRows.findIndex(r => layoutRowIsBlank(r));
   if (idx < 0) {
     layoutRows.push({
       work_date:todayStr(), part_no:'', proj_num:'', zone_code:'',
       drawing_no:'', spec:'', qty:1, bed:'', status:'上線中', inspected:false,
-      inspect_no:'', done_date:'', net_weight:'', ship_date:'', _key: ++layoutRowSeq
+      inspect_no:'', done_date:'', net_weight:'', ship_date:'', _key: ++layoutRowSeq, _isInput:true
     });
     idx = layoutRows.length - 1;
   }
+  layoutRows[idx]._isInput = true;
   return idx;
+}
+
+// 完成置頂輸入列後：補回新的空白列，並把游標留在空白列方便連續輸入。
+function layoutCommitTopInputRow(focusCol) {
+  const completed = layoutRows.find(r => layoutRowIsInput(r));
+  if (completed) completed._isInput = false;
+  layoutEnsureBlankRow();
+  pgState.layout = 0;
+  renderLayoutInput();
+  setTimeout(() => {
+    const tr = document.querySelector('#layout-input-body tr.lt-input-row');
+    if (!tr) return;
+    const col = tr.children[Math.max(0, focusCol == null ? 1 : focusCol)];
+    const input = tr.querySelector('.lt-edit[type="text"]') || (col ? col.querySelector('input,select') : tr.querySelector('input,select'));
+    if (input) { input.focus(); if (input.select) try { input.select(); } catch(_) {} }
+  }, 30);
 }
 
 function layoutAddRow() {
@@ -12687,6 +13284,8 @@ function projOptions(selected) {
 }
 
 function rowVisible(row) {
+  // 最上方快速輸入列不受搜尋、欄位或狀態篩選影響，任何檢視下都要保留。
+  if (layoutRowIsInput(row)) return true;
   const shipped = !!row.ship_date;
   // Excel-style column filters
   if (!rowPassesColFilters('layout', (key) => row[key]||'')) return false;
@@ -12832,6 +13431,9 @@ function layoutRowIsBlank(row) {
   // 空白輸入列判定不看 work_date(上線日期預設帶今天),避免僅有日期就被當成資料列而誤存
   return row && !row.id && !row.part_no && !row.proj_num && !row.bed && !row.ship_date;
 }
+function layoutRowIsInput(row) {
+  return !!(row && row._isInput);
+}
 
 function renderLayoutInput() {
   renderLayoutHead();
@@ -12841,17 +13443,21 @@ function renderLayoutInput() {
   const visIdx = [];
   layoutRows.forEach((row, i) => { if (rowVisible(row)) visIdx.push(i); });
   // 空白輸入列固定畫在最上方;已填的資料列排在下方(輸入完成後自然往下沉)
-  const blankIdx = visIdx.filter(i => layoutRowIsBlank(layoutRows[i]));
-  let dataIdx  = visIdx.filter(i => !layoutRowIsBlank(layoutRows[i]));
-  // 「已出貨」檢視:改為由新到舊排序,每頁 50 筆(保留分頁,可往前翻更舊的)
+  const blankIdx = visIdx.filter(i => layoutRowIsInput(layoutRows[i]));
+  let dataIdx  = visIdx.filter(i => !layoutRowIsInput(layoutRows[i]));
+  // 資料列一律由新到舊；剛輸入且尚未取得資料庫 id 的列排在最前面。
   const shippedView = layoutStatFilter === 'shipped';
-  if (shippedView) {
-    dataIdx.sort((a, b) => {
-      const da = layoutRows[a].ship_date || '', db = layoutRows[b].ship_date || '';
+  dataIdx.sort((a, b) => {
+    const ra = layoutRows[a], rb = layoutRows[b];
+    if (shippedView) {
+      const da = ra.ship_date || '', db = rb.ship_date || '';
       if (da !== db) return da < db ? 1 : -1;          // 出貨日期新(大)者在前
-      return (layoutRows[b].id || 0) - (layoutRows[a].id || 0);
-    });
-  }
+    }
+    const aNew = ra.id == null, bNew = rb.id == null;
+    if (aNew !== bNew) return aNew ? -1 : 1;
+    if (!aNew && Number(ra.id) !== Number(rb.id)) return Number(rb.id) - Number(ra.id);
+    return (rb._key || 0) - (ra._key || 0);
+  });
   blankIdx.forEach(i => { html += layoutRowHtml(i); });
   const pg = pagerSlice('layout', dataIdx, shippedView ? 50 : undefined);
   pg.slice.forEach(i => { html += layoutRowHtml(i); });
@@ -12878,12 +13484,12 @@ function layoutRowHtml(i) {
     const bedOpts = '<option value=""></option>' + BEDS.map(b => '<option value="'+b+'"'+(row.bed===b?' selected':'')+'>'+b+'</option>').join('');
     const statusOpts = STATUSES.map(s => '<option value="'+s+'"'+(row.status===s?' selected':'')+'>'+s+'</option>').join('');
     // 資料列的文字格預設唯讀(Excel 式:方向鍵漫遊選取,Enter 進入編輯);最上方空白輸入列保持可直接打字
-    const RO = layoutRowIsBlank(row) ? '' : ' readonly';
+    const RO = layoutRowIsInput(row) ? '' : ' readonly';
     // 空白輸入列固定黏在表頭下方(捲動時永遠看得到)
-    html += '<tr data-key="'+row._key+'"'+(layoutRowIsBlank(row) ? ' class="lt-input-row"' : '')+'>';
+    html += '<tr data-key="'+row._key+'"'+(layoutRowIsInput(row) ? ' class="lt-input-row"' : '')+'>';
     // 出貨選擇模式:最左側勾選框(空白輸入列不提供勾選)
     if (layoutShipMode) {
-      if (layoutRowIsBlank(row)) html += '<td class="lt-shipsel-col"></td>';
+      if (layoutRowIsInput(row)) html += '<td class="lt-shipsel-col"></td>';
       else html += '<td class="lt-shipsel-col" style="text-align:center"><input type="checkbox" class="lt-ship-chk"'+(layoutShipChecked.has(row._key)?' checked':'')+' onchange="layoutShipToggle('+row._key+',this.checked)"/></td>';
     }
     // 可編輯: 上線日期/工程編號/編號/數量/床位/出貨日期 (Enter 才進入編輯)
@@ -12949,6 +13555,7 @@ function layoutDelRow(i) {
   const row = layoutRows[i];
   if (row && row.id) sbFetch('/rest/v1/layout_items?id=eq.' + row.id, {method:'DELETE'});
   layoutRows.splice(i, 1);
+  layoutEnsureBlankRow();
   renderLayoutInput();
   renderLayoutStats();
 }
@@ -13017,7 +13624,7 @@ function layoutTableKey(e) {
   const i = layoutRows.findIndex(r => r._key === key);
   if (i < 0) return;
   // 這一列是不是「最上方的空白輸入列」(尚未從 BOM 帶出資料、也還沒存進資料庫)
-  const wasInputRow = !layoutRows[i].id && !layoutRows[i].zone_code && !layoutRows[i].drawing_no && !layoutRows[i].work_date;
+  const wasInputRow = tr.classList.contains('lt-input-row');
   // Auto-fill this row from BOM by part_no (+proj_num if given)
   const filled = layoutAutofillRow(i);
   layoutHideSuggest();
@@ -13033,15 +13640,7 @@ function layoutTableKey(e) {
     renderLayoutInput();
     if (wasInputRow) {
       // 剛完成的列往下沉;於最上方補一列新的空白輸入列,並把焦點移到它的「工程編號」
-      layoutEnsureBlankRow();
-      pgState.layout = 0;
-      renderLayoutInput();
-      setTimeout(() => {
-        const tbody = document.getElementById('layout-input-body');
-        const firstRow = tbody ? tbody.firstElementChild : null;
-        const inp = firstRow ? firstRow.querySelector('.lt-edit[type=text]') : null;
-        if (inp) inp.focus();
-      }, 30);
+      layoutCommitTopInputRow(1);
     } else {
       // 編輯既有列 → 焦點移到下一列(維持原行為)
       const tbody = document.getElementById('layout-input-body');
@@ -13236,7 +13835,7 @@ function layoutPickProj(i, projNum) {
   layoutMarkDirty(i);   // 自動存
   layoutHideSuggest();
   renderLayoutInput();
-  layoutFocusCell(layoutRows[i]._key, 1); // refocus proj_num input (col index 1)
+  layoutFocusCell(layoutRows[i]._key, layoutShipMode ? 3 : 2); // 工程編號按 Enter 後直接移到「編號」欄
 }
 
 // Focus the input/select in a given row (by _key) and column index
@@ -13362,6 +13961,10 @@ function layoutHideSuggest() {
 }
 function layoutPickPart(i, partNo, projNum) {
   layoutMarkPartHandled();   // 點選建議已選定有效構件,避免 onblur 再次驗證/重繪打斷焦點
+  const rowBefore = layoutRows[i];
+  const rowKey = rowBefore ? rowBefore._key : null;
+  const rowEl = rowKey == null ? null : document.querySelector('#layout-input-body tr[data-key="'+rowKey+'"]');
+  const wasInputRow = !!(rowEl && rowEl.classList.contains('lt-input-row'));
   const c = layoutBOMCache.find(x => x.part_no === partNo && (!projNum || x._proj_num === projNum));
   if (c) {
     layoutSnapshot();
@@ -13388,8 +13991,13 @@ function layoutPickPart(i, partNo, projNum) {
     layoutMarkDirty(i);   // 自動存
   }
   layoutHideSuggest();
-  renderLayoutInput();
-  layoutFocusCell(layoutRows[i]._key, 2); // refocus part_no input (col index 2)
+  if (c && wasInputRow) {
+    // 用 Enter 或點選建議完成 B820 等資料時，該筆立即成為下方最新資料；頂端永遠保留空白輸入列。
+    layoutCommitTopInputRow(1);
+  } else {
+    renderLayoutInput();
+    if (layoutRows[i]) layoutFocusCell(layoutRows[i]._key, 2); // 編輯既有資料時留在原列
+  }
 }
 
 async function layoutSaveAll() {
@@ -15485,6 +16093,7 @@ function setDXFStatus(msg,ok){
 window.addEventListener('resize',()=>{if(lastDXFFrames.length)drawPreview(lastDXFFrames);});
 
 // ── Clock ──
+let _clockDateKey='';
 function updateClock() {
   const now = new Date();
   const days = ['週日','週一','週二','週三','週四','週五','週六'];
@@ -15495,6 +16104,14 @@ function updateClock() {
   const hh = String(now.getHours()).padStart(2,'0');
   const mm = String(now.getMinutes()).padStart(2,'0');
   const ss = String(now.getSeconds()).padStart(2,'0');
+  const dateKey=`${y}-${m}-${d}`;
+  if(_clockDateKey&&dateKey!==_clockDateKey&&currentUser){
+    _notifPopped=false;
+    loadNotificationData();
+    const dash=document.getElementById('page-dashboard');
+    if(dash&&dash.classList.contains('active'))dashLoadAgenda();
+  }
+  _clockDateKey=dateKey;
   const dateEl = document.getElementById('clock-date');
   const timeEl = document.getElementById('clock-time');
   if (dateEl) dateEl.textContent = `${y}/${m}/${d} ${wd}`;
@@ -15759,8 +16376,10 @@ document.addEventListener('copy', e => {
   }
   const tbody = tblSel.table.querySelector('tbody');
   const rows = Array.from(tbody.children);
+  const skipHeader = tblSel.table.id === 'att-daily-grid';   // 出勤明細:略過灰色分類標題列
   const lines = [];
   for (let r = r1; r <= r2; r++) {
+    if (skipHeader && rows[r] && !rows[r].hasAttribute('data-name')) continue;
     const cells = Array.from(rows[r].children);
     const vals = [];
     for (let c = c1; c <= c2; c++) {
@@ -15770,7 +16389,9 @@ document.addEventListener('copy', e => {
     }
     lines.push(vals.join('\t'));
   }
-  e.clipboardData.setData('text/plain', lines.join('\n'));
+  const clipText = lines.join('\n');
+  e.clipboardData.setData('text/plain', clipText);
+  window.__tblClip = clipText;   // 內部剪貼簿:供「下拉選單格」用鍵盤攔截貼上時的後備來源
   e.preventDefault();
   setTimeout(() => { tblClearSel(); tblSel.anchor = null; tblSel.focus = null; }, 100);
 });
@@ -15826,6 +16447,12 @@ document.addEventListener('paste', e => {
     } else if (tbl.classList.contains('spx-table') && typeof spxPasteGrid === 'function') {
       e.preventDefault();
       spxPasteGrid(tbl.id.replace('spx-',''), cells2d, startAnchor);
+    } else if (active && active.tagName === 'SELECT') {
+      // 下拉選單(如出勤回報「請假類別」):瀏覽器預設無法貼進 <select>,改為程式寫入
+      e.preventDefault();
+      active.value = cells2d[0][0].trim();
+      active.dispatchEvent(new Event('input', {bubbles:true}));
+      active.dispatchEvent(new Event('change', {bubbles:true}));
     }
     return;
   }
@@ -15851,21 +16478,33 @@ document.addEventListener('paste', e => {
   const tbody = tblSel.table.querySelector('tbody');
   const rows = Array.from(tbody.children);
   const startR = tblSel.anchor.r, startC = tblSel.anchor.c;
-  cells2d.forEach((line, dr) => {
-    const tr = rows[startR + dr];
-    if (!tr) return;
-    const cellsArr = Array.from(tr.children);
-    line.forEach((val, dc) => {
-      const cell = cellsArr[startC + dc];
-      if (!cell) return;
-      const inp = cell.querySelector('input,select');
-      if (inp && !inp.disabled && inp.type !== 'checkbox' && inp.type !== 'date') {
-        inp.value = val;
-        inp.dispatchEvent(new Event('input', {bubbles:true}));
-        inp.dispatchEvent(new Event('change', {bubbles:true}));
-      }
+  const writeCell = (cell, val) => {
+    if (!cell) return;
+    const inp = cell.querySelector('input,select');
+    if (inp && !inp.disabled && inp.type !== 'checkbox' && inp.type !== 'date') {
+      inp.value = (inp.tagName === 'SELECT') ? String(val).trim() : val;
+      inp.dispatchEvent(new Event('input', {bubbles:true}));
+      inp.dispatchEvent(new Event('change', {bubbles:true}));
+    }
+  };
+  if (tblSel.table.id === 'att-daily-grid') {
+    // 出勤明細:逐列填入「資料列」，略過灰色分類標題列，確保跨部門貼上不錯位
+    const dataRows = [];
+    for (let i = startR; i < rows.length; i++) { if (rows[i].hasAttribute('data-name')) dataRows.push(rows[i]); }
+    cells2d.forEach((line, dr) => {
+      const tr = dataRows[dr];
+      if (!tr) return;
+      const cellsArr = Array.from(tr.children);
+      line.forEach((val, dc) => writeCell(cellsArr[startC + dc], val));
     });
-  });
+  } else {
+    cells2d.forEach((line, dr) => {
+      const tr = rows[startR + dr];
+      if (!tr) return;
+      const cellsArr = Array.from(tr.children);
+      line.forEach((val, dc) => writeCell(cellsArr[startC + dc], val));
+    });
+  }
   tblClearSel(); tblSel.anchor = null; tblSel.focus = null;
 });
 
@@ -15914,7 +16553,7 @@ function layoutPasteGrid(cells2d, anchor) {
   const anchorTr = domRows[anchor.r];
   const anchorIdx = (anchorTr && anchorTr.dataset && anchorTr.dataset.key)
     ? layoutRows.findIndex(r => String(r._key) === anchorTr.dataset.key) : -1;
-  if (anchorIdx < 0 || layoutRowIsBlank(layoutRows[anchorIdx])) {
+  if (anchorIdx < 0 || layoutRowIsInput(layoutRows[anchorIdx])) {
     // 從最上方空白輸入列貼上 = 逐列「新建」資料列,不覆蓋既有資料
     let ri = anchorIdx >= 0 ? anchorIdx : newBlankRow();
     cells2d.forEach((line, dr) => { if (dr > 0) ri = newBlankRow(); fillRow(ri, line); });
@@ -15924,7 +16563,7 @@ function layoutPasteGrid(cells2d, anchor) {
     domRows.forEach(tr => {
       if (!tr.dataset || !tr.dataset.key) return;   // 略過分頁列
       const idx = layoutRows.findIndex(r => String(r._key) === tr.dataset.key);
-      if (idx >= 0 && !layoutRowIsBlank(layoutRows[idx])) visDataIdx.push(idx);
+      if (idx >= 0 && !layoutRowIsInput(layoutRows[idx])) visDataIdx.push(idx);
     });
     let startVis = visDataIdx.indexOf(anchorIdx);
     if (startVis < 0) startVis = 0;
@@ -15943,6 +16582,7 @@ function layoutPasteGrid(cells2d, anchor) {
     } else {
       layoutApplyDailyStatus(row);
     }
+    if (layoutRowIsInput(row) && (row.part_no || row.proj_num || row.bed || row.ship_date)) row._isInput = false;
     layoutMarkDirty(ri);   // 自動存(貼上的每一列)
   });
   // 貼上後停留在「被貼上的最後一個儲存格」(範圍的右下角),方便繼續用鍵盤操作。
@@ -17746,7 +18386,86 @@ function attRenderDailyGrid(){
   body.innerHTML=html;
   body.oninput=attDayInput; body.onchange=attDayInput;
   tblInitSelection(document.getElementById('att-daily-grid'));   // Excel 式拖曳多選
+  attInitLeaveSelect();   // 請假類別下拉:滾輪循環選擇 + 讓下拉可參與框選(多選複製/貼上)
   attUpdateDayFoot();
+}
+
+// 「請假類別」下拉的操作增強：
+//   ① 單擊 → 維持原生「點一下就展開下拉」可直接挑選；
+//   ② Shift+點 → 延伸框選(不展開下拉)，用來做多選複製 / 貼上 / 刪除；
+//   ③ 雙擊 → 展開下拉；④ 滑鼠滾輪 → 循環切換(到頂/到底輪迴)。
+function attInitLeaveSelect(){
+  const grid=document.getElementById('att-daily-grid');
+  if(!grid || grid._attLeaveInit) return;
+  grid._attLeaveInit=true;
+  const leaveOf=t=>t&&t.closest&&t.closest('select[data-f="leave_type"]');
+  // Shift+點：用 capture 搶在 tblInitSelection 的 mousedown 之前，阻止原生下拉展開並延伸框選
+  grid.addEventListener('mousedown', ev=>{
+    const s=leaveOf(ev.target); if(!s || !ev.shiftKey) return;
+    ev.preventDefault(); ev.stopPropagation();
+    const td=s.closest('td'); if(!td) return;
+    if(!tblSel.table || tblSel.table!==grid || !tblSel.anchor){ tblSel.table=grid; tblSel.anchor=cellRC(td); }
+    tblSel.focus=cellRC(td); tblApplySel(); s.focus();
+  }, true);
+  // 雙擊：展開下拉選單
+  grid.addEventListener('dblclick', ev=>{
+    const s=leaveOf(ev.target); if(!s) return;
+    if(typeof s.showPicker==='function'){ try{ s.showPicker(); }catch(_){} }
+  });
+  // 滾輪：在下拉上循環切換，捲到最上再往上→跳到最後一項；捲到最後再往下→跳回第一項
+  grid.addEventListener('wheel', ev=>{
+    const s=leaveOf(ev.target); if(!s) return;
+    ev.preventDefault();
+    const n=s.options.length; if(!n) return;
+    let i=s.selectedIndex+(ev.deltaY>0?1:-1);
+    if(i<0) i=n-1; else if(i>=n) i=0;   // 輪迴
+    s.selectedIndex=i;
+    s.dispatchEvent(new Event('input',{bubbles:true}));
+    s.dispatchEvent(new Event('change',{bubbles:true}));
+  }, {passive:false});
+  // Ctrl/Cmd + C / V：<select> 不是可編輯元素，瀏覽器不會對它觸發 copy/paste 事件，
+  //   所以在「請假類別」下拉上按 Ctrl+C/Ctrl+V 會失效（貼上後變空白）。這裡用鍵盤攔截，
+  //   以「合成剪貼簿事件」重用既有 copy / paste 邏輯：
+  //     複製 → 合成 copy 事件取回文字，寫入系統剪貼簿與內部剪貼簿；
+  //     貼上 → 取剪貼簿文字（優先系統剪貼簿，後備內部剪貼簿），合成 paste 事件套用。
+  grid.addEventListener('keydown', ev=>{
+    const s=leaveOf(ev.target); if(!s) return;
+    if(!(ev.ctrlKey||ev.metaKey) || ev.altKey) return;
+    const k=(ev.key||'').toLowerCase();
+    if(k==='c'){
+      ev.preventDefault();
+      const td=s.closest('td');
+      // 若此下拉格尚未在選取範圍內 → 先以「單格」選取它，確保 copy 事件有 anchor/focus
+      if(td && !grid.querySelector('td.cell-selected')){
+        tblSel.table=grid; tblSel.anchor=cellRC(td); tblSel.focus=tblSel.anchor; tblApplySel();
+      } else if(grid.querySelector('td.cell-selected')){
+        tblSel.table=grid;
+      }
+      const dt=new DataTransfer();
+      document.dispatchEvent(new ClipboardEvent('copy',{clipboardData:dt,bubbles:true,cancelable:true}));
+      const txt=dt.getData('text/plain');
+      window.__tblClip=txt;
+      if(navigator.clipboard && navigator.clipboard.writeText){ try{ navigator.clipboard.writeText(txt); }catch(_){} }
+    } else if(k==='v'){
+      ev.preventDefault();
+      // 貼上「—」(空值,代表沒有請假):既有 paste 防呆會擋掉空字串,故直接清空選取的請假類別格
+      const clearEmpty=()=>{
+        const sel=grid.querySelectorAll('td.cell-selected select[data-f="leave_type"]');
+        const targets=sel.length?Array.prototype.slice.call(sel):[s];
+        targets.forEach(inp=>{ inp.value=''; inp.dispatchEvent(new Event('input',{bubbles:true})); inp.dispatchEvent(new Event('change',{bubbles:true})); });
+        tblClearSel(); tblSel.anchor=null; tblSel.focus=null;
+      };
+      const fire=txt=>{
+        if(txt==null || txt===''){ clearEmpty(); return; }   // 空值 → 清空(即「—」)
+        const dt=new DataTransfer(); dt.setData('text/plain', txt);
+        document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+      };
+      const fallback=()=>window.__tblClip||'';
+      if(navigator.clipboard && navigator.clipboard.readText){
+        navigator.clipboard.readText().then(t=>fire(t||fallback())).catch(()=>fire(fallback()));
+      } else { fire(fallback()); }
+    }
+  });
 }
 
 // 工數/時數連動 + 本工便當自動 + 重算合計
@@ -17798,6 +18517,12 @@ function attGridKey(e){
     return;
   }
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].indexOf(key)<0) return;
+  // Enter 於「請假類別」下拉選單上：打開下拉選單讓使用者用方向鍵挑選項目（不往下跳格）
+  if(key==='Enter' && el.tagName==='SELECT'){
+    e.preventDefault();
+    if(typeof el.showPicker==='function'){ try{ el.showPicker(); }catch(_){} }
+    return;
+  }
   // Shift+方向鍵：延伸矩形選取（多選）
   if(e.shiftKey && key!=='Enter' && grid){
     e.preventDefault();
