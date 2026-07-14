@@ -11,6 +11,7 @@
 <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.6/dist/pizzip-utils.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.50.0/build/docxtemplater.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -251,11 +252,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .bom-mini.st-未開始{border-left-color:var(--yellow)}
 /* 主頁頂列:在職人數 / 產量 / SP備料 / 天氣 / 今日行程，同一列緊湊呈現 */
 .dash-top-grid{display:grid;grid-template-columns:minmax(130px,.64fr) minmax(145px,.72fr) minmax(350px,1.85fr) minmax(145px,.72fr) minmax(220px,1.07fr);gap:12px;margin-bottom:16px;align-items:stretch}
-.dash-top-grid>.card,.dash-top-grid>.stat-card{padding:12px;min-height:146px}
+.dash-top-grid>.card,.dash-top-grid>.stat-card{padding:12px;height:170px;min-height:170px;max-height:170px;overflow:hidden}
 /* KPI 卡(在職人數/產量):數字群垂直置中、icon 浮右上角 */
 .dash-top-grid>.stat-card{display:flex;flex-direction:column;justify-content:center}
 .dash-top-grid>.stat-card .stat-icon{position:absolute;top:12px;right:13px;margin:0;font-size:18px}
 .dash-top-grid>.stat-card .stat-value{font-size:34px;margin-bottom:4px}
+.dash-duty-badge{margin-top:7px;padding:5px 9px;border-radius:8px;background:#ffcc00;border:1px solid #e6b800;color:#3d2f00;font-size:11px;font-weight:800;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 8px rgba(255,204,0,.28)}
 .dash-mini-card{display:flex;flex-direction:column;min-width:0}
 /* 清單卡的捲動區 flex 撐滿,短內容也貼齊整列高度,長清單則封頂捲動不撐爆 */
 .dash-mini-scroll{flex:1 1 auto;min-height:0;max-height:122px;overflow:auto}
@@ -272,9 +274,22 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .dash-weather-foot{font-size:8px;color:var(--text3);margin-top:auto;padding-top:6px;display:flex;justify-content:space-between;gap:5px;white-space:nowrap;overflow:hidden}
 .dash-weather-foot a{color:var(--text3);text-decoration:none}
 .dash-weather-foot a:hover{color:var(--accent2)}
+.dash-agenda-card{height:170px;min-height:170px!important;max-height:170px}
 .dash-agenda-actions{display:flex;gap:6px;align-items:center}
 .dash-agenda-addbtn{width:25px;height:25px;padding:0;border-radius:50%;font-size:17px;line-height:1}
-.dash-agenda-list{flex:1;min-height:0;overflow:hidden}
+.dash-agenda-list{flex:1;min-height:0;overflow-y:auto;padding-right:2px}
+.apple-agenda-group{margin-bottom:10px}
+.apple-agenda-group:last-child{margin-bottom:0}
+.apple-agenda-date{display:flex;align-items:baseline;gap:5px;padding:2px 2px 0;font-size:10px;font-weight:700;color:var(--text3);white-space:nowrap}
+.apple-agenda-date.today{color:#ff453a}
+.apple-agenda-lunar{font-weight:500;color:var(--text3);padding-left:5px;border-left:1px solid var(--border)}
+.apple-agenda-event{--event-color:#ffcc00;position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:7px;margin-top:5px;padding:6px 8px 6px 12px;border-radius:10px;background:color-mix(in srgb,var(--event-color) 11%,transparent);color:var(--event-color);min-height:31px}
+.apple-agenda-event::before{content:"";position:absolute;left:4px;top:5px;bottom:5px;width:3px;border-radius:3px;background:var(--event-color)}
+.apple-agenda-event-main{min-width:0}
+.apple-agenda-event-title{font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.apple-agenda-event-location{font-size:8px;margin-top:1px;opacity:.72;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.apple-agenda-event-time{font-family:var(--mono);font-size:9px;line-height:1.3;text-align:right;white-space:nowrap}
+.apple-agenda-event-time span{display:block}
 .dash-agenda-row{display:grid;grid-template-columns:38px 3px minmax(0,1fr) auto;gap:7px;align-items:center;padding:5px 1px;border-top:1px solid var(--border);min-height:31px}
 .dash-agenda-row:first-child{border-top:none}
 .dash-agenda-row.done{opacity:.48}
@@ -940,12 +955,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   body.layout-chart-printing { background: #fff !important; color: #000; margin: 0; }
   body.layout-chart-printing > :not(#layout-print-area) { display: none !important; }
   #layout-print-area { display: block !important; position: relative; width: 291mm; height: 204mm; margin: 0 auto; overflow: hidden; text-align: center; background: #fff !important; }
+  /* 表格在 A4 可列印範圍內水平、垂直置中。 */
   #layout-print-area .layout-print-content { position: absolute; top: 50%; left: 50%; transform-origin: center center; }
   #layout-print-area .layout-chart-table { margin: 0 auto !important; background: #fff; }
-  #layout-print-area .layout-stats { justify-content: center; margin-bottom: 12px; }
-  #layout-print-area .lstat { background: #fff !important; border: 1px solid #999 !important; }
-  #layout-print-area .lstat-label { color: #000 !important; }
-  /* 注意:.lstat-num 的顏色是用 inline style 依狀態上色,不可強制改黑,否則彩色統計數字會全部變黑 */
+  /* 列印時把狀態移到編號右側並壓縮列高，增加上下手寫空間。 */
+  #layout-print-area .layout-chart-table td { height: 24px; }
+  #layout-print-area .lcell { height: auto; padding: 2px 4px; flex-direction: row; gap: 4px; white-space: nowrap; }
   body.layout-chart-printing .no-print { display: none !important; }
   .layout-chart-table th, .layout-chart-table td { border: 1px solid #999 !important; background: #fff; }
   .layout-chart-table th { background: #eee !important; color: #000 !important; }
@@ -2023,8 +2038,9 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="stat-card blue">
           <div class="stat-icon">👷</div>
           <div class="stat-value" style="color:var(--accent2)" id="stat-staff">—</div>
-          <div class="stat-label">在職人數</div>
+          <div class="stat-label">員工人數</div>
           <div class="stat-sub"><span>本月出勤 <b id="stat-att-month">—</b> 人</span><span>本日出勤 <b id="stat-att-today">—</b> 人</span></div>
+          <div class="dash-duty-badge" id="dash-weekly-duty">本週值班：讀取中…</div>
         </div>
         <div class="stat-card green">
           <div class="stat-icon">⚖️</div>
@@ -2057,14 +2073,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         </div>
 
         <div class="card dash-agenda-card">
-          <div class="dash-brief-head">
-            <div class="section-title">📅 今日行程 <span class="dash-agenda-count" id="dash-agenda-count">0 項</span></div>
-            <div class="dash-agenda-actions">
-              <span class="dash-weather-place" id="dash-agenda-source" style="display:none">本機</span>
-              <button class="btn-sm btn-export dash-agenda-addbtn" id="dash-agenda-add" onclick="dashOpenEventModal()" title="新增行程">＋</button>
-            </div>
-          </div>
-          <div class="dash-agenda-list" id="dash-agenda-list"><div class="dash-agenda-empty"><span class="empty-ico">⏳</span><span>正在載入今日行程...</span></div></div>
+          <div class="dash-agenda-list" id="dash-agenda-list"><div class="dash-agenda-empty"><span class="empty-ico">⏳</span><span>正在載入行事曆...</span></div></div>
         </div>
       </div>
 
@@ -2581,6 +2590,13 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         #output-archive-panel .ov-tbl th.num,#output-archive-panel .ov-tbl td.num{text-align:right}
         #output-billing-panel .ov-tbl input.ov-in-l{text-align:center}
         #output-billing-panel .ov-tbl input.ov-in-l.num{text-align:right}
+        /* 請款核對試算表操作：拖曳/Shift 多選，方向鍵移動，整塊複製貼上與刪除 */
+        #output-billing-panel .ov-tbl input.bl-grid-cell{border-radius:2px;cursor:cell}
+        #output-billing-panel .ov-tbl input.bl-grid-selected{background:rgba(79,142,247,.20);box-shadow:inset 0 0 0 1px var(--accent2)}
+        #output-billing-panel .ov-tbl input.bl-grid-active{background:rgba(79,142,247,.28);box-shadow:inset 0 0 0 2px var(--accent2)}
+        #output-billing-panel .ov-tbl input.bl-util-locked{opacity:.68;cursor:not-allowed;background:rgba(255,193,7,.08)}
+        .bl-grid-help{flex:1 1 100%;font-family:var(--mono);font-size:11px;color:var(--text3)}
+        .bl-util-wait{display:inline-block;color:var(--yellow);font-size:11px;font-weight:700;white-space:nowrap}
 
         /* 請款核對:要填的欄位(請款價格/日期/狀況/備註)淡藍底 */
         #output-billing-panel .ov-tbl td:nth-child(8),#output-billing-panel .ov-tbl td:nth-child(14),
@@ -2789,6 +2805,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <button class="btn" style="margin-left:auto" onclick="blLoadDemo()">🧪 載入示範資料</button>
           <span id="bl-saved" style="font-family:var(--mono);font-size:12px;color:var(--text3)">自動儲存</span>
           <button class="btn-add-new" onclick="blArchive()">📦 封存本次請款</button>
+          <span class="bl-grid-help">方向鍵移動 · Enter 往同欄下一列 · 拖曳或 Shift 多選 · ⌘/Ctrl+C、V 複製貼上 · Backspace/Delete 刪除</span>
         </div>
         <datalist id="bl-status-list"><option value="未議價"></option><option value="未請款"></option><option value="已請款"></option><option value="已議價"></option><option value="點工計價"></option><option value="NT合併"></option></datalist>
 
@@ -9163,10 +9180,12 @@ const DASH_AGENDA_LOCAL_KEY='zs_calendar_events_v1';
 let dashAgendaRows=[];
 let dashAgendaDbAvailable=null;
 let dashAgendaEditingId=null;
+let dashAgendaLoadError='';
+let dashAgendaUsingApple=false;
 
 function dashBriefInit(){
   const add=document.getElementById('dash-agenda-add');
-  if(add) add.style.display=(!isGuest && pagePerm('dashboard')==='edit')?'':'none';
+  if(add) add.style.display='none';
   dashLoadWeather();
   dashLoadAgenda();
 }
@@ -9222,33 +9241,179 @@ function dashAgendaEscape(v){ return String(v==null?'':v).replace(/&/g,'&amp;').
 function dashAgendaToday(){ return dashTodayStr(); }
 async function dashLoadAgenda(){
   const list=document.getElementById('dash-agenda-list'); if(!list) return;
-  const today=dashAgendaToday();
-  let rows=[];
-  if(!isGuest && currentSession){
-    const r=await sbFetch('/rest/v1/calendar_events?select=*&event_date=eq.'+today+'&order=event_time.asc,created_at.asc');
-    if(r.ok && Array.isArray(r.data)){ dashAgendaDbAvailable=true; rows=r.data; }
-    else{ dashAgendaDbAvailable=false; rows=dashAgendaLocalRead().filter(x=>x.event_date===today); }
-  }else{
-    dashAgendaDbAvailable=false; rows=dashAgendaLocalRead().filter(x=>x.event_date===today);
-  }
-  dashAgendaRows=rows.sort((a,b)=>String(a.event_time||'99:99').localeCompare(String(b.event_time||'99:99')));
+  dashAgendaLoadError='';
   const src=document.getElementById('dash-agenda-source');
-  if(src){ src.style.display=dashAgendaDbAvailable?'none':''; src.textContent='僅此裝置'; }
+  if(src){ src.style.display=''; src.textContent='Apple'; src.href='https://www.icloud.com/calendar/'; }
+  try{
+    if(!window.ICAL||typeof window.ICAL.parse!=='function') throw new Error('Apple 行事曆解析元件尚未載入');
+    const headers={'apikey':SUPA_KEY};
+    if(currentSession) headers.Authorization='Bearer '+currentSession.access_token;
+    const res=await fetch(SUPA_URL+'/functions/v1/apple-calendar?fresh='+Date.now(),{headers,cache:'no-store'});
+    if(!res.ok) throw new Error('同步服務回應 '+res.status);
+    const ics=await res.text();
+    dashAgendaRows=dashParseAppleCalendar(ics,dashAgendaToday(),window.ICAL,2);
+    dashUpdateWeeklyDuty(dashFindWeeklyDuty(ics,dashAgendaToday(),window.ICAL),false);
+    dashAgendaDbAvailable=false;
+    dashAgendaUsingApple=true;
+    const add=document.getElementById('dash-agenda-add'); if(add) add.style.display='none';
+  }catch(err){
+    console.warn('Apple 行事曆同步失敗',err);
+    dashUpdateWeeklyDuty([],true);
+    dashAgendaUsingApple=false;
+    // Edge Function 尚未部署或暫時離線時，保留原行程來源，避免首頁空白。
+    const today=dashAgendaToday();
+    let rows=[];
+    if(!isGuest&&currentSession){
+      const r=await sbFetch('/rest/v1/calendar_events?select=*&event_date=eq.'+today+'&order=event_time.asc,created_at.asc');
+      if(r.ok&&Array.isArray(r.data)){ dashAgendaDbAvailable=true; rows=r.data; }
+      else{ dashAgendaDbAvailable=false; rows=dashAgendaLocalRead().filter(x=>x.event_date===today); }
+    }else{
+      dashAgendaDbAvailable=false; rows=dashAgendaLocalRead().filter(x=>x.event_date===today);
+    }
+    dashAgendaRows=rows.sort((a,b)=>String(a.event_time||'99:99').localeCompare(String(b.event_time||'99:99')));
+    if(src){ src.textContent=dashAgendaDbAvailable?'系統行程':'僅此裝置'; src.removeAttribute('href'); }
+    const add=document.getElementById('dash-agenda-add');
+    if(add) add.style.display=(!isGuest&&pagePerm('dashboard')==='edit')?'':'none';
+  }
   dashRenderAgenda();
 }
-function dashRenderAgenda(){
-  const list=document.getElementById('dash-agenda-list'), count=document.getElementById('dash-agenda-count'); if(!list||!count)return;
-  const done=dashAgendaRows.filter(x=>x.is_done).length;
-  count.textContent=dashAgendaRows.length+' 項'+(done?' · '+done+' 完成':'');
+
+function dashWeeklySaturday(today){
+  const d=new Date(today+'T12:00:00');
+  const weekday=d.getDay();
+  const mondayOffset=weekday===0?-6:1-weekday;
+  d.setDate(d.getDate()+mondayOffset+5);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function dashFindWeeklyDuty(ics,today,ICAL){
+  const saturday=dashWeeklySaturday(today);
+  const saturdayEvents=dashParseAppleCalendar(ics,saturday,ICAL,1);
+  return [...new Set(saturdayEvents.map(e=>String(e.title||'').trim()).filter(Boolean))];
+}
+
+function dashUpdateWeeklyDuty(names,failed){
+  const el=document.getElementById('dash-weekly-duty'); if(!el)return;
+  const value=failed?'無法讀取':(names.length?names.join('、'):'未排定');
+  el.textContent='本週值班：'+value;
+  el.title=el.textContent;
+}
+
+function dashParseAppleCalendar(ics,today,ICAL,rangeDays){
+  const root=new ICAL.Component(ICAL.parse(ics));
+  const dayStart=new Date(today+'T00:00:00');
+  const dayEnd=new Date(dayStart); dayEnd.setDate(dayEnd.getDate()+(rangeDays||7));
+  const searchStart=new Date(dayStart); searchStart.setDate(searchStart.getDate()-1);
+  const calendarColor=String(root.getFirstPropertyValue('x-apple-calendar-color')||'#ffcc00');
+  const rows=[];
+  const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const hm=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  const addOccurrence=(event,startTime,endTime)=>{
+    const start=startTime.toJSDate(), end=endTime.toJSDate();
+    if(end<=dayStart||start>=dayEnd) return;
+    const allDay=!!startTime.isDate;
+    const displayDate=start<dayStart?dayStart:start;
+    const eventComponent=event.component||null;
+    let color=String((eventComponent&&eventComponent.getFirstPropertyValue('color'))||calendarColor||'#ffcc00');
+    if(!/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(color)) color='#ffcc00';
+    rows.push({
+      id:'apple-'+(event.uid||'event')+'-'+start.getTime(),
+      event_date:ymd(displayDate),
+      event_time:allDay?null:hm(start),
+      title:event.summary||'未命名行程',
+      event_type:'Apple',
+      project_no:event.location||'',
+      note:event.description||'',
+      is_done:false,
+      _apple:true,
+      _allDay:allDay,
+      _endTime:allDay?null:hm(end),
+      _color:color
+    });
+  };
+  root.getAllSubcomponents('vevent').forEach(component=>{
+    // Recurrence exceptions are resolved by their parent event.
+    if(component.getFirstPropertyValue('recurrence-id')) return;
+    const event=new ICAL.Event(component);
+    if(!event.isRecurring()){
+      addOccurrence(event,event.startDate,event.endDate);
+      return;
+    }
+    const iterator=event.iterator(ICAL.Time.fromJSDate(searchStart,false));
+    let occurrence,guard=0;
+    while((occurrence=iterator.next())&&guard++<500){
+      const details=event.getOccurrenceDetails(occurrence);
+      const start=details.startDate.toJSDate();
+      if(start>=dayEnd) break;
+      addOccurrence(details.item,details.startDate,details.endDate);
+    }
+  });
+  return rows.sort((a,b)=>{
+    const dateCmp=String(a.event_date).localeCompare(String(b.event_date));
+    if(dateCmp) return dateCmp;
+    if(a._allDay!==b._allDay) return a._allDay?-1:1;
+    return String(a.event_time||'').localeCompare(String(b.event_time||''));
+  });
+}
+
+function dashAppleLunarLabel(date){
+  try{
+    const parts=new Intl.DateTimeFormat('zh-TW-u-ca-chinese',{month:'long',day:'numeric'}).formatToParts(date);
+    const month=(parts.find(x=>x.type==='month')||{}).value||'';
+    const dayNum=parseInt(((parts.find(x=>x.type==='day')||{}).value||'0'),10);
+    const nums=['','一','二','三','四','五','六','七','八','九'];
+    let day='';
+    if(dayNum<=10) day='初'+(dayNum===10?'十':nums[dayNum]);
+    else if(dayNum<20) day='十'+nums[dayNum-10];
+    else if(dayNum===20) day='二十';
+    else if(dayNum<30) day='廿'+nums[dayNum-20];
+    else day='三十';
+    return month+day;
+  }catch(e){ return ''; }
+}
+
+function dashRenderAppleAgenda(list,count){
+  if(count) count.textContent=dashAgendaRows.length+' 項 · 2 天';
   if(!dashAgendaRows.length){
-    const canEdit=!isGuest&&pagePerm('dashboard')==='edit';
-    list.innerHTML='<div class="dash-agenda-empty"><span class="empty-ico">📭</span><span>今天沒有行程'+(canEdit?'，可按「新增行程」建立':'')+'</span></div>';
+    list.innerHTML='<div class="dash-agenda-empty"><span class="empty-ico">📭</span><span>今天和明天沒有行程</span></div>';
     return;
   }
-  const canEdit=!isGuest&&pagePerm('dashboard')==='edit';
+  const groups={};
+  dashAgendaRows.forEach(e=>{ (groups[e.event_date]||(groups[e.event_date]=[])).push(e); });
+  const today=dashAgendaToday();
+  const tomorrowDate=new Date(today+'T12:00:00'); tomorrowDate.setDate(tomorrowDate.getDate()+1);
+  const tomorrow=tomorrowDate.getFullYear()+'-'+String(tomorrowDate.getMonth()+1).padStart(2,'0')+'-'+String(tomorrowDate.getDate()).padStart(2,'0');
+  list.innerHTML=Object.keys(groups).sort().map(dateStr=>{
+    const d=new Date(dateStr+'T12:00:00');
+    const weekday=new Intl.DateTimeFormat('zh-TW',{weekday:'long'}).format(d);
+    const dateLabel=dateStr===tomorrow?'明天':((d.getMonth()+1)+'月'+d.getDate()+'日'+weekday);
+    const lunar=dashAppleLunarLabel(d);
+    const events=groups[dateStr].map(e=>{
+      const color=dashAgendaEscape(e._color||'#ffcc00');
+      const time=e._allDay?'整日':('<span>'+dashAgendaEscape(e.event_time||'')+'</span><span>'+dashAgendaEscape(e._endTime||'')+'</span>');
+      return '<div class="apple-agenda-event" style="--event-color:'+color+'">'
+        +'<div class="apple-agenda-event-main"><div class="apple-agenda-event-title">'+dashAgendaEscape(e.title||'未命名行程')+'</div>'
+        +(e.project_no?'<div class="apple-agenda-event-location">'+dashAgendaEscape(e.project_no)+'</div>':'')+'</div>'
+        +'<div class="apple-agenda-event-time">'+time+'</div></div>';
+    }).join('');
+    return '<div class="apple-agenda-group"><div class="apple-agenda-date'+(dateStr===today?' today':'')+'"><span>'+dateLabel+'</span>'
+      +(lunar?'<span class="apple-agenda-lunar">'+dashAgendaEscape(lunar)+'</span>':'')+'</div>'+events+'</div>';
+  }).join('');
+}
+
+function dashRenderAgenda(){
+  const list=document.getElementById('dash-agenda-list'), count=document.getElementById('dash-agenda-count'); if(!list)return;
+  if(dashAgendaUsingApple){ dashRenderAppleAgenda(list,count); return; }
+  const done=dashAgendaRows.filter(x=>x.is_done).length;
+  if(count) count.textContent=dashAgendaRows.length+' 項'+(done?' · '+done+' 完成':'');
+  if(!dashAgendaRows.length){
+    list.innerHTML='<div class="dash-agenda-empty"><span class="empty-ico">'+(dashAgendaLoadError?'⚠️':'📭')+'</span><span>'+(dashAgendaLoadError||(dashAgendaUsingApple?'Apple 行事曆今天沒有行程':'今天沒有行程'))+'</span></div>';
+    return;
+  }
+  const canEdit=!dashAgendaUsingApple&&!isGuest&&pagePerm('dashboard')==='edit';
   const visible=dashAgendaRows.slice(0,3);
   list.innerHTML=visible.map((e,i)=>{
-    const meta=[e.event_type||'其他',e.project_no||''].filter(Boolean).map(dashAgendaEscape).join(' · ');
+    const meta=[dashAgendaUsingApple?'Apple':(e.event_type||'其他'),e.project_no||''].filter(Boolean).map(dashAgendaEscape).join(' · ');
     return '<div class="dash-agenda-row'+(e.is_done?' done':'')+'">'
       +'<span class="dash-agenda-time">'+dashAgendaEscape(String(e.event_time||'').slice(0,5)||'全天')+'</span>'
       +'<i class="dash-agenda-dot type-'+dashAgendaEscape(e.event_type||'其他')+'"></i>'
@@ -10444,16 +10609,31 @@ async function showZoneDetail(id) {
   await loadComponents(id);
 }
 
-const COMP_EXT_COLS = ['加工機','進料','A201','A202','出貨','流水編號'];
+// 所有工程區的 BOM 構件總表固定欄位；R0～R5 會自動出現在既有與新建工程區。
+const COMP_EXT_COLS = ['加工機','進料','A201','A202','出貨','流水編號','R0','R1','R2','R3','R4','R5'];
 // 'yyyy-mm-dd' -> 'mm-dd',節省空間(篩選/顯示都用同一個值,才會一致)
 function zoneDateShort(d) {
   d = String(d || '');
   return d.length >= 10 ? d.slice(5) : d;
 }
+// 單支構件已有進料紀錄時，進料欄直接顯示 MM/DD。
+function zoneSingleReceiptDate(r) {
+  if ((parseInt(r.qty) || 0) !== 1) return '';
+  const dated = (zoneReceipts[r.part_no] || [])
+    .filter(x => x.date && (parseInt(x.qty) || 0) > 0)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  return dated.length ? String(dated[0].date) : '';
+}
+function zoneDateSlashShort(d) {
+  d = String(d || '');
+  return d.length >= 10 ? d.slice(5, 10).replace('-', '/') : d.replace('-', '/');
+}
 // 統一取得「構件總表」某欄位的實際顯示值(渲染與篩選共用同一份邏輯,避免像進料/A201/A202/出貨/流水編號
 // 這種自動帶入的欄位,篩選抓不到畫面上實際顯示的值)
 function compExtDisplayValue(r, c) {
   if (c === '進料') {
+    const singleDate = zoneSingleReceiptDate(r);
+    if (singleDate) return zoneDateSlashShort(singleDate);
     const recs = zoneReceipts[r.part_no] || [];
     const got = recs.reduce((s, x) => s + (parseInt(x.qty) || 0), 0);
     const need = parseInt(r.qty) || 0;
@@ -10512,7 +10692,10 @@ async function loadComponents(zoneId) {
   if (Array.isArray(mr.data)) mr.data.forEach(m => { (zoneReceipts[m.part_no] = zoneReceipts[m.part_no] || []).push(m); });
   // load custom cols
   const cr = await sbFetch(`/rest/v1/zone_custom_cols?select=*&zone_id=eq.${zoneId}&table_type=eq.component`);
-  zoneCompCustomCols = Array.isArray(cr.data) ? cr.data.map(c=>c.col_name) : [];
+  // 已有人曾手動建立同名欄位時不重複顯示；原本存在 component_ext 的內容仍會沿用。
+  zoneCompCustomCols = Array.isArray(cr.data)
+    ? cr.data.map(c=>c.col_name).filter(c=>!COMP_EXT_COLS.includes(c))
+    : [];
   // #9 A201(上線日期) 與 出貨日期 from 線上進度表 (layout_items);A202 from 每日產量 (daily_output)
   zoneOnlineMap = {};
   zoneShipMap = {};
@@ -10944,8 +11127,12 @@ function renderCompTable() {
             '<input type="number" min="0" max="'+(left||qv||0)+'" value="'+qv+'" data-part="'+dp+'" style="width:52px" onclick="event.stopPropagation()" oninput="matQtyEdit(this)" title="本次要登記的進料支數(可少於全部)">支</td>';
         } else {
           // 進料: 顯示已進支數/應進支數,點擊開啟批次登記
-          const color = (need && got>=need) ? 'var(--green)' : (got>0 ? 'var(--yellow)' : 'var(--text3)');
-          html += '<td><span class="mat-cell" data-part="'+(r.part_no||'').replace(/"/g,'&quot;')+'" onclick="openMaterialModal(this)" style="color:'+color+'">'+got+(need?'/'+need:'')+' 支 ✎</span></td>';
+          const singleDate = zoneSingleReceiptDate(r);
+          // 單支進料改顯示日期時，顏色與旁邊 A201 自動日期一致。
+          const color = singleDate ? 'var(--accent3)' : ((need && got>=need) ? 'var(--green)' : (got>0 ? 'var(--yellow)' : 'var(--text3)'));
+          const display = singleDate ? zoneDateSlashShort(singleDate) : (got+(need?'/'+need:'')+' 支');
+          const title = singleDate ? ' title="進料日期:'+singleDate+'"' : '';
+          html += '<td><span class="mat-cell" data-part="'+(r.part_no||'').replace(/"/g,'&quot;')+'" onclick="openMaterialModal(this)" style="color:'+color+'"'+title+'>'+display+' ✎</span></td>';
         }
       } else if (c === 'A201' && zoneOnlineMap[r.part_no]) {
         // auto from 線上進度表 上線日期 (read-only,畫面只顯示 mm-dd 節省空間,完整日期看 title)
@@ -14402,20 +14589,16 @@ function layoutPrintChart() {
   const chartPanel = document.getElementById('layout-chart-panel');
   const isChart = chartPanel && chartPanel.style.display !== 'none';
   const srcChart = isChart ? document.getElementById('layout-chart') : document.getElementById('layout-virtual');
-  // Build print area: stats + chart clone
+  // Build a print area containing only the table (no title or statistics).
   let pa = document.getElementById('layout-print-area');
   if (pa) pa.remove();
   pa = document.createElement('div');
   pa.id = 'layout-print-area';
-  const statsClone = document.getElementById('layout-stats').cloneNode(true);
-  const chartClone = srcChart.cloneNode(true);
-  const title = document.createElement('div');
-  title.style.cssText = 'font-family:sans-serif;font-size:16px;font-weight:bold;text-align:center;margin-bottom:8px;color:#000';
-  title.textContent = (isChart ? '線上進度配置圖' : '虛擬現場配置圖') + '　' + new Date().toLocaleDateString('zh-TW');
+  const sourceTable = srcChart && srcChart.querySelector('.layout-chart-table');
+  if (!sourceTable) { alert('目前沒有可列印的配置表格'); return; }
+  const chartClone = sourceTable.cloneNode(true);
   const printContent = document.createElement('div');
   printContent.className = 'layout-print-content';
-  printContent.appendChild(title);
-  printContent.appendChild(statsClone);
   printContent.appendChild(chartClone);
   pa.appendChild(printContent);
   document.body.appendChild(pa);
@@ -14424,9 +14607,8 @@ function layoutPrintChart() {
   // A4 landscape minus the 3 mm page margins: 291 x 204 mm.
   // Measure the chart at its natural size, then use one uniform scale for both
   // axes. This maximizes the content without stretching or cropping it.
-  chartClone.style.overflow = 'visible';
   printContent.style.width = 'max-content';
-  const chartTable = chartClone.querySelector('.layout-chart-table');
+  const chartTable = chartClone;
   const naturalWidth = Math.max(
     1,
     printContent.scrollWidth,
@@ -14434,8 +14616,11 @@ function layoutPrintChart() {
   );
   printContent.style.width = naturalWidth + 'px';
   const mmToPx = 96 / 25.4;
-  const maxPrintWidth = 291 * mmToPx;
-  const maxPrintHeight = 204 * mmToPx;
+  // Keep an extra 3 mm safety margin on both sides so table borders are not
+  // clipped by browser rounding or a printer's non-printable edge.
+  const maxPrintWidth = 285 * mmToPx;
+  // Leave a small inner margin and center the compact table vertically.
+  const maxPrintHeight = 198 * mmToPx;
   const contentWidth = Math.max(1, naturalWidth);
   const contentHeight = Math.max(1, printContent.scrollHeight);
   const printScale = Math.min(maxPrintWidth / contentWidth, maxPrintHeight / contentHeight);
@@ -19648,7 +19833,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     dirty={}; setSaved('');
     // 工程編號需靠 project_id 對照 projects；直接進本頁時 allBOM 可能尚未載入，故一律自行抓取
     var res=await Promise.all([
-      sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,sub_code,proc_code,unit_price,util_price,util_weight_kg,util_proc_code,price_note'),
+      sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,sub_code,proc_code,unit_price,util_price,util_weight_kg,util_proc_code,price_note,status'),
       sbFetchAll('/rest/v1/projects?select=id,proj_num')
     ]);
     var r=res[0];
@@ -20187,6 +20372,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   var blRecords={};      // 'round|zid' -> record(含輸入欄)
   var blDirty={};        // 'round|zid' -> true
   var blRowsCache={1:[],2:[]};
+  var blProjectComplete={}; // 工程編號 -> 所有工程區是否都已完成
+  var blGridAnchor=null, blGridActive=null, blGridDragging=false;
 
   function pad(n){ return String(n).padStart(2,'0'); }
   function zkey(proj,zone){ return String(proj||'').trim().toUpperCase()+'|'+String(zone||'').trim().toUpperCase(); }
@@ -20292,11 +20479,19 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     pr.forEach(function(p){ proj[String(p.id)]=p.proj_num; if(p.proj_num) blProjCompany[String(p.proj_num).trim().toUpperCase()]=(p.company||'').trim(); });
     blDaily=Array.isArray(res[0].data)?res[0].data:[];
     blZoneMap={};
+    blProjectComplete={};
     var zr=Array.isArray(res[1].data)?res[1].data:[];
+    var zoneStates={};
     zr.forEach(function(z){
       var pn=proj[String(z.project_id)]||'';
       blZoneMap[zkey(pn,z.zone_code)]={ zid:z.id, proc_code:z.proc_code, sub_code:z.sub_code,
         unit_price:z.unit_price, util_price:z.util_price, util_weight_kg:z.util_weight_kg, util_proc_code:z.util_proc_code||'', price_note:z.price_note||'' };
+      (zoneStates[String(z.project_id)]||(zoneStates[String(z.project_id)]=[])).push(String(z.status||'').trim());
+    });
+    // 同一工程編號的所有工程區都為「已完成」，才開放水電重量與水電請款。
+    Object.keys(zoneStates).forEach(function(pid){
+      var pn=proj[pid]||'';
+      if(pn) blProjectComplete[String(pn).trim().toUpperCase()]=zoneStates[pid].length>0 && zoneStates[pid].every(function(s){ return s==='已完成'; });
     });
     // 報驗公司:各工程區出貨資料中最常出現的公司(作為 projects.company 的後備)
     var tally={};
@@ -20332,12 +20527,16 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     blRender();
   };
 
-  window.blRender=function(){ blRenderRound(1); blRenderRound(2); };
+  window.blRender=function(){
+    blGridAnchor=null; blGridActive=null; blGridDragging=false;
+    blRenderRound(1); blRenderRound(2);
+  };
 
   // ── 示範資料(僅供畫面/流程測試;不寫入資料庫。測完可整段移除) ──
   window.blLoadDemo=function(){
     blDemo=true;
     blProjCompany={'A101':'鎮山','B202':'麗生'};
+    blProjectComplete={'A101':false,'B202':true};
     blZoneMap={
       'A101|Z1':{zid:101,proc_code:'P10',sub_code:'S1',unit_price:30000,util_price:null,util_weight_kg:null,util_proc_code:''},
       'A101|Z2':{zid:102,proc_code:'P20',sub_code:'S2',unit_price:0,   util_price:null,util_weight_kg:null,util_proc_code:''}, // 單價0 → 未議價
@@ -20414,25 +20613,33 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     return keys.map(function(k){
       var o=agg[k], z=blZoneMap[k]||{};
       var tonv=o.kg/1000, up=num(z.unit_price), total=tonv*up;
-      var uW=(z.util_weight_kg==null)?null:num(z.util_weight_kg)/1000;
+      var hasUtil=z.util_weight_kg!=null;
+      var projectComplete=!!blProjectComplete[String(o.proj_num||'').trim().toUpperCase()];
+      var uW=(hasUtil&&projectComplete)?num(z.util_weight_kg)/1000:null;
       var uTotal=(uW==null)?0:uW*num(z.util_price);
       return { key:k, zid:(z.zid==null?null:z.zid), proj_num:o.proj_num, zone_code:o.zone_code,
         proc_code:z.proc_code||'', sub_code:z.sub_code||'',
         tons:tonv, qty:o.qty, unit_price:up, total:total, price_note:z.price_note||'',
         util_proc_code:z.util_proc_code||'', util_weight:uW, util_total:uTotal,
+        has_util:hasUtil, util_pending:hasUtil&&!projectComplete, project_complete:projectComplete,
         company:companyOf(o.proj_num,k) };
     });
   }
 
   // 公司配色:鎮山=青、麗生=黃(比照卡片)
   function coStyle(co){ return co==='鎮山'?' style="color:var(--accent3);font-weight:700"':co==='麗生'?' style="color:var(--yellow);font-weight:700"':''; }
+  function gridAttrs(round,rowIndex,zid,col,field){
+    return ' data-bl-round="'+round+'" data-bl-row="'+rowIndex+'" data-bl-col="'+col+'" data-bl-zid="'+zid+'" data-bl-field="'+field+'"'+
+      ' onfocus="blGridFocusCell(this)" onmousedown="blGridPointerDown(event,this)" onmouseenter="blGridPointerEnter(event,this)"'+
+      ' onkeydown="blGridKey(event,this)" onpaste="blGridPaste(event,this)"';
+  }
   window.blRenderRound=function(round){
     var f=document.getElementById('bl-r'+round+'-from'), t=document.getElementById('bl-r'+round+'-to');
     var from=f&&f.value, to=t&&t.value;
     var rows=rangeRows(from,to);
     blRowsCache[round]=rows;
     var body='';
-    rows.forEach(function(row){
+    rows.forEach(function(row,rowIndex){
       if(row.zid==null) return;   // 無對應 zone(無法儲存)略過
       var rec=blRecords[round+'|'+row.zid]||{};
       var bp=rec.bill_price==null?'':rec.bill_price;
@@ -20441,21 +20648,24 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       var note=rec.note==null?'':rec.note;
       var stDisp=deriveStatus(rec,row.unit_price,row.price_note);
       var pfx='bl-'+round+'-'+row.zid;
-      body+='<tr'+(row.util_weight!=null?' class="has-util"':'')+'>'
+      var utilPriceCell=row.util_pending
+        ? '<td><input class="ov-in-l num bl-util-locked" disabled placeholder="工程未全數完成" title="此工程編號的所有工程區完成後，才可請水電款"></td>'
+        : '<td><input id="'+pfx+'-uprice" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,1,'util_bill_price')+' value="'+escAttr(fmtBill(ubp))+'" placeholder="水電請款" oninput="blCell('+round+','+row.zid+',\'util_bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>';
+      body+='<tr'+(row.has_util?' class="has-util'+(row.util_pending?' util-pending':'')+'"':'')+'>'
         +'<td>'+esc(row.proj_num)+'</td><td>'+esc(row.zone_code)+'</td>'
         +'<td>'+esc(row.proc_code)+'</td><td>'+esc(row.sub_code)+'</td>'
         +'<td class="num">'+t2(row.tons)+'</td><td class="num">'+intf(row.qty)+'</td>'
         +'<td class="num">'+ntd(row.total)+'</td>'
-        +'<td><input id="'+pfx+'-price" class="ov-in-l num" value="'+escAttr(fmtBill(bp))+'" placeholder="請款價格" oninput="blCell('+round+','+row.zid+',\'bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>'
+        +'<td><input id="'+pfx+'-price" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,0,'bill_price')+' value="'+escAttr(fmtBill(bp))+'" placeholder="請款價格" oninput="blCell('+round+','+row.zid+',\'bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>'
         +'<td>'+esc(row.util_proc_code||'—')+'</td>'
-        +'<td class="num">'+(row.util_weight==null?'—':t2(row.util_weight))+'</td>'
-        +'<td class="num">'+(row.util_weight==null?'—':money(row.util_total))+'</td>'
-        +'<td><input id="'+pfx+'-uprice" class="ov-in-l num" value="'+escAttr(fmtBill(ubp))+'" placeholder="水電請款" oninput="blCell('+round+','+row.zid+',\'util_bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>'
+        +'<td class="num">'+(row.util_pending?'<span class="bl-util-wait">待全區完成</span>':row.util_weight==null?'—':t2(row.util_weight))+'</td>'
+        +'<td class="num">'+(row.util_pending?'—':row.util_weight==null?'—':money(row.util_total))+'</td>'
+        +utilPriceCell
         +'<td class="num">'+(row.price_note&&String(row.price_note).trim()!==''?'<span class="ov-labor">'+esc(row.price_note)+'</span>':money(row.unit_price))+'</td>'
-        +'<td><input id="'+pfx+'-date" class="ov-in-l" type="date" value="'+escAttr(bd)+'" onchange="blCell('+round+','+row.zid+',\'bill_date\',this.value)"></td>'
-        +'<td><input id="'+pfx+'-status" class="ov-in-l" list="bl-status-list" value="'+escAttr(stDisp)+'" placeholder="狀況" onchange="blCell('+round+','+row.zid+',\'bill_status\',this.value)"></td>'
+        +'<td><input id="'+pfx+'-date" class="ov-in-l bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,2,'bill_date')+' type="date" value="'+escAttr(bd)+'" onchange="blCell('+round+','+row.zid+',\'bill_date\',this.value)"></td>'
+        +'<td><input id="'+pfx+'-status" class="ov-in-l bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,3,'bill_status')+' list="bl-status-list" value="'+escAttr(stDisp)+'" placeholder="狀況" onchange="blCell('+round+','+row.zid+',\'bill_status\',this.value)"></td>'
         +'<td'+coStyle(row.company)+'>'+esc(row.company||'—')+'</td>'
-        +'<td><input id="'+pfx+'-note" class="ov-in-l" value="'+escAttr(note)+'" placeholder="備註" oninput="blCell('+round+','+row.zid+',\'note\',this.value)"></td>'
+        +'<td><input id="'+pfx+'-note" class="ov-in-l bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,4,'note')+' value="'+escAttr(note)+'" placeholder="備註" oninput="blCell('+round+','+row.zid+',\'note\',this.value)"></td>'
         +'</tr>';
     });
     if(!rows.length) body='<tr><td colspan="17" class="empty-state">此區間無產量資料</td></tr>';
@@ -20469,6 +20679,166 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     blRenderSummary(round);
   };
 
+  // ── 請款核對試算表操作 ────────────────────────────────
+  function gridCoord(el){
+    return {round:+el.dataset.blRound,row:+el.dataset.blRow,col:+el.dataset.blCol};
+  }
+  function gridCells(round){
+    return Array.from(document.querySelectorAll('#bl-r'+round+'-table input.bl-grid-cell'));
+  }
+  function gridCellAt(round,row,col){
+    return document.querySelector('#bl-r'+round+'-table input.bl-grid-cell[data-bl-row="'+row+'"][data-bl-col="'+col+'"]');
+  }
+  function gridSame(a,b){ return !!a&&!!b&&a.round===b.round&&a.row===b.row&&a.col===b.col; }
+  function gridPaintRange(anchor,active){
+    document.querySelectorAll('#output-billing-panel input.bl-grid-cell').forEach(function(el){
+      el.classList.remove('bl-grid-selected','bl-grid-active');
+    });
+    if(!anchor||!active) return;
+    if(anchor.round!==active.round) anchor=active;
+    var r0=Math.min(anchor.row,active.row),r1=Math.max(anchor.row,active.row);
+    var c0=Math.min(anchor.col,active.col),c1=Math.max(anchor.col,active.col);
+    gridCells(active.round).forEach(function(el){
+      var p=gridCoord(el);
+      if(p.row>=r0&&p.row<=r1&&p.col>=c0&&p.col<=c1) el.classList.add('bl-grid-selected');
+      if(gridSame(p,active)) el.classList.add('bl-grid-active');
+    });
+  }
+  function gridSetRange(anchor,active){
+    blGridAnchor=anchor; blGridActive=active;
+    gridPaintRange(anchor,active);
+  }
+  function gridFocus(el){
+    if(!el) return;
+    blGridDragging=true; // 避免 focus 事件把 Shift 延伸選取重設為單格
+    el.focus();
+    if(el.select && el.type!=='date') el.select();
+    blGridDragging=false;
+    el.scrollIntoView({block:'nearest',inline:'nearest'});
+  }
+  window.blGridFocusCell=function(el){
+    if(blGridDragging) return;
+    var p=gridCoord(el);
+    if(!gridSame(p,blGridActive)) gridSetRange(p,p);
+  };
+  window.blGridPointerDown=function(e,el){
+    var p=gridCoord(el);
+    if(e.shiftKey&&blGridAnchor&&blGridAnchor.round===p.round) gridSetRange(blGridAnchor,p);
+    else gridSetRange(p,p);
+    blGridDragging=true;
+  };
+  window.blGridPointerEnter=function(e,el){
+    if(!blGridDragging||!blGridAnchor) return;
+    var p=gridCoord(el);
+    if(p.round===blGridAnchor.round) gridSetRange(blGridAnchor,p);
+  };
+  document.addEventListener('mouseup',function(){ blGridDragging=false; });
+
+  function gridSelected(fallback){
+    var a=Array.from(document.querySelectorAll('#output-billing-panel input.bl-grid-cell.bl-grid-selected'));
+    return a.length?a:(fallback?[fallback]:[]);
+  }
+  function gridMove(el,dr,dc,extend){
+    var p=gridCoord(el), target=null;
+    if(dr){
+      var sameCol=gridCells(p.round).filter(function(x){ return +x.dataset.blCol===p.col; })
+        .sort(function(a,b){ return +a.dataset.blRow-+b.dataset.blRow; });
+      var ix=sameCol.indexOf(el); target=sameCol[ix+dr]||null;
+      // 同欄到底時，接續另一個計價區的同欄第一/最後一格。
+      if(!target&&!extend){
+        var other=p.round===1?2:1;
+        var oc=gridCells(other).filter(function(x){ return +x.dataset.blCol===p.col; })
+          .sort(function(a,b){ return +a.dataset.blRow-+b.dataset.blRow; });
+        target=dr>0?oc[0]:oc[oc.length-1];
+      }
+    } else if(dc){
+      var sameRow=gridCells(p.round).filter(function(x){ return +x.dataset.blRow===p.row; })
+        .sort(function(a,b){ return +a.dataset.blCol-+b.dataset.blCol; });
+      var j=sameRow.indexOf(el); target=sameRow[j+dc]||null;
+    }
+    if(!target) return;
+    var tp=gridCoord(target);
+    if(extend&&blGridAnchor&&blGridAnchor.round===tp.round) gridSetRange(blGridAnchor,tp);
+    else gridSetRange(tp,tp);
+    gridFocus(target);
+  }
+  function gridNormalize(field,value){
+    var v=String(value==null?'':value);
+    if(field!=='bill_date'||!v.trim()) return v;
+    var s=v.trim().replace(/\//g,'-'),m;
+    if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) return m[1]+'-'+pad(m[2])+'-'+pad(m[3]);
+    if((m=s.match(/^(\d{1,2})-(\d{1,2})$/))) return new Date().getFullYear()+'-'+pad(m[1])+'-'+pad(m[2]);
+    return v;
+  }
+  function gridApply(el,value){
+    if(!el||el.disabled) return;
+    var field=el.dataset.blField;
+    var v=gridNormalize(field,value);
+    el.value=v;
+    if(field==='bill_price'||field==='util_bill_price') el.value=fmtBill(v);
+    window.blCell(+el.dataset.blRound,+el.dataset.blZid,field,el.value);
+  }
+  function gridDelete(el){
+    gridSelected(el).forEach(function(x){ gridApply(x,''); });
+  }
+  function gridCopyText(el){
+    var selected=gridSelected(el); if(!selected.length) return '';
+    var ps=selected.map(gridCoord),round=ps[0].round;
+    var r0=Math.min.apply(null,ps.map(function(p){return p.row;})),r1=Math.max.apply(null,ps.map(function(p){return p.row;}));
+    var c0=Math.min.apply(null,ps.map(function(p){return p.col;})),c1=Math.max.apply(null,ps.map(function(p){return p.col;}));
+    var lines=[];
+    for(var r=r0;r<=r1;r++){
+      var vals=[];
+      for(var c=c0;c<=c1;c++){ var x=gridCellAt(round,r,c); vals.push(x?x.value:''); }
+      lines.push(vals.join('\t'));
+    }
+    return lines.join('\n');
+  }
+  function gridCopy(el){
+    var txt=gridCopyText(el); if(txt==='') return;
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).catch(function(){ gridCopyFallback(txt); });
+    } else gridCopyFallback(txt);
+    blSaved('已複製選取範圍','var(--success)');
+  }
+  function gridCopyFallback(txt){
+    var ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(e){} ta.remove();
+  }
+  window.blGridPaste=function(e,el){
+    var txt=e.clipboardData&&e.clipboardData.getData('text/plain');
+    if(txt==null) return;
+    e.preventDefault();
+    var matrix=txt.replace(/\r/g,'').split('\n').map(function(line){ return line.split('\t'); });
+    if(matrix.length>1&&matrix[matrix.length-1].length===1&&matrix[matrix.length-1][0]==='') matrix.pop();
+    var selected=gridSelected(el);
+    // 單一內容貼到多選範圍：每格填入相同內容。
+    if(matrix.length===1&&matrix[0].length===1&&selected.length>1){
+      selected.forEach(function(x){ gridApply(x,matrix[0][0]); });
+      return;
+    }
+    var coords=selected.map(gridCoord),round=+el.dataset.blRound;
+    var startRow=coords.length?Math.min.apply(null,coords.map(function(p){return p.row;})):+el.dataset.blRow;
+    var startCol=coords.length?Math.min.apply(null,coords.map(function(p){return p.col;})):+el.dataset.blCol;
+    var last=null;
+    matrix.forEach(function(rowVals,ri){ rowVals.forEach(function(v,ci){ var x=gridCellAt(round,startRow+ri,startCol+ci); if(x){ gridApply(x,v); last=x; } }); });
+    var first=gridCellAt(round,startRow,startCol)||el;
+    if(last) gridSetRange(gridCoord(first),gridCoord(last));
+  };
+  window.blGridKey=function(e,el){
+    if(e.isComposing) return;
+    var activeEl=blGridActive?gridCellAt(blGridActive.round,blGridActive.row,blGridActive.col):null;
+    var base=activeEl||el;
+    var mod=e.metaKey||e.ctrlKey;
+    if(mod&&String(e.key).toLowerCase()==='c'){ e.preventDefault(); gridCopy(el); return; }
+    if(e.key==='Backspace'||e.key==='Delete'){ e.preventDefault(); gridDelete(el); return; }
+    if(e.key==='Enter'){ e.preventDefault(); gridMove(base,1,0,false); return; }
+    if(e.key==='ArrowUp'){ e.preventDefault(); gridMove(base,-1,0,e.shiftKey); return; }
+    if(e.key==='ArrowDown'){ e.preventDefault(); gridMove(base,1,0,e.shiftKey); return; }
+    if(e.key==='ArrowLeft'){ e.preventDefault(); gridMove(base,0,-1,e.shiftKey); return; }
+    if(e.key==='ArrowRight'){ e.preventDefault(); gridMove(base,0,1,e.shiftKey); }
+  };
+
   window.blRenderSummary=function(round){
     var rows=blRowsCache[round]||[];
     var estTotal=0, utilTotal=0, tons=0, qty=0, billed=0;
@@ -20477,7 +20847,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       if(row.zid==null) return;
       estTotal+=row.total; utilTotal+=row.util_total; tons+=row.tons; qty+=row.qty;
       var rec=blRecords[round+'|'+row.zid]||{};
-      var rowBilled=billNum(rec.bill_price)+billNum(rec.util_bill_price);
+      var rowBilled=billNum(rec.bill_price)+(row.util_pending?0:billNum(rec.util_bill_price));
       billed+=rowBilled;
       var co=row.company||'(未分類)';
       byCo[co]=(byCo[co]||0)+rowBilled;   // 鎮山/麗生 = 各公司「已請款」金額
@@ -20629,8 +20999,9 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
           company:comp, status:mainSt, note:(rec.note||'') });
         grand+=total;
       }
-      // 水電(僅該工程區有水電時才列)
-      var uW=(z.util_weight_kg==null)?null:num(z.util_weight_kg)/1000;
+      // 水電：同一工程編號的所有工程區完成後才進入未請款清單。
+      var projectComplete=!!blProjectComplete[String(o.proj_num||'').trim().toUpperCase()];
+      var uW=(z.util_weight_kg==null||!projectComplete)?null:num(z.util_weight_kg)/1000;
       var uTotal=(uW==null)?0:uW*num(z.util_price);
       if(uW!=null && uTotal>0){
         var utilSt=partStatus(rec.util_bill_price, z.util_price, null);
@@ -20698,7 +21069,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
           company:row.company||null, tons:row.tons, qty:row.qty, total_price:row.total,
           util_proc_code:row.util_proc_code||null, util_weight:row.util_weight, util_total:row.util_total,
           unit_price:row.unit_price,
-          bill_price:clean(rec.bill_price), util_bill_price:clean(rec.util_bill_price),
+          bill_price:clean(rec.bill_price), util_bill_price:row.util_pending?null:clean(rec.util_bill_price),
           bill_date:clean(rec.bill_date)||today(), bill_status:'已請款', note:clean(rec.note),
           archived_at:new Date().toISOString()
         });
