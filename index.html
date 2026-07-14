@@ -96,6 +96,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .nav-rail{width:var(--rail-w);flex-shrink:0;display:flex;flex-direction:column;background:var(--nav-bg2);border-right:1px solid var(--nav-border)}
 .rail-scroll{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0}
 .rail-item{width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:var(--rad);background:none;border:1px solid transparent;cursor:pointer;font-size:20px;line-height:1;color:var(--nav-text);transition:all .15s}
+.rail-item svg{width:21px;height:21px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;pointer-events:none}
 .rail-item:hover{background:var(--nav-hover);color:var(--nav-text-strong)}
 .rail-item.active{background:var(--nav-active);color:var(--nav-text-strong);border-color:var(--nav-border);box-shadow:inset 2px 0 0 var(--nav-green)}
 .rail-foot{display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--nav-border)}
@@ -120,7 +121,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .nav-item{position:relative;display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:var(--rad);cursor:pointer;transition:all .15s;color:var(--nav-text);border:1px solid transparent}
 .nav-item:hover{background:var(--nav-hover);color:var(--nav-text-strong)}
 .nav-item.active{background:var(--nav-active);color:var(--nav-text-strong);border-color:var(--nav-border);box-shadow:inset 2px 0 0 var(--nav-green)}
-.nav-item .nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.nav-item .nav-icon{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:currentColor}
+.nav-item .nav-icon svg{width:17px;height:17px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .nav-item .nav-label{font-family:var(--sans);font-size:13.5px;font-weight:400;letter-spacing:.01em;line-height:1.2}
 .nav-item.active .nav-label{font-weight:500}
 .nav-item .nav-badge{margin-left:auto;font-size:10px;background:var(--nav-green);color:var(--nav-on-green);border-radius:8px;padding:1px 6px;font-family:var(--mono);font-weight:600}
@@ -290,6 +292,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .apple-agenda-event-location{font-size:8px;margin-top:1px;opacity:.72;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .apple-agenda-event-time{font-family:var(--mono);font-size:9px;line-height:1.3;text-align:right;white-space:nowrap}
 .apple-agenda-event-time span{display:block}
+[data-theme="light"] .apple-agenda-date{color:#475569}
+[data-theme="light"] .apple-agenda-lunar{color:#64748b;border-left-color:#cbd5e1}
+[data-theme="light"] .apple-agenda-event{color:color-mix(in srgb,var(--event-color) 68%,#111827);background:color-mix(in srgb,var(--event-color) 20%,#fff);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--event-color) 28%,#d1d5db)}
+[data-theme="light"] .apple-agenda-event-title{font-weight:800}
+[data-theme="light"] .apple-agenda-event-location,[data-theme="light"] .apple-agenda-event-time{opacity:1;color:#334155}
 .dash-agenda-row{display:grid;grid-template-columns:38px 3px minmax(0,1fr) auto;gap:7px;align-items:center;padding:5px 1px;border-top:1px solid var(--border);min-height:31px}
 .dash-agenda-row:first-child{border-top:none}
 .dash-agenda-row.done{opacity:.48}
@@ -988,13 +995,26 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .theme-toggle{background:none;border:1px solid var(--nav-border);border-radius:var(--rad);width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all .15s;color:var(--nav-text)}
 .theme-toggle:hover{border-color:var(--nav-green);color:var(--nav-green-text);background:var(--nav-hover)}
 .cell-selected{background:rgba(255,159,10,.10) !important;box-shadow:inset 0 0 0 1px rgba(255,159,10,.65)}
+#excel-selection-stats{position:fixed;right:18px;bottom:16px;z-index:9997;display:none;align-items:center;gap:14px;padding:8px 13px;background:rgba(22,27,38,.94);border:1px solid rgba(255,255,255,.16);border-radius:9px;box-shadow:0 6px 22px rgba(0,0,0,.28);backdrop-filter:blur(8px);font-family:var(--mono);font-size:12px;color:#d8dde8;pointer-events:none}
+#excel-selection-stats b{color:#fff;font-size:13px}#excel-selection-stats .sum{color:#7dd3c0}
+[data-theme="light"] #excel-selection-stats{background:rgba(255,255,255,.96);border-color:#cfd5df;color:#596273}[data-theme="light"] #excel-selection-stats b{color:#172033}[data-theme="light"] #excel-selection-stats .sum{color:#147d6c}
+/* Excel 式目前列：滑鼠移入、點擊或方向鍵 focus 時，以微量疊色提示整列，不覆蓋原本水電/狀況底色。 */
+.layout-table tbody tr:hover td,.att-grid tbody tr:hover td,.lab-tbl tbody tr:hover td,.spx-table tbody tr:hover td,.gx-table tbody tr:hover td,
+#output-billing-panel .ov-tbl tbody tr:hover td{background-image:linear-gradient(rgba(79,142,247,.035),rgba(79,142,247,.035))}
+.layout-table tbody tr.excel-row-focus td,.att-grid tbody tr.excel-row-focus td,.lab-tbl tbody tr.excel-row-focus td,.spx-table tbody tr.excel-row-focus td,.gx-table tbody tr.excel-row-focus td,
+#output-billing-panel .ov-tbl tbody tr.excel-row-focus td{background-image:linear-gradient(rgba(79,142,247,.075),rgba(79,142,247,.075))}
+.layout-table tbody tr.excel-row-focus input,.layout-table tbody tr.excel-row-focus select,.att-grid tbody tr.excel-row-focus input,.att-grid tbody tr.excel-row-focus select,
+.lab-tbl tbody tr.excel-row-focus input,.lab-tbl tbody tr.excel-row-focus select,.spx-table tbody tr.excel-row-focus input,.spx-table tbody tr.excel-row-focus select,
+.gx-table tbody tr.excel-row-focus input,.gx-table tbody tr.excel-row-focus select,#output-billing-panel .ov-tbl tbody tr.excel-row-focus input:not(.bill-status-pill){background-image:linear-gradient(rgba(79,142,247,.055),rgba(79,142,247,.055))!important}
+[data-theme="light"] .layout-table tbody tr.excel-row-focus td,[data-theme="light"] .att-grid tbody tr.excel-row-focus td,[data-theme="light"] .lab-tbl tbody tr.excel-row-focus td,
+[data-theme="light"] .spx-table tbody tr.excel-row-focus td,[data-theme="light"] .gx-table tbody tr.excel-row-focus td,[data-theme="light"] #output-billing-panel .ov-tbl tbody tr.excel-row-focus td{background-image:linear-gradient(rgba(45,105,190,.055),rgba(45,105,190,.055))}
 
 /* ── Excel 式表頭篩選下拉 ── */
 .cf-th-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:9px;padding:0 2px;margin-left:3px;vertical-align:middle}
 .cf-th-btn:hover{color:var(--accent2)}
 .cf-th-btn.active{color:var(--accent2)}
 .cf-th-del:hover{color:var(--danger)}
-.colfilter-dd{position:fixed;z-index:10000;background:var(--bg2);border:1px solid var(--border-hi);border-radius:var(--rad);box-shadow:0 8px 28px rgba(0,0,0,.5);width:230px;font-family:var(--sans);overflow:hidden}
+.colfilter-dd{position:fixed;z-index:10000;background:var(--bg2);border:1px solid var(--border-hi);border-radius:var(--rad);box-shadow:0 8px 28px rgba(0,0,0,.5);width:230px;max-height:calc(100vh - 16px);font-family:var(--sans);overflow:hidden;display:flex;flex-direction:column}
 .cf-search{padding:10px}
 .cf-search input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-size:12px;padding:7px 10px;outline:none}
 .cf-search input:focus{border-color:var(--accent2)}
@@ -1002,7 +1022,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .cf-actions a{color:var(--accent2);font-size:12px;cursor:pointer;text-decoration:none}
 .cf-actions a:hover{text-decoration:underline}
 .cf-count{margin-left:auto;color:var(--text3);font-size:11px}
-.cf-list{max-height:200px;overflow-y:auto;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.cf-list{max-height:200px;min-height:0;flex:1 1 auto;overflow-y:auto;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.cf-search,.cf-actions,.cf-footer{flex:0 0 auto}
 .cf-item{display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;font-size:12px;color:var(--text2)}
 .cf-item:hover{background:var(--bg3)}
 .cf-item input{accent-color:var(--accent2)}
@@ -1898,13 +1919,13 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
   <div class="sidebar">
     <div class="nav-rail">
       <div class="rail-scroll">
-        <button class="rail-item active" data-sec="main" onclick="onRailClick('main')" title="主選單">🏠</button>
-        <button class="rail-item" data-sec="prod" onclick="onRailClick('prod')" title="產量與報驗">📋</button>
-        <button class="rail-item" data-sec="tools" onclick="onRailClick('tools')" title="工具">🛠️</button>
-        <button class="rail-item" data-sec="staff" onclick="onRailClick('staff')" title="人員管理">👥</button>
-        <button class="rail-item" data-sec="eg" onclick="onRailClick('eg')" title="長榮專區">🏢</button>
-        <button class="rail-item" data-sec="hr" id="rail-hr" style="display:none" onclick="onRailClick('hr')" title="人事薪資">💼</button>
-        <button class="rail-item" data-sec="admin" id="rail-admin" style="display:none" onclick="onRailClick('admin')" title="管理員">⚙️</button>
+        <button class="rail-item active" data-sec="main" onclick="onRailClick('main')" title="主選單" aria-label="主選單"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v11h14V10M9 21v-7h6v7"/></svg></button>
+        <button class="rail-item" data-sec="prod" onclick="onRailClick('prod')" title="產量與報驗" aria-label="產量與報驗"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M8 9h8M8 13h8M8 17h5"/></svg></button>
+        <button class="rail-item" data-sec="tools" onclick="onRailClick('tools')" title="工具" aria-label="工具"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5-5l2.1 2.1-2.4 2.4-2.1-2.1a4 4 0 0 0 5 5L20 16.4 16.4 20l-7.7-7.7"/></svg></button>
+        <button class="rail-item" data-sec="staff" onclick="onRailClick('staff')" title="人員管理" aria-label="人員管理"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-4 2.5-6 6-6s6 2 6 6M14 15c3.5 0 6 1.5 6 5"/></svg></button>
+        <button class="rail-item" data-sec="eg" onclick="onRailClick('eg')" title="長榮專區" aria-label="長榮專區"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V3h16v18M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2M9 21v-3h6v3M2 21h20"/></svg></button>
+        <button class="rail-item" data-sec="hr" id="rail-hr" style="display:none" onclick="onRailClick('hr')" title="人事薪資" aria-label="人事薪資"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V4h8v3M3 12h18M10 12v2h4v-2"/></svg></button>
+        <button class="rail-item" data-sec="admin" id="rail-admin" style="display:none" onclick="onRailClick('admin')" title="管理員" aria-label="管理員"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z"/></svg></button>
       </div>
       <div class="rail-foot">
         <button class="panel-toggle" id="panel-toggle" onclick="togglePanel()" title="收合/展開子選單"><span class="pt-ico">◧</span></button>
@@ -2021,6 +2042,43 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
   </div>
 
   <div class="nav-backdrop" id="nav-backdrop" onclick="closeNav()"></div>
+
+  <script>
+  // 側邊欄使用內嵌線條 SVG，不依賴 Windows/macOS 的 Emoji 字型。
+  (function(){
+    var icons={
+      'nav-dashboard':'<path d="M4 13h3v7H4zM10.5 4h3v16h-3zM17 9h3v11h-3z"/>',
+      'nav-evergreen-sys':'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>',
+      'nav-hardware':'<path d="M14.7 6.3a4 4 0 0 0-5-5l2.1 2.1-2.4 2.4-2.1-2.1a4 4 0 0 0 5 5L20 16.4 16.4 20l-7.7-7.7"/>',
+      'nav-labor':'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V4h8v3M3 12h18M10 12v2h4v-2"/>',
+      'nav-bom':'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+      'nav-layout':'<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M7.5 16.5 16.5 7.5M6 5v6M3 8h6M15 18h6"/>',
+      'nav-daily':'<path d="M4 19V9M10 19V4M16 19v-7M22 19H2"/>',
+      'nav-inspect':'<path d="M9 5h6M9 3h6v4H9z"/><rect x="5" y="5" width="14" height="16" rx="2"/><path d="m9 14 2 2 4-5"/>',
+      'nav-a201a202':'<path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/>',
+      'nav-prod':'<path d="M3 21V10l6 3V9l6 4V5l6 4v12zM7 17h2M13 17h2M18 17h1"/>',
+      'nav-bomtool':'<path d="M6 2h9l4 4v16H6zM15 2v5h5M9 11h7M9 15h7M9 19h4"/>',
+      'nav-sp':'<path d="M4 20 20 4M7 17l-2-2M11 13l-2-2M15 9l-2-2M3 21h18"/>',
+      'nav-dxf':'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z"/>',
+      'nav-hazard':'<path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/><path d="M18 12h.01"/>',
+      'nav-staff':'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-4 2.5-6 6-6s6 2 6 6M14 15c3.5 0 6 1.5 6 5"/>',
+      'nav-egstaff':'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9" r="3"/><path d="M7 18c1-3 2.7-4 5-4s4 1 5 4"/>',
+      'nav-attend':'<path d="M4 8V5a2 2 0 0 1 2-2h3M20 8V5a2 2 0 0 0-2-2h-3M4 16v3a2 2 0 0 0 2 2h3M20 16v3a2 2 0 0 1-2 2h-3"/><circle cx="12" cy="10" r="3"/><path d="M7.5 18c.8-3 2.2-4 4.5-4s3.7 1 4.5 4"/>',
+      'nav-attendlog':'<circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/>',
+      'nav-attendance':'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 15l2 2 5-5"/>',
+      'nav-egdaily':'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M7 14h3M14 14h3M7 18h3"/>',
+      'nav-emp':'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-4 2.5-6 6-6 1.3 0 2.4.3 3.3.8M16 13v8M12 17h8"/>',
+      'nav-payroll':'<path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h4"/>',
+      'nav-leave':'<path d="M3 20h18M6 17c1-5 4-8 9-10M9 8c-1-3 1-5 4-5 0 3-1 5-4 5M14 7c3-1 5 1 5 4-3 0-5-1-5-4"/>',
+      'nav-payrollcfg':'<circle cx="12" cy="12" r="3"/><path d="M19 12h3M2 12h3M12 2v3M12 19v3M17 7l2-2M5 19l2-2M17 17l2 2M5 5l2 2"/>',
+      'nav-output':'<path d="M4 20V10h4v10M10 20V4h4v16M16 20v-7h4v7M2 20h20"/>',
+      'nav-pricing':'<circle cx="12" cy="12" r="9"/><path d="M16 8c-.7-1-1.8-1.5-4-1.5-2.5 0-4 1-4 2.5s1.2 2.2 4 2.8 4 1.3 4 2.8-1.5 2.8-4 2.8c-2.2 0-3.7-.6-4.5-1.7M12 4v16"/>',
+      'nav-accounts':'<circle cx="8" cy="15" r="4"/><path d="m11 12 8-8 2 2-2 2 2 2-3 3-2-2-3 3"/>'
+    };
+    function apply(){Object.keys(icons).forEach(function(id){var item=document.getElementById(id),el=item&&item.querySelector('.nav-icon');if(el)el.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+icons[id]+'</svg>';});}
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply);else apply();
+  })();
+  </script>
 
   <!-- 唯讀模式徽章 -->
   <div id="ro-badge" style="display:none">🔒 唯讀模式</div>
@@ -2588,6 +2646,26 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         .ovr-stat-card .big.ov-red{color:var(--red)}
         .ovr-stat-card .big.ov-grn{color:var(--accent)}
         .ov-tbl.ovr-mini td,.ov-tbl.ovr-mini th{padding:5px 8px;font-size:11px}
+        /* 產值回報採內容寬度：資料完整顯示，但不讓卡片與表格無意義地撐滿整頁 */
+        #output-report-panel .ovr-stat-head{width:fit-content;max-width:100%;box-sizing:border-box;gap:8px 14px;padding:9px 10px}
+        #output-report-panel .ovr-stat-cards{flex:0 1 auto;gap:7px}
+        #output-report-panel .ovr-stat-card{flex:0 0 auto;min-width:112px;padding:6px 9px}
+        #output-report-panel .ovr-stat-card .big{font-size:14px}
+        #ovr-price-content>.table-scroll,#ovr-manu-content>.table-scroll,#ovr-eg-content>.table-scroll{width:fit-content;max-width:100%}
+        #ovr-price-content .ov-tbl,#ovr-manu-content .ov-tbl,#ovr-eg-content .ov-tbl{width:max-content;min-width:0}
+        #output-report-panel .ov-tbl:not(.ovr-mini) td,#output-report-panel .ov-tbl:not(.ovr-mini) th{padding:6px 8px;font-size:12px}
+        .ovr-one-grid{display:grid;grid-template-columns:repeat(2,minmax(280px,420px));gap:10px;width:fit-content;max-width:100%}
+        .ovr-one-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden}
+        .ovr-one-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:8px 10px;background:var(--bg3);border-bottom:1px solid var(--border)}
+        .ovr-one-title{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent)}
+        .ovr-one-range{font-family:var(--mono);font-size:10px;color:var(--text3);white-space:nowrap}
+        .ovr-one-values{display:grid;grid-template-columns:repeat(2,minmax(110px,1fr))}
+        .ovr-one-value{padding:8px 10px;border-right:1px solid rgba(128,128,128,.14);border-bottom:1px solid rgba(128,128,128,.14)}
+        .ovr-one-value:nth-child(even){border-right:none}.ovr-one-value:nth-last-child(-n+2){border-bottom:none}
+        .ovr-one-value .lbl{display:block;font-size:10px;color:var(--text3);margin-bottom:2px}
+        .ovr-one-value .big{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text)}
+        .ovr-one-value .big.hi{color:var(--red)}
+        @media(max-width:760px){.ovr-one-grid{grid-template-columns:1fr;width:100%}}
         .ov-red{color:var(--red);font-weight:600}
         .ov-neg-seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--rad);overflow:hidden}
         .ov-neg-btn{background:var(--bg2);border:none;border-left:1px solid var(--border);color:var(--text2);font-size:12px;padding:6px 12px;cursor:pointer}
@@ -2597,8 +2675,11 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         .bl-round-h{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
         .bl-round-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent)}
         .bl-round-h input[type=date]{background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;padding:6px 9px;outline:none}
-        .ov-tbl input.ov-in-l{width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;padding:5px 8px;text-align:left;outline:none}
-        .ov-tbl input.ov-in-l:focus{border-color:var(--accent2)}
+        .ov-tbl input.ov-in-l{width:100%;min-height:30px;box-sizing:border-box;background:linear-gradient(180deg,var(--bg2),var(--bg3));border:1px solid rgba(128,128,128,.38);border-radius:7px;color:var(--text);font-family:var(--mono);font-size:12px;padding:5px 9px;text-align:left;outline:none;box-shadow:inset 0 1px 2px rgba(0,0,0,.10);transition:border-color .15s,box-shadow .15s,background .15s}
+        .ov-tbl input.ov-in-l:hover{border-color:rgba(79,142,247,.55)}
+        .ov-tbl input.ov-in-l:focus{border-color:var(--accent2);background:var(--bg2);box-shadow:0 0 0 2px rgba(79,142,247,.16)}
+        .ov-tbl input.ov-in-l::placeholder{color:var(--text3);font-size:11px}
+        #output-billing-panel .legacy-unpaid-input{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.55)}
         /* ═══ 請款三頁(請款核對/未請款/請款紀錄)統一可讀性 ═══ */
         /* 高對比文字:深色純白、淺色純黑 */
         #output-billing-panel .ov-tbl,#output-unbilled-panel .ov-tbl,#output-archive-panel .ov-tbl{--bfg:#fff}
@@ -2619,21 +2700,32 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         #output-billing-panel .ov-tbl input.ov-in-l{text-align:center}
         #output-billing-panel .ov-tbl input.ov-in-l.num{text-align:right}
         /* 請款核對試算表操作：拖曳/Shift 多選，方向鍵移動，整塊複製貼上與刪除 */
-        #output-billing-panel .ov-tbl input.bl-grid-cell{border-radius:2px;cursor:cell}
+        #output-billing-panel .ov-tbl input.bl-grid-cell{cursor:cell}
         #output-billing-panel .ov-tbl input.bl-grid-selected{background:rgba(79,142,247,.20);box-shadow:inset 0 0 0 1px var(--accent2)}
         #output-billing-panel .ov-tbl input.bl-grid-active{background:rgba(79,142,247,.28);box-shadow:inset 0 0 0 2px var(--accent2)}
         #output-billing-panel .ov-tbl input.bl-util-locked{opacity:.68;cursor:not-allowed;background:rgba(255,193,7,.08)}
         .bl-grid-help{flex:1 1 100%;font-family:var(--mono);font-size:11px;color:var(--text3)}
         .bl-util-wait{display:inline-block;color:var(--yellow);font-size:11px;font-weight:700;white-space:nowrap}
 
+        /* 請款狀況：比照點工計價的小色塊，僅以顏色區分 */
+        .bill-status-pill{display:inline-block;min-width:58px;border:1px solid transparent;border-radius:6px;padding:3px 8px;font-family:var(--mono);font-size:11px;font-weight:700;text-align:center;white-space:nowrap}
+        input.bill-status-pill{width:82px!important;min-height:27px!important;cursor:pointer;box-shadow:none!important}
+        .bill-status-pill.bst-paid{background:#f6e4a6!important;border-color:#dfc76e!important;color:#6b4e00!important}
+        .bill-status-pill.bst-unpaid{background:#d95858!important;border-color:#c43f3f!important;color:#fff!important}
+        .bill-status-pill.bst-unpriced{background:#f1b39f!important;border-color:#df8b73!important;color:#6f2417!important}
+        .bill-status-pill.bst-labor{background:rgba(79,142,247,.12)!important;border-color:rgba(79,142,247,.30)!important;color:var(--accent2)!important}
+        .bill-status-pill.bst-other{background:rgba(245,158,11,.14)!important;border-color:rgba(245,158,11,.38)!important;color:var(--yellow)!important}
         /* 請款核對:要填的欄位(請款價格/日期/狀況/備註)淡藍底 */
-        #output-billing-panel .ov-tbl td:nth-child(8),#output-billing-panel .ov-tbl td:nth-child(14),
-        #output-billing-panel .ov-tbl td:nth-child(15),#output-billing-panel .ov-tbl td:nth-child(17){background:rgba(79,142,247,.08)}
+        #output-billing-panel .ov-round-1 td:nth-child(8),#output-billing-panel .ov-round-2 td:nth-child(8),
+        #output-billing-panel .ov-round-1 td:nth-child(15),#output-billing-panel .ov-round-2 td:nth-child(15),
+        #output-billing-panel .ov-round-1 td:nth-child(16),#output-billing-panel .ov-round-2 td:nth-child(16),
+        #output-billing-panel .ov-round-1 td:nth-child(18),#output-billing-panel .ov-round-2 td:nth-child(18){background:rgba(79,142,247,.08)}
         /* 水電欄位:只有「該列真的有水電」時才上青底(標題列與無水電列不上底色) */
-        #output-billing-panel .ov-tbl tr.has-util td:nth-child(9),
-        #output-billing-panel .ov-tbl tr.has-util td:nth-child(10),
-        #output-billing-panel .ov-tbl tr.has-util td:nth-child(11),
-        #output-billing-panel .ov-tbl tr.has-util td:nth-child(12){background:rgba(125,211,192,.12)}
+        #output-billing-panel .ov-round-1 tr.has-util td:nth-child(9),#output-billing-panel .ov-round-2 tr.has-util td:nth-child(9),
+        #output-billing-panel .ov-round-1 tr.has-util td:nth-child(10),#output-billing-panel .ov-round-2 tr.has-util td:nth-child(10),
+        #output-billing-panel .ov-round-1 tr.has-util td:nth-child(11),#output-billing-panel .ov-round-2 tr.has-util td:nth-child(11),
+        #output-billing-panel .ov-round-1 tr.has-util td:nth-child(12),#output-billing-panel .ov-round-2 tr.has-util td:nth-child(12),
+        #output-billing-panel .ov-round-1 tr.has-util td:nth-child(13),#output-billing-panel .ov-round-2 tr.has-util td:nth-child(13){background:rgba(125,211,192,.12)}
         /* 預估總價紅字 */
         #output-billing-panel .ov-tbl td:nth-child(7){color:var(--red)}
         /* 聚焦中的輸入格更明顯 */
@@ -2669,6 +2761,18 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         .bl-scard .big.ov-red{color:var(--red)}
         .bl-scard .big.ov-grn{color:var(--accent)}
         .ub-group-h{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent2);margin:18px 0 8px}
+        .ub-report-months{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,280px));gap:8px;width:fit-content;max-width:100%;margin:10px 0 14px}
+        .ub-report-month{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);padding:8px 10px;font-family:var(--mono)}
+        .ub-report-month .m{font-size:12px;font-weight:700;color:var(--accent2);margin-bottom:5px}
+        .ub-report-month .r{display:flex;justify-content:space-between;gap:14px;font-size:11px;color:var(--text2);padding:2px 0}
+        .ub-report-month .r b{color:var(--text);font-weight:600}.ub-report-month .r.total{border-top:1px dashed var(--border);margin-top:3px;padding-top:5px}.ub-report-month .r.total b{color:var(--red)}
+        .ub-report-sheet{width:fit-content;max-width:100%;overflow:auto;margin:0 0 14px;border:1px solid var(--border)}
+        .ub-report-table{border-collapse:collapse;min-width:760px;font-family:var(--mono);font-size:12px;background:var(--bg2)}
+        .ub-report-table td{border:1px solid var(--border);padding:4px 8px;text-align:center;white-space:nowrap;color:var(--text)}
+        .ub-report-table .ub-report-title td,.ub-report-table .ub-report-period td:first-child,.ub-report-table .ub-report-total td:first-child{background:#df6b70;color:#111;font-weight:700}
+        .ub-report-table .ub-report-title td{font-size:13px}
+        .ub-report-table .num{text-align:right}.ub-report-table .st-negotiated{background:#f8e2c8;color:#111}.ub-report-table .st-unbilled{background:#df6b70;color:#111;font-weight:700}
+        .ub-report-table .ub-report-total td{font-weight:700}
 
         /* ═══ 單價 / 產值回報:比照請款核對 — 高對比文字 + 工程編號/工程區粗體 + 水電底色 ═══ */
         /* 高對比文字:深色純白、淺色純黑 */
@@ -2694,7 +2798,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         #page-output .btn{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text2);font-family:var(--mono);font-size:11px;font-weight:500;padding:4px 10px;letter-spacing:0;gap:6px}
         #page-output .btn:hover{background:var(--bg4);border-color:var(--accent2);color:var(--accent2)}
         /* ── 每日產值回報:直觀儀表板(單頁可截圖,不需捲動) ── */
-        .ovd-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+        .ovd-kpis{display:grid;grid-template-columns:repeat(4,minmax(130px,170px));gap:8px;margin-bottom:10px;width:fit-content;max-width:100%}
         .ovd-kpi{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:10px 14px;display:flex;flex-direction:column;gap:3px;position:relative;overflow:hidden}
         .ovd-kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent2)}
         .ovd-kpi.k-val::before{background:var(--red)}
@@ -2705,10 +2809,12 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         .ovd-kpi .kpi-unit{font-size:12px;font-weight:600;color:var(--text3);margin-left:2px}
         .ovd-kpi .kpi-sub{font-family:var(--mono);font-size:11px;color:var(--text2);display:flex;justify-content:space-between;gap:8px;border-top:1px dashed rgba(128,128,128,.25);padding-top:4px;margin-top:1px}
         .ovd-kpi .kpi-sub b{color:var(--accent2);font-weight:700}
-        .ovd-body{display:flex;gap:14px;align-items:flex-start}
-        .ovd-table{flex:1 1 auto;min-width:0}
+        .ovd-body{display:flex;gap:10px;align-items:flex-start;width:fit-content;max-width:100%}
+        .ovd-table{flex:0 1 auto;min-width:0;max-width:100%}
+        .ovd-table .card{width:fit-content;max-width:100%}
+        .ovd-table .ov-tbl{width:max-content;min-width:0}
         .ovd-table .table-scroll{max-height:calc(100vh - 340px)}
-        .ovd-side{flex:0 0 300px;display:flex;flex-direction:column;gap:12px}
+        .ovd-side{flex:0 0 260px;display:flex;flex-direction:column;gap:10px}
         @media(max-width:1000px){.ovd-kpis{grid-template-columns:repeat(2,1fr)}}
         @media(max-width:820px){.ovd-body{flex-direction:column}.ovd-side{flex:1 1 100%;width:100%}}
       </style>
@@ -2721,6 +2827,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <button class="layout-tab"        id="otab-report"   onclick="outputSwitchTab('report')">產值回報</button>
         <button class="layout-tab"        id="otab-billing"  onclick="outputSwitchTab('billing')">請款核對</button>
         <button class="layout-tab"        id="otab-unbilled" onclick="outputSwitchTab('unbilled')">未請款</button>
+        <button class="layout-tab"        id="otab-unbilled-report" onclick="outputSwitchTab('unbilled-report')">未請款(回報)</button>
         <button class="layout-tab"        id="otab-archive"  onclick="outputSwitchTab('archive')">請款紀錄</button>
       </div>
       <div id="output-price-panel">
@@ -2750,10 +2857,25 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       </div>
       <div id="output-report-panel" style="display:none">
         <div class="layout-tabs" style="margin-bottom:14px">
+          <button class="layout-tab"        id="ovtab-one" onclick="ovrView('one')">一頁回報</button>
           <button class="layout-tab active" id="ovtab-daily" onclick="ovrView('daily')">每日產值回報</button>
           <button class="layout-tab"        id="ovtab-price" onclick="ovrView('price')">計價統計</button>
           <button class="layout-tab"        id="ovtab-manu"  onclick="ovrView('manu')">製造統計</button>
           <button class="layout-tab"        id="ovtab-eg"    onclick="ovrView('eg')">長榮製造統計</button>
+        </div>
+
+        <!-- 一頁回報：用一個基準日期整合四種日／週期／月統計 -->
+        <div id="ovr-one-view" style="display:none">
+          <div class="ovr-toolbar">
+            <button class="btn" onclick="ovrOneShift(-1)">← 前一天</button>
+            <input type="date" id="ovr-one-date" onchange="ovrRenderOne()"/>
+            <button class="btn" onclick="ovrOneShift(1)">後一天 →</button>
+            <button class="btn" onclick="ovrOneToday()">今天</button>
+            <span class="ovr-wd" id="ovr-one-weekday"></span>
+            <button class="btn" style="margin-left:auto" onclick="ovrCopyOne()">複製回報文字</button>
+            <span id="ovr-one-copied" style="font-family:var(--mono);font-size:11px;color:var(--accent)"></span>
+          </div>
+          <div class="ovr-one-grid" id="ovr-one-grid"><div class="empty-state">載入中...</div></div>
         </div>
 
         <!-- 每日產值回報(儀表板:單頁可截圖) -->
@@ -2830,16 +2952,15 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <button class="btn" onclick="blNav(0)">本月</button>
           <button class="btn" onclick="blNav(1)">下個月 ›</button>
           <span class="ovr-wd" id="bl-label"></span>
+          <input class="search-input" id="bl-search" style="max-width:300px" placeholder="搜尋項目／工程／工程區／代號／副號／公司" oninput="outputSearchLater('billing')"/>
           <button class="btn" style="margin-left:auto" onclick="blLoadDemo()">🧪 載入示範資料</button>
           <span id="bl-saved" style="font-family:var(--mono);font-size:12px;color:var(--text3)">自動儲存</span>
           <button class="btn-add-new" onclick="blArchive()">📦 封存本次請款</button>
           <span class="bl-grid-help">方向鍵移動 · Enter 往同欄下一列 · 拖曳或 Shift 多選 · ⌘/Ctrl+C、V 複製貼上 · Backspace/Delete 刪除</span>
         </div>
-        <datalist id="bl-status-list"><option value="未議價"></option><option value="未請款"></option><option value="已請款"></option><option value="已議價"></option><option value="點工計價"></option><option value="NT合併"></option></datalist>
-
         <div class="bl-round bl-round-1">
           <div class="bl-round-h">
-            <span class="bl-round-title">第一次計價</span>
+            <span class="bl-round-title" id="bl-r1-title">第一次計價</span>
             <span class="ovr-seg-sep">日期區間</span>
             <input type="date" id="bl-r1-from" onchange="blPeriodChanged()"/>
             <span style="color:var(--text3)">~</span>
@@ -2851,7 +2972,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
 
         <div class="bl-round bl-round-2" style="margin-top:24px">
           <div class="bl-round-h">
-            <span class="bl-round-title">第二次計價</span>
+            <span class="bl-round-title" id="bl-r2-title">第二次計價</span>
             <span class="ovr-seg-sep">日期區間</span>
             <input type="date" id="bl-r2-from" onchange="blPeriodChanged()"/>
             <span style="color:var(--text3)">~</span>
@@ -2860,6 +2981,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div id="bl-r2-summary"></div>
           <div class="card" style="padding:0;overflow:auto"><div id="bl-r2-table"><div class="empty-state">載入中...</div></div></div>
         </div>
+        <div id="bl-carry-section" style="display:none;margin-top:24px"></div>
       </div>
 
       <!-- 未請款 -->
@@ -2867,8 +2989,20 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="ovr-toolbar">
           <button class="btn" onclick="ubRender()">🔄 重新整理</button>
           <span class="ovr-wd">未請款彙總（所有月份）</span>
+          <input class="search-input" id="ub-search" style="max-width:300px" placeholder="搜尋項目／工程／工程區／代號／副號／公司" oninput="outputSearchLater('unbilled')"/>
         </div>
         <div id="ub-content"><div class="empty-state">載入中...</div></div>
+      </div>
+
+      <!-- 未請款回報：獨立截圖／複製用，不混在管理明細頁 -->
+      <div id="output-unbilled-report-panel" style="display:none">
+        <div class="ovr-toolbar">
+          <button class="btn" onclick="ubRender()">🔄 重新整理</button>
+          <span class="ovr-wd">未請款一頁回報</span>
+          <button class="btn" style="margin-left:auto" onclick="ubCopyReport()">複製回報文字</button>
+          <span id="ub-copy-status" style="font-family:var(--mono);font-size:11px;color:var(--accent)"></span>
+        </div>
+        <div id="ubr-content"><div class="empty-state">載入中...</div></div>
       </div>
 
       <!-- 請款紀錄(封存;寫死不可改) -->
@@ -2876,6 +3010,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="ovr-toolbar">
           <button class="btn" onclick="arRender()">🔄 重新整理</button>
           <span class="ovr-wd">請款紀錄（依請款日期分月;已封存資料寫死不可修改）</span>
+          <input class="search-input" id="ar-search" style="max-width:300px" placeholder="搜尋項目／工程／工程區／代號／副號／公司" oninput="outputSearchLater('archive')"/>
         </div>
         <div id="ar-content"><div class="empty-state">載入中...</div></div>
       </div>
@@ -2905,6 +3040,40 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       #page-labor .lab-proj-h{ font-size:13px; margin:10px 0 4px; color:var(--text2); }
       #page-labor .lab-total{ text-align:center; padding:14px; }
       #page-labor .lab-total .big{ font-size:30px; font-weight:800; color:var(--danger); font-family:var(--mono); }
+      #page-labor .labor-project-nav{margin-bottom:12px}
+      #page-labor .labor-project-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--text3)}
+      #page-labor .labor-project-back{border:0;background:none;color:var(--accent2);cursor:pointer;padding:2px 0;font:inherit}
+      #page-labor .labor-project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px}
+      #page-labor .labor-project-card{appearance:none;text-align:left;padding:11px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);cursor:pointer;transition:.15s}
+      #page-labor .labor-project-card:hover{border-color:var(--accent2);transform:translateY(-1px)}
+      #page-labor .labor-project-card.active{border-color:var(--accent2);box-shadow:inset 3px 0 0 var(--accent2);background:color-mix(in srgb,var(--accent2) 8%,var(--bg2))}
+      #page-labor .labor-project-card.completed{opacity:.66;border-style:dashed}
+      #page-labor .labor-project-code{font-size:16px;font-weight:750;margin-bottom:6px}
+      #page-labor .labor-project-meta{font-family:var(--mono);font-size:10px;line-height:1.55;color:var(--text3)}
+      #page-labor .labor-project-meta b{color:var(--danger);font-weight:650}
+      #page-labor .labor-ub-switch{display:inline-flex;padding:3px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;gap:2px}
+      #page-labor .labor-ub-switch button{border:0;background:transparent;color:var(--text3);padding:5px 12px;border-radius:6px;cursor:pointer;font:inherit}
+      #page-labor .labor-ub-switch button.active{background:var(--accent2);color:#fff;font-weight:700}
+      #page-labor .labor-ub-report{width:100%;max-width:none}
+      #page-labor .labor-ub-groups{display:grid;width:100%;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+      #page-labor .labor-ub-group-card{min-width:0;border:1px solid var(--border);border-radius:10px;background:var(--bg2);padding:0 8px 8px;overflow:hidden}
+      #page-labor .labor-ub-group-card .lab-group-h{margin-left:-8px;margin-right:-8px;margin-top:0;border-radius:9px 9px 0 0}
+      #page-labor .labor-ub-report .lab-group-h{margin-top:12px;margin-bottom:5px;padding:6px 10px}
+      #page-labor .labor-ub-report .lab-proj-h{margin:7px 0 3px}
+      #page-labor .labor-ub-report .lab-tbl{font-size:11px;table-layout:fixed}
+      #page-labor .labor-ub-report .lab-tbl th,#page-labor .labor-ub-report .lab-tbl td{padding:4px 5px}
+      #page-labor .labor-ub-report .lab-tbl th:nth-child(1){width:125px}#page-labor .labor-ub-report .lab-tbl th:nth-child(2){width:86px}
+      #page-labor .labor-ub-report .lab-tbl th:nth-child(3),#page-labor .labor-ub-report .lab-tbl th:nth-child(4){width:68px}
+      #page-labor .labor-ub-report .lab-tbl th:nth-child(6){width:90px}
+      @media(max-width:1050px){#page-labor .labor-ub-groups{grid-template-columns:1fr}}
+      @media print{
+        body.labor-ub-printing *{visibility:hidden!important}
+        body.labor-ub-printing #labor-unbilled-panel,body.labor-ub-printing #labor-unbilled-panel *{visibility:visible!important}
+        body.labor-ub-printing #labor-unbilled-panel{position:absolute;left:0;top:0;width:100%;background:#fff;color:#000;padding:8mm}
+        body.labor-ub-printing #labor-unbilled-panel .ovr-toolbar{display:none!important}
+        body.labor-ub-printing #labor-unbilled-panel .card{box-shadow:none;border-color:#999}
+        body.labor-ub-printing #labor-unbilled-panel .lab-tbl,body.labor-ub-printing #labor-unbilled-panel td,body.labor-ub-printing #labor-unbilled-panel th{color:#000!important;border-color:#aaa!important}
+      }
     </style>
     <div class="page" id="page-labor">
       <div class="page-header">
@@ -2924,6 +3093,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
 
       <!-- 明細登錄 -->
       <div id="labor-detail-panel">
+        <div class="labor-project-nav" id="labor-project-nav"></div>
         <div class="search-bar" style="display:flex;gap:10px;align-items:center">
           <input class="search-input" id="labor-search" style="flex:1" placeholder="搜尋 編號 / 工程 / 點工內容 / 權責單位 / 主辦..." oninput="laborRender()"/>
           <button class="btn" onclick="laborUndo()" title="復原 (Ctrl+Z)">↶ 復原</button>
@@ -2943,8 +3113,11 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <div id="labor-unbilled-panel" style="display:none">
         <div class="ovr-toolbar">
           <button class="btn" onclick="laborRenderUnbilled()">🔄 重新整理</button>
+          <div class="labor-ub-switch"><button id="labor-ub-by-manager" class="active" onclick="laborSetUbGroup('manager')">依主辦</button><button id="labor-ub-by-project" onclick="laborSetUbGroup('project')">依工程</button></div>
           <input class="search-input" id="labor-ub-search" style="max-width:260px" placeholder="搜尋 主辦 / 工程 / 內容..." oninput="laborRenderUnbilled()"/>
+          <button class="btn" style="margin-left:auto" onclick="laborPrintUnbilled()">列印／PDF</button>
         </div>
+        <div style="margin:0 0 10px;padding:8px 12px;border:1px solid rgba(79,142,247,.28);border-radius:8px;background:rgba(79,142,247,.08);color:var(--text2);font-size:12px">說明：明細登錄的「請款日」有資料就表示已請款；請款日空白才會列入未請款。</div>
         <div id="labor-ub-content"><div class="empty-state">載入中...</div></div>
       </div>
 
@@ -7967,6 +8140,8 @@ function navTo(page) {
     if(fb && fb.k!==page) return navTo(fb.k);
     return;
   }
+  // 離開點工單前立即送出尚未完成的自動儲存，避免切頁太快漏存。
+  if(page!=='labor' && document.getElementById('page-labor')?.classList.contains('active') && typeof window.laborFlushNow==='function') window.laborFlushNow();
   setView({page});   // 記住目前頁面,重新整理後回到此頁
   closeNav(); // 手機版:選完自動收回側欄
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -16592,11 +16767,18 @@ function openColFilter(ev, tableKey, colKey, allValues) {
   document.body.appendChild(dd);
   const r = btn.getBoundingClientRect();
   let left = r.left;
-  if (left + 240 > window.innerWidth) left = window.innerWidth - 250;
-  dd.style.left = left + 'px';
-  dd.style.top = (r.bottom + 4) + 'px';
   activeFilterDropdown = { dd, tableKey, colKey, distinct, working };
   cfRenderList('');
+  // 清單內容產生後才量實際高度；搜尋與底部按鈕固定，只有選項清單捲動。
+  var margin=8,below=r.bottom+4,spaceBelow=window.innerHeight-margin-below,spaceAbove=r.top-margin-4;
+  var naturalHeight=dd.scrollHeight, useAbove=spaceBelow<naturalHeight&&spaceAbove>spaceBelow;
+  var available=Math.max(120,useAbove?spaceAbove:spaceBelow);
+  dd.style.maxHeight=Math.min(window.innerHeight-margin*2,available)+'px';
+  var ddHeight=Math.min(dd.scrollHeight,parseFloat(dd.style.maxHeight)||dd.scrollHeight);
+  var top=useAbove?(r.top-ddHeight-4):below;
+  top=Math.max(margin,Math.min(top,window.innerHeight-ddHeight-margin));
+  left=Math.max(margin,Math.min(left,window.innerWidth-dd.offsetWidth-margin));
+  dd.style.left=left+'px'; dd.style.top=top+'px';
 }
 
 // render the checkbox list filtered by search query, reflecting the working set
@@ -16650,6 +16832,8 @@ function cfApply() {
   else if (tableKey === 'layout') renderLayoutInput();
   else if (tableKey === 'staff') renderStaff();
   else if (tableKey === 'ovprice' && typeof window.outputRenderPrice === 'function') window.outputRenderPrice();
+  else if (tableKey === 'labordetail' && typeof window.laborRender === 'function') window.laborRender();
+  else if (tableKey === 'laborret' && typeof window.laborRenderRetention === 'function') window.laborRenderRetention();
   else if ((tableKey === 'track' || tableKey === 'reserved' || tableKey === 'product') && typeof spxRender === 'function') spxRender(tableKey);
 }
 function closeColFilter() {
@@ -16661,6 +16845,50 @@ document.addEventListener('mousedown', e => {
 
 // ── Excel 式多選複製貼上 ──
 let tblSel = { table:null, anchor:null, focus:null, selecting:false };
+
+function selectionStatsValue(node){
+  const ctl=node.matches&&node.matches('input,select')?node:node.querySelector&&node.querySelector('input,select');
+  if(ctl){ if(ctl.type==='checkbox') return ctl.checked?'1':''; return String(ctl.value||'').trim(); }
+  return String(node.textContent||'').trim();
+}
+function selectionStatsNumber(raw){
+  let s=String(raw||'').trim(); if(!s||/^[-—]+$/.test(s)) return null;
+  if(/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/.test(s)||/^\d{1,2}:\d{2}/.test(s)) return null;
+  s=s.replace(/NT\$|[$,，]/gi,'').replace(/\s/g,'').replace(/(公斤|小時|元|支|筆|區|kg|KG|t)$/,'');
+  if(!/^[-+]?\d+(?:\.\d+)?$/.test(s)) return null;
+  const n=Number(s); return Number.isFinite(n)?n:null;
+}
+function updateExcelSelectionStats(){
+  let bar=document.getElementById('excel-selection-stats');
+  if(!bar){ bar=document.createElement('div');bar.id='excel-selection-stats';document.body.appendChild(bar); }
+  const nodes=Array.from(document.querySelectorAll('td.cell-selected'))
+    .concat(Array.from(document.querySelectorAll('#output-billing-panel input.bl-grid-cell.bl-grid-selected')));
+  let count=0,sum=0,numeric=0;
+  nodes.forEach(n=>{const v=selectionStatsValue(n);if(v!=='')count++;const x=selectionStatsNumber(v);if(x!=null){sum+=x;numeric++;}});
+  if(!nodes.length){bar.style.display='none';return;}
+  bar.innerHTML='<span>數量 <b>'+count.toLocaleString('zh-TW')+'</b></span><span>合計 <b class="sum">'+(numeric?sum.toLocaleString('zh-TW',{maximumFractionDigits:2}):'—')+'</b></span>';
+  bar.style.display='flex';
+}
+// 各功能有些使用自己的選取程式；監看選取 class，統一更新右下角統計。
+setTimeout(function(){
+  if(!document.body)return;
+  new MutationObserver(function(ms){
+    if(ms.some(m=>m.target&&m.target.matches&&m.target.matches('td.cell-selected,td,input.bl-grid-cell'))) updateExcelSelectionStats();
+  }).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
+},0);
+document.addEventListener('input',function(e){ if(e.target&&e.target.closest&&e.target.closest('td.cell-selected')) updateExcelSelectionStats(); });
+const EXCEL_FOCUS_TABLE_SEL='.layout-table,.att-grid,.lab-tbl,.spx-table,.gx-table,#output-billing-panel .ov-tbl';
+function updateExcelFocusRow(target){
+  const td=target&&target.closest?target.closest('td'):null;
+  const table=td&&td.closest?td.closest(EXCEL_FOCUS_TABLE_SEL):null;
+  document.querySelectorAll('tr.excel-row-focus').forEach(tr=>tr.classList.remove('excel-row-focus'));
+  if(table){const tr=td.closest('tbody tr');if(tr)tr.classList.add('excel-row-focus');}
+}
+document.addEventListener('focusin',function(e){updateExcelFocusRow(e.target);});
+document.addEventListener('mousedown',function(e){
+  if(e.target&&e.target.closest&&e.target.closest(EXCEL_FOCUS_TABLE_SEL+' td')) updateExcelFocusRow(e.target);
+  else if(!e.target.closest||!e.target.closest(EXCEL_FOCUS_TABLE_SEL)) updateExcelFocusRow(null);
+},true);
 
 function cellRC(td) {
   const tr = td.closest('tr');
@@ -16674,6 +16902,7 @@ function cellRC(td) {
 function tblClearSel() {
   if (!tblSel.table) return;
   tblSel.table.querySelectorAll('td.cell-selected').forEach(td => td.classList.remove('cell-selected'));
+  updateExcelSelectionStats();
 }
 
 // 目前在 table 內被選取的儲存格矩形範圍(無選取則回傳 null)
@@ -16704,6 +16933,11 @@ function tblApplySel() {
       if (cells[c]) cells[c].classList.add('cell-selected');
     }
   }
+  // 目前列跟著 tblSel.focus 的儲存格走；純文字/唯讀格不需要 input 取得焦點。
+  const focusTr=rows[tblSel.focus.r];
+  const focusTd=focusTr&&focusTr.children[tblSel.focus.c];
+  if(focusTd) updateExcelFocusRow(focusTd);
+  updateExcelSelectionStats();
 }
 
 function tblInitSelection(table) {
@@ -16843,6 +17077,9 @@ document.addEventListener('paste', e => {
     } else if (tbl.classList.contains('spx-table') && typeof spxPasteGrid === 'function') {
       e.preventDefault();
       spxPasteGrid(tbl.id.replace('spx-',''), cells2d, startAnchor);
+    } else if (tbl.id === 'labor-ret-grid' && typeof window.laborRetentionPasteGrid === 'function') {
+      e.preventDefault();
+      window.laborRetentionPasteGrid(cells2d,startAnchor);
     } else if (active && active.tagName === 'SELECT') {
       // 下拉選單(如出勤回報「請假類別」):瀏覽器預設無法貼進 <select>,改為程式寫入
       e.preventDefault();
@@ -16867,6 +17104,11 @@ document.addEventListener('paste', e => {
   // 點工單明細:自動補列 + 依欄位填入
   if (tblSel.table.id === 'labor-grid' && typeof window.laborPasteGrid === 'function') {
     window.laborPasteGrid(cells2d, startAnchor);
+    return;
+  }
+  // 點工單保留款:日期／核銷金額支援 Excel 式單格與多格貼上
+  if (tblSel.table.id === 'labor-ret-grid' && typeof window.laborRetentionPasteGrid === 'function') {
+    window.laborRetentionPasteGrid(cells2d, startAnchor);
     return;
   }
 
@@ -19985,7 +20227,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   };
 
   window.outputSwitchTab=function(t){
-    ['price','report','billing','unbilled','archive'].forEach(function(x){
+    ['price','report','billing','unbilled','unbilled-report','archive'].forEach(function(x){
       var b=document.getElementById('otab-'+x); if(b) b.classList.toggle('active', x===t);
       var p=document.getElementById('output-'+x+'-panel'); if(p) p.style.display=(x===t)?'':'none';
     });
@@ -19994,6 +20236,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(t==='report'   && typeof window.ovrInit==='function') window.ovrInit();
     if(t==='billing'  && typeof window.blInit==='function')  window.blInit();
     if(t==='unbilled' && typeof window.ubInit==='function')  window.ubInit();
+    if(t==='unbilled-report' && typeof window.ubInit==='function') window.ubInit();
     if(t==='archive'  && typeof window.arInit==='function')  window.arInit();
   };
 
@@ -20203,8 +20446,9 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   var ovrDaily=[];            // daily_output 原始列
   var ovrZoneMap={};          // zkey -> zone 物件(單價/水電...)
   var ovrAttCache={};         // 'YYYY-MM' -> att_report 陣列
-  var ovrCurView='daily';
+  var ovrCurView='one';
   var ovrStatMonth={};        // mode -> 'YYYY-MM' 產量月
+  var ovrOneText='';
 
   function zkey(proj,zone){ return String(proj||'').trim().toUpperCase()+'|'+String(zone||'').trim().toUpperCase(); }
   function classify(spec){
@@ -20243,6 +20487,13 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(mode==='price') return { from:mkDate(y,m-1,16), to:mkDate(y,m,15) };
     if(mode==='eg')    return { from:mkDate(y,m-1,26), to:mkDate(y,m,25) };
     var from=mkDate(y,m,1); return { from:from, to:monthEndOf(from) };  // manu
+  }
+  // 由一頁回報的基準日期，推算三種統計各自的產量月
+  function prodMonthAt(mode,dateStr){
+    var y=+dateStr.slice(0,4),m=+dateStr.slice(5,7),d=+dateStr.slice(8,10);
+    if(mode==='price') return d<=15?ymStr(y,m):ymStr(y,m+1);
+    if(mode==='eg') return d<=25?ymStr(y,m):ymStr(y,m+1);
+    return ymStr(y,m);
   }
   // 更新「X月產量」標籤（依輸入框推算）
   function ovrStatLabel(mode){
@@ -20351,19 +20602,67 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     ovrStatApply('price', defaultProdMonth('price'), false);
     ovrStatApply('manu',  defaultProdMonth('manu'),  false);
     ovrStatApply('eg',    defaultProdMonth('eg'),    false);
-    ovrView('daily');
+    var oneDate=document.getElementById('ovr-one-date'); if(oneDate&&!oneDate.value) oneDate.value=latest;
+    ovrView('one');
   };
 
   window.ovrView=function(v){
     ovrCurView=v;
-    var views={daily:'ovr-daily-view',price:'ovr-price-view',manu:'ovr-manu-view',eg:'ovr-eg-view'};
-    var tabs={daily:'ovtab-daily',price:'ovtab-price',manu:'ovtab-manu',eg:'ovtab-eg'};
+    var views={one:'ovr-one-view',daily:'ovr-daily-view',price:'ovr-price-view',manu:'ovr-manu-view',eg:'ovr-eg-view'};
+    var tabs={one:'ovtab-one',daily:'ovtab-daily',price:'ovtab-price',manu:'ovtab-manu',eg:'ovtab-eg'};
     Object.keys(views).forEach(function(k){
       var el=document.getElementById(views[k]); if(el) el.style.display=(k===v)?'':'none';
       var tb=document.getElementById(tabs[k]); if(tb) tb.classList.toggle('active',k===v);
     });
-    if(v==='daily') ovrRenderDaily();
+    if(v==='one') ovrRenderOne();
+    else if(v==='daily') ovrRenderDaily();
     else ovrRenderStat(v);
+  };
+
+  function oneSummary(from,to){
+    var agg=aggRange(from,to),tons=0,qty=0,val=0,utilT=0,utilVal=0;
+    Object.keys(agg).forEach(function(k){
+      var o=agg[k],z=ovrZoneMap[k]||{},t=o.kg/1000,u=(z.util_weight_kg==null?0:num(z.util_weight_kg)/1000);
+      tons+=t; qty+=o.qty; val+=t*num(z.unit_price); utilT+=u; utilVal+=u*num(z.util_price);
+    });
+    return {tons:tons,qty:qty,val:val,utilT:utilT,utilVal:utilVal};
+  }
+  function oneCard(title,range,s,extraLabel,extraValue){
+    return '<div class="ovr-one-card"><div class="ovr-one-head"><span class="ovr-one-title">'+title+'</span><span class="ovr-one-range">'+range+'</span></div>'
+      +'<div class="ovr-one-values">'
+      +'<div class="ovr-one-value"><span class="lbl">產值</span><span class="big hi">'+ntd(s.val)+'</span></div>'
+      +'<div class="ovr-one-value"><span class="lbl">噸數</span><span class="big">'+t2(s.tons)+' t</span></div>'
+      +'<div class="ovr-one-value"><span class="lbl">支數</span><span class="big">'+intf(s.qty)+' 支</span></div>'
+      +'<div class="ovr-one-value"><span class="lbl">'+extraLabel+'</span><span class="big">'+extraValue+'</span></div>'
+      +'</div></div>';
+  }
+  window.ovrRenderOne=async function(){
+    var dp=document.getElementById('ovr-one-date'); if(!dp) return;
+    var d=dp.value||todayStr(); dp.value=d;
+    var wd=document.getElementById('ovr-one-weekday'); if(wd) wd.textContent=weekdayName(d);
+    var day=oneSummary(d,d), modes=['price','manu','eg'], labels={price:'計價統計',manu:'製造月統計',eg:'工程製造月統計'};
+    var html='', lines=['產值一頁回報｜'+d+' '+weekdayName(d)];
+    var att={dayGong:0,dayStaff:0}; try{ att=await ovrAtt(d); }catch(e){ console.warn('ovrOne attendance failed',e); }
+    html+=oneCard('每日產值',d,day,'出勤',t2(att.dayGong)+' 工 / '+intf(att.dayStaff)+' 人');
+    lines.push('每日：'+t2(day.tons)+' t｜'+intf(day.qty)+' 支｜'+ntd(day.val)+'｜出勤 '+t2(att.dayGong)+' 工');
+    modes.forEach(function(mode){
+      var ym=prodMonthAt(mode,d),range=cycleFromMonth(mode,ym),s=oneSummary(range.from,range.to);
+      html+=oneCard(labels[mode],range.from+' ～ '+range.to,s,'含水電總價',ntd(s.val+s.utilVal));
+      lines.push(labels[mode]+'（'+range.from+'～'+range.to+'）：'+t2(s.tons)+' t｜'+intf(s.qty)+' 支｜'+ntd(s.val)+'｜含水電 '+ntd(s.val+s.utilVal));
+    });
+    var grid=document.getElementById('ovr-one-grid'); if(grid) grid.innerHTML=html;
+    ovrOneText=lines.join('\n');
+  };
+  window.ovrOneShift=function(delta){ var dp=document.getElementById('ovr-one-date'); if(dp){ dp.value=shiftDay(dp.value||todayStr(),delta); ovrRenderOne(); } };
+  window.ovrOneToday=function(){ var dp=document.getElementById('ovr-one-date'); if(dp){ dp.value=todayStr(); ovrRenderOne(); } };
+  window.ovrCopyOne=async function(){
+    var msg=document.getElementById('ovr-one-copied');
+    try{ await navigator.clipboard.writeText(ovrOneText); if(msg) msg.textContent='已複製 ✓'; }
+    catch(e){
+      var ta=document.createElement('textarea'); ta.value=ovrOneText; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select();
+      var ok=document.execCommand('copy'); ta.remove(); if(msg) msg.textContent=ok?'已複製 ✓':'複製失敗';
+    }
+    setTimeout(function(){ if(msg) msg.textContent=''; },1800);
   };
 
   window.ovrDailyShift=function(delta){
@@ -20530,6 +20829,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
 })();
 </script>
 
+<script src="billing_legacy_data.js"></script>
 <!-- 請款核對 / 未請款 (billing) -->
 <script>
 (function(){
@@ -20541,10 +20841,20 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   var blMonth='';        // 'YYYY-MM' 產量月
   var blPeriods={};      // ym -> {r1from,r1to,r2from,r2to} 本次操作記住的計價期間(改過就記,不必存檔)
   var blRecords={};      // 'round|zid' -> record(含輸入欄)
+  var blCarryovers=[];   // 歷史未請款，依實際請款日期承接到當期
   var blDirty={};        // 'round|zid' -> true
   var blRowsCache={1:[],2:[]};
-  var blProjectComplete={}; // 工程編號 -> 所有工程區是否都已完成
+  var blZoneNeed={};        // 工程編號|工程區 -> 該區 BOM 總支數
   var blGridAnchor=null, blGridActive=null, blGridDragging=false;
+  var blLegacy=(typeof window!=='undefined'&&window.BILLING_LEGACY_DATA)||{};
+  var blLegacyUnbilled=((typeof window!=='undefined'&&window.BILLING_LEGACY_UNBILLED)||[]).slice();
+  // 原始 TSV「累計至 2026/06 未請款」誤標為 2025/05；依實際區間 2026/04/26～05/15 更正至 2026/05 第二次計價。
+  blLegacyUnbilled.push(
+    {ym:'2026-05',round:2,proj_num:'B814',zone_code:'A82B',proc_code:'CFB552',sub_code:'A001',tons:'0.00 t',qty:'6 支',amount:'NT$0.00',status:'點工計價',note:''},
+    {ym:'2026-05',round:2,proj_num:'B814',zone_code:'A82P',proc_code:'CFN549',sub_code:'A001',tons:'0.73 t',qty:'2 支',amount:'NT$0.00',status:'點工計價',note:''},
+    {ym:'2026-05',round:2,proj_num:'B820',zone_code:'6BG水電',proc_code:'CFH524',sub_code:'',tons:'18.36 t',qty:'',amount:'NT$495,822.06',status:'未請款',note:''}
+  );
+  function isLegacyViewYm(ym){ return ym>='2023-01'&&ym<='2026-06'&&!!blLegacy[ym]; }
 
   function pad(n){ return String(n).padStart(2,'0'); }
   function zkey(proj,zone){ return String(proj||'').trim().toUpperCase()+'|'+String(zone||'').trim().toUpperCase(); }
@@ -20571,6 +20881,11 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   // \u4f9d\u65e5\u671f\u53cd\u63a8\u300c\u7522\u91cf\u6708 + \u8a08\u50f9\u6b21\u5225\u300d:>=16 \u65e5 \u2192 \u6b21\u6708\u7b2c\u4e00\u6b21;<=15 \u65e5 \u2192 \u7576\u6708\u7b2c\u4e8c\u6b21
   function ymRoundOf(dateStr){
     var y=+dateStr.slice(0,4), m=+dateStr.slice(5,7), d=+dateStr.slice(8,10);
+    // 2026/07 起：每月 16～25 日為次月第一次，26 日～次月 15 日為次月第二次。
+    if(dateStr>='2026-06-16'){
+      if(d>=16){ var ny=y,nm=m+1; if(nm>12){nm=1;ny++;} return {ym:ny+'-'+pad(nm),round:d<=25?1:2}; }
+      return {ym:y+'-'+pad(m),round:2};
+    }
     if(d>=16){ var nm=m+1, ny=y; if(nm>12){nm-=12;ny++;} return { ym:ny+'-'+pad(nm), round:1 }; }
     return { ym:y+'-'+pad(m), round:2 };
   }
@@ -20594,10 +20909,23 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(unitPrice==null || num(unitPrice)===0) return '\u672a\u8b70\u50f9';
     return '\u672a\u8acb\u6b3e';
   }
+  function billStatusClassName(st){
+    st=String(st||'').trim();
+    if(st==='點工計價'||/點工/.test(st)) return 'bst-labor';
+    if(st==='已請款'||/已請款/.test(st)) return 'bst-paid';
+    if(st==='未請款'||/未請款/.test(st)) return 'bst-unpaid';
+    if(st==='未議價'||/未議價/.test(st)) return 'bst-unpriced';
+    return 'bst-other';
+  }
+  window.blPaintStatus=function(el){ if(!el)return; el.classList.remove('bst-paid','bst-unpaid','bst-unpriced','bst-labor','bst-other'); el.classList.add(billStatusClassName(el.value!=null?el.value:el.textContent)); };
 
   // 兩次計價的預設日期區間(依產量月 ym)：第一次 (前月)16~月底、第二次 1~15
   function roundDates(ym){
     var y=+ym.slice(0,4), m=+ym.slice(5,7);
+    if(ym<'2026-03') return {
+      1:{ from:mkDate(y,m-1,16), to:mkDate(y,m,15) },
+      2:{ from:'', to:'' }
+    };
     return {
       1:{ from:mkDate(y,m-1,16), to:monthEndOf(mkDate(y,m-1,1)) },
       2:{ from:mkDate(y,m,1),    to:mkDate(y,m,15) }
@@ -20609,10 +20937,22 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var lb=document.getElementById('bl-label'); if(lb) lb.textContent=(+ym.slice(5,7))+'月產量　('+ym+')';
     var f1=document.getElementById('bl-r1-from'), t1=document.getElementById('bl-r1-to');
     var f2=document.getElementById('bl-r2-from'), t2e=document.getElementById('bl-r2-to');
+    var legacy=blLegacy[ym]||null;
     var p=blPeriods[ym];        // 本次操作已改過此月 → 沿用,不套預設
     var d=roundDates(ym);
-    if(f1) f1.value=p?p.r1from:d[1].from; if(t1) t1.value=p?p.r1to:d[1].to;
-    if(f2) f2.value=p?p.r2from:d[2].from; if(t2e) t2e.value=p?p.r2to:d[2].to;
+    if(legacy&&legacy.length){
+      if(f1) f1.value=legacy[0].from||''; if(t1) t1.value=legacy[0].to||'';
+      if(f2) f2.value=legacy[1]?legacy[1].from:''; if(t2e) t2e.value=legacy[1]?legacy[1].to:'';
+    }else{
+      if(f1) f1.value=p?p.r1from:d[1].from; if(t1) t1.value=p?p.r1to:d[1].to;
+      if(f2) f2.value=p?p.r2from:d[2].from; if(t2e) t2e.value=p?p.r2to:d[2].to;
+    }
+    [f1,t1,f2,t2e].forEach(function(el){if(el) el.disabled=isLegacyViewYm(ym);});
+    var oldSingle=ym<'2026-03', r2=document.querySelector('#output-billing-panel .bl-round-2');
+    if(r2) r2.style.display=oldSingle?'none':'';
+    var h1=document.getElementById('bl-r1-title'),h2=document.getElementById('bl-r2-title');
+    if(h1) h1.textContent=oldSingle?'計價':'第一次計價';
+    if(h2) h2.textContent='第二次計價';
   }
   // 把目前四個日期欄記到 blPeriods[blMonth](使用者一改日期就記,不必存檔)
   function capturePeriod(){
@@ -20631,6 +20971,11 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var arr=Array.isArray(res.data)?res.data:[];
     arr.forEach(function(r){ blRecords[r.round+'|'+r.zone_id]=r; });
   }
+  async function loadCarryovers(ym){
+    if(blDemo){ blCarryovers=[]; return; }
+    var res=await sbFetchAll('/rest/v1/billing_carryovers?settlement_ym=eq.'+ym+'&select=*');
+    blCarryovers=Array.isArray(res.data)?res.data:[];
+  }
 
   var blDemo=false;   // 示範資料模式:略過 Supabase 抓取,不覆蓋注入的假資料
   var blDemoRec={};   // 示範用:已存的請款紀錄 'ym|round|zid' -> payload
@@ -20641,8 +20986,9 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(blDemo) return;
     var res=await Promise.all([
       sbFetchAll('/rest/v1/daily_output?select=date,proj_num,zone_code,net_weight,company'),
-      sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,sub_code,proc_code,unit_price,util_price,util_weight_kg,util_proc_code,price_note'),
-      sbFetchAll('/rest/v1/projects?select=id,proj_num,company')
+      sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,sub_code,proc_code,unit_price,util_price,util_weight_kg,util_proc_code,price_note,status'),
+      sbFetchAll('/rest/v1/projects?select=id,proj_num,company'),
+      sbFetchAll('/rest/v1/components?select=zone_id,qty')
     ]);
     var proj={};
     var pr=Array.isArray(res[2].data)?res[2].data:((typeof allBOM!=='undefined'&&Array.isArray(allBOM))?allBOM:[]);
@@ -20650,19 +20996,20 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     pr.forEach(function(p){ proj[String(p.id)]=p.proj_num; if(p.proj_num) blProjCompany[String(p.proj_num).trim().toUpperCase()]=(p.company||'').trim(); });
     blDaily=Array.isArray(res[0].data)?res[0].data:[];
     blZoneMap={};
-    blProjectComplete={};
+    blZoneNeed={};
     var zr=Array.isArray(res[1].data)?res[1].data:[];
-    var zoneStates={};
+    var zoneKeyById={};
     zr.forEach(function(z){
       var pn=proj[String(z.project_id)]||'';
-      blZoneMap[zkey(pn,z.zone_code)]={ zid:z.id, proc_code:z.proc_code, sub_code:z.sub_code,
+      var zk=zkey(pn,z.zone_code); zoneKeyById[String(z.id)]=zk;
+      blZoneMap[zk]={ zid:z.id, proc_code:z.proc_code, sub_code:z.sub_code,
         unit_price:z.unit_price, util_price:z.util_price, util_weight_kg:z.util_weight_kg, util_proc_code:z.util_proc_code||'', price_note:z.price_note||'' };
-      (zoneStates[String(z.project_id)]||(zoneStates[String(z.project_id)]=[])).push(String(z.status||'').trim());
     });
-    // 同一工程編號的所有工程區都為「已完成」，才開放水電重量與水電請款。
-    Object.keys(zoneStates).forEach(function(pid){
-      var pn=proj[pid]||'';
-      if(pn) blProjectComplete[String(pn).trim().toUpperCase()]=zoneStates[pid].length>0 && zoneStates[pid].every(function(s){ return s==='已完成'; });
+    // 單一工程區完成判斷：該區累計完成/報驗支數 >= 該區 BOM 總支數。
+    var zoneNeed={};
+    (Array.isArray(res[3].data)?res[3].data:[]).forEach(function(c){ var id=String(c.zone_id); zoneNeed[id]=(zoneNeed[id]||0)+Math.max(0,parseInt(c.qty)||0); });
+    Object.keys(zoneKeyById).forEach(function(id){
+      blZoneNeed[zoneKeyById[id]]=zoneNeed[id]||0;
     });
     // 報驗公司:各工程區出貨資料中最常出現的公司(作為 projects.company 的後備)
     var tally={};
@@ -20684,6 +21031,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(!blMonth) setMonthUI(defaultBillMonth());
     await applyChainDefaults(blMonth);
     await loadRecords(blMonth);
+    await loadCarryovers(blMonth);
     blRender();
   };
 
@@ -20694,20 +21042,85 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     blSaved('載入中...','var(--text3)');
     await applyChainDefaults(ym);
     await loadRecords(ym);
+    await loadCarryovers(ym);
     blSaved('');
     blRender();
   };
 
   window.blRender=function(){
     blGridAnchor=null; blGridActive=null; blGridDragging=false;
-    blRenderRound(1); blRenderRound(2);
+    if(isLegacyViewYm(blMonth)){ blRenderLegacy(); renderCarryovers(); return; }
+    blRenderRound(1); blRenderRound(2); renderCarryovers();
   };
+
+  function renderCarryovers(){
+    var el=document.getElementById('bl-carry-section'); if(!el) return;
+    if(!blCarryovers.length){el.style.display='none';el.innerHTML='';return;}
+    var body='';
+    blCarryovers.slice().sort(function(a,b){return (a.settlement_round-b.settlement_round)||String(a.source_ym).localeCompare(String(b.source_ym));}).forEach(function(r){
+      var amt=billNum(r.bill_price)+billNum(r.util_bill_price);
+      body+='<tr class="ar-r'+(+r.settlement_round===2?2:1)+'"><td>'+esc(r.source_ym)+'</td><td>第'+(+r.settlement_round===1?'一':'二')+'次</td>'
+        +'<td>'+esc(r.proj_num||'')+'</td><td>'+esc(r.zone_code||'')+'</td><td>'+esc(r.proc_code||'')+'</td><td>'+esc(r.sub_code||'')+'</td>'
+        +'<td class="num">'+fmtBill(r.bill_price)+'</td><td class="num">'+(r.util_bill_price?fmtBill(r.util_bill_price):'—')+'</td>'
+        +'<td class="num">'+ntd(amt)+'</td><td>'+esc(r.bill_date||'')+'</td><td'+coStyle(r.company)+'>'+esc(r.company||'—')+'</td><td>'+esc(r.note||'')+'</td></tr>';
+    });
+    el.style.display=''; el.innerHTML='<div class="ub-group-h">歷史未請款承接（計入本月實際請款，不重複計算產量）</div>'
+      +'<div class="card" style="padding:0;overflow:auto"><table class="data-table ov-tbl"><thead><tr><th>來源月份</th><th>結算次別</th><th>工程編號</th><th>工程區</th><th>加工代號</th><th>副號</th><th class="num">主件請款</th><th class="num">水電請款</th><th class="num">合計</th><th>請款日期</th><th>公司</th><th>備註</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+  }
+
+  function legacyVal(v){ var s=String(v==null?'':v); return s.trim()?esc(s):'—'; }
+  function legacyUnpaid(v,status){
+    var s=String(v==null?'':v).trim(),st=String(status==null?'':status);
+    return blMonth>='2025-08'&&blMonth<='2026-06' && (!s || /未請款|未過|申議/.test(s+' '+st));
+  }
+  function blRenderLegacyRound(round,period){
+    var tableEl=document.getElementById('bl-r'+round+'-table'),sumEl=document.getElementById('bl-r'+round+'-summary');
+    if(!tableEl) return;
+    if(!period){ tableEl.innerHTML=''; if(sumEl) sumEl.innerHTML=''; return; }
+    var body=''; blRowsCache[round]=[];
+    var legacyQ=outputQuery('bl-search');
+    var legacyRows=period.rows.filter(function(r){
+      var item=String(r.util_proc_code||'').trim()&&!/^-$/.test(String(r.util_proc_code||'').trim())?'主件 水電':'主件';
+      return outputSearchMatch(r,legacyQ,item);
+    });
+    legacyRows.forEach(function(r,rowIndex){
+      var z=blZoneMap[zkey(r.proj_num,r.zone_code)]||{},zid=z.zid==null?null:z.zid;
+      var snap={zid:zid,proj_num:r.proj_num,zone_code:r.zone_code,proc_code:r.proc_code,sub_code:r.sub_code,
+        tons:num(r.tons),qty:num(r.qty),total:billNum(r.total_price),unit_price:z.unit_price,price_note:z.price_note||'',
+        util_proc_code:r.util_proc_code,util_weight:num(r.util_weight),util_total:billNum(r.util_total),company:r.company||companyOf(r.proj_num,zkey(r.proj_num,r.zone_code))};
+      if(zid!=null) blRowsCache[round].push(snap);
+      var key=round+'|'+zid,rec=zid==null?{}:(blRecords[key]||(blRecords[key]={
+        bill_price:r.bill_price,util_bill_price:r.util_bill_price,bill_date:r.bill_date,bill_status:r.bill_status,note:''
+      }));
+      var mainOpen=zid!=null&&legacyUnpaid(rec.bill_price,rec.bill_status);
+      var hasUtil=String(r.util_proc_code||'').trim()&&!/^-$/.test(String(r.util_proc_code||'').trim());
+      var utilOpen=round===2&&zid!=null&&hasUtil&&legacyUnpaid(rec.util_bill_price,rec.bill_status);
+      var mainCell=mainOpen?'<input class="ov-in-l num legacy-unpaid-input" value="'+escAttr(fmtBill(rec.bill_price))+'" placeholder="未請款：輸入請款價格" oninput="blCell('+round+','+zid+',\'bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)">':legacyVal(r.bill_price);
+      var utilCell=utilOpen?'<input class="ov-in-l num legacy-unpaid-input" value="'+escAttr(fmtBill(rec.util_bill_price))+'" placeholder="未請款：輸入水電請款" oninput="blCell('+round+','+zid+',\'util_bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)">':legacyVal(r.util_bill_price);
+      body+='<tr><td>'+legacyVal(r.proj_num)+'</td><td>'+legacyVal(r.zone_code)+'</td><td>'+legacyVal(r.proc_code)+'</td><td>'+legacyVal(r.sub_code)+'</td>'
+        +'<td class="num">'+legacyVal(r.tons)+'</td><td class="num">'+legacyVal(r.qty)+'</td><td class="num">'+legacyVal(r.total_price)+'</td>'
+        +'<td class="num">'+mainCell+'</td><td>'+legacyVal(r.util_proc_code)+'</td><td class="num">'+legacyVal(r.util_weight)+'</td>'
+        +'<td class="num">'+legacyVal(r.util_total)+'</td><td><span class="bill-status-pill '+billStatusClassName(r.bill_status)+'">'+legacyVal(r.bill_status)+'</span></td><td class="num">'+utilCell+'</td>'
+        +'<td>'+legacyVal(r.bill_date)+'</td><td>'+legacyVal(r.company)+'</td></tr>';
+    });
+    if(!body) body='<tr><td colspan="15" class="empty-state">原始檔此區間沒有資料</td></tr>';
+    tableEl.innerHTML='<table class="data-table ov-tbl"><thead><tr><th>工程編號</th><th>工程區</th><th>加工代號</th><th>工程副號</th>'
+      +'<th class="num">總噸數</th><th class="num">總支數</th><th class="num">總價</th><th class="num">請款價格</th>'
+      +'<th>水電加工代號</th><th class="num">水電重量</th><th class="num">水電總價</th><th>議價狀況</th>'
+      +'<th class="num">水電請款價格</th><th>請款日期</th><th>公司</th></tr></thead><tbody>'+body+'</tbody></table>';
+    if(sumEl) sumEl.innerHTML='<div class="bl-summary"><div class="bl-scard"><span class="lbl">資料來源</span><span class="big">原始每月計價 · '+legacyRows.length+' 筆</span></div></div>';
+  }
+  function blRenderLegacy(){
+    var periods=blLegacy[blMonth]||[];
+    blRenderLegacyRound(1,periods[0]); blRenderLegacyRound(2,periods[1]);
+    blSaved('已載入原始每月計價資料','var(--success)');
+  }
 
   // ── 示範資料(僅供畫面/流程測試;不寫入資料庫。測完可整段移除) ──
   window.blLoadDemo=function(){
     blDemo=true;
     blProjCompany={'A101':'鎮山','B202':'麗生'};
-    blProjectComplete={'A101':false,'B202':true};
+    blZoneNeed={'A101|Z1':10,'A101|Z2':10,'B202|Z1':2};
     blZoneMap={
       'A101|Z1':{zid:101,proc_code:'P10',sub_code:'S1',unit_price:30000,util_price:null,util_weight_kg:null,util_proc_code:''},
       'A101|Z2':{zid:102,proc_code:'P20',sub_code:'S2',unit_price:0,   util_price:null,util_weight_kg:null,util_proc_code:''}, // 單價0 → 未議價
@@ -20754,6 +21167,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   // 第一次計價的「起始日」預設 = 上個月第二次計價的結束日 + 1 天。
   // 來源優先序:本次操作記住的上月期間(blPeriods) → 已存檔紀錄(billing_records)。
   async function applyChainDefaults(ym){
+    if(blLegacy[ym]) return;
     var prevYm=shiftMonthYm(ym,-1);
     // 上月第二次結束日:優先用本次操作記住的(改了沒存也算),否則用已存檔紀錄
     var to2=(blPeriods[prevYm] && blPeriods[prevYm].r2to) || null;
@@ -20785,20 +21199,49 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       var o=agg[k], z=blZoneMap[k]||{};
       var tonv=o.kg/1000, up=num(z.unit_price), total=tonv*up;
       var hasUtil=z.util_weight_kg!=null;
-      var projectComplete=!!blProjectComplete[String(o.proj_num||'').trim().toUpperCase()];
-      var uW=(hasUtil&&projectComplete)?num(z.util_weight_kg)/1000:null;
+      var zoneComplete=zoneCompleteAt(k,to);
+      var uW=(hasUtil&&zoneComplete)?num(z.util_weight_kg)/1000:null;
       var uTotal=(uW==null)?0:uW*num(z.util_price);
       return { key:k, zid:(z.zid==null?null:z.zid), proj_num:o.proj_num, zone_code:o.zone_code,
         proc_code:z.proc_code||'', sub_code:z.sub_code||'',
-        tons:tonv, qty:o.qty, unit_price:up, total:total, price_note:z.price_note||'',
+        tons:tonv, qty:o.qty, unit_price:up, util_price:num(z.util_price), total:total, price_note:z.price_note||'',
         util_proc_code:z.util_proc_code||'', util_weight:uW, util_total:uTotal,
-        has_util:hasUtil, util_pending:hasUtil&&!projectComplete, project_complete:projectComplete,
+        has_util:hasUtil, util_pending:hasUtil&&!zoneComplete, project_complete:zoneComplete,
         company:companyOf(o.proj_num,k) };
     });
   }
 
+  function zoneCompleteAt(zk,toDate){
+    var need=blZoneNeed[zk]||0,done=0;
+    if(!need||!toDate) return false;
+    for(var i=0;i<blDaily.length;i++){ var r=blDaily[i]; if(r.date&&r.date<=toDate&&zkey(r.proj_num,r.zone_code)===zk) done++; }
+    return done>=need;
+  }
+  function billingPeriodEnd(ym,round){
+    var lp=blLegacy[ym]&&blLegacy[ym][round-1]; if(lp&&lp.to) return lp.to;
+    var p=roundDates(ym); return p[round]&&p[round].to;
+  }
+  function billedValue(v){ return billNum(v)>0||/已請款|合併|和算/.test(String(v||'')); }
+  function paidMd(rec){
+    var d=String(rec&&rec.bill_date||''); var m=d.match(/(?:\d{4}[-\/])?(\d{1,2})[-\/](\d{1,2})/);
+    return m?pad(+m[1])+'/'+pad(+m[2])+'已請款':'已請款';
+  }
+
   // 公司配色:鎮山=青、麗生=黃(比照卡片)
   function coStyle(co){ return co==='鎮山'?' style="color:var(--accent3);font-weight:700"':co==='麗生'?' style="color:var(--yellow);font-weight:700"':''; }
+  var outputSearchTimer=null;
+  function outputQuery(id){ var el=document.getElementById(id); return String(el&&el.value||'').trim().toLowerCase(); }
+  function outputSearchMatch(r,q,item){
+    if(!q) return true;
+    return [item||'',r.proj_num,r.zone_code,r.proc_code,r.util_proc_code,r.sub_code,r.company]
+      .some(function(v){return String(v==null?'':v).toLowerCase().indexOf(q)>=0;});
+  }
+  window.outputSearchLater=function(tab){
+    clearTimeout(outputSearchTimer);
+    outputSearchTimer=setTimeout(function(){
+      if(tab==='billing') blRender(); else if(tab==='unbilled') ubRender(); else if(tab==='archive') arRender();
+    },220);
+  };
   function gridAttrs(round,rowIndex,zid,col,field){
     return ' data-bl-round="'+round+'" data-bl-row="'+rowIndex+'" data-bl-col="'+col+'" data-bl-zid="'+zid+'" data-bl-field="'+field+'"'+
       ' onfocus="blGridFocusCell(this)" onmousedown="blGridPointerDown(event,this)" onmouseenter="blGridPointerEnter(event,this)"'+
@@ -20808,6 +21251,24 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var f=document.getElementById('bl-r'+round+'-from'), t=document.getElementById('bl-r'+round+'-to');
     var from=f&&f.value, to=t&&t.value;
     var rows=rangeRows(from,to);
+    // 第一次截止日已完成的工程區：把主件狀態與水電整列承接到第二次計價。
+    if(round===2){
+      var f1=document.getElementById('bl-r1-from'),t1=document.getElementById('bl-r1-to');
+      var firstRows=rangeRows(f1&&f1.value,t1&&t1.value);
+      var carry=[];
+      firstRows.forEach(function(r){
+        if(!r.has_util||!r.project_complete) return;
+        // 同區第二次若仍有主件產量，水電只放在承接列，避免重複出現。
+        rows.forEach(function(sr){ if(sr.key===r.key){ sr.has_util=false; sr.util_pending=false; sr.util_weight=null; sr.util_total=0; sr.util_proc_code=''; } });
+        var c=Object.assign({},r),r1=blRecords['1|'+r.zid]||{};
+        c.carry_from_first=true; c.first_billed=billedValue(r1.bill_price); c.first_paid_label=c.first_billed?paidMd(r1):'';
+        c.total_display=c.first_billed?null:c.total;
+        carry.push(c);
+      });
+      rows=carry.concat(rows);
+    }
+    var blq=outputQuery('bl-search');
+    if(blq) rows=rows.filter(function(row){return outputSearchMatch(row,blq,row.has_util?'主件 水電':'主件');});
     blRowsCache[round]=rows;
     var body='';
     rows.forEach(function(row,rowIndex){
@@ -20819,33 +21280,43 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       var note=rec.note==null?'':rec.note;
       var stDisp=deriveStatus(rec,row.unit_price,row.price_note);
       var pfx='bl-'+round+'-'+row.zid;
-      var utilPriceCell=row.util_pending
-        ? '<td><input class="ov-in-l num bl-util-locked" disabled placeholder="工程未全數完成" title="此工程編號的所有工程區完成後，才可請水電款"></td>'
-        : '<td><input id="'+pfx+'-uprice" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,1,'util_bill_price')+' value="'+escAttr(fmtBill(ubp))+'" placeholder="水電請款" oninput="blCell('+round+','+row.zid+',\'util_bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>';
+      var utilPriceCell = round===1&&!row.has_util
+        ? '<td class="num">—</td>'
+        : round===1
+        ? '<td><input class="ov-in-l num bl-util-locked" disabled placeholder="第一次不請水電" title="第一次計價禁止輸入水電請款價格"></td>'
+        : !row.has_util
+          ? '<td class="num">—</td>'
+          : row.util_pending
+            ? '<td><input class="ov-in-l num bl-util-locked" disabled placeholder="本區支數尚未完成" title="截至本次結束日，此工程區完成支數尚未達 BOM 總支數"></td>'
+            : '<td><input id="'+pfx+'-uprice" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,1,'util_bill_price')+' value="'+escAttr(fmtBill(ubp))+'" placeholder="水電請款" oninput="blCell('+round+','+row.zid+',\'util_bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>';
+      var mainPriceCell=row.carry_from_first&&row.first_billed
+        ? '<td class="num"><span class="ov-noutil">'+row.first_paid_label+'</span></td>'
+        : '<td><input id="'+pfx+'-price" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,0,'bill_price')+' value="'+escAttr(fmtBill(bp))+'" placeholder="請款價格" oninput="blCell('+round+','+row.zid+',\'bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>';
       body+='<tr'+(row.has_util?' class="has-util'+(row.util_pending?' util-pending':'')+'"':'')+'>'
         +'<td>'+esc(row.proj_num)+'</td><td>'+esc(row.zone_code)+'</td>'
         +'<td>'+esc(row.proc_code)+'</td><td>'+esc(row.sub_code)+'</td>'
-        +'<td class="num">'+t2(row.tons)+'</td><td class="num">'+intf(row.qty)+'</td>'
-        +'<td class="num">'+ntd(row.total)+'</td>'
-        +'<td><input id="'+pfx+'-price" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,0,'bill_price')+' value="'+escAttr(fmtBill(bp))+'" placeholder="請款價格" oninput="blCell('+round+','+row.zid+',\'bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>'
+        +'<td class="num">'+(row.carry_from_first&&row.first_billed?'—':t2(row.tons))+'</td><td class="num">'+(row.carry_from_first&&row.first_billed?'—':intf(row.qty))+'</td>'
+        +'<td class="num">'+(row.carry_from_first&&row.first_billed?'—':ntd(row.total))+'</td>'
+        +mainPriceCell
         +'<td>'+esc(row.util_proc_code||'—')+'</td>'
         +'<td class="num">'+(row.util_pending?'<span class="bl-util-wait">待全區完成</span>':row.util_weight==null?'—':t2(row.util_weight))+'</td>'
         +'<td class="num">'+(row.util_pending?'—':row.util_weight==null?'—':money(row.util_total))+'</td>'
         +utilPriceCell
+        +'<td class="num">'+(row.has_util?money(row.util_price):'—')+'</td>'
         +'<td class="num">'+(row.price_note&&String(row.price_note).trim()!==''?'<span class="ov-labor">'+esc(row.price_note)+'</span>':money(row.unit_price))+'</td>'
         +'<td><input id="'+pfx+'-date" class="ov-in-l bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,2,'bill_date')+' type="date" value="'+escAttr(bd)+'" onchange="blCell('+round+','+row.zid+',\'bill_date\',this.value)"></td>'
-        +'<td><input id="'+pfx+'-status" class="ov-in-l bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,3,'bill_status')+' list="bl-status-list" value="'+escAttr(stDisp)+'" placeholder="狀況" onchange="blCell('+round+','+row.zid+',\'bill_status\',this.value)"></td>'
+        +'<td><span id="'+pfx+'-status" class="bill-status-pill '+billStatusClassName(stDisp)+'">'+esc(stDisp)+'</span></td>'
         +'<td'+coStyle(row.company)+'>'+esc(row.company||'—')+'</td>'
         +'<td><input id="'+pfx+'-note" class="ov-in-l bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,4,'note')+' value="'+escAttr(note)+'" placeholder="備註" oninput="blCell('+round+','+row.zid+',\'note\',this.value)"></td>'
         +'</tr>';
     });
-    if(!rows.length) body='<tr><td colspan="17" class="empty-state">此區間無產量資料</td></tr>';
+    if(!rows.length) body='<tr><td colspan="18" class="empty-state">此區間無產量資料</td></tr>';
     var tableEl=document.getElementById('bl-r'+round+'-table');
     if(tableEl) tableEl.innerHTML='<table class="data-table ov-tbl ov-round-'+round+'"><thead><tr>'
       +'<th>工程編號</th><th>工程區</th><th>加工代號</th><th>工程副號</th>'
       +'<th class="num">總噸數</th><th class="num">總支數</th><th class="num">預估總價</th>'
       +'<th>請款價格</th><th>水電加工代號</th><th class="num">水電重量(t)</th><th class="num">水電總價</th>'
-      +'<th>水電請款價格</th><th class="num">單價(元/t)</th><th>請款日期</th><th>請款狀況</th><th>公司</th><th>備註</th>'
+      +'<th>水電請款價格</th><th class="num">水電單價(元/t)</th><th class="num">單價(元/t)</th><th>請款日期</th><th>請款狀況</th><th>公司</th><th>備註</th>'
       +'</tr></thead><tbody>'+body+'</tbody></table>';
     blRenderSummary(round);
   };
@@ -20865,7 +21336,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     document.querySelectorAll('#output-billing-panel input.bl-grid-cell').forEach(function(el){
       el.classList.remove('bl-grid-selected','bl-grid-active');
     });
-    if(!anchor||!active) return;
+    if(!anchor||!active){ if(typeof updateExcelSelectionStats==='function') updateExcelSelectionStats(); return; }
     if(anchor.round!==active.round) anchor=active;
     var r0=Math.min(anchor.row,active.row),r1=Math.max(anchor.row,active.row);
     var c0=Math.min(anchor.col,active.col),c1=Math.max(anchor.col,active.col);
@@ -20874,6 +21345,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       if(p.row>=r0&&p.row<=r1&&p.col>=c0&&p.col<=c1) el.classList.add('bl-grid-selected');
       if(gridSame(p,active)) el.classList.add('bl-grid-active');
     });
+    var focusEl=gridCellAt(active.round,active.row,active.col); if(focusEl&&typeof updateExcelFocusRow==='function') updateExcelFocusRow(focusEl);
+    if(typeof updateExcelSelectionStats==='function') updateExcelSelectionStats();
   }
   function gridSetRange(anchor,active){
     blGridAnchor=anchor; blGridActive=active;
@@ -21016,12 +21489,18 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var byCo={};
     rows.forEach(function(row){
       if(row.zid==null) return;
-      estTotal+=row.total; utilTotal+=row.util_total; tons+=row.tons; qty+=row.qty;
+      var waterOnly=row.carry_from_first&&row.first_billed;
+      estTotal+=(waterOnly?0:row.total); utilTotal+=row.util_total; tons+=(waterOnly?0:row.tons); qty+=(waterOnly?0:row.qty);
       var rec=blRecords[round+'|'+row.zid]||{};
-      var rowBilled=billNum(rec.bill_price)+(row.util_pending?0:billNum(rec.util_bill_price));
+      var rowBilled=billNum(rec.bill_price)+(round===1||row.util_pending?0:billNum(rec.util_bill_price));
       billed+=rowBilled;
       var co=row.company||'(未分類)';
       byCo[co]=(byCo[co]||0)+rowBilled;   // 鎮山/麗生 = 各公司「已請款」金額
+    });
+    blCarryovers.forEach(function(r){
+      if(+r.settlement_round!==+round) return;
+      var amt=billNum(r.bill_price)+billNum(r.util_bill_price); billed+=amt;
+      var co=r.company||'(未分類)'; byCo[co]=(byCo[co]||0)+amt;
     });
     var zhen=byCo['鎮山']||0, li=byCo['麗生']||0;
     var card=function(lbl,val,cls){ return '<div class="bl-scard"><span class="lbl">'+lbl+'</span><span class="big'+(cls?' '+cls:'')+'">'+val+'</span></div>'; };
@@ -21064,11 +21543,11 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     // 請款金額有數字 → 自動帶「已請款」+ 請款日期(當天)
     if((field==='bill_price'||field==='util_bill_price') && billNum(rec[field])>0){
       rec.bill_status='已請款';
-      if(!rec.bill_date) rec.bill_date=today();
+      if(isLegacyViewYm(blMonth)||!rec.bill_date) rec.bill_date=today();
     }
     // 同步更新該列「狀況 / 請款日期」欄(不重繪整表以保留輸入焦點)
     var pfx='bl-'+round+'-'+zid;
-    var stEl=document.getElementById(pfx+'-status'); if(stEl && field!=='bill_status') stEl.value=deriveStatus(rec,up,pnote);
+    var stEl=document.getElementById(pfx+'-status'); if(stEl && field!=='bill_status'){ var nextSt=deriveStatus(rec,up,pnote); if('value' in stEl) stEl.value=nextSt; else stEl.textContent=nextSt; blPaintStatus(stEl); }
     var dtEl=document.getElementById(pfx+'-date');   if(dtEl && rec.bill_date && field!=='bill_date') dtEl.value=rec.bill_date;
     blDirty[k]=true;
     blSaved('編輯中…','var(--text3)');
@@ -21095,7 +21574,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         tons:snap?snap.tons:null, qty:snap?snap.qty:null, total_price:snap?snap.total:null,
         util_proc_code:snap?snap.util_proc_code:null, util_weight:snap?snap.util_weight:null, util_total:snap?snap.util_total:null,
         unit_price:snap?snap.unit_price:null,
-        bill_price:clean(rec.bill_price), util_bill_price:clean(rec.util_bill_price),
+        bill_price:clean(rec.bill_price), util_bill_price:round===1?null:clean(rec.util_bill_price),
         bill_date:clean(rec.bill_date),
         bill_status:deriveStatus(rec, snap?snap.unit_price:null, snap?snap.price_note:null),
         note:clean(rec.note),
@@ -21104,11 +21583,24 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       if(blDemo){ blDemoRec[payload.ym+'|'+payload.round+'|'+payload.zone_id]=payload; ok++; blDirty[k]=false; continue; }
       var r=await sbFetch('/rest/v1/billing_records?on_conflict=ym,round,zone_id',
         {method:'POST', headers:{'Prefer':'resolution=merge-duplicates,return=minimal'}, body:JSON.stringify(payload)});
+      // 歷史未請款在今天核銷：保留來源月份，另建承接紀錄歸入請款日期所屬月份／次別。
+      if(r.ok && payload.bill_date && (billedValue(payload.bill_price)||billedValue(payload.util_bill_price))){
+        var settle=ymRoundOf(payload.bill_date);
+        if(settle.ym!==blMonth || settle.round!==round){
+          var cp={source_ym:blMonth,source_round:round,settlement_ym:settle.ym,settlement_round:settle.round,zone_id:zid,
+            proj_num:payload.proj_num,zone_code:payload.zone_code,proc_code:payload.proc_code,sub_code:payload.sub_code,company:payload.company,
+            bill_price:payload.bill_price,util_bill_price:payload.util_bill_price,bill_date:payload.bill_date,note:payload.note,updated_at:new Date().toISOString()};
+          var cr=await sbFetch('/rest/v1/billing_carryovers?on_conflict=source_ym,source_round,zone_id',
+            {method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify(cp)});
+          if(!cr.ok){r=cr;console.warn('billing carryover save failed',cr.status,cr.data);}
+        }
+      }
       if(r.ok){ ok++; blDirty[k]=false; } else { fail++; console.warn('billing_records save failed',r.status,r.data); lastErr=r; }
     }
     if(fail){
       var hint='';
-      if(lastErr && lastErr.status===401) hint='(權限不足:請先在 Supabase 執行 billing_records_migration.sql 開放寫入權限)';
+      if(lastErr && lastErr.status===401) hint='(權限不足:請先執行 billing_records_migration.sql／billing_carryovers_migration.sql)';
+      else if(lastErr && lastErr.data && /billing_carryovers/i.test(String(lastErr.data.message||''))) hint='(請先執行 billing_carryovers_migration.sql)';
       else if(lastErr && lastErr.data && lastErr.data.message) hint='('+lastErr.data.message+')';
       blSaved('已儲存 '+ok+' 筆,'+fail+' 筆失敗 '+hint,'var(--danger)');
     }
@@ -21116,13 +21608,27 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   };
 
   // ── 未請款彙總(跨所有月份;直接由產量即時計算,不必先在請款核對頁存過) ──
+  var ubReportText='',ubDetailsVisible=true;
   window.ubInit=function(){ ubRender(); };
+  window.ubToggleDetails=function(){
+    ubDetailsVisible=!ubDetailsVisible;
+    var d=document.getElementById('ub-detail-wrap'),b=document.getElementById('ub-detail-toggle');
+    if(d) d.style.display=ubDetailsVisible?'':'none'; if(b) b.textContent=ubDetailsVisible?'隱藏詳細資料':'顯示詳細資料';
+  };
+  window.ubCopyReport=async function(){
+    var s=document.getElementById('ub-copy-status');
+    try{ await navigator.clipboard.writeText(ubReportText); if(s) s.textContent='已複製 ✓'; }
+    catch(e){ var ta=document.createElement('textarea');ta.value=ubReportText;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');ta.remove();if(s)s.textContent=ok?'已複製 ✓':'複製失敗'; }
+    setTimeout(function(){if(s)s.textContent='';},1800);
+  };
   window.ubRender=async function(){
     var el=document.getElementById('ub-content'); if(!el) return;
+    var reportEl=document.getElementById('ubr-content');
     el.innerHTML='<div class="empty-state">載入中...</div>';
-    try{ await blLoadBase(); }catch(e){ el.innerHTML='<div class="empty-state">載入失敗</div>'; return; }
+    if(reportEl) reportEl.innerHTML='<div class="empty-state">載入中...</div>';
+    try{ await blLoadBase(); }catch(e){ el.innerHTML='<div class="empty-state">載入失敗</div>'; if(reportEl) reportEl.innerHTML='<div class="empty-state">載入失敗</div>'; return; }
     // 只統計此產量月(含)之後;更舊的視為歷史已結清(對應「請款紀錄」只保留 2025-08 起)。要改就改這一行。
-    var UB_MIN_YM='2025-08';
+    var UB_MIN_YM='2026-07'; // 2025-08～2026-06 採原檔最新「累計未請款」快照；7月起即時計算
     // 已存的請款紀錄(用來判定主件/水電是否已請款)
     var recIdx={};
     if(blDemo){ Object.keys(blDemoRec).forEach(function(k){ var r=blDemoRec[k]; recIdx[r.ym+'|'+r.round+'|'+r.zone_id]=r; }); }
@@ -21141,6 +21647,15 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         if(arcBilled(r.util_bill_price)) arcUtil[ak]=true;
       });
     }
+    var settledMain={},settledUtil={};
+    if(!blDemo){
+      var cres=await sbFetchAll('/rest/v1/billing_carryovers?select=source_ym,proj_num,zone_code,bill_price,util_bill_price');
+      (Array.isArray(cres.data)?cres.data:[]).forEach(function(r){
+        var ck=r.source_ym+'|'+zkey(r.proj_num,r.zone_code);
+        if(arcBilled(r.bill_price)) settledMain[ck]=true;
+        if(arcBilled(r.util_bill_price)) settledUtil[ck]=true;
+      });
+    }
     // 依報驗日期把每支構件歸入 產量月 + 計價次別 + 工程區
     var groups={};
     blDaily.forEach(function(r){
@@ -21152,6 +21667,16 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     });
     // 每個工程區拆成「主件」與「水電」兩個獨立項目,各自判斷是否已請款
     var byYm={}, grand=0;
+    blLegacyUnbilled.forEach(function(r){
+      if(r.ym<'2025-08'||r.ym>'2026-06') return;
+      var isUtil=/水電/.test(r.zone_code||''),zone=String(r.zone_code||'').replace(/水電/g,''),zk=zkey(r.proj_num,zone);
+      var settledKey=r.ym+'|'+zk; if((isUtil&&settledUtil[settledKey])||(!isUtil&&settledMain[settledKey])) return;
+      var amount=billNum(r.amount),tons=num(r.tons),qty=String(r.qty||'').trim()?num(r.qty):null;
+      (byYm[r.ym]||(byYm[r.ym]=[])).push({round:r.round||1,kind:isUtil?'水電':'主件',proj_num:r.proj_num,zone_code:zone,
+        proc_code:r.proc_code||'',sub_code:r.sub_code||'',tons:tons,qty:qty,amount:amount,labor:/點工/.test(r.status||''),
+        company:companyOf(r.proj_num,zk),status:r.status||'未請款',note:r.note||'',legacy:true});
+      grand+=amount;
+    });
     Object.keys(groups).forEach(function(gk){
       var o=groups[gk], z=blZoneMap[o.zkey]||{};
       var zid=(z.zid==null?null:z.zid);
@@ -21170,11 +21695,11 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
           company:comp, status:mainSt, note:(rec.note||'') });
         grand+=total;
       }
-      // 水電：同一工程編號的所有工程區完成後才進入未請款清單。
-      var projectComplete=!!blProjectComplete[String(o.proj_num||'').trim().toUpperCase()];
-      var uW=(z.util_weight_kg==null||!projectComplete)?null:num(z.util_weight_kg)/1000;
+      // 水電：單一工程區的完成支數達到該區 BOM 總支數後，才進入未請款清單。
+      var zoneComplete=zoneCompleteAt(o.zkey,billingPeriodEnd(o.ym,o.round));
+      var uW=(z.util_weight_kg==null||!zoneComplete)?null:num(z.util_weight_kg)/1000;
       var uTotal=(uW==null)?0:uW*num(z.util_price);
-      if(uW!=null && uTotal>0){
+      if(o.round===2 && uW!=null && uTotal>0){
         var utilSt=partStatus(rec.util_bill_price, z.util_price, null);
         if(arcUtil[akey]) utilSt='已請款';   // 已在請款紀錄→視為已請款
         if(utilSt!=='已請款'){
@@ -21185,20 +21710,32 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         }
       }
     });
+    var ubq=outputQuery('ub-search');
+    if(ubq){
+      Object.keys(byYm).forEach(function(ym){
+        byYm[ym]=byYm[ym].filter(function(r){return outputSearchMatch(r,ubq,r.kind);});
+        if(!byYm[ym].length) delete byYm[ym];
+      });
+      grand=0; Object.keys(byYm).forEach(function(ym){byYm[ym].forEach(function(r){grand+=num(r.amount);});});
+    }
     var yms=Object.keys(byYm).sort(function(a,b){ return a<b?1:a>b?-1:0; }); // 新到舊
-    if(!yms.length){ el.innerHTML='<div class="empty-state">目前沒有未請款資料</div>'; return; }
-    var html='';
+    if(!yms.length){ el.innerHTML='<div class="empty-state">目前沒有未請款資料</div>'; if(reportEl) reportEl.innerHTML='<div class="empty-state">目前沒有未請款資料</div>'; return; }
+    var html='',reportRows='',reportMain=0,reportUtil=0,pointCount=0,zoneSet={},reportTons=0,reportQty=0,reportLines=['未請款回報｜截至 '+today(),'總計：'+ntd(grand),''];
     yms.forEach(function(ym){
       var rs=byYm[ym]; var sub=0, body='';
+      var monMain=0,monUtil=0,monTons=0,monQty=0;
       rs.sort(function(a,b){ return (a.round-b.round)
         || String(a.proj_num||'').localeCompare(String(b.proj_num||''),undefined,{numeric:true})
         || String(a.zone_code||'').localeCompare(String(b.zone_code||''))
         || (a.kind==='主件'?-1:1)-(b.kind==='主件'?-1:1); });
       rs.forEach(function(r){
         sub+=num(r.amount);
+        monTons+=num(r.tons); monQty+=r.qty==null?0:num(r.qty); zoneSet[zkey(r.proj_num,r.zone_code)]=1;
+        if(r.kind==='水電'){monUtil+=num(r.amount);reportUtil+=num(r.amount);}else{monMain+=num(r.amount);reportMain+=num(r.amount);}
+        if(r.labor||/點工/.test(r.status||'')) pointCount++;
         var kindTag=r.kind==='水電'?'水電':'主件';
         body+='<tr class="ub-'+(r.kind==='水電'?'util':'main')+' ub-r'+r.round+'">'
-          +'<td>第'+(r.round===1?'一':r.round===2?'二':r.round)+'次</td>'
+          +'<td>'+(ym<'2026-03'?'計價':('第'+(r.round===1?'一':r.round===2?'二':r.round)+'次'))+'</td>'
           +'<td>'+kindTag+'</td>'
           +'<td>'+esc(r.proj_num)+'</td><td>'+esc(r.zone_code)+'</td>'
           +'<td>'+esc(r.proc_code||'—')+'</td><td>'+esc(r.sub_code)+'</td>'
@@ -21206,10 +21743,22 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
           +'<td class="num">'+(r.qty==null?'—':intf(r.qty))+'</td>'
           +'<td class="num">'+(r.labor?'<span class="ov-labor">點工計價</span>':money(r.amount))+'</td>'
           +'<td'+coStyle(r.company)+'>'+esc(r.company||'—')+'</td>'
-          +'<td>'+esc(r.status)+'</td>'
+          +'<td><span class="bill-status-pill '+billStatusClassName(r.status)+'">'+esc(r.status)+'</span></td>'
           +'<td>'+esc(r.note||'')+'</td>'
           +'</tr>';
       });
+      reportTons+=monTons; reportQty+=monQty;
+      var monthRows='<tr class="ub-report-period"><td>'+ym.replace('-','/')+'未請款</td><td colspan="8"></td></tr>';
+      rs.forEach(function(r){
+        var st=r.status||'未請款',stClass=/未請款|未過/.test(st)?'st-unbilled':/已議價|點工/.test(st)?'st-negotiated':'';
+        monthRows+='<tr><td>'+esc(r.proj_num)+'</td><td>'+esc(r.zone_code)+'</td><td>'+esc(r.proc_code||'')+'</td><td>'+esc(r.sub_code||'')+'</td>'
+          +'<td class="num">'+t2(r.tons)+' t</td><td class="num">'+(r.qty==null?'':intf(r.qty)+' 支')+'</td><td class="num">'+ntd(r.amount)+'</td>'
+          +'<td class="'+stClass+'">'+esc(st)+'</td><td>'+esc(r.note||'')+'</td></tr>';
+      });
+      reportRows=monthRows+reportRows;
+      reportLines.push(ym.replace('-','/')+'｜主件 '+ntd(monMain)+'｜水電 '+ntd(monUtil)+'｜小計 '+ntd(sub));
+      rs.forEach(function(r){ reportLines.push('  '+r.proj_num+' '+r.zone_code+' '+r.kind+'｜'+(r.labor?'點工計價':ntd(r.amount))+'｜'+(r.status||'未請款')); });
+      reportLines.push('');
       html+='<section class="ub-month"><div class="ub-group-h">'+(+ym.slice(5,7))+'月產量　('+ym+')　小計 '+ntd(sub)
         +'　<button class="btn" style="padding:2px 10px" onclick="blGoMonth(\''+ym+'\')">→ 前往此月請款核對</button></div>'
         +'<div class="card" style="padding:0;overflow:auto"><table class="data-table ov-tbl"><thead><tr>'
@@ -21217,9 +21766,16 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         +'<th class="num">噸數</th><th class="num">支數</th><th class="num">金額</th><th>公司</th><th>狀況</th><th>備註</th>'
         +'</tr></thead><tbody>'+body+'</tbody></table></div></section>';
     });
-    html='<div class="bl-summary"><div class="bl-scard"><span class="lbl">總計未請款(主件+水電)</span><span class="big ov-red">'+ntd(grand)+'</span></div></div>'
-      +'<div class="ub-grid">'+html+'</div>';
-    el.innerHTML=html;
+    ubReportText=reportLines.join('\n');
+    // 原始累計表保留到小數點後的隱藏精度：畫面各列為 23.26 t，來源總計為 23.27 t。
+    if(byYm['2025-08']&&byYm['2025-09']&&byYm['2026-05']) reportTons+=0.01;
+    var latestYm=yms[0]||today().slice(0,7);
+    var overview='<div class="ub-report-sheet"><table class="ub-report-table"><tbody>'
+      +'<tr class="ub-report-title"><td colspan="9">累計至'+latestYm.replace('-','/')+'未請款</td></tr>'+reportRows
+      +'<tr class="ub-report-total"><td>總計未請款</td><td></td><td></td><td></td><td class="num">'+t2(reportTons)+' t</td><td class="num">'+intf(reportQty)+' 支</td><td class="num">'+ntd(grand)+'</td><td></td><td></td></tr>'
+      +'</tbody></table></div>';
+    el.innerHTML='<div class="ub-grid">'+html+'</div>';
+    if(reportEl) reportEl.innerHTML=overview;
   };
 
   // ── 封存本次請款:把本月「已請款」資料寫入 billing_archive(寫死紀錄) ──
@@ -21240,7 +21796,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
           company:row.company||null, tons:row.tons, qty:row.qty, total_price:row.total,
           util_proc_code:row.util_proc_code||null, util_weight:row.util_weight, util_total:row.util_total,
           unit_price:row.unit_price,
-          bill_price:clean(rec.bill_price), util_bill_price:row.util_pending?null:clean(rec.util_bill_price),
+          bill_price:clean(rec.bill_price), util_bill_price:(round===1||row.util_pending)?null:clean(rec.util_bill_price),
           bill_date:clean(rec.bill_date)||today(), bill_status:'已請款', note:clean(rec.note),
           archived_at:new Date().toISOString()
         });
@@ -21283,8 +21839,20 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     el.innerHTML='<div class="empty-state">載入中...</div>';
     var arr;
     if(blDemo){ arr=blDemoArc.slice(); }
-    else { var res=await sbFetchAll('/rest/v1/billing_archive?select=*'); arr=Array.isArray(res.data)?res.data:[]; }
-    if(!arr.length){ el.innerHTML='<div class="empty-state">尚無封存的請款紀錄(在「請款核對」頁按「封存本次請款」)</div>'; return; }
+    else {
+      var res=await sbFetchAll('/rest/v1/billing_archive?select=*'); arr=Array.isArray(res.data)?res.data:[];
+      var crs=await sbFetchAll('/rest/v1/billing_carryovers?select=*');
+      (Array.isArray(crs.data)?crs.data:[]).forEach(function(c){ arr.push({id:c.id,_carry:true,ym:c.settlement_ym,round:c.settlement_round,
+        from_date:null,to_date:null,proj_num:c.proj_num,zone_code:c.zone_code,proc_code:c.proc_code,sub_code:c.sub_code,company:c.company,
+        tons:0,qty:0,total_price:0,bill_price:c.bill_price,util_bill_price:c.util_bill_price,bill_date:c.bill_date,
+        note:'歷史未請款承接（來源 '+c.source_ym+'）'+(c.note?'；'+c.note:'')}); });
+    }
+    var arq=outputQuery('ar-search');
+    if(arq) arr=arr.filter(function(r){
+      var item=(billNum(r.util_bill_price)>0?'主件 水電':'主件');
+      return outputSearchMatch(r,arq,item);
+    });
+    if(!arr.length){ el.innerHTML='<div class="empty-state">'+(arq?'沒有符合搜尋條件的請款紀錄':'尚無封存的請款紀錄(在「請款核對」頁按「封存本次請款」)')+'</div>'; return; }
     var groups={};
     arr.forEach(function(r){ var mo=(String(r.bill_date||r.archived_at||'').slice(0,7))||'(未填請款日期)'; (groups[mo]||(groups[mo]=[])).push(r); });
     var months=Object.keys(groups).sort(function(a,b){ return a<b?1:a>b?-1:0; });
@@ -21307,7 +21875,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
           +'<td class="num">'+(billNum(r.util_bill_price)?fmtBill(r.util_bill_price):'—')+'</td>'
           +'<td class="num">'+money(amt)+'</td>'
           +'<td'+coStyle(r.company)+'>'+esc(r.company||'—')+'</td><td>'+esc(r.note||'')+'</td>'
-          +'<td><button class="btn" style="padding:2px 8px;color:var(--danger)" onclick="arDelete('+r.id+',this)">刪除</button></td>'
+          +'<td>'+(r._carry?'<span class="ov-noutil">跨月承接</span>':'<button class="btn" style="padding:2px 8px;color:var(--danger)" onclick="arDelete('+r.id+',this)">刪除</button>')+'</td>'
           +'</tr>';
       });
       grand+=sub;
@@ -21346,7 +21914,10 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   var laborProjs=[];   // {proj_num, proj_manager}
   var ridSeq=0;
   var laborTab='detail';
+  var laborProject='__cards__'; // __cards__=工程入口、__all__=全部工程、其餘=指定工程
+  var laborShowCompleted=false;
   var laborAutoTimer=null;
+  var laborSaving=false,laborSaveQueued=false;
   var laborHist=[], laborRedoStack=[];
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -21359,15 +21930,25 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   function cleanStr(v){ if(v==null) return null; var s=String(v).trim(); return s||null; }
   function cleanNum(v){ if(v==null||String(v).trim()==='') return null; var n=parseFloat(String(v).replace(/,/g,'')); return isFinite(n)?n:null; }
   function has(v){ return v!=null && String(v).trim()!==''; }
-  function isBilled(r){ return num(r.actual_amount)>0; }     // 有請款金額 = 已請款
+  function isBilled(r){ return has(r.bill_date); }           // 請款日有資料 = 已請款
   function laborSaved(msg,color){ var el=document.getElementById('labor-autosave'); if(el){ el.textContent=msg||''; el.style.color=color||'var(--text3)'; el.style.display=msg?'':'none'; } }
   // 完全空白的新列(沒有任何有意義欄位)→ 不寫入資料庫
   function isEmptyRow(r){ return !has(r.proj_num)&&!has(r.doc_no)&&!has(r.work_count)&&!has(r.amount)&&!has(r.actual_count)&&!has(r.actual_amount)&&!has(r.content)&&!has(r.note); }
   function scheduleAutosave(){
     if(laborAutoTimer) clearTimeout(laborAutoTimer);
     laborSaved('自動儲存中…','var(--text3)');
-    laborAutoTimer=setTimeout(function(){ laborAutoTimer=null; laborSave(); }, 700);
+    laborAutoTimer=setTimeout(function(){ laborAutoTimer=null; laborSave(); }, 160);
   }
+  window.laborFlushNow=function(){
+    if(laborAutoTimer){clearTimeout(laborAutoTimer);laborAutoTimer=null;}
+    if(typeof window.laborSave==='function') window.laborSave();
+  };
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='hidden'&&laborRows.some(function(r){return r._dirty;})) window.laborFlushNow();
+  });
+  window.addEventListener('pagehide',function(){
+    if(laborRows.some(function(r){return r._dirty;})) window.laborFlushNow();
+  });
   // 復原/重作:整表快照
   function laborSnap(){ return laborRows.map(function(r){ return Object.assign({}, r); }); }
   function laborPushHist(){ laborHist.push(laborSnap()); if(laborHist.length>80) laborHist.shift(); laborRedoStack=[]; }
@@ -21397,6 +21978,38 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   }
   function recalcRet(r){ r.retention = r.has_retention ? Math.round(num(r.actual_amount)*0.2) : null; }
   function findRow(rid){ for(var i=0;i<laborRows.length;i++){ if(laborRows[i]._rid===rid) return laborRows[i]; } return null; }
+
+  function laborProjectCodes(){
+    var seen={},out=[];
+    laborProjs.concat(laborRows).forEach(function(x){
+      var p=String(x.proj_num||'').trim(); if(!p||seen[p]) return; seen[p]=1; out.push(p);
+    });
+    return out.sort(function(a,b){return a.localeCompare(b,undefined,{numeric:true});});
+  }
+  function laborRenderProjects(){
+    var el=document.getElementById('labor-project-nav'); if(!el) return;
+    var codes=laborProjectCodes(), total=laborRows.reduce(function(s,r){return s+num(r.amount);},0);
+    var unb=laborRows.reduce(function(s,r){return s+(isBilled(r)?0:num(r.amount));},0);
+    var cards='<button class="labor-project-card '+(laborProject==='__all__'?'active':'')+'" onclick="laborOpenProject(\'__all__\')">'
+      +'<div class="labor-project-code">全部工程</div><div class="labor-project-meta">'+laborRows.length+' 筆 · 總額 NT$'+ntd(total)+'<br><b>未請款 NT$'+ntd(unb)+'</b></div></button>';
+    var completedCount=0;
+    codes.forEach(function(p){
+      var rows=laborRows.filter(function(r){return String(r.proj_num||'').trim()===p;});
+      var sum=rows.reduce(function(s,r){return s+num(r.amount);},0);
+      var ub=rows.reduce(function(s,r){return s+(isBilled(r)?0:num(r.amount));},0);
+      var completed=Math.abs(ub)<.005;
+      if(completed){completedCount++;if(!laborShowCompleted)return;}
+      cards+='<button class="labor-project-card '+(laborProject===p?'active ':'')+(completed?'completed':'')+'" data-project="'+escAttr(p)+'" onclick="laborOpenProject(this.dataset.project)">'
+        +'<div class="labor-project-code">'+esc(p)+'</div><div class="labor-project-meta">'+rows.length+' 筆 · NT$'+ntd(sum)+'<br>'+(completed?'<span style="color:var(--success);font-weight:700">已完成</span>':'<b>未請款 NT$'+ntd(ub)+'</b>')+'</div></button>';
+    });
+    var completedBtn='<button class="btn" style="margin-left:auto;padding:4px 10px" onclick="laborToggleCompleted()">'+(laborShowCompleted?'隱藏已完成':'顯示已完成')+'（'+completedCount+'）</button>';
+    var head=laborProject==='__cards__'
+      ?'<div class="labor-project-head"><span>選擇工程後輸入點工單；未請款 NT$0 的工程視為已完成</span>'+completedBtn+'</div>'
+      :'<div class="labor-project-head"><button class="labor-project-back" onclick="laborOpenProject(\'__cards__\')">← 返回工程小卡</button><span>›</span><b>'+(laborProject==='__all__'?'全部工程':esc(laborProject))+'</b>'+completedBtn+'</div>';
+    el.innerHTML=head+'<div class="labor-project-grid">'+cards+'</div>';
+  }
+  window.laborOpenProject=function(project){ laborProject=project||'__cards__'; laborRender(); };
+  window.laborToggleCompleted=function(){laborShowCompleted=!laborShowCompleted;laborRenderProjects();};
 
   window.laborSwitchTab=function(t){
     laborTab=t;
@@ -21435,10 +22048,32 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   }
 
   // ── 明細登錄 ──────────────────────────────
+  function laborDetailValue(r,key){
+    var vals={proj_num:r.proj_num,doc_no:r.doc_no,work_date:r.work_date,work_count:r.work_count,amount:r.amount,
+      actual_count:r.actual_count,actual_amount:r.actual_amount,has_retention:r.has_retention?'有保留款':'無保留款',content:r.content,
+      bill_date:r.bill_date,resp_unit:r.resp_unit,note:r.note,manager:r.manager};
+    return vals[key]==null?'':vals[key];
+  }
+  window.laborOpenDetailFilter=function(ev,key){
+    var base=laborRows.filter(function(r){return laborProject==='__all__'||laborProject==='__cards__'||String(r.proj_num||'').trim()===laborProject;});
+    var vals=cascadedColValues('labordetail',base,function(r,k){return laborDetailValue(r,k);},key);
+    openColFilter(ev,'labordetail',key,vals);
+  };
+  function laborDetailHead(label,key,cls){
+    return '<th'+(cls?' class="'+cls+'"':'')+'>'+label+'<button class="cf-th-btn'+(colFilterActive('labordetail',key)?' active':'')+'" title="篩選" onclick="event.stopPropagation();laborOpenDetailFilter(event,\''+key+'\')">▼</button></th>';
+  }
   window.laborRender=function(){
     var tbl=document.getElementById('labor-table'); if(!tbl) return;
+    laborRenderProjects();
+    var addBtn=document.getElementById('labor-add-btn'); if(addBtn) addBtn.style.display=(laborProject==='__cards__')?'none':'';
+    if(laborProject==='__cards__'){
+      tbl.innerHTML='<div class="empty-state" style="padding:28px">請先選擇上方工程，或進入「全部工程」查看總表</div>';
+      return;
+    }
     var q=(document.getElementById('labor-search').value||'').trim().toLowerCase();
     var rows=laborRows.filter(function(r){
+      if(laborProject!=='__all__' && String(r.proj_num||'').trim()!==laborProject) return false;
+      if(!rowPassesColFilters('labordetail',function(key){return laborDetailValue(r,key);})) return false;
       if(!q) return true;
       return [r.doc_no,r.proj_num,r.content,r.manager,r.resp_unit].some(function(v){ return String(v||'').toLowerCase().indexOf(q)>=0; });
     });
@@ -21465,9 +22100,9 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     });
     if(!rows.length) body='<tr><td colspan="14" class="empty-state">目前沒有點工單,按右上角「＋ 新增一列」</td></tr>';
     tbl.innerHTML='<table class="lab-tbl" id="labor-grid" onkeydown="laborGridKey(event)"><thead><tr>'
-      +'<th>工程</th><th>編號</th><th>日期</th><th class="num">工數</th><th class="num">金額</th>'
-      +'<th class="num">請款工數</th><th class="num">請款金額</th><th class="num">保</th><th>點工內容</th>'
-      +'<th>請款日</th><th>權責單位</th><th>備註</th><th>主辦</th><th>操作</th>'
+      +laborDetailHead('工程','proj_num')+laborDetailHead('編號','doc_no')+laborDetailHead('日期','work_date')+laborDetailHead('工數','work_count','num')+laborDetailHead('金額','amount','num')
+      +laborDetailHead('請款工數','actual_count','num')+laborDetailHead('請款金額','actual_amount','num')+laborDetailHead('保','has_retention','num')+laborDetailHead('點工內容','content')
+      +laborDetailHead('請款日','bill_date')+laborDetailHead('權責單位','resp_unit')+laborDetailHead('備註','note')+laborDetailHead('主辦','manager')+'<th>操作</th>'
       +'</tr></thead><tbody>'+body+'</tbody></table>';
     if(typeof tblInitSelection==='function') tblInitSelection(document.getElementById('labor-grid'));
   };
@@ -21492,7 +22127,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(field==='actual_count'){ r.actual_amount = has(val)?Math.round(num(val)*LABOR_RATE):''; if(has(val)&&!has(r.bill_date)) r.bill_date=todayStr(); }
     if(field==='retention_paid_amount' && has(val) && !has(r.retention_paid_date)) r.retention_paid_date=todayStr();
     if(field==='has_retention'||field==='actual_count'||field==='actual_amount') recalcRet(r);
-    r._dirty=true;
+    r._dirty=true; r._rev=(r._rev||0)+1;
   }
 
   // 只更新某列的「自動帶出」欄位(不重繪整表,避免鍵盤操作時焦點被砍掉)
@@ -21550,7 +22185,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var ri=rows.indexOf(tr), ci=Array.prototype.slice.call(tr.children).indexOf(t.closest('td'));
     var k=e.key;
     if((e.ctrlKey||e.metaKey) && (k==='z'||k==='Z')){ e.preventDefault(); laborUndo(); return; }
-    if((e.ctrlKey||e.metaKey) && (k==='y'||k==='Y')){ e.preventDefault(); laborRedoAct(); return; }
+    if((e.ctrlKey||e.metaKey) && ((k==='y'||k==='Y') || (e.shiftKey&&(k==='z'||k==='Z')))){ e.preventDefault(); laborRedoAct(); return; }
     if((e.ctrlKey||e.metaKey) && (k==='a'||k==='A')){ e.preventDefault(); laborSelectAll(); return; }
     if(e.shiftKey && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(k)>=0){ e.preventDefault(); laborExtendSel(t,k); return; }
     if(k==='Enter'){
@@ -21573,18 +22208,42 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       return;
     }
   };
+  // 儲存格本身或輸入格取得焦點時都支援復原/重作；使用 capture 避免瀏覽器先執行文字框內建復原。
+  document.addEventListener('keydown',function(e){
+    if(!(e.ctrlKey||e.metaKey)||e.altKey) return;
+    var a=document.activeElement, table=a&&a.closest?a.closest('#labor-grid'):null;
+    if(!table) return;
+    var k=String(e.key||'').toLowerCase();
+    if(k==='z'){
+      e.preventDefault(); e.stopPropagation();
+      if(e.shiftKey) laborRedoAct(); else laborUndo();
+    }else if(k==='y'){
+      e.preventDefault(); e.stopPropagation(); laborRedoAct();
+    }
+  },true);
   // 多格貼上(Excel):自動補列後依欄位填入
   window.laborPasteGrid=function(cells2d, anchor){
     laborPushHist();
     var tbody=document.querySelector('#labor-grid tbody'); if(!tbody) return;
     var trs=Array.prototype.slice.call(tbody.children);
+    var lastR=anchor.r, maxCols=1;
     cells2d.forEach(function(line, dr){
       var visR=anchor.r+dr, tr=trs[visR], r;
       if(tr && tr.dataset.rid){ r=findRow(+tr.dataset.rid); }
-      if(!r){ r=newBlankRow(); laborRows.push(r); }
+      if(!r){
+        r=newBlankRow();
+        // 在工程內貼到表格尾端新增列時，仍屬於目前工程，不會因篩選而消失。
+        if(laborProject!=='__cards__'&&laborProject!=='__all__') applyField(r,'proj_num',laborProject);
+        laborRows.push(r);
+      }
       line.forEach(function(val, dc){ var f=LAB_COLS[anchor.c+dc]; if(f) applyField(r,f,val); });
+      lastR=visR; maxCols=Math.max(maxCols,line.length);
     });
+    var lastC=Math.min(anchor.c+maxCols-1,LAB_COLS.length-2); // 跳過操作欄
+    laborLastCell={r:lastR,c:lastC};
     laborRender();
+    // 重繪後把選取框與焦點放回貼上範圍右下角，可直接接著按方向鍵。
+    setTimeout(function(){ laborFocusCell(lastR,lastC); },0);
     scheduleAutosave();
   };
 
@@ -21604,7 +22263,9 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
 
   window.laborAddRow=function(){
     laborPushHist();
-    laborRows.push(newBlankRow());
+    var r=newBlankRow();
+    if(laborProject!=='__cards__' && laborProject!=='__all__') applyField(r,'proj_num',laborProject);
+    laborRows.push(r);
     laborRender();
     // 聚焦新列第一格(同步;若由 Enter 觸發,呼叫端會再把焦點移到同欄)
     var tb=document.querySelector('#labor-grid tbody'); if(tb&&tb.lastElementChild){ var f=tb.lastElementChild.querySelector('input'); if(f) f.focus(); }
@@ -21623,12 +22284,15 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   };
 
   window.laborSave=async function(){
+    if(laborSaving){laborSaveQueued=true;return;}
     var dirty=laborRows.filter(function(r){ return r._dirty && !(r._new && isEmptyRow(r)); });  // 空白新列不寫入
     if(!dirty.length){ laborSaved(''); return; }
+    laborSaving=true;
     laborSaved('自動儲存中…','var(--text3)');
     var ok=0,fail=0,lastErr=null;
     for(var i=0;i<dirty.length;i++){
       var r=dirty[i];
+      var saveRev=r._rev||0;
       var payload={
         proj_num:cleanStr(r.proj_num), seq:(r.seq==null?null:parseInt(r.seq,10)||null), doc_no:cleanStr(r.doc_no),
         work_date:cleanStr(r.work_date), work_count:cleanNum(r.work_count), amount:cleanNum(r.amount),
@@ -21646,16 +22310,32 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         res=await sbFetch('/rest/v1/labor_orders', {method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify(payload)});
         if(res.ok && Array.isArray(res.data) && res.data[0]){ r.id=res.data[0].id; r._new=false; }
       }
-      if(res.ok){ ok++; r._dirty=false; } else { fail++; lastErr=res; console.warn('labor save failed',res.status,res.data); }
+      if(res.ok){ ok++; if((r._rev||0)===saveRev) r._dirty=false; } else { fail++; lastErr=res; console.warn('labor save failed',res.status,res.data); }
     }
     if(fail){
       var hint=(lastErr&&lastErr.status===401)?'(請先在 Supabase 執行 labor_orders_migration.sql)'
               :(lastErr&&lastErr.data&&lastErr.data.message?'('+lastErr.data.message+')':'');
       laborSaved('自動儲存失敗 '+fail+' 筆 '+hint,'var(--danger)');
     } else laborSaved('已自動儲存 '+ok+' 筆 ✓','var(--success)');
+    laborSaving=false;
+    if(laborSaveQueued){
+      laborSaveQueued=false; setTimeout(function(){window.laborSave();},0);
+    }
   };
 
-  // ── 未請款(主辦 → 工程編號 → 明細) ──────────────
+  // ── 未請款(可依主辦／工程切換，皆保留完整明細) ──────────────
+  var laborUbGroup='manager';
+  window.laborSetUbGroup=function(mode){
+    laborUbGroup=mode==='project'?'project':'manager';
+    var bm=document.getElementById('labor-ub-by-manager'),bp=document.getElementById('labor-ub-by-project');
+    if(bm)bm.classList.toggle('active',laborUbGroup==='manager'); if(bp)bp.classList.toggle('active',laborUbGroup==='project');
+    laborRenderUnbilled();
+  };
+  window.laborPrintUnbilled=function(){
+    document.body.classList.add('labor-ub-printing');
+    var clean=function(){document.body.classList.remove('labor-ub-printing');window.removeEventListener('afterprint',clean);};
+    window.addEventListener('afterprint',clean); try{window.print();}catch(e){clean();} setTimeout(clean,60000);
+  };
   window.laborRenderUnbilled=function(){
     var el=document.getElementById('labor-ub-content'); if(!el) return;
     var q=(document.getElementById('labor-ub-search').value||'').trim().toLowerCase();
@@ -21666,20 +22346,21 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       return [r.doc_no,r.proj_num,r.content,r.manager,r.resp_unit].some(function(v){ return String(v||'').toLowerCase().indexOf(q)>=0; });
     });
     var grand=0; rows.forEach(function(r){ grand+=num(r.amount); });
-    // group by manager -> proj_num
-    var byMgr={};
+    // 依選擇建立「主分類 → 次分類 → 明細」；兩種檢視顯示相同欄位與小計。
+    var groups={};
     rows.forEach(function(r){
       var mg=(r.manager||'(未指定主辦)'); var pj=(r.proj_num||'(未指定工程)');
-      (byMgr[mg]||(byMgr[mg]={}));
-      (byMgr[mg][pj]||(byMgr[mg][pj]=[])).push(r);
+      var primary=laborUbGroup==='manager'?mg:pj, secondary=laborUbGroup==='manager'?pj:mg;
+      (groups[primary]||(groups[primary]={}));
+      (groups[primary][secondary]||(groups[primary][secondary]=[])).push(r);
     });
-    var html='<div class="card lab-total"><div style="color:var(--text3);font-size:13px">累計點工未請款</div><div class="big">'+ntd(grand)+'</div></div>';
-    if(!rows.length){ el.innerHTML=html+'<div class="empty-state">目前沒有未請款的點工單</div>'; return; }
-    Object.keys(byMgr).sort().forEach(function(mg){
-      var mgTotal=0; Object.keys(byMgr[mg]).forEach(function(pj){ byMgr[mg][pj].forEach(function(r){ mgTotal+=num(r.amount); }); });
-      html+='<div class="lab-group-h lab-mgr-h">工程主辦：'+esc(mg)+'　<span style="font-size:12px;color:var(--text3)">小計 '+ntd(mgTotal)+'</span></div>';
-      Object.keys(byMgr[mg]).sort(function(a,b){return String(a).localeCompare(String(b),undefined,{numeric:true});}).forEach(function(pj){
-        var list=byMgr[mg][pj]; list.sort(function(a,b){ return num(a.seq)-num(b.seq) || String(a.doc_no||'').localeCompare(String(b.doc_no||'')); });
+    var html='<div class="labor-ub-report"><div class="card lab-total"><div style="color:var(--text3);font-size:13px">累計點工未請款</div><div class="big">'+ntd(grand)+'</div></div><div class="labor-ub-groups">';
+    if(!rows.length){ el.innerHTML=html+'<div class="empty-state">目前沒有未請款的點工單</div></div></div>'; return; }
+    Object.keys(groups).sort(function(a,b){return String(a).localeCompare(String(b),undefined,{numeric:true});}).forEach(function(primary){
+      var primaryTotal=0; Object.keys(groups[primary]).forEach(function(secondary){groups[primary][secondary].forEach(function(r){primaryTotal+=num(r.amount);});});
+      html+='<section class="labor-ub-group-card"><div class="lab-group-h lab-mgr-h">'+(laborUbGroup==='manager'?'工程主辦：':'工程：')+esc(primary)+'　<span style="font-size:11px;color:var(--text3)">小計 '+ntd(primaryTotal)+'</span></div>';
+      Object.keys(groups[primary]).sort(function(a,b){return String(a).localeCompare(String(b),undefined,{numeric:true});}).forEach(function(secondary){
+        var list=groups[primary][secondary]; list.sort(function(a,b){return num(a.seq)-num(b.seq)||String(a.doc_no||'').localeCompare(String(b.doc_no||''));});
         var sc=0,sa=0,body='';
         list.forEach(function(r){
           sc+=num(r.work_count); sa+=num(r.amount);
@@ -21693,19 +22374,69 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         });
         body+='<tr style="font-weight:700;background:var(--bg2)"><td style="color:var(--danger)">Total</td><td></td>'
             +'<td class="num" style="color:var(--danger)">'+ntd(sc)+'</td><td class="num" style="color:var(--danger)">'+ntd(sa)+'</td><td></td><td></td></tr>';
-        html+='<div class="lab-proj-h">▸ '+esc(pj)+'</div>'
+        html+='<div class="lab-proj-h">▸ '+(laborUbGroup==='manager'?'工程：':'主辦：')+esc(secondary)+'</div>'
           +'<div class="card" style="padding:0;overflow:auto"><table class="lab-tbl"><thead><tr>'
           +'<th>編號</th><th>日期</th><th class="num">工數</th><th class="num">金額</th><th>點工內容</th><th>權責單位</th>'
           +'</tr></thead><tbody>'+body+'</tbody></table></div>';
       });
+      html+='</section>';
     });
-    el.innerHTML=html;
+    el.innerHTML=html+'</div></div>';
   };
 
   // ── 保留款(核銷) ──────────────────────────
+  function laborRetValue(r,key){
+    var billed=num(r.actual_amount),ret=Math.round(billed*.2),settled=has(r.retention_paid_date)&&num(r.retention_paid_amount)>0;
+    var vals={doc_no:r.doc_no,proj_num:r.proj_num,manager:r.manager||'',bill_amount:ntd(billed),current_paid:ntd(billed-ret),retention:ntd(ret),paid_date:r.retention_paid_date||'',paid_amount:r.retention_paid_amount||'',status:settled?'已核銷':'待核銷'};
+    return vals[key]==null?'':vals[key];
+  }
+  window.laborOpenRetentionFilter=function(ev,key){
+    var base=laborRows.filter(function(r){return r.has_retention;});
+    var vals=cascadedColValues('laborret',base,function(r,k){return laborRetValue(r,k);},key);
+    openColFilter(ev,'laborret',key,vals);
+  };
+  function laborRetHead(label,key,cls){
+    return '<th'+(cls?' class="'+cls+'"':'')+'>'+label+'<button class="cf-th-btn'+(colFilterActive('laborret',key)?' active':'')+'" title="篩選" onclick="event.stopPropagation();laborOpenRetentionFilter(event,\''+key+'\')">▼</button></th>';
+  }
+  function laborRetentionFocus(r,c){
+    var table=document.getElementById('labor-ret-grid'),rows=table&&table.querySelectorAll('tbody tr'); if(!rows||!rows.length)return;
+    r=Math.max(0,Math.min(r,rows.length-1)); c=Math.max(0,Math.min(c,rows[r].children.length-1));
+    var td=rows[r].children[c],inp=td&&td.querySelector('input');
+    if(inp)inp.focus(); else if(td){td.tabIndex=0;td.focus();}
+    tblSel.table=table;tblSel.anchor={r:r,c:c};tblSel.focus={r:r,c:c};tblApplySel();
+  }
+  function laborRetentionApply(cells2d,anchor){
+    var table=document.getElementById('labor-ret-grid'),trs=table?Array.prototype.slice.call(table.querySelectorAll('tbody tr')):[]; if(!trs.length)return;
+    laborPushHist(); var touched=false,lastR=anchor.r,lastC=anchor.c;
+    cells2d.forEach(function(line,dr){
+      var tr=trs[anchor.r+dr],r=tr&&findRow(+tr.dataset.rid); if(!r)return;
+      line.forEach(function(val,dc){
+        var c=anchor.c+dc,field=c===6?'retention_paid_date':c===7?'retention_paid_amount':null; if(!field)return;
+        applyField(r,field,String(val||'').trim()); touched=true; lastR=anchor.r+dr;lastC=c;
+      });
+    });
+    if(!touched){laborHist.pop();return;}
+    laborRenderRetention();scheduleAutosave();setTimeout(function(){laborRetentionFocus(lastR,lastC);},0);
+  }
+  window.laborRetentionPasteGrid=function(cells2d,anchor){laborRetentionApply(cells2d,anchor);};
+  window.laborRetentionGridKey=function(e){
+    var table=document.getElementById('labor-ret-grid'),td=e.target&&e.target.closest?e.target.closest('td'):null;if(!table||!td)return;
+    var rc=cellRC(td),k=e.key;
+    if(k==='Delete'||k==='Backspace'){
+      var rect=tblSelRect(table)||{r1:rc.r,r2:rc.r,c1:rc.c,c2:rc.c},grid=[];
+      for(var r=rect.r1;r<=rect.r2;r++){var line=[];for(var c=rect.c1;c<=rect.c2;c++)line.push('');grid.push(line);}
+      e.preventDefault();laborRetentionApply(grid,{r:rect.r1,c:rect.c1});return;
+    }
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(k)>=0){
+      if(e.target.tagName==='INPUT'&&e.target.type==='number'&&(k==='ArrowLeft'||k==='ArrowRight'))return;
+      var d={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]}[k];e.preventDefault();laborRetentionFocus(rc.r+d[0],rc.c+d[1]);
+    }
+  };
   window.laborRenderRetention=function(){
     var el=document.getElementById('labor-ret-content'); if(!el) return;
-    var rows=laborRows.filter(function(r){ return r.has_retention; });
+    var rows=laborRows.filter(function(r){
+      return r.has_retention&&rowPassesColFilters('laborret',function(key){return laborRetValue(r,key);});
+    });
     var pending=0, done=0;
     rows.forEach(function(r){ var ret=Math.round(num(r.actual_amount)*0.2); if(has(r.retention_paid_date)&&num(r.retention_paid_amount)>0) done+=num(r.retention_paid_amount); else pending+=ret; });
     var body='';
@@ -21714,13 +22445,13 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       var rid=r._rid;
       var billed=num(r.actual_amount), ret=Math.round(billed*0.2), thisPay=billed-ret;
       var settled=has(r.retention_paid_date)&&num(r.retention_paid_amount)>0;
-      body+='<tr>'
+      body+='<tr data-rid="'+rid+'">'
         +'<td>'+esc(r.doc_no)+'</td><td>'+esc(r.proj_num)+'</td><td>'+esc(r.manager||'')+'</td>'
         +'<td class="num">'+ntd(billed)+'</td>'
         +'<td class="num">'+ntd(thisPay)+'</td>'
         +'<td class="num" style="color:var(--danger)">'+ntd(ret)+'</td>'
-        +'<td class="lab-w-date"><input type="date" value="'+escAttr(r.retention_paid_date)+'" onchange="laborCell('+rid+',\'retention_paid_date\',this.value)"></td>'
-        +'<td class="lab-w-num"><input class="r" type="number" step="any" value="'+escAttr(r.retention_paid_amount)+'" placeholder="'+ret+'" onchange="laborCell('+rid+',\'retention_paid_amount\',this.value)"></td>'
+        +'<td class="lab-w-date"><input type="date" data-ret-field="retention_paid_date" value="'+escAttr(r.retention_paid_date)+'" onchange="laborCell('+rid+',\'retention_paid_date\',this.value)"></td>'
+        +'<td class="lab-w-num"><input class="r" type="number" step="any" data-ret-field="retention_paid_amount" value="'+escAttr(r.retention_paid_amount)+'" placeholder="'+ret+'" onchange="laborCell('+rid+',\'retention_paid_amount\',this.value)"></td>'
         +'<td>'+(settled?'<span style="color:var(--success)">已核銷</span>':'<span style="color:var(--danger)">待核銷</span>')+'</td>'
         +'</tr>';
     });
@@ -21729,10 +22460,12 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       +'<div><div style="color:var(--text3);font-size:12px">已核銷金額</div><div style="font-size:22px;font-weight:800;color:var(--success);font-family:var(--mono)">'+ntd(done)+'</div></div>'
       +'</div>';
     if(!rows.length){ el.innerHTML=summ+'<div class="empty-state">目前沒有保留款(在明細勾「保」即產生)</div>'; return; }
-    el.innerHTML=summ+'<div class="card" style="padding:0;overflow:auto"><table class="lab-tbl"><thead><tr>'
-      +'<th>編號</th><th>工程</th><th>主辦</th><th class="num">請款金額</th><th class="num">本期實收(80%)</th><th class="num">保留款(20%)</th>'
-      +'<th>核銷請款日</th><th class="num">核銷金額</th><th>狀態</th>'
+    el.innerHTML=summ+'<div class="card" style="padding:0;overflow:auto"><table class="lab-tbl" id="labor-ret-grid" onkeydown="laborRetentionGridKey(event)"><thead><tr>'
+      +laborRetHead('編號','doc_no')+laborRetHead('工程','proj_num')+laborRetHead('主辦','manager')
+      +laborRetHead('請款金額','bill_amount','num')+laborRetHead('本期實收(80%)','current_paid','num')+laborRetHead('保留款(20%)','retention','num')
+      +laborRetHead('核銷請款日','paid_date')+laborRetHead('核銷金額','paid_amount','num')+laborRetHead('狀態','status')
       +'</tr></thead><tbody>'+body+'</tbody></table></div>';
+    if(typeof tblInitSelection==='function') tblInitSelection(document.getElementById('labor-ret-grid'));
   };
 })();
 </script>
