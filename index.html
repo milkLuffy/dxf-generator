@@ -930,30 +930,30 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 
 /* ── 列印：橫式 A4 配置圖 ── */
 @media print {
-  @page { size: A4 landscape; margin: 8mm; }
+  @page { size: A4 landscape; margin: 3mm; }
   /* 強制保留背景/文字顏色列印(否則多數瀏覽器即使選了「彩色」,仍會把背景色省略或淡化) */
-  html, body, #layout-print-area, #layout-print-area * {
+  body.layout-chart-printing, #layout-print-area, #layout-print-area * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
-  body * { visibility: hidden; }
-  #layout-print-area, #layout-print-area * { visibility: visible; }
-  #layout-print-area { position: absolute; left: 0; right: 0; top: 0; margin: 0 auto; text-align: center; background: #fff; }
+  body.layout-chart-printing { background: #fff !important; color: #000; margin: 0; }
+  body.layout-chart-printing > :not(#layout-print-area) { display: none !important; }
+  #layout-print-area { display: block !important; position: relative; width: 291mm; height: 204mm; margin: 0 auto; overflow: hidden; text-align: center; background: #fff !important; }
+  #layout-print-area .layout-print-content { position: absolute; top: 50%; left: 50%; transform-origin: center center; }
   #layout-print-area .layout-chart-table { margin: 0 auto !important; background: #fff; }
   #layout-print-area .layout-stats { justify-content: center; margin-bottom: 12px; }
   #layout-print-area .lstat { background: #fff !important; border: 1px solid #999 !important; }
   #layout-print-area .lstat-label { color: #000 !important; }
   /* 注意:.lstat-num 的顏色是用 inline style 依狀態上色,不可強制改黑,否則彩色統計數字會全部變黑 */
-  .no-print { display: none !important; }
-  .layout-chart-table { font-size: 9px; }
+  body.layout-chart-printing .no-print { display: none !important; }
   .layout-chart-table th, .layout-chart-table td { border: 1px solid #999 !important; background: #fff; }
   .layout-chart-table th { background: #eee !important; color: #000 !important; }
   .layout-chart-table td.pos-cell { background: #eee !important; color: #000 !important; }
   .layout-chart-table .lcell-part { color: #000 !important; }
   /* 注意:.lcell-status(狀態小標籤)與 .cell-上線中/.cell-待出貨等底色,都要保留原本的狀態配色,
      不能再強制改成灰黑色,否則就是「彩色列印卻印不出彩色」的根本原因 */
-  .sidebar, .app-header { display: none !important; }
+  body.layout-chart-printing .sidebar, body.layout-chart-printing .app-header { display: none !important; }
 }
 
 /* ── 美化捲軸 ── */
@@ -1655,8 +1655,8 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
   #payslip-print .ps-net{font-size:16px;font-weight:800}
   #payslip-print .ps-net td{border:none}
   @media print{
-    body *{visibility:hidden !important;}
-    #payslip-modal, #payslip-modal *{visibility:visible !important;}
+    body.payslip-printing *{visibility:hidden !important;}
+    body.payslip-printing #payslip-modal, body.payslip-printing #payslip-modal *{visibility:visible !important;}
     #payslip-modal{position:absolute;inset:0;background:#fff;}
     #payslip-modal .modal{box-shadow:none;max-width:none;width:100%;background:#fff;color:#000}
     #payslip-print, #payslip-print *{color:#000 !important}
@@ -1669,7 +1669,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     <div id="payslip-print"></div>
     <div class="modal-actions">
       <button class="btn-modal-cancel" onclick="closeModal('payslip-modal')">關閉</button>
-      <button class="btn-modal-ok" onclick="window.print()">🖨 列印 / 存 PDF</button>
+      <button class="btn-modal-ok" onclick="payrollPrint()">🖨 列印 / 存 PDF</button>
     </div>
   </div>
 </div>
@@ -14412,12 +14412,52 @@ function layoutPrintChart() {
   const title = document.createElement('div');
   title.style.cssText = 'font-family:sans-serif;font-size:16px;font-weight:bold;text-align:center;margin-bottom:8px;color:#000';
   title.textContent = (isChart ? '線上進度配置圖' : '虛擬現場配置圖') + '　' + new Date().toLocaleDateString('zh-TW');
-  pa.appendChild(title);
-  pa.appendChild(statsClone);
-  pa.appendChild(chartClone);
+  const printContent = document.createElement('div');
+  printContent.className = 'layout-print-content';
+  printContent.appendChild(title);
+  printContent.appendChild(statsClone);
+  printContent.appendChild(chartClone);
+  pa.appendChild(printContent);
   document.body.appendChild(pa);
-  window.print();
-  setTimeout(() => { pa.remove(); }, 500);
+  document.body.classList.add('layout-chart-printing');
+
+  // A4 landscape minus the 3 mm page margins: 291 x 204 mm.
+  // Measure the chart at its natural size, then use one uniform scale for both
+  // axes. This maximizes the content without stretching or cropping it.
+  chartClone.style.overflow = 'visible';
+  printContent.style.width = 'max-content';
+  const chartTable = chartClone.querySelector('.layout-chart-table');
+  const naturalWidth = Math.max(
+    1,
+    printContent.scrollWidth,
+    chartTable ? chartTable.scrollWidth : 0
+  );
+  printContent.style.width = naturalWidth + 'px';
+  const mmToPx = 96 / 25.4;
+  const maxPrintWidth = 291 * mmToPx;
+  const maxPrintHeight = 204 * mmToPx;
+  const contentWidth = Math.max(1, naturalWidth);
+  const contentHeight = Math.max(1, printContent.scrollHeight);
+  const printScale = Math.min(maxPrintWidth / contentWidth, maxPrintHeight / contentHeight);
+  printContent.style.transform = 'translate(-50%, -50%) scale(' + printScale + ')';
+
+  // Safari may return from window.print() before the preview has captured the page.
+  // Keep the print DOM alive until afterprint instead of deleting it after 500 ms.
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    window.removeEventListener('afterprint', cleanup);
+    document.body.classList.remove('layout-chart-printing');
+    if (pa.isConnected) pa.remove();
+  };
+  window.addEventListener('afterprint', cleanup);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    try { window.print(); }
+    catch (err) { cleanup(); alert('無法開啟列印視窗，請再試一次'); }
+  }));
+  // Fallback for browsers which do not dispatch afterprint.
+  setTimeout(cleanup, 60000);
 }
 
 function layoutExportExcel() {
@@ -21585,6 +21625,17 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   }
 
   // 個人薪資明細單(可列印/存 PDF)
+  window.payrollPrint=function(){
+    document.body.classList.add('payslip-printing');
+    var cleanup=function(){
+      window.removeEventListener('afterprint', cleanup);
+      document.body.classList.remove('payslip-printing');
+    };
+    window.addEventListener('afterprint', cleanup);
+    try { window.print(); } catch(e) { cleanup(); }
+    setTimeout(cleanup, 60000);
+  };
+
   window.payrollDetail=function(sid){
     var p=prRows.filter(function(x){ return String(x.emp_id)===String(sid); })[0];
     if(!p){ alert('請先計算'); return; }
