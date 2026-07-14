@@ -728,6 +728,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .hw-pager{display:flex;align-items:center;justify-content:center;gap:12px;padding:12px;font-family:var(--mono);font-size:12px;color:var(--text3)}
 .hw-pager button{background:var(--bg3);border:1px solid var(--border-hi);color:var(--text2);border-radius:var(--rad);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:12px}
 .hw-pager button:disabled{opacity:.4;cursor:default}
+.hw-ppe-name-note{font-size:12px;color:var(--text3);line-height:1.6}
+.hw-ppe-name-wrap{max-height:52vh;overflow:auto;border:1px solid var(--border);border-radius:var(--rad)}
+.hw-ppe-name-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.hw-ppe-name-table th,.hw-ppe-name-table td{padding:7px;border-bottom:1px solid var(--border);text-align:left}
+.hw-ppe-name-table th{position:sticky;top:0;background:var(--bg3);z-index:1;font-family:var(--mono);font-size:11px;color:var(--text3)}
+.hw-ppe-name-table tr:last-child td{border-bottom:0}
+.hw-ppe-name-table input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);padding:8px 10px;font-family:var(--mono);font-size:13px;outline:none}
+.hw-ppe-name-table input:focus{border-color:var(--accent2)}
 /* 五金庫存表格:加大字級、欄位貼齊內容(不再撐滿整列) */
 #page-hardware .layout-table{font-size:13.5px;width:auto;min-width:auto}
 #page-hardware .layout-table th{font-size:12px;padding:8px 10px;letter-spacing:.03em;color:var(--text2)}
@@ -1481,6 +1489,26 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     </div>
     <div class="info-manage-list" id="manual-notification-list"></div>
     <div class="modal-actions"><button class="btn-modal-cancel" onclick="closeModal('notification-settings-modal')">關閉</button></div>
+  </div>
+</div>
+
+<!-- ── 五金防護用具姓名對照 modal ── -->
+<div class="modal-overlay" id="hw-ppe-name-modal">
+  <div class="modal" style="max-width:650px">
+    <div class="modal-title">防護用具匯出姓名對照</div>
+    <div class="hw-ppe-name-note">左側填領用紀錄中的中文姓名，右側填列印時顯示的英文姓名。此設定只套用於五金的「防護用具匯出」，並由全公司共用。</div>
+    <div class="hw-ppe-name-wrap">
+      <table class="hw-ppe-name-table">
+        <colgroup><col style="width:42%"><col style="width:48%"><col style="width:10%"></colgroup>
+        <thead><tr><th>中文姓名</th><th>匯出英文姓名</th><th></th></tr></thead>
+        <tbody id="hw-ppe-name-body"></tbody>
+      </table>
+    </div>
+    <button class="btn-sm" type="button" onclick="hwPpeAddNameRow()" style="align-self:flex-start">＋ 新增姓名</button>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" type="button" onclick="closeModal('hw-ppe-name-modal')">取消</button>
+      <button class="btn-modal-ok" type="button" id="hw-ppe-name-save" onclick="hwPpeSaveNames()">儲存姓名對照</button>
+    </div>
   </div>
 </div>
 
@@ -4076,7 +4104,13 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="hw-tblbox">
           <div class="layout-toolbar">
             <span class="layout-hint">新增領用會自動扣減該品項庫存;庫存不足會提示。</span>
-            <button class="btn-sm btn-export" onclick="hwExportUsage()">⬇ 匯出 Excel</button>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <label class="layout-hint" for="hw-ppe-month">月份</label>
+              <input id="hw-ppe-month" type="month" class="search-input" style="width:145px"/>
+              <button class="btn-sm" onclick="hwPpeOpenNames()">姓名對照</button>
+              <button class="btn-sm btn-export" onclick="hwExportPPE()">防護用具匯出</button>
+              <button class="btn-sm btn-export" onclick="hwExportUsage()">⬇ 匯出 Excel</button>
+            </div>
           </div>
           <div class="layout-table-wrap">
             <table class="layout-table" id="hw-usage-table" onkeydown="tableArrowNav(event)">
@@ -8039,7 +8073,8 @@ async function hwInit(){
       sbFetchAll('/rest/v1/hw_usage?select=*'),
       sbFetchAll('/rest/v1/hw_vendors?select=*'),
       sbFetchAll('/rest/v1/hw_stocktake?select=*'),
-      sbFetchAll('/rest/v1/hw_equipment?select=*')
+      sbFetchAll('/rest/v1/hw_equipment?select=*'),
+      hwPpeLoadNames()
     ]);
     hwItems=ri.data||[]; hwPurchases=rp.data||[]; hwUsage=ru.data||[];
     hwVendors=rv.data||[]; hwStocktake=rst.data||[]; hwEquip=req.data||[];
@@ -8066,6 +8101,7 @@ function hwPopulateSelects(){
   const pd=document.getElementById('hw-pu-date'); if(pd&&!pd.value)pd.value=t;
   const ud=document.getElementById('hw-us-date'); if(ud&&!ud.value)ud.value=t;
   const cd=document.getElementById('hw-ct-date'); if(cd&&!cd.value)cd.value=t;
+  const pm=document.getElementById('hw-ppe-month'); if(pm&&!pm.value)pm.value=t.slice(0,7);
 }
 
 function hwSwitchTab(tab){
@@ -8671,6 +8707,141 @@ function hwEditEquip(id){
   };
   overlay.querySelector('.ok').onclick=doSave;
   overlay.onclick=(e)=>{ if(e.target===overlay) close(); };
+}
+
+// ── 防護用具領用表：依月份篩選並產生 A4 直式分頁列印 / PDF ──
+const HW_PPE_NAME_CONFIG_KEY = 'hw_ppe_foreign_names';
+const HW_PPE_FOREIGN_DEFAULTS = {
+  '和松朋':'SOMPHON',
+  '蘇林':'SURIN',
+  '他瓦才':'TAWATCHAI',
+  '阿路瓦':'ANUWAT',
+  '翁安':'ONGART',
+  '那卡林':'NAKHARIN',
+  '吉達武':'KRITSADAWUT',
+  '沙達朋':'SATTAPHON',
+  '蘇提拉':'SUTHICHA'
+};
+let HW_PPE_FOREIGN_NAMES = {...HW_PPE_FOREIGN_DEFAULTS};
+function hwPpeNameMap(value){
+  try{
+    const obj=typeof value==='string'?JSON.parse(value):value;
+    if(!obj || typeof obj!=='object' || Array.isArray(obj)) return null;
+    const clean={};
+    Object.entries(obj).forEach(([local,english])=>{
+      const l=String(local||'').trim(), e=String(english||'').trim();
+      if(l&&e) clean[l]=e;
+    });
+    return clean;
+  }catch(e){ return null; }
+}
+async function hwPpeLoadNames(){
+  try{
+    const r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+encodeURIComponent(HW_PPE_NAME_CONFIG_KEY));
+    const row=r.ok&&Array.isArray(r.data)?r.data[0]:null;
+    const saved=row?hwPpeNameMap(row.value):null;
+    HW_PPE_FOREIGN_NAMES=saved===null?{...HW_PPE_FOREIGN_DEFAULTS}:saved;
+  }catch(e){
+    console.warn('hwPpeLoadNames',e);
+    HW_PPE_FOREIGN_NAMES={...HW_PPE_FOREIGN_DEFAULTS};
+  }
+}
+function hwPpeNameRow(local,english){
+  return '<tr><td><input class="hw-ppe-local" value="'+hwPpeEsc(local||'')+'" placeholder="例如：和松朋"></td>'+
+    '<td><input class="hw-ppe-english" value="'+hwPpeEsc(english||'')+'" placeholder="例如：SOMPHON"></td>'+
+    '<td style="text-align:center"><button class="hw-act del" type="button" title="刪除" onclick="this.closest(\'tr\').remove()">✕</button></td></tr>';
+}
+function hwPpeAddNameRow(local,english){
+  const body=document.getElementById('hw-ppe-name-body'); if(!body)return;
+  body.insertAdjacentHTML('beforeend',hwPpeNameRow(local||'',english||''));
+  const input=body.lastElementChild&&body.lastElementChild.querySelector('.hw-ppe-local'); if(input)input.focus();
+}
+function hwPpeOpenNames(){
+  const body=document.getElementById('hw-ppe-name-body'); if(!body)return;
+  const entries=Object.entries(HW_PPE_FOREIGN_NAMES).sort((a,b)=>a[0].localeCompare(b[0],'zh-Hant'));
+  body.innerHTML=entries.map(([local,english])=>hwPpeNameRow(local,english)).join('');
+  if(!entries.length) hwPpeAddNameRow();
+  openModal('hw-ppe-name-modal');
+}
+async function hwPpeSaveNames(){
+  const body=document.getElementById('hw-ppe-name-body'); if(!body)return;
+  const map={};
+  for(const tr of body.querySelectorAll('tr')){
+    const local=(tr.querySelector('.hw-ppe-local')?.value||'').trim();
+    const english=(tr.querySelector('.hw-ppe-english')?.value||'').trim();
+    if(!local&&!english)continue;
+    if(!local||!english){ alert('每一列都要同時填寫中文姓名與英文姓名'); return; }
+    if(Object.prototype.hasOwnProperty.call(map,local)){ alert('中文姓名重複：'+local); return; }
+    map[local]=english;
+  }
+  const btn=document.getElementById('hw-ppe-name-save'); if(btn){btn.disabled=true;btn.textContent='儲存中…';}
+  try{
+    const r=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:HW_PPE_NAME_CONFIG_KEY,value:JSON.stringify(map)})});
+    if(!r.ok){ alert('姓名對照儲存失敗，請確認目前帳號有設定權限'); return; }
+    HW_PPE_FOREIGN_NAMES=map;
+    closeModal('hw-ppe-name-modal');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='儲存姓名對照';}
+  }
+}
+function hwPpeEsc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function hwPpePersonName(name){
+  const n=String(name||'').trim();
+  return HW_PPE_FOREIGN_NAMES[n]||n;
+}
+function hwPpeIsCountRow(row){
+  const text=[row&&row.name,row&&row.person,row&&row.note,row&&row.remark]
+    .map(v=>String(v||'').normalize('NFKC').replace(/\s+/g,''))
+    .join('');
+  return text.includes('清點');
+}
+function hwExportPPE(){
+  const monthEl=document.getElementById('hw-ppe-month');
+  const month=(monthEl&&monthEl.value)||egToday().slice(0,7);
+  if(!/^\d{4}-\d{2}$/.test(month)){ alert('請先選擇正確月份'); return; }
+  const rows=hwUsage.filter(u=>u.category==='防護用具' && String(u.tx_date||'').slice(0,7)===month && !hwPpeIsCountRow(u))
+    .slice().sort((a,b)=>String(a.tx_date||'').localeCompare(String(b.tx_date||'')) || hwNum(a.id)-hwNum(b.id));
+  if(!rows.length){ alert(month.replace('-','/')+' 沒有「防護用具」領用資料'); return; }
+
+  // 直式 A4 每頁 23 筆；四周保留 10mm，固定 30pt 列高，資料多時自動分頁。
+  const pageRows=23;
+  const pages=[];
+  for(let i=0;i<rows.length;i+=pageRows) pages.push(rows.slice(i,i+pageRows));
+  const title='鎮山_防護用具領用表';
+  const docTitle=title+'_'+month;
+  const css='@page{size:A4 portrait;margin:10mm;}'+
+    '*{box-sizing:border-box;}html,body{margin:0;padding:0;color:#000;background:#fff;font-family:"標楷體","DFKai-SB","BiauKai","Kaiti TC",serif;}'+
+    '.sheet{width:190mm;height:277mm;margin:0 auto;page-break-after:always;page-break-inside:avoid;}'+
+    '.sheet:last-child{page-break-after:auto;}'+
+    '.title{height:12mm;line-height:10mm;text-align:center;font-size:18pt;font-weight:700;white-space:nowrap;}'+
+    'table{width:100%;border-collapse:collapse;table-layout:fixed;}'+
+    'col.seq{width:13mm;}col.date{width:31mm;}col.item{width:45mm;}col.qty{width:16mm;}col.person{width:35mm;}col.sign{width:50mm;}'+
+    'th,td{border:0.8pt solid #000;text-align:center;vertical-align:middle;padding:1mm 1.5mm;white-space:nowrap;}'+
+    'thead tr,tbody tr{height:30pt;}th{height:30pt;font-size:16pt;font-weight:700;}'+
+    'td{height:30pt;font-size:14pt;line-height:1.05;}td.item{text-align:left;padding-left:3mm;}'+
+    '@media screen{body{background:#525659;padding:10px;}.sheet{background:#fff;box-shadow:0 2px 9px rgba(0,0,0,.45);margin-bottom:10px;}}'+
+    '@media print{body{background:#fff;}.sheet{margin:0;box-shadow:none;}}';
+  const sheets=pages.map((page,pageIndex)=>{
+    const body=page.map((r,rowIndex)=>'<tr>'+
+      '<td>'+(pageIndex*pageRows+rowIndex+1)+'</td>'+
+      '<td>'+hwPpeEsc(String(r.tx_date||'').replace(/-/g,'/'))+'</td>'+
+      '<td class="item">'+hwPpeEsc(r.name||'')+'</td>'+
+      '<td>'+hwPpeEsc(hwFmt(r.qty))+'</td>'+
+      '<td>'+hwPpeEsc(hwPpePersonName(r.person))+'</td>'+
+      '<td></td>'+
+      '</tr>').join('');
+    return '<div class="sheet"><div class="title">'+title+'</div><table><colgroup><col class="seq"><col class="date"><col class="item"><col class="qty"><col class="person"><col class="sign"></colgroup>'+
+      '<thead><tr><th>序號</th><th>日期</th><th>項目</th><th>數量</th><th>領用人</th><th>簽名</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+  }).join('');
+  const html='<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>'+hwPpeEsc(docTitle)+'</title><style>'+css+'</style></head><body>'+
+    sheets+'</body></html>';
+  const w=window.open('','_blank');
+  if(!w){ alert('視窗被瀏覽器封鎖，請允許彈出視窗後再按「防護用具匯出」'); return; }
+  w.document.open(); w.document.write(html); w.document.close(); w.document.title=docTitle;
+  const fire=()=>{ try{ w.focus(); w.print(); }catch(e){ alert('無法開啟列印視窗，請再試一次'); } };
+  if(w.document.readyState==='complete') setTimeout(fire,300); else w.onload=()=>setTimeout(fire,300);
 }
 
 // ── Excel 匯出 ──
