@@ -257,7 +257,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .dash-top-grid>.card,.dash-top-grid>.stat-card{padding:12px;height:170px;min-height:170px;max-height:170px;overflow:hidden}
 /* KPI 卡(在職人數/產量):數字群垂直置中、icon 浮右上角 */
 .dash-top-grid>.stat-card{display:flex;flex-direction:column;justify-content:center}
+.dash-top-grid>.stat-card:before{display:none}
 .dash-top-grid>.stat-card .stat-icon{position:absolute;top:12px;right:13px;margin:0;font-size:18px}
+.dash-top-grid>.stat-card .dash-card-link{position:absolute;top:12px;right:13px;z-index:1}
 .dash-top-grid>.stat-card .stat-value{font-size:34px;margin-bottom:4px}
 .dash-duty-badge{margin-top:7px;padding:5px 9px;border-radius:8px;background:#ffcc00;border:1px solid #e6b800;color:#3d2f00;font-size:11px;font-weight:800;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 8px rgba(255,204,0,.28)}
 .dash-mini-card{display:flex;flex-direction:column;min-width:0}
@@ -671,6 +673,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .btn-sm{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--rad);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;border:1px solid}
 .btn-export{background:none;border-color:var(--border-hi);color:var(--text2)}
 .btn-export:hover{border-color:var(--accent3);color:var(--accent3)}
+.btn-danger{background:none;border-color:var(--border-hi);color:var(--text3)}
+.btn-danger:hover{border-color:var(--red);color:var(--red)}
 /* 勾選非本公司製作構件 — 啟用中狀態 */
 .btn-nonco-on{background:var(--accent3);border-color:var(--accent3);color:#fff}
 .btn-nonco-on:hover{filter:brightness(1.08)}
@@ -1948,6 +1952,9 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="nav-item" onclick="navTo('labor')" id="nav-labor">
             <span class="nav-icon">🧰</span><span class="nav-label">點工單</span>
           </div>
+          <div class="nav-item" onclick="navTo('deductions')" id="nav-deductions">
+            <span class="nav-icon">💸</span><span class="nav-label">扣款明細</span>
+          </div>
         </div>
         <div class="nav-sec" data-sec="prod" hidden>
           <div class="nav-item" onclick="navTo('bom')" id="nav-bom">
@@ -1967,6 +1974,9 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           </div>
           <div class="nav-item" onclick="navTo('prod')" id="nav-prod">
             <span class="nav-icon">🏗️</span><span class="nav-label">SP狀態追蹤表</span>
+          </div>
+          <div class="nav-item" onclick="navTo('modparts')" id="nav-modparts">
+            <span class="nav-icon">🛠️</span><span class="nav-label">修改構件</span>
           </div>
         </div>
         <div class="nav-sec" data-sec="tools" hidden>
@@ -2051,12 +2061,14 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       'nav-evergreen-sys':'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>',
       'nav-hardware':'<path d="M14.7 6.3a4 4 0 0 0-5-5l2.1 2.1-2.4 2.4-2.1-2.1a4 4 0 0 0 5 5L20 16.4 16.4 20l-7.7-7.7"/>',
       'nav-labor':'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V4h8v3M3 12h18M10 12v2h4v-2"/>',
+      'nav-deductions':'<circle cx="9" cy="9" r="6"/><path d="M6.5 9h5"/><path d="M16 12v7M13 16l3 3 3-3"/>',
       'nav-bom':'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
       'nav-layout':'<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M7.5 16.5 16.5 7.5M6 5v6M3 8h6M15 18h6"/>',
       'nav-daily':'<path d="M4 19V9M10 19V4M16 19v-7M22 19H2"/>',
       'nav-inspect':'<path d="M9 5h6M9 3h6v4H9z"/><rect x="5" y="5" width="14" height="16" rx="2"/><path d="m9 14 2 2 4-5"/>',
       'nav-a201a202':'<path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/>',
       'nav-prod':'<path d="M3 21V10l6 3V9l6 4V5l6 4v12zM7 17h2M13 17h2M18 17h1"/>',
+      'nav-modparts':'<rect x="3" y="4" width="11" height="11" rx="1"/><path d="M6.5 8h4M6.5 11h4"/><path d="M20 12.6 14.6 18l-3 .8.8-3 5.4-5.4a1.5 1.5 0 0 1 2.2 2.2z"/>',
       'nav-bomtool':'<path d="M6 2h9l4 4v16H6zM15 2v5h5M9 11h7M9 15h7M9 19h4"/>',
       'nav-sp':'<path d="M4 20 20 4M7 17l-2-2M11 13l-2-2M15 9l-2-2M3 21h18"/>',
       'nav-dxf':'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z"/>',
@@ -2122,14 +2134,14 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     <div class="page active" id="page-dashboard">
       <div class="dash-top-grid">
         <div class="stat-card blue">
-          <div class="stat-icon">👷</div>
+          <button class="btn-sm btn-export dash-card-link" onclick="navTo('attendance')">出勤表</button>
           <div class="stat-value" style="color:var(--accent2)" id="stat-staff">—</div>
           <div class="stat-label">員工人數</div>
           <div class="stat-sub"><span>本月出勤 <b id="stat-att-month">—</b> 人</span><span>本日出勤 <b id="stat-att-today">—</b> 人</span></div>
           <div class="dash-duty-badge" id="dash-weekly-duty">本週值班：讀取中…</div>
         </div>
         <div class="stat-card green">
-          <div class="stat-icon">⚖️</div>
+          <button class="btn-sm btn-export dash-card-link" onclick="navTo('inspect')">報驗</button>
           <div class="stat-value" style="color:var(--green)" id="stat-month-ton">—</div>
           <div class="stat-label">本月總產量（噸）</div>
           <div class="stat-sub"><span>今日 <b id="stat-today-ton">—</b> t</span><span>本月 <b id="stat-month-qty">—</b> 支</span></div>
@@ -3048,6 +3060,8 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       #page-labor .labor-project-card:hover{border-color:var(--accent2);transform:translateY(-1px)}
       #page-labor .labor-project-card.active{border-color:var(--accent2);box-shadow:inset 3px 0 0 var(--accent2);background:color-mix(in srgb,var(--accent2) 8%,var(--bg2))}
       #page-labor .labor-project-card.completed{opacity:.66;border-style:dashed}
+      #page-labor .labor-project-code-row{display:flex;align-items:center;gap:6px}
+      #page-labor .labor-support-tag{display:inline-flex;align-items:center;padding:2px 6px;border-radius:999px;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.38);color:var(--yellow);font-size:9px;font-weight:700;white-space:nowrap}
       #page-labor .labor-project-code{font-size:16px;font-weight:750;margin-bottom:6px}
       #page-labor .labor-project-meta{font-family:var(--mono);font-size:10px;line-height:1.55;color:var(--text3)}
       #page-labor .labor-project-meta b{color:var(--danger);font-weight:650}
@@ -4367,6 +4381,34 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <datalist id="hw-item-list-ct"></datalist>
       <datalist id="hw-vendor-list"></datalist>
       <datalist id="hw-person-list"></datalist>
+    </div>
+
+    <!-- 扣款明細 -->
+    <div class="page" id="page-deductions">
+      <div class="page-header"><div><div class="page-title">扣款明細</div><div class="page-subtitle">點工單、品管、材料、工安及運費扣款集中管理</div></div></div>
+      <div class="layout-tabs" id="ded-cat-tabs"><button class="layout-tab active" onclick="deductionsCat('',this)">全部分類</button><button class="layout-tab" onclick="deductionsCat('點工單扣款',this)">點工單扣款</button><button class="layout-tab" onclick="deductionsCat('品管扣款',this)">品管扣款</button><button class="layout-tab" onclick="deductionsCat('材料',this)">材料</button><button class="layout-tab" onclick="deductionsCat('工安扣款',this)">工安扣款</button><button class="layout-tab" onclick="deductionsCat('運費扣款',this)">運費扣款</button></div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="layout-toolbar" style="flex-wrap:wrap">
+          <input id="ded-search" class="search-input" placeholder="搜尋編號、工程區、事由…" oninput="deductionsRender()"/>
+          <span style="flex:1"></span><button class="btn-sm btn-gen" style="flex:none" onclick="deductionsAdd()">＋ 新增</button><button class="btn-sm btn-export" onclick="deductionsExport()">⬇ 匯出 Excel</button>
+        </div>
+        <div class="section-label" style="margin-top:8px">Excel 式操作：拖曳多選、方向鍵、複製／貼上、Delete 清除；修改後自動儲存。</div>
+      </div>
+      <div class="layout-table-wrap"><table class="layout-table" id="ded-grid" onkeydown="deductionsKey(event)"><thead><tr><th>分類</th><th>日期</th><th>編號</th><th>工程區</th><th>事由／扣款項目</th><th class="num">預計工數</th><th class="num">預計金額</th><th class="num">實際扣款</th><th>扣款日期</th><th>備註</th><th>操作</th></tr></thead><tbody id="ded-body"></tbody><tfoot id="ded-foot"></tfoot></table></div>
+    </div>
+
+    <!-- 修改構件 -->
+    <div class="page" id="page-modparts">
+      <div class="page-header"><div><div class="page-title">修改構件</div><div class="page-subtitle">修改構件總表與區間回報</div></div></div>
+      <div class="layout-tabs"><button class="layout-tab active" id="mp-tabbtn-list" onclick="modpartsTab('list')">總表登記</button><button class="layout-tab" id="mp-tabbtn-report" onclick="modpartsTab('report')">區間回報</button></div>
+      <div id="mp-tab-list">
+        <div class="card" style="margin-bottom:14px"><div class="layout-toolbar"><input id="mp-search" class="search-input" placeholder="搜尋 CP、構件、工程…" oninput="modpartsRender()"/><span style="flex:1"></span><button class="btn-sm btn-gen" style="flex:none" onclick="modpartsAdd()">＋ 新增</button><button class="btn-sm btn-export" onclick="modpartsExport(false)">⬇ 匯出 Excel</button></div><div class="section-label" style="margin-top:8px">輸入「構件編號＋工程編號」後，工程區、單重與圖號會由 BOM 自動帶入。表格支援完整 Excel 式操作並自動儲存。</div></div>
+        <div class="layout-table-wrap"><table class="layout-table" id="mp-grid" onkeydown="modpartsKey(event)"><thead><tr><th>CP編號</th><th>構件編號</th><th>工程編號</th><th>工程區</th><th class="num">數量</th><th class="num">單重(kg)</th><th>圖號</th><th>上線日期</th><th>出貨日期</th><th>操作</th></tr></thead><tbody id="mp-body"></tbody><tfoot id="mp-foot"></tfoot></table></div>
+      </div>
+      <div id="mp-tab-report" style="display:none">
+        <div class="card" style="margin-bottom:14px"><div class="dash-date-nav" style="margin:0"><button class="dash-nav-btn" onclick="modpartsPeriod(-1)">« 上一期</button><input type="date" id="mp-from" class="dash-date" onchange="modpartsReport()"><span>～</span><input type="date" id="mp-to" class="dash-date" onchange="modpartsReport()"><button class="dash-nav-btn" onclick="modpartsPeriod(1)">下一期 »</button><button class="dash-nav-btn" onclick="modpartsDefaultPeriod()">本期</button><span style="flex:1"></span><button class="btn-sm btn-export" onclick="modpartsExport(true)">⬇ 匯出 Excel</button></div></div>
+        <div class="layout-table-wrap"><table class="layout-table" id="mp-report-grid"><thead><tr><th>CP編號</th><th>構件編號</th><th>工程編號</th><th>工程區</th><th class="num">數量</th><th class="num">單重(kg)</th><th class="num">總重(kg)</th><th>圖號</th><th>上線日期</th><th>出貨日期</th></tr></thead><tbody id="mp-report-body"></tbody><tfoot id="mp-report-foot"></tfoot></table></div>
+      </div>
     </div>
 
     </div><!-- /content-body -->
@@ -8012,8 +8054,8 @@ function goHome() {
 // ── 兩欄式導覽:圖示軌(分類) + 子選單面板 ──
 const SECTION_TITLE={main:'主選單',prod:'產量與報驗',tools:'工具',staff:'人員管理',eg:'長榮專區',hr:'人事薪資',admin:'管理員'};
 const PAGE_SECTION={
-  dashboard:'main', labor:'main', hardware:'main',
-  bom:'prod', layout:'prod', daily:'prod', inspect:'prod', a201a202:'prod', prod:'prod',
+  dashboard:'main', labor:'main', hardware:'main', deductions:'main',
+  bom:'prod', layout:'prod', daily:'prod', inspect:'prod', a201a202:'prod', prod:'prod', modparts:'prod',
   bomtool:'tools', sp:'tools', dxf:'tools', hazard:'tools',
   staff:'staff', egstaff:'staff', attend:'staff', attendlog:'staff',
   attendance:'eg', egdaily:'eg',
@@ -8030,12 +8072,14 @@ const PAGE_META=[
   {k:'evergreen-sys',label:'長榮系統(外部)', sec:'main'},
   {k:'hardware',     label:'五金庫存',       sec:'main'},
   {k:'labor',        label:'點工單',         sec:'main'},
+  {k:'deductions',   label:'扣款明細',       sec:'main'},
   {k:'bom',          label:'BOM 工程列表',   sec:'prod'},
   {k:'layout',       label:'線上進度表',     sec:'prod'},
   {k:'daily',        label:'每日產量',       sec:'prod'},
   {k:'inspect',      label:'報驗',           sec:'prod'},
   {k:'a201a202',     label:'A201/A202登記',  sec:'prod'},
   {k:'prod',         label:'SP狀態追蹤表',   sec:'prod'},
+  {k:'modparts',     label:'修改構件',       sec:'prod'},
   {k:'bomtool',      label:'BOM 剖析工具',   sec:'tools'},
   {k:'sp',           label:'S/P 板厚分類剖析',sec:'tools'},
   {k:'dxf',          label:'水電靠模生產器', sec:'tools'},
@@ -8173,7 +8217,9 @@ function navTo(page) {
   if(page==='egdaily') egInit();
   if(page==='hardware') hwInit();
   if(page==='labor') laborInit();
+  if(page==='deductions') deductionsInit();
   if(page==='prod') prodInit();
+  if(page==='modparts') modpartsInit();
   if(page==='egstaff') egstInit();
   if(page==='emp') empInit();
   if(page==='payroll') payrollInit();
@@ -16677,10 +16723,31 @@ function updateClock() {
   const ss = String(now.getSeconds()).padStart(2,'0');
   const dateKey=`${y}-${m}-${d}`;
   if(_clockDateKey&&dateKey!==_clockDateKey&&currentUser){
+    const previousDateKey=_clockDateKey;
     _notifPopped=false;
     loadNotificationData();
     const dash=document.getElementById('page-dashboard');
-    if(dash&&dash.classList.contains('active'))dashLoadAgenda();
+    if(dash&&dash.classList.contains('active')){
+      // 只有原本停在「昨天」時才自動跟到今天；使用者刻意查看歷史日期時不打斷。
+      const dashDate=document.getElementById('dash-shared-date');
+      if(dashDate&&(!dashDate.value||dashDate.value===previousDateKey)) dashDate.value=dateKey;
+      loadDashboard();
+    }
+    const attendance=document.getElementById('page-attendance');
+    if(attendance&&attendance.classList.contains('active')){
+      const attDate=document.getElementById('att-date');
+      if(attDate&&(!attDate.value||attDate.value===previousDateKey)){
+        attDate.value=dateKey;
+        const attMonth=document.getElementById('att-month');
+        if(attMonth) attMonth.value=dateKey.slice(0,7);
+        attendanceLoadMonth();
+      }else{
+        attUpdateNavLabels();
+        refreshDateWk();
+      }
+    }else{
+      refreshDateWk();
+    }
   }
   _clockDateKey=dateKey;
   const dateEl = document.getElementById('clock-date');
@@ -17119,7 +17186,8 @@ document.addEventListener('paste', e => {
   const writeCell = (cell, val) => {
     if (!cell) return;
     const inp = cell.querySelector('input,select');
-    if (inp && !inp.disabled && inp.type !== 'checkbox' && inp.type !== 'date') {
+    const allowDate = tblSel.table && (tblSel.table.id === 'ded-grid' || tblSel.table.id === 'mp-grid');
+    if (inp && !inp.disabled && !inp.readOnly && inp.type !== 'checkbox' && (inp.type !== 'date' || allowDate)) {
       inp.value = (inp.tagName === 'SELECT') ? String(val).trim() : val;
       inp.dispatchEvent(new Event('input', {bubbles:true}));
       inp.dispatchEvent(new Event('change', {bubbles:true}));
@@ -17598,7 +17666,7 @@ document.addEventListener('keydown', e => {
   e.preventDefault();
   selCells.forEach(cell => {
     const inp = cell.querySelector('input,select');
-    if (inp && !inp.disabled && inp.type !== 'checkbox') {
+    if (inp && !inp.disabled && !inp.readOnly && inp.type !== 'checkbox') {
       inp.value = '';
       inp.dispatchEvent(new Event('input', {bubbles:true}));
       inp.dispatchEvent(new Event('change', {bubbles:true}));
@@ -21916,6 +21984,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   var laborTab='detail';
   var laborProject='__cards__'; // __cards__=工程入口、__all__=全部工程、其餘=指定工程
   var laborShowCompleted=false;
+  var laborSupportProjects=(function(){try{return new Set(JSON.parse(localStorage.getItem('laborSupportProjects')||'[]'));}catch(e){return new Set();}})();
   var laborAutoTimer=null;
   var laborSaving=false,laborSaveQueued=false;
   var laborHist=[], laborRedoStack=[];
@@ -21997,19 +22066,38 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       var rows=laborRows.filter(function(r){return String(r.proj_num||'').trim()===p;});
       var sum=rows.reduce(function(s,r){return s+num(r.amount);},0);
       var ub=rows.reduce(function(s,r){return s+(isBilled(r)?0:num(r.amount));},0);
-      var completed=Math.abs(ub)<.005;
+      var support=laborSupportProjects.has(p);
+      var completed=Math.abs(ub)<.005&&!support;
       if(completed){completedCount++;if(!laborShowCompleted)return;}
-      cards+='<button class="labor-project-card '+(laborProject===p?'active ':'')+(completed?'completed':'')+'" data-project="'+escAttr(p)+'" onclick="laborOpenProject(this.dataset.project)">'
-        +'<div class="labor-project-code">'+esc(p)+'</div><div class="labor-project-meta">'+rows.length+' 筆 · NT$'+ntd(sum)+'<br>'+(completed?'<span style="color:var(--success);font-weight:700">已完成</span>':'<b>未請款 NT$'+ntd(ub)+'</b>')+'</div></button>';
+      cards+='<div class="labor-project-card '+(laborProject===p?'active ':'')+(completed?'completed':'')+'" role="button" tabindex="0" data-project="'+escAttr(p)+'" onclick="laborOpenProject(this.dataset.project)" onkeydown="if(event.key===\'Enter\')laborOpenProject(this.dataset.project)">'
+        +'<div class="labor-project-code-row"><div class="labor-project-code">'+esc(p)+'</div>'+(support?'<span class="labor-support-tag">外勞支援</span>':'')+'</div>'
+        +'<div class="labor-project-meta">'+rows.length+' 筆 · NT$'+ntd(sum)+'<br>'+(support?'<b style="color:var(--yellow)">外勞支援 · 未完成</b>':completed?'<span style="color:var(--success);font-weight:700">已完成</span>':'<b>未請款 NT$'+ntd(ub)+'</b>')+'</div></div>';
     });
-    var completedBtn='<button class="btn" style="margin-left:auto;padding:4px 10px" onclick="laborToggleCompleted()">'+(laborShowCompleted?'隱藏已完成':'顯示已完成')+'（'+completedCount+'）</button>';
+    var supportBtn='<button class="btn" style="margin-left:auto;padding:4px 10px" onclick="laborOpenSupportPicker()">設定外勞支援</button>';
+    var completedBtn='<button class="btn" style="padding:4px 10px" onclick="laborToggleCompleted()">'+(laborShowCompleted?'隱藏已完成':'顯示已完成')+'（'+completedCount+'）</button>';
     var head=laborProject==='__cards__'
-      ?'<div class="labor-project-head"><span>選擇工程後輸入點工單；未請款 NT$0 的工程視為已完成</span>'+completedBtn+'</div>'
-      :'<div class="labor-project-head"><button class="labor-project-back" onclick="laborOpenProject(\'__cards__\')">← 返回工程小卡</button><span>›</span><b>'+(laborProject==='__all__'?'全部工程':esc(laborProject))+'</b>'+completedBtn+'</div>';
+      ?'<div class="labor-project-head"><span>選擇工程後輸入點工單；未請款 NT$0 的工程視為已完成</span>'+supportBtn+completedBtn+'</div>'
+      :'<div class="labor-project-head"><button class="labor-project-back" onclick="laborOpenProject(\'__cards__\')">← 返回工程小卡</button><span>›</span><b>'+(laborProject==='__all__'?'全部工程':esc(laborProject))+'</b>'+supportBtn+completedBtn+'</div>';
     el.innerHTML=head+'<div class="labor-project-grid">'+cards+'</div>';
   }
   window.laborOpenProject=function(project){ laborProject=project||'__cards__'; laborRender(); };
   window.laborToggleCompleted=function(){laborShowCompleted=!laborShowCompleted;laborRenderProjects();};
+  window.laborOpenSupportPicker=function(){
+    var old=document.getElementById('labor-support-picker');if(old)old.remove();
+    var current=Array.from(laborSupportProjects)[0]||'',opts=laborProjectCodes().map(function(p){return '<option value="'+escAttr(p)+'" '+(p===current?'selected':'')+'>'+esc(p)+'</option>';}).join('');
+    var ov=document.createElement('div');ov.id='labor-support-picker';ov.className='modal-overlay show';
+    ov.innerHTML='<div class="modal" style="max-width:420px"><div class="modal-title">設定外勞支援工程</div><div class="lf"><label>選擇工程</label><select id="labor-support-select" class="filter-select" style="width:100%;padding:9px"><option value="">— 請選擇工程 —</option>'+opts+'</select></div><div style="font-size:12px;color:var(--text3)">確定後會取代原本標記的工程，並固定顯示在未完成工程中。</div><div class="modal-actions"><button class="btn-modal-cancel" onclick="document.getElementById(\'labor-support-picker\').remove()">取消</button>'+(current?'<button class="btn-modal-cancel" style="color:var(--danger)" onclick="laborClearSupport()">取消標記</button>':'')+'<button class="btn-modal-ok" onclick="laborConfirmSupport()">確定</button></div></div>';
+    document.body.appendChild(ov);
+  };
+  window.laborConfirmSupport=function(){
+    var sel=document.getElementById('labor-support-select'),project=String(sel&&sel.value||'').trim();if(!project){alert('請先選擇工程');return;}
+    laborSupportProjects=new Set([project]);try{localStorage.setItem('laborSupportProjects',JSON.stringify([project]));}catch(e){}
+    document.getElementById('labor-support-picker')?.remove();laborRenderProjects();
+  };
+  window.laborClearSupport=function(){
+    laborSupportProjects.clear();try{localStorage.setItem('laborSupportProjects','[]');}catch(e){}
+    document.getElementById('labor-support-picker')?.remove();laborRenderProjects();
+  };
 
   window.laborSwitchTab=function(t){
     laborTab=t;
@@ -24228,5 +24316,58 @@ function spxPasteGrid(key,cells2d,anchor){ const cfg=SPX[key], arr=prodArr(key);
 </script>
 
 
+<script>
+/* ═══════════ 扣款明細／修改構件 ═══════════ */
+const DED_KEYS=['category','record_date','doc_no','zone_code','reason','expected_work','expected_amount','actual_amount','deduction_date','note'];
+let dedRows=[],dedLocal=false,dedReady=false,dedCat='';
+const dedStore='zs_deduction_details_v1';
+function xEsc(v){return String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function xToday(){const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
+function xLocalRead(k){try{const a=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(a)?a:[];}catch(e){return[];}}
+function xLocalWrite(k,a){try{localStorage.setItem(k,JSON.stringify(a));}catch(e){}}
+function xNum(v){const n=parseFloat(v);return isFinite(n)?n:0;}
+function xCell(type,val,onchange,ro){return '<input '+(type?'type="'+type+'" ':'')+(ro?'readonly class="lt-ro" ':'')+'value="'+xEsc(val)+'" onchange="'+onchange+'">';}
+async function deductionsInit(){
+  if(!dedReady){const r=await sbFetchAll('/rest/v1/deduction_details?select=*&order=record_date.desc,created_at.desc');dedLocal=!!(r&&r.ok===false);dedRows=dedLocal?xLocalRead(dedStore):(Array.isArray(r.data)?r.data:[]);dedReady=true;}
+  deductionsRender();
+}
+function deductionsCat(c,btn){dedCat=c;document.querySelectorAll('#ded-cat-tabs .layout-tab').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');deductionsRender();}
+function deductionsRender(){
+  const cat=dedCat,q=(document.getElementById('ded-search')?.value||'').toLowerCase();
+  const rows=dedRows.filter(r=>(!cat||r.category===cat)&&(!q||DED_KEYS.some(k=>String(r[k]||'').toLowerCase().includes(q))));
+  document.getElementById('ded-body').innerHTML=rows.map(r=>{const i=dedRows.indexOf(r),oc=(k)=>`deductionsChange(${i},'${k}',this.value)`;return '<tr data-i="'+i+'">'+
+    '<td><select onchange="'+oc('category')+'">'+['點工單扣款','品管扣款','材料','工安扣款','運費扣款'].map(v=>'<option'+(r.category===v?' selected':'')+'>'+v+'</option>').join('')+'</select></td>'+[
+    xCell('date',r.record_date||'',oc('record_date')),xCell('',r.doc_no||'',oc('doc_no')),xCell('',r.zone_code||'',oc('zone_code')),xCell('',r.reason||'',oc('reason')),xCell('number',r.expected_work??'',oc('expected_work')),xCell('number',r.expected_amount??'',oc('expected_amount')),xCell('number',r.actual_amount??'',oc('actual_amount')),xCell('date',r.deduction_date||'',oc('deduction_date')),xCell('',r.note||'',oc('note'))].map(v=>'<td>'+v+'</td>').join('')+'<td><button class="btn-sm btn-danger" onclick="deductionsDelete('+i+')">刪除</button></td></tr>';}).join('')||'<tr><td colspan="11" class="empty-state">尚無扣款資料</td></tr>';
+  const total=rows.reduce((s,r)=>s+xNum(r.actual_amount),0);document.getElementById('ded-foot').innerHTML='<tr><td colspan="7"><b>合計 '+rows.length+' 筆</b></td><td class="num"><b>'+total.toLocaleString()+'</b></td><td colspan="3"></td></tr>';
+  tblInitSelection(document.getElementById('ded-grid'));
+}
+async function deductionsAdd(){const row={category:dedCat||'點工單扣款',record_date:xToday(),doc_no:'',zone_code:'',reason:'',expected_work:null,expected_amount:null,actual_amount:null,deduction_date:null,note:''};if(dedLocal){row.id='local-'+Date.now();dedRows.unshift(row);xLocalWrite(dedStore,dedRows);}else{const r=await sbFetch('/rest/v1/deduction_details',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)});if(!r.ok){alert('新增失敗('+(r.status||'?')+')：'+((r.data&&(r.data.message||r.data.hint))||'請確認已在 Supabase 執行 deductions_modparts_migration.sql'));return;}dedRows.unshift(Array.isArray(r.data)?r.data[0]:r.data);}deductionsRender();}
+let dedSaveTimer;
+function deductionsChange(i,k,v){const r=dedRows[i];if(!r)return;r[k]=['expected_work','expected_amount','actual_amount'].includes(k)?(v===''?null:Number(v)):v;clearTimeout(dedSaveTimer);dedSaveTimer=setTimeout(()=>deductionsSave(i),300);}
+async function deductionsSave(i){const r=dedRows[i];if(!r)return;if(dedLocal){xLocalWrite(dedStore,dedRows);return;}const body={};DED_KEYS.forEach(k=>{let v=r[k];if((k==='record_date'||k==='deduction_date')&&v==='')v=null;body[k]=v??null;});await sbFetch('/rest/v1/deduction_details?id=eq.'+encodeURIComponent(r.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(body)});deductionsRender();}
+async function deductionsDelete(i){const r=dedRows[i];if(!r||!await uiConfirm('確定刪除此筆扣款？'))return;if(!dedLocal)await sbFetch('/rest/v1/deduction_details?id=eq.'+encodeURIComponent(r.id),{method:'DELETE'});dedRows.splice(i,1);if(dedLocal)xLocalWrite(dedStore,dedRows);deductionsRender();}
+function deductionsKey(e){tableArrowNav(e);}
+function deductionsExport(){const rows=dedRows.filter(r=>!dedCat||r.category===dedCat);const a=[['分類','日期','編號','工程區','事由／扣款項目','預計工數','預計金額','實際扣款','扣款日期','備註']];rows.forEach(r=>a.push(DED_KEYS.map(k=>r[k]??'')));const ws=XLSX.utils.aoa_to_sheet(a),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'扣款明細');XLSX.writeFile(wb,'扣款明細_'+xToday()+'.xlsx');}
+
+const MP_KEYS=['cp_no','part_no','proj_num','zone_code','qty','unit_weight','drawing_no','online_date','ship_date'];
+let mpRows=[],mpLocal=false,mpReady=false,mpBom=[];const mpStore='zs_modified_components_v1';
+async function modpartsInit(){
+  if(!mpReady){const [r,pr,zr,cr]=await Promise.all([sbFetchAll('/rest/v1/modified_components?select=*&order=online_date.desc,created_at.desc'),sbFetchAll('/rest/v1/projects?select=id,proj_num'),sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code'),sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,drawing_no')]);mpLocal=!!(r&&r.ok===false);mpRows=mpLocal?xLocalRead(mpStore):(Array.isArray(r.data)?r.data:[]);const pn={};(pr.data||[]).forEach(x=>pn[x.id]=x.proj_num);const zn={};(zr.data||[]).forEach(x=>zn[x.id]={proj_num:pn[x.project_id]||'',zone_code:x.zone_code||''});mpBom=(cr.data||[]).map(c=>({...c,...(zn[c.zone_id]||{})}));mpReady=true;modpartsDefaultPeriod();}
+  modpartsRender();
+}
+function modpartsTab(t){document.getElementById('mp-tab-list').style.display=t==='list'?'':'none';document.getElementById('mp-tab-report').style.display=t==='report'?'':'none';document.getElementById('mp-tabbtn-list').classList.toggle('active',t==='list');document.getElementById('mp-tabbtn-report').classList.toggle('active',t==='report');if(t==='report')modpartsReport();}
+function modpartsRender(){const q=(document.getElementById('mp-search')?.value||'').toLowerCase(),rows=mpRows.filter(r=>!q||MP_KEYS.some(k=>String(r[k]||'').toLowerCase().includes(q)));document.getElementById('mp-body').innerHTML=rows.map(r=>{const i=mpRows.indexOf(r),oc=k=>`modpartsChange(${i},'${k}',this.value)`;return '<tr>'+MP_KEYS.map(k=>'<td>'+xCell(k.includes('date')?'date':(['qty','unit_weight'].includes(k)?'number':''),r[k]??'',oc(k),['zone_code','unit_weight','drawing_no'].includes(k))+'</td>').join('')+'<td><button class="btn-sm btn-danger" onclick="modpartsDelete('+i+')">刪除</button></td></tr>';}).join('')||'<tr><td colspan="10" class="empty-state">尚無修改構件資料</td></tr>';const qty=rows.reduce((s,r)=>s+xNum(r.qty),0),w=rows.reduce((s,r)=>s+xNum(r.qty)*xNum(r.unit_weight),0);document.getElementById('mp-foot').innerHTML='<tr><td colspan="4"><b>合計 '+rows.length+' 筆</b></td><td class="num"><b>'+qty+'</b></td><td class="num"><b>'+w.toFixed(2)+'</b></td><td colspan="4"></td></tr>';tblInitSelection(document.getElementById('mp-grid'));}
+async function modpartsAdd(){const r={cp_no:'',part_no:'',proj_num:'',zone_code:'',qty:1,unit_weight:null,drawing_no:'',online_date:xToday(),ship_date:null};if(mpLocal){r.id='local-'+Date.now();mpRows.unshift(r);xLocalWrite(mpStore,mpRows);}else{const z=await sbFetch('/rest/v1/modified_components',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(r)});if(!z.ok){alert('新增失敗('+(z.status||'?')+')：'+((z.data&&(z.data.message||z.data.hint))||'請確認已在 Supabase 執行 deductions_modparts_migration.sql'));return;}mpRows.unshift(Array.isArray(z.data)?z.data[0]:z.data);}modpartsRender();}
+let mpSaveTimer;
+function modpartsChange(i,k,v){const r=mpRows[i];if(!r)return;r[k]=['qty','unit_weight'].includes(k)?(v===''?null:Number(v)):v;if(k==='part_no'||k==='proj_num')modpartsBomFill(r);clearTimeout(mpSaveTimer);mpSaveTimer=setTimeout(()=>modpartsSave(i),350);modpartsRender();}
+function modpartsBomFill(r){if(!r.part_no||!r.proj_num)return;const c=mpBom.find(x=>String(x.part_no).trim().toUpperCase()===String(r.part_no).trim().toUpperCase()&&String(x.proj_num).trim().toUpperCase()===String(r.proj_num).trim().toUpperCase());if(c){r.zone_code=c.zone_code||'';r.unit_weight=c.net_weight??null;r.drawing_no=c.drawing_no||'';}}
+async function modpartsSave(i){const r=mpRows[i];if(!r)return;if(mpLocal){xLocalWrite(mpStore,mpRows);return;}const b={};MP_KEYS.forEach(k=>{let v=r[k];if((k==='online_date'||k==='ship_date')&&v==='')v=null;b[k]=v??null;});await sbFetch('/rest/v1/modified_components?id=eq.'+encodeURIComponent(r.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(b)});}
+async function modpartsDelete(i){const r=mpRows[i];if(!r||!await uiConfirm('確定刪除此筆修改構件？'))return;if(!mpLocal)await sbFetch('/rest/v1/modified_components?id=eq.'+encodeURIComponent(r.id),{method:'DELETE'});mpRows.splice(i,1);if(mpLocal)xLocalWrite(mpStore,mpRows);modpartsRender();}
+function modpartsKey(e){tableArrowNav(e);}
+function modpartsDefaultPeriod(){const n=new Date(),p=x=>String(x).padStart(2,'0');let y=n.getFullYear(),m=n.getMonth()+1;if(n.getDate()<26){m--;if(m<1){m=12;y--;}}const from=y+'-'+p(m)+'-26';let e=new Date(y,m,25);const to=e.getFullYear()+'-'+p(e.getMonth()+1)+'-'+p(e.getDate());const a=document.getElementById('mp-from'),b=document.getElementById('mp-to');if(a)a.value=from;if(b)b.value=to;modpartsReport();}
+function modpartsPeriod(d){const a=document.getElementById('mp-from'),b=document.getElementById('mp-to');if(!a.value)return modpartsDefaultPeriod();const x=new Date(a.value+'T00:00:00');x.setMonth(x.getMonth()+d);const p=n=>String(n).padStart(2,'0');a.value=x.getFullYear()+'-'+p(x.getMonth()+1)+'-26';const e=new Date(x.getFullYear(),x.getMonth()+1,25);b.value=e.getFullYear()+'-'+p(e.getMonth()+1)+'-'+p(e.getDate());modpartsReport();}
+function modpartsReport(){const f=document.getElementById('mp-from')?.value||'',t=document.getElementById('mp-to')?.value||'',rows=mpRows.filter(r=>{const d=r.ship_date||r.online_date||'';return d&&d>=f&&d<=t;});document.getElementById('mp-report-body').innerHTML=rows.map(r=>'<tr>'+[r.cp_no,r.part_no,r.proj_num,r.zone_code,r.qty,r.unit_weight,(xNum(r.qty)*xNum(r.unit_weight)).toFixed(2),r.drawing_no,r.online_date,r.ship_date].map(v=>'<td>'+xEsc(v??'')+'</td>').join('')+'</tr>').join('')||'<tr><td colspan="10" class="empty-state">此區間沒有資料</td></tr>';const q=rows.reduce((s,r)=>s+xNum(r.qty),0),w=rows.reduce((s,r)=>s+xNum(r.qty)*xNum(r.unit_weight),0);document.getElementById('mp-report-foot').innerHTML='<tr><td colspan="4"><b>區間合計 '+rows.length+' 筆</b></td><td class="num"><b>'+q+'</b></td><td></td><td class="num"><b>'+w.toFixed(2)+'</b></td><td colspan="3"></td></tr>';}
+function modpartsExport(report){const f=document.getElementById('mp-from')?.value||'',t=document.getElementById('mp-to')?.value||'',rows=report?mpRows.filter(r=>{const d=r.ship_date||r.online_date||'';return d&&d>=f&&d<=t;}):mpRows,a=[['CP編號','構件編號','工程編號','工程區','數量','單重(kg)','總重(kg)','圖號','上線日期','出貨日期']];rows.forEach(r=>a.push([r.cp_no,r.part_no,r.proj_num,r.zone_code,r.qty,r.unit_weight,xNum(r.qty)*xNum(r.unit_weight),r.drawing_no,r.online_date,r.ship_date]));a.push(['合計','','','',rows.reduce((s,r)=>s+xNum(r.qty),0),'',rows.reduce((s,r)=>s+xNum(r.qty)*xNum(r.unit_weight),0),'','','']);const ws=XLSX.utils.aoa_to_sheet(a),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,report?'區間回報':'修改構件總表');XLSX.writeFile(wb,(report?'修改構件回報_'+f+'_'+t:'修改構件總表')+'.xlsx');}
+</script>
 </body>
 </html>
