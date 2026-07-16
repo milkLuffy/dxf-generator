@@ -3418,7 +3418,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <div class="layout-table-wrap" style="margin-top:14px">
         <table class="layout-table" id="daily-table" onkeydown="tableArrowNav(event)">
           <thead><tr>
-            <th>日期</th><th>構件編號</th><th>工程編號</th><th>工程區</th><th>單重(kg)</th>
+            <th>日期</th><th>構件編號</th><th>工程編號</th><th>工程區</th><th>數量</th><th>單重(kg)</th>
             <th>圖號</th><th>流水編號</th><th>規格</th><th>加工代號</th><th>工程副號</th>
             <th>報驗時間</th><th>報驗公司</th><th></th>
           </tr></thead>
@@ -14518,6 +14518,9 @@ function layoutPartInput(i, input) {
   // 已輸入工程編號 → 一律只顯示該工程的構件(查無則不顯示，不退回全部專案)
   const wantProj = (layoutRows[i].proj_num||'').trim().toUpperCase();
   if (wantProj) pool = pool.filter(c => (c._proj_num||'').trim().toUpperCase() === wantProj);
+  const projHasParts = pool.length > 0;   // 該工程是否有構件(過濾已報驗前)
+  // 只顯示「未報驗」構件:已在每日產量出現過的(已報驗)不列入下拉,避免整個工程一長串太雜
+  pool = pool.filter(c => !layoutDailyOutputKeys.has(layoutDailyKey(c._proj_num, c.part_no)));
   // fuzzy (contains) match on part_no, unique; empty q shows all
   const seen = {};
   const matches = [];
@@ -14526,8 +14529,13 @@ function layoutPartInput(i, input) {
     if ((q === '' || pn.indexOf(q) >= 0) && !seen[c.part_no]) { seen[c.part_no] = 1; matches.push(c); }
   });
   if (!matches.length) {
-    // 有指定工程編號卻找不到任何構件 → 顯示提示(辨識:此工程無構件資料或尚未載入)
-    if (wantProj) layoutShowSuggest(input, '<div class="lt-suggest-item" style="cursor:default;color:var(--text3)">「'+wantProj+'」查無構件資料（請確認該工程已匯入構件總表）</div>');
+    // 有指定工程編號卻找不到任何(未報驗)構件 → 顯示提示,並區分「皆已報驗」與「查無構件資料」
+    if (wantProj) {
+      const msg = (pool.length === 0 && projHasParts)
+        ? '「'+wantProj+'」構件皆已報驗，無未報驗構件'
+        : '「'+wantProj+'」查無構件資料（請確認該工程已匯入構件總表）';
+      layoutShowSuggest(input, '<div class="lt-suggest-item" style="cursor:default;color:var(--text3)">'+msg+'</div>');
+    }
     return;
   }
   const itemsHtml = matches.map(c =>
@@ -16404,7 +16412,7 @@ async function generateInspection() {
   const NB_YES = '是(✓   )否(    )', NB_NO = '是(    )否(✓   )', NB_BLANK = '是(    )否(    )';
   for (let i = 1; i <= nPages * 20; i++) {
     const c = checked[i-1];
-    data['p' + i] = c ? (c.part_no || '') : '';
+    data['p' + i] = c ? ((c.part_no || '') + (inspQtyOf(c) > 1 ? '*' + inspQtyOf(c) : '')) : '';
     data['v' + i] = c ? person : '';
     data['g' + i] = c ? (c.drawing_no || '') : '';
     data['n' + i] = c ? (c.part_no || '') : '';
@@ -16417,8 +16425,8 @@ async function generateInspection() {
     // 第3頁 非破壞檢查:符合 NDT 條件打「是」,其他打「否」,空列維持原樣
     data['nb' + i] = c ? (NDT_BOARD_SET.indexOf(c._board || '') >= 0 ? NB_YES : NB_NO) : NB_BLANK;
   }
-  // Page 2/4 構件類別/編號 box: parts joined (single space)
-  data['parts_box'] = checked.map(c => c.part_no).join(' ');
+  // Page 2/4 構件類別/編號 box: parts joined (single space);>1 支加「*N」
+  data['parts_box'] = checked.map(c => (c.part_no || '') + (inspQtyOf(c) > 1 ? '*' + inspQtyOf(c) : '')).join(' ');
 
   // NDT 檢驗表(第2、4頁):有/無板符合上述條件的構件才列入,只填前 5 列;超過 5 個 -> 檢驗結果「其餘同上」
   const projNumVal = proj ? proj.proj_num : '';
@@ -17828,6 +17836,18 @@ function dailyGetFiltered(){
   return rows;
 }
 let dailyLastSig = null;
+// 把「一列一支」的資料合併成「一構件一列 + 數量」;分組鍵用畫面上所有顯示欄位(避免誤併不同筆)
+function dailyGroupRows(rows){
+  const map = new Map(); const order = [];
+  rows.forEach(r => {
+    const key = [r.date,r.part_no,r.proj_num,r.zone_code,r.net_weight,r.drawing_no,r.serial_no,r.spec,r.proc_code,r.sub_code,r.inspect_time,r.company].join('\u0001');
+    let g = map.get(key);
+    if (!g) { g = { rep:r, qty:0, ids:[] }; map.set(key,g); order.push(g); }
+    g.qty++;
+    if (r.id != null) g.ids.push(r.id);
+  });
+  return order;
+}
 function renderDaily() {
   refreshDateWk();   // 更新「日期（星期）」顯示
   const tbody = dailyEl('daily-body'); if (!tbody) return;
@@ -17836,32 +17856,38 @@ function renderDaily() {
   // 篩選條件有變就跳回第 1 頁(分頁按鈕不改條件,故切頁時保留頁碼)
   const dsig = [rs,re,dailyViewDate,(dailyEl('daily-f-proj')||{}).value,(dailyEl('daily-f-zone')||{}).value,(dailyEl('daily-f-company')||{}).value,(dailyEl('daily-f-serial')||{}).value].join('|');
   if (dsig !== dailyLastSig) { dailyLastSig = dsig; pgState.daily = 0; }
-  const rows = dailyGetFiltered();
+  const rawRows = dailyGetFiltered();
+  const groups = dailyGroupRows(rawRows);   // 合併相同構件,qty = 支數
   let ctx = (rs&&re) ? (rs+' ~ '+re) : (dailyViewDate || '全部日期');
-  dailyEl('daily-count').textContent = ctx + ' · 共 ' + rows.length + ' 筆';
-  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--text3);padding:32px;font-family:var(--mono);font-size:13px">尚無資料</td></tr>'; return; }
-  const pgD = pagerSlice('daily', rows);
+  dailyEl('daily-count').textContent = ctx + ' · 共 ' + groups.length + ' 筆 / ' + rawRows.length + ' 支';
+  if (!groups.length) { tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:var(--text3);padding:32px;font-family:var(--mono);font-size:13px">尚無資料</td></tr>'; return; }
+  const pgD = pagerSlice('daily', groups);
   const dtd = v => '<td><input type="text" readonly value="'+esc(v==null?'':v)+'" style="text-align:center"></td>';
-  tbody.innerHTML = pgD.slice.map(r => '<tr>' +
+  tbody.innerHTML = pgD.slice.map(g => { const r = g.rep; return '<tr>' +
     dtd(r.date) + dtd(r.part_no) + dtd(r.proj_num) + dtd(r.zone_code) +
-    dtd(r.net_weight!=null?r.net_weight:'') + dtd(r.drawing_no) + dtd(r.serial_no) + dtd(r.spec) +
+    dtd(g.qty) + dtd(r.net_weight!=null?r.net_weight:'') + dtd(r.drawing_no) + dtd(r.serial_no) + dtd(r.spec) +
     dtd(r.proc_code) + dtd(r.sub_code) + dtd(r.inspect_time) + dtd(r.company) +
-    '<td class="del-col"><button class="btn-del-row" onclick="delDaily('+r.id+')">✕</button></td>' +
-  '</tr>').join('') + pagerRow(pgD, 13);
+    '<td class="del-col"><button class="btn-del-row" onclick="delDailyGroup(\''+g.ids.join(',')+'\')">✕</button></td>' +
+  '</tr>'; }).join('') + pagerRow(pgD, 14);
   const dTbl = document.getElementById('daily-table');
   if (dTbl) tblInitSelection(dTbl);
 }
-async function delDaily(id) {
-  if (!await uiConfirm('刪除這筆每日產量記錄?')) return;
-  await sbFetch('/rest/v1/daily_output?id=eq.' + id, { method:'DELETE', headers:{'Prefer':'return=minimal'} });
-  dailyRows = dailyRows.filter(r => r.id !== id);
+async function delDailyGroup(idsStr) {
+  const ids = String(idsStr||'').split(',').map(s=>parseInt(s,10)).filter(n=>!isNaN(n));
+  if (!ids.length) return;
+  if (!await uiConfirm('刪除這筆每日產量記錄（共 '+ids.length+' 支）?')) return;
+  for (const id of ids) {
+    await sbFetch('/rest/v1/daily_output?id=eq.' + id, { method:'DELETE', headers:{'Prefer':'return=minimal'} });
+  }
+  const idset = new Set(ids);
+  dailyRows = dailyRows.filter(r => !idset.has(r.id));
   dailyFillFilterOptions();
   renderDaily();
 }
 function exportDaily() {
-  const rows = dailyGetFiltered();
-  const head = ['日期','構件編號','工程編號','工程區','單重(kg)','圖號','流水編號','規格','加工代號','工程副號','報驗時間','報驗公司'];
-  const data = rows.map(r => [r.date,r.part_no,r.proj_num,r.zone_code,r.net_weight,r.drawing_no,r.serial_no,r.spec,r.proc_code,r.sub_code,r.inspect_time,r.company]);
+  const groups = dailyGroupRows(dailyGetFiltered());
+  const head = ['日期','構件編號','工程編號','工程區','數量','單重(kg)','圖號','流水編號','規格','加工代號','工程副號','報驗時間','報驗公司'];
+  const data = groups.map(g => { const r = g.rep; return [r.date,r.part_no,r.proj_num,r.zone_code,g.qty,r.net_weight,r.drawing_no,r.serial_no,r.spec,r.proc_code,r.sub_code,r.inspect_time,r.company]; });
   const ws = XLSX.utils.aoa_to_sheet([head, ...data]);
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '每日產量');
   const rs=(dailyEl('daily-range-start')||{}).value||'', re=(dailyEl('daily-range-end')||{}).value||'';
