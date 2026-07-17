@@ -2039,6 +2039,9 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="nav-item" onclick="navTo('accounts')" id="nav-accounts">
             <span class="nav-icon">🔑</span><span class="nav-label">帳號管理</span>
           </div>
+          <div class="nav-item" onclick="navTo('audit')" id="nav-audit">
+            <span class="nav-icon">🕵️</span><span class="nav-label">操作紀錄</span>
+          </div>
         </div>
       </div>
       <div class="sidebar-user">
@@ -2085,7 +2088,8 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       'nav-payrollcfg':'<circle cx="12" cy="12" r="3"/><path d="M19 12h3M2 12h3M12 2v3M12 19v3M17 7l2-2M5 19l2-2M17 17l2 2M5 5l2 2"/>',
       'nav-output':'<path d="M4 20V10h4v10M10 20V4h4v16M16 20v-7h4v7M2 20h20"/>',
       'nav-pricing':'<circle cx="12" cy="12" r="9"/><path d="M16 8c-.7-1-1.8-1.5-4-1.5-2.5 0-4 1-4 2.5s1.2 2.2 4 2.8 4 1.3 4 2.8-1.5 2.8-4 2.8c-2.2 0-3.7-.6-4.5-1.7M12 4v16"/>',
-      'nav-accounts':'<circle cx="8" cy="15" r="4"/><path d="m11 12 8-8 2 2-2 2 2 2-3 3-2-2-3 3"/>'
+      'nav-accounts':'<circle cx="8" cy="15" r="4"/><path d="m11 12 8-8 2 2-2 2 2 2-3 3-2-2-3 3"/>',
+      'nav-audit':'<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4"/><path d="M8 11h8M8 15h8M8 19h4"/>'
     };
     function apply(){Object.keys(icons).forEach(function(id){var item=document.getElementById(id),el=item&&item.querySelector('.nav-icon');if(el)el.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+icons[id]+'</svg>';});}
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply);else apply();
@@ -2098,6 +2102,23 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     #ro-badge{position:fixed;right:16px;bottom:16px;z-index:9000;background:#334155;color:#fff;
       font-size:12px;font-weight:600;padding:7px 12px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.25);
       pointer-events:none;letter-spacing:.5px}
+    /* 線上狀態頭像(右上角):重疊排列,滑過顯示「誰 · 在哪一頁」 */
+    #presence-bar{display:flex;align-items:center;margin-right:14px;padding-left:6px}
+    .pres-dot{position:relative;width:28px;height:28px;border-radius:50%;margin-left:-7px;
+      border:2px solid var(--bg);box-shadow:0 1px 3px rgba(0,0,0,.2);
+      display:flex;align-items:center;justify-content:center;overflow:visible;
+      color:#fff;font-size:12px;font-weight:700;cursor:default;transition:transform .12s}
+    .pres-dot:first-child{margin-left:0}
+    .pres-dot:hover{transform:translateY(-2px) scale(1.08);z-index:5}
+    .pres-dot img{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+    .pres-dot.pres-more{background:var(--text3)}
+    .pres-tip{position:absolute;top:calc(100% + 7px);right:0;z-index:9500;
+      background:#1e293b;color:#fff;font-size:11px;font-weight:600;letter-spacing:.02em;
+      padding:5px 9px;border-radius:6px;white-space:nowrap;pointer-events:none;
+      opacity:0;transform:translateY(-3px);transition:opacity .12s,transform .12s;
+      box-shadow:0 3px 10px rgba(0,0,0,.28)}
+    .pres-dot:hover .pres-tip{opacity:1;transform:translateY(0)}
+    @media(max-width:768px){ #presence-bar{display:none !important} }
     /* 唯讀頁:資料輸入元件停用(保留搜尋/篩選/日期瀏覽) */
     .perm-ro input:not(.search-input):not(.filter-select):not([type=date]):not([type=search]),
     .perm-ro textarea,
@@ -2119,6 +2140,8 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         </div>
       </div>
       <div class="app-header-right">
+        <!-- 線上狀態:誰在線上、正在看哪一頁(類似 Google 試算表右上角)-->
+        <div id="presence-bar" style="display:none"></div>
         <button class="theme-toggle" id="notif-btn" onclick="toggleNotifPanel()" title="通知" style="margin-right:12px;position:relative">🔔<span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--red);color:#fff;font-family:var(--mono);font-size:10px;font-weight:600;line-height:16px;text-align:center;box-sizing:border-box;border:1px solid var(--bg)"></span></button>
         <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="切換亮色/暗色" style="margin-right:12px">💡</button>
         <div class="top-clock" id="top-clock">
@@ -2713,8 +2736,11 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         #output-billing-panel .ov-tbl input.ov-in-l.num{text-align:right}
         /* 請款核對試算表操作：拖曳/Shift 多選，方向鍵移動，整塊複製貼上與刪除 */
         #output-billing-panel .ov-tbl input.bl-grid-cell{cursor:cell}
-        #output-billing-panel .ov-tbl input.bl-grid-selected{background:rgba(79,142,247,.20);box-shadow:inset 0 0 0 1px var(--accent2)}
-        #output-billing-panel .ov-tbl input.bl-grid-active{background:rgba(79,142,247,.28);box-shadow:inset 0 0 0 2px var(--accent2)}
+        /* 選取畫在 td 上(不只輸入格),唯讀欄(噸數/總價/單價)才能一起圈選加總 */
+        #output-billing-panel .ov-tbl td.bl-cell{cursor:cell;outline:none}
+        #output-billing-panel .ov-tbl td.bl-grid-selected{background:rgba(79,142,247,.20);box-shadow:inset 0 0 0 1px var(--accent2)}
+        #output-billing-panel .ov-tbl td.bl-grid-active{background:rgba(79,142,247,.28);box-shadow:inset 0 0 0 2px var(--accent2)}
+        #output-billing-panel .ov-tbl td.bl-grid-selected input.bl-grid-cell{background:transparent}
         #output-billing-panel .ov-tbl input.bl-util-locked{opacity:.68;cursor:not-allowed;background:rgba(255,193,7,.08)}
         .bl-grid-help{flex:1 1 100%;font-family:var(--mono);font-size:11px;color:var(--text3)}
         .bl-util-wait{display:inline-block;color:var(--yellow);font-size:11px;font-weight:700;white-space:nowrap}
@@ -2980,6 +3006,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           </div>
           <div id="bl-r1-summary"></div>
           <div class="card" style="padding:0;overflow:auto"><div id="bl-r1-table"><div class="empty-state">載入中...</div></div></div>
+          <div id="bl-r1-cross" style="display:none;margin-top:16px"></div>
         </div>
 
         <div class="bl-round bl-round-2" style="margin-top:24px">
@@ -2992,8 +3019,8 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           </div>
           <div id="bl-r2-summary"></div>
           <div class="card" style="padding:0;overflow:auto"><div id="bl-r2-table"><div class="empty-state">載入中...</div></div></div>
+          <div id="bl-r2-cross" style="display:none;margin-top:16px"></div>
         </div>
-        <div id="bl-carry-section" style="display:none;margin-top:24px"></div>
       </div>
 
       <!-- 未請款 -->
@@ -3382,7 +3409,61 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         ※ 名稱/綁定/管理員改好後,按右上角「儲存全部」一次存檔。<br>
         ※ 綁定公司名冊後,會自動把該帳號的 Email 寫入名冊中該員工的 Email 欄。<br>
         ※ <b>停用</b>與<b>頁面權限</b>為即時生效(按下即存),對方下次登入/重新整理套用。<br>
-        ※ <b>離職員工請按「停用」</b>,資料庫端會拒絕其一切讀寫;<b>切勿刪除該列</b>(刪掉等於解除封鎖)。
+        ※ <b>離職員工請按「停用」</b>,資料庫端會拒絕其一切讀寫;<b>切勿刪除該列</b>(刪掉等於解除封鎖)。<br>
+        ※ 想知道某個帳號做過什麼,到<b>「操作紀錄」</b>頁查。
+      </div>
+    </div>
+
+    <!-- 操作紀錄 (管理員) -->
+    <div class="page" id="page-audit">
+      <div class="page-header">
+        <div class="page-title" style="margin-bottom:0">操作紀錄</div>
+        <button class="btn-add-new" onclick="auditLoad(0)">🔄 重新整理</button>
+      </div>
+      <div class="toolbar" id="audit-toolbar">
+        <select class="filter-select" id="audit-f-user" onchange="auditLoad(0)"><option value="">全部帳號</option></select>
+        <select class="filter-select" id="audit-f-action" onchange="auditLoad(0)">
+          <option value="">全部動作</option>
+          <option value="login">登入</option><option value="logout">登出</option>
+          <option value="insert">新增</option><option value="update">修改</option><option value="delete">刪除</option>
+          <option value="_write">只看異動(新增/修改/刪除)</option>
+        </select>
+        <select class="filter-select" id="audit-f-tbl" onchange="auditLoad(0)"><option value="">全部資料表</option></select>
+        <span style="display:inline-flex;align-items:center;gap:4px">
+          <input type="date" id="audit-f-from" class="search-input date-wk" data-wk="audit-from-show" style="width:150px" onchange="auditLoad(0)" title="起始日"/>
+          <span class="date-wk-show" id="audit-from-show">—</span>
+        </span>
+        <span style="color:var(--text3)">～</span>
+        <span style="display:inline-flex;align-items:center;gap:4px">
+          <input type="date" id="audit-f-to" class="search-input date-wk" data-wk="audit-to-show" style="width:150px" onchange="auditLoad(0)" title="結束日"/>
+          <span class="date-wk-show" id="audit-to-show">—</span>
+        </span>
+        <input class="search-input" id="audit-f-q" placeholder="搜尋內容/對象..." style="width:180px" oninput="auditRender()"/>
+        <button class="btn" onclick="auditClearFilters()">清除篩選</button>
+        <span style="flex:1"></span>
+        <span id="audit-count" style="font-family:var(--mono);font-size:12px;color:var(--text3)"></span>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th style="white-space:nowrap">時間</th><th>帳號</th><th>動作</th><th>頁面</th>
+              <th>資料表</th><th>對象</th><th>內容</th><th>IP</th><th>裝置</th>
+            </tr></thead>
+            <tbody id="audit-body"><tr><td colspan="9" class="empty-state">載入中...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="toolbar" style="justify-content:center;margin-top:10px">
+        <button class="btn" id="audit-prev" onclick="auditPage(-1)">‹ 上一頁</button>
+        <span id="audit-pageinfo" style="font-family:var(--mono);font-size:12px;color:var(--text3);min-width:90px;text-align:center">—</span>
+        <button class="btn" id="audit-next" onclick="auditPage(1)">下一頁 ›</button>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:10px;line-height:1.7">
+        ※ 全站的<b>新增/修改/刪除</b>都會自動留痕,含<b>時間、帳號、IP、所在頁面、資料表、送出內容</b>;登入/登出另外記。<br>
+        ※ 時間、IP、裝置由<b>資料庫端</b>蓋章,前端偽造不了;紀錄<b>只能新增不能改也不能刪</b>(連管理員從網頁也刪不掉)。<br>
+        ※ 只有<b>管理員</b>看得到本頁;一般帳號連讀取都會被資料庫拒絕。<br>
+        ※ 預設保留 <b>180 天</b>。需要先跑 <b>audit_log_migration.sql</b> 本頁才有資料。
       </div>
     </div>
 
@@ -4386,15 +4467,20 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     <!-- 扣款明細 -->
     <div class="page" id="page-deductions">
       <div class="page-header"><div><div class="page-title">扣款明細</div><div class="page-subtitle">點工單、品管、材料、工安及運費扣款集中管理</div></div></div>
-      <div class="layout-tabs" id="ded-cat-tabs"><button class="layout-tab active" onclick="deductionsCat('',this)">全部分類</button><button class="layout-tab" onclick="deductionsCat('點工單扣款',this)">點工單扣款</button><button class="layout-tab" onclick="deductionsCat('品管扣款',this)">品管扣款</button><button class="layout-tab" onclick="deductionsCat('材料',this)">材料</button><button class="layout-tab" onclick="deductionsCat('工安扣款',this)">工安扣款</button><button class="layout-tab" onclick="deductionsCat('運費扣款',this)">運費扣款</button></div>
+      <div class="layout-tabs" id="ded-cat-tabs"></div>
       <div class="card" style="margin-bottom:14px">
         <div class="layout-toolbar" style="flex-wrap:wrap">
-          <input id="ded-search" class="search-input" placeholder="搜尋編號、工程區、事由…" oninput="deductionsRender()"/>
-          <span style="flex:1"></span><button class="btn-sm btn-gen" style="flex:none" onclick="deductionsAdd()">＋ 新增</button><button class="btn-sm btn-export" onclick="deductionsExport()">⬇ 匯出 Excel</button>
+          <button class="btn-sm" style="flex:none" onclick="GridXL.undo('ded')" title="復原 (Ctrl+Z)">↶ 復原</button>
+          <button class="btn-sm" style="flex:none" onclick="GridXL.redo('ded')" title="重做 (Ctrl+Y)">↷ 重做</button>
+          <button class="btn-sm btn-gen" style="flex:none" onclick="GridXL.addRow('ded')">＋ 新增列</button>
+          <input id="gxSearch-ded" class="search-input" placeholder="搜尋編號、工程區、事由…" oninput="GridXL.search('ded')"/>
+          <span class="section-label" id="gxCount-ded" style="flex:none"></span>
+          <span style="flex:1"></span><button class="btn-sm btn-export" style="flex:none" onclick="deductionsExport()">⬇ 匯出 Excel</button>
         </div>
-        <div class="section-label" style="margin-top:8px">Excel 式操作：拖曳多選、方向鍵、複製／貼上、Delete 清除；修改後自動儲存。</div>
+        <div class="section-label" style="margin-top:8px" id="ded-summary"></div>
+        <div class="section-label" style="margin-top:4px">Excel 式操作：方向鍵漫遊、打字即編輯、Enter 下移、拖曳／Shift 多選、Ctrl+C／Ctrl+V（貼上自動補列）、Delete 清除、Ctrl+Z 復原；修改後自動儲存。</div>
       </div>
-      <div class="layout-table-wrap"><table class="layout-table" id="ded-grid" onkeydown="deductionsKey(event)"><thead><tr><th>分類</th><th>日期</th><th>編號</th><th>工程區</th><th>事由／扣款項目</th><th class="num">預計工數</th><th class="num">預計金額</th><th class="num">實際扣款</th><th>扣款日期</th><th>備註</th><th>操作</th></tr></thead><tbody id="ded-body"></tbody><tfoot id="ded-foot"></tfoot></table></div>
+      <div class="layout-table-wrap"><table class="layout-table gx-table" id="gx-ded"><thead id="gxHead-ded"></thead><tbody id="gxBody-ded"></tbody></table></div>
     </div>
 
     <!-- 修改構件 -->
@@ -7799,11 +7885,168 @@ async function sbFetch(path, opts={}, _retried) {
   // token expired -> refresh once and retry
   if (res.status === 401 && !_retried && !isGuest && currentSession && currentSession.refresh_token) {
     const ok = await refreshAccessToken();
-    if (ok) return sbFetch(path, opts, true);
+    if (ok) return sbFetch(path, opts, true);   // 由重試那一次寫紀錄,避免同一動作記兩筆
   }
+  auditCapture(_m, path, opts.body, res.ok);   // 所有寫入都經過這裡 → 一處攔截,全站留痕
   const text = await res.text();
   let data=null; try{data=JSON.parse(text);}catch(e){}
   return {ok:res.ok, status:res.status, data};
+}
+
+// ── 操作紀錄 (audit log) ─────────────────────────────────────
+// 全站的新增/修改/刪除都經過 sbFetch,所以只要在那裡攔一次,
+// 不必去動幾百個呼叫點,日後新增功能也自動被記錄。
+// 真正不可竄改的把關在資料庫:audit_log 沒有 update/delete policy,
+// 時間/IP/裝置由 DB 觸發器蓋章,前端送什麼都會被覆寫。
+const AUDIT_ACTION_LABEL={login:'登入',logout:'登出',insert:'新增',update:'修改',delete:'刪除'};
+const AUDIT_METHOD_ACTION={POST:'insert',PATCH:'update',PUT:'update',DELETE:'delete'};
+const AUDIT_SKIP_TABLES=new Set(['audit_log','user_presence']);   // 記錄自己會無限循環
+// 網址查詢字串裡這些是「查法」不是「對象」,列出來只會洗版
+const AUDIT_SKIP_PARAMS=new Set(['select','order','limit','offset','on_conflict','columns']);
+// 資料表 → 中文名(查紀錄時看得懂;沒列到的就直接顯示表名)
+const AUDIT_TBL_LABEL={
+  profiles:'帳號', staff:'公司名冊', eg_staff:'長榮人員', projects:'工程', zones:'工程區',
+  components:'構件', component_ext:'構件附加', material_receipts:'進料', layout_items:'線上進度表',
+  daily_output:'每日產量', att_report:'出勤回報', attend_log:'打卡紀錄', calendar_events:'行事曆',
+  announcements:'公司公佈欄', notifications:'通知', gen_logs:'產生紀錄', app_config:'系統設定',
+  billing_records:'請款紀錄', billing_archive:'請款封存', labor_orders:'點工單',
+  deduction_details:'扣款明細', modified_components:'修改構件',
+  sp_production:'SP狀態追蹤表', sp_online:'SP線上', sp_reserved:'保留料', sp_finished:'成品材',
+  hw_items:'五金品項', hw_purchases:'五金進貨', hw_usage:'五金領用', hw_vendors:'五金廠商',
+  hw_stocktake:'五金盤點', hw_equipment:'五金設備',
+  employee_pay:'員工薪資設定', payroll_run:'薪資計算', payslip:'薪資明細',
+  leave_ledger:'請假・特休', payroll_config:'費率設定', output_price:'產值單價'
+};
+function auditTblLabel(t){ return AUDIT_TBL_LABEL[t]||t||'—'; }
+// /rest/v1/hw_items?id=eq.5&select=* → {tbl:'hw_items', target:'id=eq.5'}
+function _auditParsePath(path){
+  const m=/^\/rest\/v1\/([A-Za-z0-9_]+)/.exec(path||''); if(!m) return null;
+  const qi=path.indexOf('?');
+  let target='';
+  if(qi>=0){
+    target=path.slice(qi+1).split('&')
+      .filter(p=>!AUDIT_SKIP_PARAMS.has(p.split('=')[0]))
+      .map(p=>{try{return decodeURIComponent(p);}catch(e){return p;}})
+      .join(' & ');
+  }
+  return {tbl:m[1], target};
+}
+// 送出內容摘要:整包 JSON 可能是幾 MB 的批次匯入,只留「幾筆 + 欄位/值」的短摘要
+function _auditSummary(body){
+  if(!body||typeof body!=='string') return null;
+  let d=null; try{ d=JSON.parse(body); }catch(e){ return body.slice(0,200); }
+  const one=o=>Object.keys(o||{}).map(k=>{
+    let v=o[k];
+    if(v===null||v===undefined) v='(空)';
+    else if(typeof v==='object') v='{…}';
+    else v=String(v);
+    if(v.length>40) v=v.slice(0,40)+'…';
+    return k+'='+v;
+  }).join(', ');
+  let s = Array.isArray(d)
+    ? (d.length===1 ? one(d[0]) : d.length+' 筆:'+one(d[0])+(d.length>1?' …':''))
+    : one(d);
+  return s.length>300 ? s.slice(0,300)+'…' : s;
+}
+// 不經過 sbFetch 的原始請求:紀錄與線上狀態自己要能送出,
+// 不可被唯讀攔截擋掉(唯讀頁面也要留下「他來看過」的痕跡),也不可再觸發一次紀錄。
+async function _sbRaw(path, opts={}){
+  if(!currentSession||isGuest) return null;
+  try{
+    return await fetch(SUPA_URL+path, {...opts, headers:Object.assign(
+      {'apikey':SUPA_KEY,'Content-Type':'application/json','Authorization':'Bearer '+currentSession.access_token},
+      opts.headers||{})});
+  }catch(e){ return null; }
+}
+// 寫一筆紀錄。呼叫端通常「不 await」(不拖慢使用者的操作),失敗就算了 —— 紀錄不該擋住正事。
+// 但登出要 await:登出會讓 session 失效,沒等它送出去就會漏掉登出紀錄。
+function auditWrite(entry){
+  if(!currentSession||isGuest||!currentUser||!currentUser.id) return Promise.resolve();
+  const payload=Object.assign({
+    user_id:currentUser.id, account:currentUser.account||null, name:currentUser.name||null,
+    page:_auditPage, page_label:_auditPageLabel
+  }, entry);
+  return _sbRaw('/rest/v1/audit_log',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)});
+}
+function auditCapture(method, path, body, ok){
+  const action=AUDIT_METHOD_ACTION[method]; if(!action) return;        // GET/HEAD 不記
+  const p=_auditParsePath(path); if(!p||AUDIT_SKIP_TABLES.has(p.tbl)) return;
+  auditWrite({action, tbl:p.tbl, target:p.target||null, summary:_auditSummary(body), ok:!!ok});
+}
+// 目前所在頁面(紀錄與線上狀態共用)
+let _auditPage='dashboard', _auditPageLabel='主頁';
+function auditSetPage(page){
+  _auditPage=page||null;
+  _auditPageLabel=(PAGE_META.find(pm=>pm.k===page)||{}).label||page||null;
+  presencePing();
+}
+
+// ── 線上狀態:右上角顯示「誰在線上、正在看哪一頁」(類似 Google 試算表)──
+const PRESENCE_PING_MS=30000;    // 自己每 30 秒回報一次
+const PRESENCE_POLL_MS=20000;    // 每 20 秒抓一次別人
+const PRESENCE_STALE_MS=90000;   // 超過 90 秒沒回報 = 已離線(關分頁不一定送得出 DELETE)
+let _presTimers=[], _presList=[];
+async function presencePing(){
+  if(!currentSession||isGuest||!currentUser||!currentUser.id) return;
+  await _sbRaw('/rest/v1/user_presence?on_conflict=user_id',{
+    method:'POST', headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify({user_id:currentUser.id, account:currentUser.account||null, name:currentUser.name||null,
+      avatar_url:currentUser.avatarUrl||null, page:_auditPage, page_label:_auditPageLabel,
+      updated_at:new Date().toISOString()})
+  });
+}
+async function presencePoll(){
+  if(!currentSession||isGuest) return;
+  const since=new Date(Date.now()-PRESENCE_STALE_MS).toISOString();
+  const res=await _sbRaw('/rest/v1/user_presence?select=*&updated_at=gte.'+encodeURIComponent(since)+'&order=updated_at.desc');
+  if(!res||!res.ok) return;
+  let list=[]; try{ list=await res.json(); }catch(e){ return; }
+  _presList=Array.isArray(list)?list:[];
+  renderPresence();
+}
+// 依 user_id 給一個固定的顏色,同一個人每次都同色
+function _presColor(id){
+  let h=0; const s=String(id||'');
+  for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))|0;
+  return 'hsl('+(Math.abs(h)%360)+',62%,45%)';
+}
+function renderPresence(){
+  const box=document.getElementById('presence-bar'); if(!box) return;
+  const me=currentUser&&currentUser.id;
+  const others=_presList.filter(p=>String(p.user_id)!==String(me));
+  if(!others.length){ box.innerHTML=''; box.style.display='none'; return; }
+  box.style.display='';
+  const shown=others.slice(0,5);
+  box.innerHTML=shown.map(p=>{
+    const nm=p.name||p.account||'?';
+    const title=nm+'\n正在看:'+(p.page_label||'—')+'\n'+(p.account||'');
+    // 首字母墊底,頭貼疊在上面;頭貼載入失敗就自己移除 → 露出首字母
+    const img=p.avatar_url
+      ? `<img src="${esc(p.avatar_url)}" alt="${esc(nm)}" referrerpolicy="no-referrer" onerror="this.remove()"/>`
+      : '';
+    return `<div class="pres-dot" style="background:${_presColor(p.user_id)}" title="${esc(title)}">${esc(nm[0].toUpperCase())}${img}<span class="pres-tip">${esc(nm)} · ${esc(p.page_label||'—')}</span></div>`;
+  }).join('') + (others.length>shown.length?`<div class="pres-dot pres-more" title="還有 ${others.length-shown.length} 人在線上">+${others.length-shown.length}</div>`:'');
+}
+function presenceStart(){
+  presenceStop();
+  if(!currentSession||isGuest) return;
+  presencePing(); presencePoll();
+  _presTimers.push(setInterval(presencePing, PRESENCE_PING_MS));
+  _presTimers.push(setInterval(presencePoll, PRESENCE_POLL_MS));
+  // 切回分頁時立刻更新一次,不必等下一個週期
+  document.addEventListener('visibilitychange', _presVis);
+}
+function _presVis(){ if(!document.hidden){ presencePing(); presencePoll(); } }
+function presenceStop(){
+  _presTimers.forEach(clearInterval); _presTimers=[]; _presList=[];
+  document.removeEventListener('visibilitychange', _presVis);
+  const box=document.getElementById('presence-bar'); if(box){ box.innerHTML=''; box.style.display='none'; }
+}
+// 註:關分頁時不主動刪自己那一列 —— sendBeacon 送不出 DELETE 也帶不了授權標頭。
+// 改由「超過 90 秒沒回報就視為離線」處理,效果一樣,少一段永遠失敗的程式碼。
+async function presenceClear(){
+  if(!currentSession||isGuest||!currentUser||!currentUser.id) return;
+  await _sbRaw('/rest/v1/user_presence?user_id=eq.'+currentUser.id,{method:'DELETE'});
 }
 
 // 單頁抓取(含 401 自動更新 token)。wantCount=true 時附帶 Prefer: count=exact,
@@ -7984,7 +8227,12 @@ async function loadProfile() {
   currentUser={id:uid,name,account,isAdmin,perms,disabled,avatarUrl};
 }
 async function logout() {
-  if(!isGuest) await sbFetch('/auth/v1/logout',{method:'POST'});
+  if(!isGuest){
+    await auditWrite({action:'logout', ok:true});   // 要等它送出:下一行的登出會讓 token 失效
+    await presenceClear();
+    presenceStop();
+    await sbFetch('/auth/v1/logout',{method:'POST'});
+  }
   clearSavedSession();
   currentSession=null; currentUser=null; isGuest=false;
   document.getElementById('app-screen').style.display='none';
@@ -8024,6 +8272,9 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
   if(railAdmin) railAdmin.style.display=showAdmin?'':'none';
   initPanel();
   applyPermsUI();   // 依帳號權限顯示/隱藏各頁面與分類
+  // 操作紀錄:只有「真的登入」才記一筆;restore=true 是重新整理,記了只會洗版
+  if(!restore) auditWrite({action:'login', ok:true});
+  presenceStart();   // 開始回報/抓取線上狀態(右上角頭像)
   // 只預載輕量的公司名冊(各頁下拉會用到)與通知紀錄。
   // 主頁統計、BOM 等「重資料」改由 navTo 進到該頁時才載,避免登入瞬間併發抓一堆大表,
   // 拖慢緊接著要開的頁面(例如帳號管理)。
@@ -8060,7 +8311,7 @@ const PAGE_SECTION={
   staff:'staff', egstaff:'staff', attend:'staff', attendlog:'staff',
   attendance:'eg', egdaily:'eg',
   emp:'hr', payroll:'hr', leave:'hr', payrollcfg:'hr',
-  output:'admin', pricing:'admin', accounts:'admin'
+  output:'admin', pricing:'admin', accounts:'admin', audit:'admin'
 };
 // 每個分類的「首頁」(點圖示或觸控時導向)
 const SECTION_FIRST={main:'dashboard',prod:'bom',tools:'bomtool',staff:'staff',eg:'attendance',hr:'emp',admin:'output'};
@@ -8097,8 +8348,9 @@ const PAGE_META=[
   {k:'output',       label:'產值',           sec:'admin'},
   {k:'pricing',      label:'計價',           sec:'admin'},
   {k:'accounts',     label:'帳號管理',       sec:'admin'},
+  {k:'audit',        label:'操作紀錄',       sec:'admin'},
 ];
-const ADMIN_PAGES=new Set(['output','pricing','accounts']);   // 一般帳號預設隱藏的管理頁
+const ADMIN_PAGES=new Set(['output','pricing','accounts','audit']);   // 一般帳號預設隱藏的管理頁
 // 人事薪資專區:整區用單一 perms 鍵 'payroll' 控管(與資料庫 is_hr() 一致),未授權一律隱藏
 const HR_PAGES=new Set(['emp','leave','payroll','payslip','payrollcfg']);
 // 訪客固定可見(唯讀):主頁、長榮系統、BOM工程列表、工具整區。其餘一律隱藏。
@@ -8199,6 +8451,7 @@ function navTo(page) {
   if(_pel) _pel.classList.toggle('perm-ro', _perm==='read');
   const _rb=document.getElementById('ro-badge'); if(_rb) _rb.style.display=(_perm==='read')?'':'none';
   if(PAGE_SECTION[page]){ _pageSection=PAGE_SECTION[page]; selectSection(_pageSection); }   // 右欄切到當前頁所屬分類
+  auditSetPage(page);   // 記住目前頁面:之後的每筆紀錄都會標上,同時回報「我在這一頁」
   if(page!=='attend') attendStop(); // 離開打卡機就關相機
   if(page==='dashboard') loadDashboard();
   if(page==='dxf') dxfFillProjNums();
@@ -8214,6 +8467,7 @@ function navTo(page) {
   if(page==='attendlog') loadAttendLog();
   if(page==='attendance') attendanceInit();
   if(page==='accounts') loadAccounts();
+  if(page==='audit') auditInit();
   if(page==='egdaily') egInit();
   if(page==='hardware') hwInit();
   if(page==='labor') laborInit();
@@ -12823,6 +13077,145 @@ async function saveAllAccounts(){
   setTimeout(()=>{btn.textContent='💾 儲存全部';},1800);
 }
 
+// ── 操作紀錄頁 (管理員) ──────────────────────────────────────
+const AUDIT_PAGE_SIZE=200;
+let auditRows=[], auditOffset=0, auditHasMore=false, auditInited=false;
+function auditInit(){
+  if(!auditInited){
+    auditInited=true;
+    // 預設看最近 7 天,免得一進來就撈 180 天
+    const to=new Date(), from=new Date(Date.now()-6*86400000);
+    const iso=d=>d.toISOString().slice(0,10);
+    document.getElementById('audit-f-from').value=iso(from);
+    document.getElementById('audit-f-to').value=iso(to);
+    refreshDateWk(document.getElementById('page-audit'));
+    auditFillUserOptions();
+  }
+  auditLoad(0);
+}
+// 帳號下拉:用帳號管理已載入的清單;沒載過就直接抓一次
+async function auditFillUserOptions(){
+  let list=allAccounts;
+  if(!list||!list.length){
+    const r=await sbFetchAll('/rest/v1/profiles?select=id,name,account&order=account');
+    list=Array.isArray(r.data)?r.data:[];
+  }
+  const sel=document.getElementById('audit-f-user'); if(!sel) return;
+  sel.innerHTML='<option value="">全部帳號</option>'+list.map(a=>
+    `<option value="${esc(a.id)}">${esc(a.name||a.account||a.id)}</option>`).join('');
+}
+function auditClearFilters(){
+  ['audit-f-user','audit-f-action','audit-f-tbl','audit-f-q'].forEach(id=>{const e=document.getElementById(id); if(e) e.value='';});
+  const to=new Date(), from=new Date(Date.now()-6*86400000);
+  const iso=d=>d.toISOString().slice(0,10);
+  document.getElementById('audit-f-from').value=iso(from);
+  document.getElementById('audit-f-to').value=iso(to);
+  refreshDateWk(document.getElementById('page-audit'));
+  auditLoad(0);
+}
+function auditPage(dir){
+  const next=auditOffset+dir*AUDIT_PAGE_SIZE;
+  if(next<0) return;
+  if(dir>0 && !auditHasMore) return;
+  auditLoad(next);
+}
+async function auditLoad(offset){
+  auditOffset=Math.max(0, offset|0);
+  const body=document.getElementById('audit-body');
+  body.innerHTML='<tr><td colspan="9" class="empty-state">載入中...</td></tr>';
+  const q=[];
+  const uid=document.getElementById('audit-f-user').value;
+  const act=document.getElementById('audit-f-action').value;
+  const tbl=document.getElementById('audit-f-tbl').value;
+  const from=document.getElementById('audit-f-from').value;
+  const to=document.getElementById('audit-f-to').value;
+  if(uid) q.push('user_id=eq.'+uid);
+  if(act==='_write') q.push('action=in.(insert,update,delete)');
+  else if(act) q.push('action=eq.'+act);
+  if(tbl) q.push('tbl=eq.'+encodeURIComponent(tbl));
+  if(from) q.push('at=gte.'+from+'T00:00:00');
+  if(to)   q.push('at=lte.'+to+'T23:59:59.999');
+  // 多抓 1 筆,用來判斷「還有沒有下一頁」,免得再送一次 count 查詢
+  q.push('select=*','order=at.desc','offset='+auditOffset,'limit='+(AUDIT_PAGE_SIZE+1));
+  const r=await sbFetch('/rest/v1/audit_log?'+q.join('&'));
+  if(!r.ok){
+    body.innerHTML='<tr><td colspan="9" class="empty-state">讀取失敗('+r.status+')。'+
+      (r.status===404?'請先在 Supabase SQL Editor 執行 audit_log_migration.sql。':'請確認此帳號為管理員。')+'</td></tr>';
+    document.getElementById('audit-count').textContent='';
+    document.getElementById('audit-pageinfo').textContent='—';
+    return;
+  }
+  const rows=Array.isArray(r.data)?r.data:[];
+  auditHasMore=rows.length>AUDIT_PAGE_SIZE;
+  auditRows=rows.slice(0,AUDIT_PAGE_SIZE);
+  auditFillTblOptions();
+  auditRender();
+}
+// 資料表下拉:用目前這批紀錄出現過的表名(不必另外查),保留使用者已選的值
+function auditFillTblOptions(){
+  const sel=document.getElementById('audit-f-tbl'); if(!sel) return;
+  const cur=sel.value;
+  const set=new Set(auditRows.map(r=>r.tbl).filter(Boolean));
+  if(cur) set.add(cur);
+  const opts=[...set].sort((a,b)=>auditTblLabel(a).localeCompare(auditTblLabel(b),'zh-Hant'));
+  sel.innerHTML='<option value="">全部資料表</option>'+opts.map(t=>
+    `<option value="${esc(t)}"${t===cur?' selected':''}>${esc(auditTblLabel(t))}</option>`).join('');
+}
+function auditFmtTime(s){
+  if(!s) return '—';
+  const d=new Date(s); if(isNaN(d)) return esc(s);
+  const p=n=>String(n).padStart(2,'0');
+  const WD=['日','一','二','三','四','五','六'];
+  return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())}（${WD[d.getDay()]}）${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+// User-Agent 太長,只留看得懂的部分
+function auditFmtUA(ua){
+  if(!ua) return '—';
+  const os = /Windows/i.test(ua)?'Windows' : /iPhone|iPad/i.test(ua)?'iOS' : /Android/i.test(ua)?'Android'
+           : /Mac OS X/i.test(ua)?'Mac' : /Linux/i.test(ua)?'Linux' : '其他';
+  const br = /Edg\//i.test(ua)?'Edge' : /OPR\//i.test(ua)?'Opera' : /Chrome\//i.test(ua)?'Chrome'
+           : /Firefox\//i.test(ua)?'Firefox' : /Safari\//i.test(ua)?'Safari' : '';
+  return os+(br?' · '+br:'');
+}
+// 多個代理時 x-forwarded-for 會是 "真實IP, 代理IP",取第一個
+function auditFmtIP(ip){ return ip?String(ip).split(',')[0].trim():'—'; }
+const AUDIT_ACTION_STYLE={
+  login :'background:#dbeafe;color:#1d4ed8',
+  logout:'background:#e5e7eb;color:#4b5563',
+  insert:'background:#dcfce7;color:#15803d',
+  update:'background:#fef3c7;color:#b45309',
+  delete:'background:#fee2e2;color:#b91c1c'
+};
+function auditRender(){
+  const body=document.getElementById('audit-body');
+  const q=(document.getElementById('audit-f-q').value||'').toLowerCase();
+  const list=q?auditRows.filter(r=>
+    (r.summary||'').toLowerCase().includes(q)||(r.target||'').toLowerCase().includes(q)||
+    (r.page_label||'').toLowerCase().includes(q)||auditTblLabel(r.tbl).toLowerCase().includes(q)
+  ):auditRows;
+  document.getElementById('audit-count').textContent=list.length+' 筆'+(q?'(已篩選)':'');
+  document.getElementById('audit-pageinfo').textContent='第 '+(Math.floor(auditOffset/AUDIT_PAGE_SIZE)+1)+' 頁';
+  document.getElementById('audit-prev').disabled=auditOffset<=0;
+  document.getElementById('audit-next').disabled=!auditHasMore;
+  if(!list.length){ body.innerHTML='<tr><td colspan="9" class="empty-state">這段期間沒有符合的紀錄</td></tr>'; return; }
+  body.innerHTML=list.map(r=>{
+    const act=r.action||'';
+    const badge=`<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;${AUDIT_ACTION_STYLE[act]||'background:var(--bg3);color:var(--text3)'}">${esc(AUDIT_ACTION_LABEL[act]||act)}</span>`;
+    const failed=(r.ok===false)?'<span title="這次請求失敗(可能被權限擋下)" style="margin-left:4px;color:var(--text3)">✗</span>':'';
+    return `<tr${r.ok===false?' style="opacity:.6"':''}>
+      <td style="font-family:var(--mono);font-size:11px;white-space:nowrap">${auditFmtTime(r.at)}</td>
+      <td style="font-size:12px">${esc(r.name||r.account||'—')}<div style="font-family:var(--mono);font-size:10px;color:var(--text3)">${esc(r.account||'')}</div></td>
+      <td style="white-space:nowrap">${badge}${failed}</td>
+      <td style="font-size:12px">${esc(r.page_label||'—')}</td>
+      <td style="font-size:12px">${esc(auditTblLabel(r.tbl))}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--text3);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.target||'')}">${esc(r.target||'—')}</td>
+      <td style="font-family:var(--mono);font-size:11px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.summary||'')}">${esc(r.summary||'—')}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap">${esc(auditFmtIP(r.ip))}</td>
+      <td style="font-size:11px;color:var(--text3);white-space:nowrap" title="${esc(r.ua||'')}">${esc(auditFmtUA(r.ua))}</td>
+    </tr>`;
+  }).join('');
+}
+
 // ════════════════════════════════════════════
 //  人臉打卡 (face-api.js)
 // ════════════════════════════════════════════
@@ -16910,6 +17303,7 @@ function cfApply() {
   else if (tableKey === 'labordetail' && typeof window.laborRender === 'function') window.laborRender();
   else if (tableKey === 'laborret' && typeof window.laborRenderRetention === 'function') window.laborRenderRetention();
   else if ((tableKey === 'track' || tableKey === 'reserved' || tableKey === 'product') && typeof spxRender === 'function') spxRender(tableKey);
+  else if (window.GridXL && window.GridXL._cfg[tableKey]) window.GridXL.render(tableKey);
 }
 function closeColFilter() {
   if (activeFilterDropdown) { activeFilterDropdown.dd.remove(); activeFilterDropdown = null; }
@@ -16937,7 +17331,7 @@ function updateExcelSelectionStats(){
   let bar=document.getElementById('excel-selection-stats');
   if(!bar){ bar=document.createElement('div');bar.id='excel-selection-stats';document.body.appendChild(bar); }
   const nodes=Array.from(document.querySelectorAll('td.cell-selected'))
-    .concat(Array.from(document.querySelectorAll('#output-billing-panel input.bl-grid-cell.bl-grid-selected')));
+    .concat(Array.from(document.querySelectorAll('#output-billing-panel td.bl-grid-selected')));
   let count=0,sum=0,numeric=0;
   nodes.forEach(n=>{const v=selectionStatsValue(n);if(v!=='')count++;const x=selectionStatsNumber(v);if(x!=null){sum+=x;numeric++;}});
   if(!nodes.length){bar.style.display='none';return;}
@@ -16948,7 +17342,7 @@ function updateExcelSelectionStats(){
 setTimeout(function(){
   if(!document.body)return;
   new MutationObserver(function(ms){
-    if(ms.some(m=>m.target&&m.target.matches&&m.target.matches('td.cell-selected,td,input.bl-grid-cell'))) updateExcelSelectionStats();
+    if(ms.some(m=>m.target&&m.target.matches&&m.target.matches('td.cell-selected,td,input.bl-grid-cell,td.bl-cell'))) updateExcelSelectionStats();
   }).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
 },0);
 document.addEventListener('input',function(e){ if(e.target&&e.target.closest&&e.target.closest('td.cell-selected')) updateExcelSelectionStats(); });
@@ -17194,7 +17588,7 @@ document.addEventListener('paste', e => {
   const writeCell = (cell, val) => {
     if (!cell) return;
     const inp = cell.querySelector('input,select');
-    const allowDate = tblSel.table && (tblSel.table.id === 'ded-grid' || tblSel.table.id === 'mp-grid');
+    const allowDate = tblSel.table && tblSel.table.id === 'mp-grid';
     if (inp && !inp.disabled && !inp.readOnly && inp.type !== 'checkbox' && (inp.type !== 'date' || allowDate)) {
       inp.value = (inp.tagName === 'SELECT') ? String(val).trim() : val;
       inp.dispatchEvent(new Event('input', {bubbles:true}));
@@ -20935,19 +21329,18 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   var blMonth='';        // 'YYYY-MM' 產量月
   var blPeriods={};      // ym -> {r1from,r1to,r2from,r2to} 本次操作記住的計價期間(改過就記,不必存檔)
   var blRecords={};      // 'round|zid' -> record(含輸入欄)
-  var blCarryovers=[];   // 歷史未請款，依實際請款日期承接到當期
+  var blCross={1:[],2:[]};  // 跨月請款:別的產量月、但請款日落在本月此次的列(即時算,不另存表)
+  var blLabor=[];           // 點工單(只取請款日/請款金額/保留款),供各次計價的「點工款項」「點工保留款」卡片
   var blDirty={};        // 'round|zid' -> true
   var blRowsCache={1:[],2:[]};
   var blZoneNeed={};        // 工程編號|工程區 -> 該區 BOM 總支數
   var blGridAnchor=null, blGridActive=null, blGridDragging=false;
+  var blGridSel={};   // Ctrl/⌘ 跳格多選:已定案的選取格 'round|row|col'->座標;與目前 anchor..active 矩形聯集成最終選取
   var blLegacy=(typeof window!=='undefined'&&window.BILLING_LEGACY_DATA)||{};
   var blLegacyUnbilled=((typeof window!=='undefined'&&window.BILLING_LEGACY_UNBILLED)||[]).slice();
-  // 原始 TSV「累計至 2026/06 未請款」誤標為 2025/05；依實際區間 2026/04/26～05/15 更正至 2026/05 第二次計價。
-  blLegacyUnbilled.push(
-    {ym:'2026-05',round:2,proj_num:'B814',zone_code:'A82B',proc_code:'CFB552',sub_code:'A001',tons:'0.00 t',qty:'6 支',amount:'NT$0.00',status:'點工計價',note:''},
-    {ym:'2026-05',round:2,proj_num:'B814',zone_code:'A82P',proc_code:'CFN549',sub_code:'A001',tons:'0.73 t',qty:'2 支',amount:'NT$0.00',status:'點工計價',note:''},
-    {ym:'2026-05',round:2,proj_num:'B820',zone_code:'6BG水電',proc_code:'CFH524',sub_code:'',tons:'18.36 t',qty:'',amount:'NT$495,822.06',status:'未請款',note:''}
-  );
+  // 2026-07:原本這裡手動補了 3 筆 2026/05 第二次的未請款(B814 A82B、B814 A82P、B820 6BG水電),
+  // 使用者確認皆已請款,故移除。舊月快照若還有其他列要結清,正規做法是到該月「請款核對」填請款價格
+  // ——ubRender 會依 產量月|工程區 自動排除,不必再動這個陣列。
   function isLegacyViewYm(ym){ return ym>='2023-01'&&ym<='2026-06'&&!!blLegacy[ym]; }
 
   function pad(n){ return String(n).padStart(2,'0'); }
@@ -20983,10 +21376,20 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(d>=16){ var nm=m+1, ny=y; if(nm>12){nm-=12;ny++;} return { ym:ny+'-'+pad(nm), round:1 }; }
     return { ym:y+'-'+pad(m), round:2 };
   }
-  // \u8acb\u6b3e\u72c0\u6cc1\u5224\u5b9a:\u6709\u8acb\u6b3e\u91d1\u984d\u2192\u5df2\u8acb\u6b3e;\u7279\u6b8a\u72c0\u6cc1(\u5df2\u8b70\u50f9/\u9ede\u5de5\u8a08\u50f9/NT\u5408\u4f75)\u4fdd\u7559\u624b\u52d5\u503c;
-  // \u672a\u8b70\u50f9(\u55ae\u50f9\u7a7a)\u512a\u5148\u65bc\u672a\u8acb\u6b3e
+  // 依「請款日期」反推這筆錢歸哪一期請款:1～15 日 → 該月第一次;16 日～月底 → 該月第二次。
+  // 注意與 ymRoundOf 是兩回事:ymRoundOf 吃報驗日推產量月,這支吃請款日推實收期別,不可互用。
+  function billRoundOf(dateStr){
+    var s=String(dateStr||''); if(s.length<10) return null;
+    return { ym:s.slice(0,7), round:(+s.slice(8,10))<=15?1:2 };
+  }
+  // \u8acb\u6b3e\u72c0\u6cc1\u5224\u5b9a,\u512a\u5148\u5e8f\u7531\u4e0a\u800c\u4e0b:
+  // 1. \u8acb\u6b3e\u50f9\u683c(\u4e3b\u4ef6\u6216\u6c34\u96fb)\u53ea\u8981\u6709\u4efb\u4f55\u8f38\u5165 \u2192 \u5df2\u8acb\u6b3e\u3002\u542b\u300c7/17\u5df2\u8acb\u6b3e\u300d\u300cNT\u5408\u4f75\u300d\u300cNT\u8207F61V\u548c\u7b97\u300d\u9019\u985e\u7d14\u6587\u5b57,
+  //    \u4e14\u6b64\u689d\u512a\u5148\u65bc\u624b\u52d5\u7279\u6b8a\u72c0\u6cc1(\u4f7f\u7528\u8005 2026-07 \u6307\u793a:\u6709\u8cc7\u8a0a\u5c31\u662f\u5df2\u8acb\u6b3e)\u3002
+  //    \u4e0d\u53ef\u7528 billNum>0 \u5224\u65b7:billNum \u9047\u4e2d\u6587\u56de 0,\u6703\u628a\u9019\u4e9b\u6587\u5b57\u5217\u8aa4\u5224\u6210\u672a\u8acb\u6b3e\u3002
+  // 2. \u624b\u52d5\u7279\u6b8a\u72c0\u6cc1(\u5df2\u8b70\u50f9\u2026)\u4fdd\u7559\u539f\u503c  3. \u9ede\u5de5\u8a08\u50f9(zones.price_note \u6709\u6587\u5b57)  4. \u672a\u8b70\u50f9(\u55ae\u50f9\u7a7a,\u512a\u5148\u65bc\u672a\u8acb\u6b3e)
+  function hasBillInput(v){ return String(v==null?'':v).trim()!==''; }
   function deriveStatus(rec, unitPrice, priceNote){
-    if(billNum(rec&&rec.bill_price)>0 || billNum(rec&&rec.util_bill_price)>0) return '\u5df2\u8acb\u6b3e';
+    if(hasBillInput(rec&&rec.bill_price) || hasBillInput(rec&&rec.util_bill_price)) return '\u5df2\u8acb\u6b3e';
     var manual=rec&&rec.bill_status;
     if(manual && !/^(\u672a\u8acb\u6b3e|\u672a\u8b70\u50f9|\u5df2\u8acb\u6b3e|\u9ede\u5de5\u8a08\u50f9)$/.test(String(manual).trim())) return manual;
     // \u5c0d\u7167 zones \u767c\u73fe\u662f\u9ede\u5de5\u8a08\u50f9(\u6587\u5b57\u5099\u8a3b)\u2192 \u72c0\u614b\u986f\u793a\u9ede\u5de5\u8a08\u50f9
@@ -20996,7 +21399,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   }
   // \u55ae\u7368\u5224\u5b9a\u67d0\u4e00\u300c\u9805\u76ee\u300d(\u4e3b\u4ef6 or \u6c34\u96fb)\u7684\u8acb\u6b3e\u72c0\u6cc1;\u672a\u8acb\u6b3e\u9801\u628a\u4e3b\u4ef6/\u6c34\u96fb\u5206\u958b\u5217\u6642\u4f7f\u7528
   function partStatus(billedPrice, unitPrice, manual, priceNote){
-    if(billNum(billedPrice)>0) return '\u5df2\u8acb\u6b3e';
+    if(hasBillInput(billedPrice)) return '\u5df2\u8acb\u6b3e';   // \u540c deriveStatus:\u6709\u8f38\u5165\u5c31\u662f\u5df2\u8acb\u6b3e,\u5169\u9801\u5224\u5b9a\u624d\u4e00\u81f4
     if(manual && !/^(\u672a\u8acb\u6b3e|\u672a\u8b70\u50f9|\u5df2\u8acb\u6b3e|\u9ede\u5de5\u8a08\u50f9)$/.test(String(manual).trim())) return manual;
     // \u5c0d\u7167 zones \u767c\u73fe\u662f\u9ede\u5de5\u8a08\u50f9(\u6587\u5b57\u5099\u8a3b)\u2192 \u72c0\u614b\u986f\u793a\u9ede\u5de5\u8a08\u50f9
     if(priceNote && String(priceNote).trim()!=='') return '\u9ede\u5de5\u8a08\u50f9';
@@ -21065,10 +21468,21 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var arr=Array.isArray(res.data)?res.data:[];
     arr.forEach(function(r){ blRecords[r.round+'|'+r.zone_id]=r; });
   }
-  async function loadCarryovers(ym){
-    if(blDemo){ blCarryovers=[]; return; }
-    var res=await sbFetchAll('/rest/v1/billing_carryovers?settlement_ym=eq.'+ym+'&select=*');
-    blCarryovers=Array.isArray(res.data)?res.data:[];
+  // 跨月請款:掃全表,挑出「產量月不是本月、但請款日落在本月」的列,依請款日歸到第一/第二次。
+  // 產量仍掛在來源月,這裡只是把實收金額列給本期看,故不另存承接表——改了請款日即時跟著跑。
+  async function loadCrossBills(ym){
+    blCross={1:[],2:[]};
+    var take=function(r){
+      if(r.ym===ym) return;                                        // 本月的列(不分次別)不是跨月
+      if(!billedValue(r.bill_price)&&!billedValue(r.util_bill_price)) return;
+      var s=billRoundOf(r.bill_date); if(!s||s.ym!==ym) return;
+      blCross[s.round].push(r);
+    };
+    if(blDemo){ Object.keys(blDemoRec).forEach(function(k){ take(blDemoRec[k]); }); }
+    else{
+      var res=await sbFetchAll('/rest/v1/billing_records?bill_date=gte.'+ym+'-01&bill_date=lte.'+monthEndOf(ym+'-01')+'&select=*');
+      (Array.isArray(res.data)?res.data:[]).forEach(take);
+    }
   }
 
   var blDemo=false;   // 示範資料模式:略過 Supabase 抓取,不覆蓋注入的假資料
@@ -21082,8 +21496,10 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       sbFetchAll('/rest/v1/daily_output?select=date,proj_num,zone_code,net_weight,company'),
       sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,sub_code,proc_code,unit_price,util_price,util_weight_kg,util_proc_code,price_note,status'),
       sbFetchAll('/rest/v1/projects?select=id,proj_num,company'),
-      sbFetchAll('/rest/v1/components?select=zone_id,qty')
+      sbFetchAll('/rest/v1/components?select=zone_id,qty'),
+      sbFetchAll('/rest/v1/labor_orders?select=bill_date,actual_amount,retention,has_retention')
     ]);
+    blLabor=Array.isArray(res[4].data)?res[4].data:[];
     var proj={};
     var pr=Array.isArray(res[2].data)?res[2].data:((typeof allBOM!=='undefined'&&Array.isArray(allBOM))?allBOM:[]);
     blProjCompany={};
@@ -21125,7 +21541,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(!blMonth) setMonthUI(defaultBillMonth());
     await applyChainDefaults(blMonth);
     await loadRecords(blMonth);
-    await loadCarryovers(blMonth);
+    await loadCrossBills(blMonth);
     blRender();
   };
 
@@ -21136,30 +21552,49 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     blSaved('載入中...','var(--text3)');
     await applyChainDefaults(ym);
     await loadRecords(ym);
-    await loadCarryovers(ym);
+    await loadCrossBills(ym);
     blSaved('');
     blRender();
   };
 
   window.blRender=function(){
-    blGridAnchor=null; blGridActive=null; blGridDragging=false;
-    if(isLegacyViewYm(blMonth)){ blRenderLegacy(); renderCarryovers(); return; }
-    blRenderRound(1); blRenderRound(2); renderCarryovers();
+    blGridAnchor=null; blGridActive=null; blGridDragging=false; blGridSel={};
+    if(isLegacyViewYm(blMonth)){ blRenderLegacy(); renderCross(1); renderCross(2); return; }
+    blRenderRound(1); blRenderRound(2); renderCross(1); renderCross(2);
   };
 
-  function renderCarryovers(){
-    var el=document.getElementById('bl-carry-section'); if(!el) return;
-    if(!blCarryovers.length){el.style.display='none';el.innerHTML='';return;}
-    var body='';
-    blCarryovers.slice().sort(function(a,b){return (a.settlement_round-b.settlement_round)||String(a.source_ym).localeCompare(String(b.source_ym));}).forEach(function(r){
+  // 跨月請款區塊:掛在該次計價底下。噸數/支數只顯示與小計,不併入本月總噸數(產量歸來源月,見 blRenderSummary)。
+  function renderCross(round){
+    var el=document.getElementById('bl-r'+round+'-cross'); if(!el) return;
+    var rows=blCross[round]||[];
+    if(!rows.length){ el.style.display='none'; el.innerHTML=''; return; }
+    var sumT=0,sumQ=0,sumA=0, body='';
+    rows.slice().sort(function(a,b){
+      return String(a.ym).localeCompare(String(b.ym))||(a.round-b.round)
+        ||String(a.proj_num||'').localeCompare(String(b.proj_num||''),undefined,{numeric:true});
+    }).forEach(function(r){
       var amt=billNum(r.bill_price)+billNum(r.util_bill_price);
-      body+='<tr class="ar-r'+(+r.settlement_round===2?2:1)+'"><td>'+esc(r.source_ym)+'</td><td>第'+(+r.settlement_round===1?'一':'二')+'次</td>'
-        +'<td>'+esc(r.proj_num||'')+'</td><td>'+esc(r.zone_code||'')+'</td><td>'+esc(r.proc_code||'')+'</td><td>'+esc(r.sub_code||'')+'</td>'
-        +'<td class="num">'+fmtBill(r.bill_price)+'</td><td class="num">'+(r.util_bill_price?fmtBill(r.util_bill_price):'—')+'</td>'
-        +'<td class="num">'+ntd(amt)+'</td><td>'+esc(r.bill_date||'')+'</td><td'+coStyle(r.company)+'>'+esc(r.company||'—')+'</td><td>'+esc(r.note||'')+'</td></tr>';
+      sumT+=num(r.tons); sumQ+=num(r.qty); sumA+=amt;
+      body+='<tr class="ar-r'+(+r.round===2?2:1)+'">'
+        +'<td>'+(+String(r.ym).slice(5,7))+'月/第'+(+r.round===1?'一':'二')+'次</td>'
+        +'<td>'+esc(r.proj_num||'')+'</td><td>'+esc(r.zone_code||'')+'</td>'
+        +'<td>'+esc(r.proc_code||'')+'</td><td>'+esc(r.sub_code||'')+'</td>'
+        +'<td class="num">'+t2(r.tons)+'</td><td class="num">'+intf(r.qty)+'</td>'
+        +'<td class="num">'+fmtBill(r.bill_price)+'</td>'
+        +'<td class="num">'+(billNum(r.util_bill_price)?fmtBill(r.util_bill_price):'—')+'</td>'
+        +'<td class="num">'+ntd(amt)+'</td><td>'+esc(r.bill_date||'')+'</td>'
+        +'<td'+coStyle(r.company)+'>'+esc(r.company||'—')+'</td><td>'+esc(r.note||'')+'</td></tr>';
     });
-    el.style.display=''; el.innerHTML='<div class="ub-group-h">歷史未請款承接（計入本月實際請款，不重複計算產量）</div>'
-      +'<div class="card" style="padding:0;overflow:auto"><table class="data-table ov-tbl"><thead><tr><th>來源月份</th><th>結算次別</th><th>工程編號</th><th>工程區</th><th>加工代號</th><th>副號</th><th class="num">主件請款</th><th class="num">水電請款</th><th class="num">合計</th><th>請款日期</th><th>公司</th><th>備註</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+    el.style.display='';
+    el.innerHTML='<div class="ub-group-h">跨月請款（'+rows.length+' 筆）　小計 '+ntd(sumA)
+      +'　'+t2(sumT)+' t　'+intf(sumQ)+' 支　<span style="font-weight:400;color:var(--text3)">'
+      +'產量仍掛來源月，此處只計入本次實際請款金額</span></div>'
+      +'<div class="card" style="padding:0;overflow:auto"><table class="data-table ov-tbl"><thead><tr>'
+      +'<th>來源產量月/次別</th><th>工程編號</th><th>工程區</th><th>加工代號</th><th>副號</th>'
+      +'<th class="num">總噸數</th><th class="num">總支數</th>'
+      +'<th class="num">主件請款</th><th class="num">水電請款</th><th class="num">實收合計</th>'
+      +'<th>請款日期</th><th>公司</th><th>備註</th>'
+      +'</tr></thead><tbody>'+body+'</tbody></table></div>';
   }
 
   function legacyVal(v){ var s=String(v==null?'':v); return s.trim()?esc(s):'—'; }
@@ -21336,10 +21771,9 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       if(tab==='billing') blRender(); else if(tab==='unbilled') ubRender(); else if(tab==='archive') arRender();
     },220);
   };
-  function gridAttrs(round,rowIndex,zid,col,field){
-    return ' data-bl-round="'+round+'" data-bl-row="'+rowIndex+'" data-bl-col="'+col+'" data-bl-zid="'+zid+'" data-bl-field="'+field+'"'+
-      ' onfocus="blGridFocusCell(this)" onmousedown="blGridPointerDown(event,this)" onmouseenter="blGridPointerEnter(event,this)"'+
-      ' onkeydown="blGridKey(event,this)" onpaste="blGridPaste(event,this)"';
+  // 只標識別資訊;座標(row/col)由 gridStamp 依 DOM 實際位置蓋上,事件走委派(見 gridBind)
+  function gridAttrs(round,zid,field){
+    return ' data-bl-round="'+round+'" data-bl-zid="'+zid+'" data-bl-field="'+field+'"';
   }
   window.blRenderRound=function(round){
     var f=document.getElementById('bl-r'+round+'-from'), t=document.getElementById('bl-r'+round+'-to');
@@ -21365,7 +21799,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(blq) rows=rows.filter(function(row){return outputSearchMatch(row,blq,row.has_util?'主件 水電':'主件');});
     blRowsCache[round]=rows;
     var body='';
-    rows.forEach(function(row,rowIndex){
+    rows.forEach(function(row){
       if(row.zid==null) return;   // 無對應 zone(無法儲存)略過
       var rec=blRecords[round+'|'+row.zid]||{};
       var bp=rec.bill_price==null?'':rec.bill_price;
@@ -21382,10 +21816,10 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
           ? '<td class="num">—</td>'
           : row.util_pending
             ? '<td><input class="ov-in-l num bl-util-locked" disabled placeholder="本區支數尚未完成" title="截至本次結束日，此工程區完成支數尚未達 BOM 總支數"></td>'
-            : '<td><input id="'+pfx+'-uprice" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,1,'util_bill_price')+' value="'+escAttr(fmtBill(ubp))+'" placeholder="水電請款" oninput="blCell('+round+','+row.zid+',\'util_bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>';
+            : '<td><input id="'+pfx+'-uprice" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,row.zid,'util_bill_price')+' value="'+escAttr(fmtBill(ubp))+'" placeholder="水電請款" oninput="blCell('+round+','+row.zid+',\'util_bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>';
       var mainPriceCell=row.carry_from_first&&row.first_billed
         ? '<td class="num"><span class="ov-noutil">'+row.first_paid_label+'</span></td>'
-        : '<td><input id="'+pfx+'-price" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,0,'bill_price')+' value="'+escAttr(fmtBill(bp))+'" placeholder="請款價格" oninput="blCell('+round+','+row.zid+',\'bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>';
+        : '<td><input id="'+pfx+'-price" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,row.zid,'bill_price')+' value="'+escAttr(fmtBill(bp))+'" placeholder="請款價格" oninput="blCell('+round+','+row.zid+',\'bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>';
       body+='<tr'+(row.has_util?' class="has-util'+(row.util_pending?' util-pending':'')+'"':'')+'>'
         +'<td>'+esc(row.proj_num)+'</td><td>'+esc(row.zone_code)+'</td>'
         +'<td>'+esc(row.proc_code)+'</td><td>'+esc(row.sub_code)+'</td>'
@@ -21398,10 +21832,10 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         +utilPriceCell
         +'<td class="num">'+(row.has_util?money(row.util_price):'—')+'</td>'
         +'<td class="num">'+(row.price_note&&String(row.price_note).trim()!==''?'<span class="ov-labor">'+esc(row.price_note)+'</span>':money(row.unit_price))+'</td>'
-        +'<td><input id="'+pfx+'-date" class="ov-in-l bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,2,'bill_date')+' type="date" value="'+escAttr(bd)+'" onchange="blCell('+round+','+row.zid+',\'bill_date\',this.value)"></td>'
+        +'<td><input id="'+pfx+'-date" class="ov-in-l bl-grid-cell"'+gridAttrs(round,row.zid,'bill_date')+' type="date" value="'+escAttr(bd)+'" onchange="blCell('+round+','+row.zid+',\'bill_date\',this.value)"></td>'
         +'<td><span id="'+pfx+'-status" class="bill-status-pill '+billStatusClassName(stDisp)+'">'+esc(stDisp)+'</span></td>'
         +'<td'+coStyle(row.company)+'>'+esc(row.company||'—')+'</td>'
-        +'<td><input id="'+pfx+'-note" class="ov-in-l bl-grid-cell"'+gridAttrs(round,rowIndex,row.zid,4,'note')+' value="'+escAttr(note)+'" placeholder="備註" oninput="blCell('+round+','+row.zid+',\'note\',this.value)"></td>'
+        +'<td><input id="'+pfx+'-note" class="ov-in-l bl-grid-cell"'+gridAttrs(round,row.zid,'note')+' value="'+escAttr(note)+'" placeholder="備註" oninput="blCell('+round+','+row.zid+',\'note\',this.value)"></td>'
         +'</tr>';
     });
     if(!rows.length) body='<tr><td colspan="18" class="empty-state">此區間無產量資料</td></tr>';
@@ -21412,76 +21846,110 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       +'<th>請款價格</th><th>水電加工代號</th><th class="num">水電重量(t)</th><th class="num">水電總價</th>'
       +'<th>水電請款價格</th><th class="num">水電單價(元/t)</th><th class="num">單價(元/t)</th><th>請款日期</th><th>請款狀況</th><th>公司</th><th>備註</th>'
       +'</tr></thead><tbody>'+body+'</tbody></table>';
+    gridStamp(round);
     blRenderSummary(round);
   };
 
   // ── 請款核對試算表操作 ────────────────────────────────
+  // 整張表的每個 td 都是一格(唯讀欄也能圈選加總),座標一律用 DOM 實際位置,輸入格沿用所屬 td 的座標。
+  function gridStamp(round){
+    var tb=document.querySelector('#bl-r'+round+'-table table tbody'); if(!tb) return;
+    Array.from(tb.rows).forEach(function(tr,ri){
+      if(tr.querySelector('.empty-state')) return;
+      Array.from(tr.cells).forEach(function(td,ci){
+        td.classList.add('bl-cell');
+        td.dataset.blRound=round; td.dataset.blRow=ri; td.dataset.blCol=ci;
+        td.tabIndex=-1;   // 唯讀格也要能取得焦點才收得到鍵盤事件
+        var inp=td.querySelector('input.bl-grid-cell');
+        if(inp){ inp.dataset.blRow=ri; inp.dataset.blCol=ci; }
+      });
+    });
+  }
   function gridCoord(el){
     return {round:+el.dataset.blRound,row:+el.dataset.blRow,col:+el.dataset.blCol};
   }
   function gridCells(round){
-    return Array.from(document.querySelectorAll('#bl-r'+round+'-table input.bl-grid-cell'));
+    return Array.from(document.querySelectorAll('#bl-r'+round+'-table td.bl-cell'));
   }
   function gridCellAt(round,row,col){
-    return document.querySelector('#bl-r'+round+'-table input.bl-grid-cell[data-bl-row="'+row+'"][data-bl-col="'+col+'"]');
+    return document.querySelector('#bl-r'+round+'-table td.bl-cell[data-bl-row="'+row+'"][data-bl-col="'+col+'"]');
   }
+  function gridInput(td){ var i=td&&td.querySelector?td.querySelector('input.bl-grid-cell'):null; return (i&&!i.disabled)?i:null; }
+  function gridValue(td){ var i=gridInput(td); return i?String(i.value||''):String(td.textContent||'').trim(); }
   function gridSame(a,b){ return !!a&&!!b&&a.round===b.round&&a.row===b.row&&a.col===b.col; }
-  function gridPaintRange(anchor,active){
-    document.querySelectorAll('#output-billing-panel input.bl-grid-cell').forEach(function(el){
-      el.classList.remove('bl-grid-selected','bl-grid-active');
-    });
-    if(!anchor||!active){ if(typeof updateExcelSelectionStats==='function') updateExcelSelectionStats(); return; }
+  function gridKeyOf(p){ return p.round+'|'+p.row+'|'+p.col; }
+  function gridRect(anchor,active,cb){
+    if(!anchor||!active) return;
     if(anchor.round!==active.round) anchor=active;
     var r0=Math.min(anchor.row,active.row),r1=Math.max(anchor.row,active.row);
     var c0=Math.min(anchor.col,active.col),c1=Math.max(anchor.col,active.col);
-    gridCells(active.round).forEach(function(el){
-      var p=gridCoord(el);
-      if(p.row>=r0&&p.row<=r1&&p.col>=c0&&p.col<=c1) el.classList.add('bl-grid-selected');
-      if(gridSame(p,active)) el.classList.add('bl-grid-active');
+    gridCells(active.round).forEach(function(td){
+      var p=gridCoord(td);
+      if(p.row>=r0&&p.row<=r1&&p.col>=c0&&p.col<=c1) cb(td,p);
     });
-    var focusEl=gridCellAt(active.round,active.row,active.col); if(focusEl&&typeof updateExcelFocusRow==='function') updateExcelFocusRow(focusEl);
+  }
+  // Ctrl 再點時,先把目前矩形定案存進 blGridSel,之後的矩形與它聯集
+  function gridCommitRect(){
+    gridRect(blGridAnchor,blGridActive,function(td,p){ blGridSel[gridKeyOf(p)]=p; });
+  }
+  function gridPaintRange(anchor,active){
+    document.querySelectorAll('#output-billing-panel td.bl-cell').forEach(function(td){
+      td.classList.remove('bl-grid-selected','bl-grid-active');
+    });
+    Object.keys(blGridSel).forEach(function(k){
+      var p=blGridSel[k], td=gridCellAt(p.round,p.row,p.col);
+      if(td) td.classList.add('bl-grid-selected');
+    });
+    gridRect(anchor,active,function(td){ td.classList.add('bl-grid-selected'); });
+    if(active){
+      var focusEl=gridCellAt(active.round,active.row,active.col);
+      if(focusEl){ focusEl.classList.add('bl-grid-active');
+        if(typeof updateExcelFocusRow==='function') updateExcelFocusRow(focusEl); }
+    }
     if(typeof updateExcelSelectionStats==='function') updateExcelSelectionStats();
   }
   function gridSetRange(anchor,active){
     blGridAnchor=anchor; blGridActive=active;
     gridPaintRange(anchor,active);
   }
-  function gridFocus(el){
-    if(!el) return;
-    blGridDragging=true; // 避免 focus 事件把 Shift 延伸選取重設為單格
-    el.focus();
-    if(el.select && el.type!=='date') el.select();
+  // 可編輯的格聚焦到裡面的 input;唯讀格聚焦 td 本身(靠 tabIndex=-1)
+  function gridFocus(td){
+    if(!td) return;
+    blGridDragging=true; // 避免 focus 事件把 Shift/Ctrl 選取重設為單格
+    var inp=gridInput(td);
+    if(inp){ inp.focus(); if(inp.select&&inp.type!=='date') inp.select(); }
+    else td.focus();
     blGridDragging=false;
-    el.scrollIntoView({block:'nearest',inline:'nearest'});
+    td.scrollIntoView({block:'nearest',inline:'nearest'});
   }
-  window.blGridFocusCell=function(el){
+  function gridFocusCell(td){
     if(blGridDragging) return;
-    var p=gridCoord(el);
-    if(!gridSame(p,blGridActive)) gridSetRange(p,p);
-  };
-  window.blGridPointerDown=function(e,el){
-    var p=gridCoord(el);
-    if(e.shiftKey&&blGridAnchor&&blGridAnchor.round===p.round) gridSetRange(blGridAnchor,p);
-    else gridSetRange(p,p);
-    blGridDragging=true;
-  };
-  window.blGridPointerEnter=function(e,el){
-    if(!blGridDragging||!blGridAnchor) return;
-    var p=gridCoord(el);
+    var p=gridCoord(td);
+    if(!gridSame(p,blGridActive)){ blGridSel={}; gridSetRange(p,p); }
+  }
+  function gridPointerDown(e,td){
+    var p=gridCoord(td);
+    if(e.metaKey||e.ctrlKey){ gridCommitRect(); gridSetRange(p,p); }   // Ctrl/⌘ 跳格多選:保留先前選取,另起一格
+    else if(e.shiftKey&&blGridAnchor&&blGridAnchor.round===p.round) gridSetRange(blGridAnchor,p);
+    else { blGridSel={}; gridSetRange(p,p); }
+    if(!gridInput(td)) gridFocus(td);   // 唯讀格瀏覽器不會自動聚焦,手動補
+    blGridDragging=true;                // 須在 gridFocus 之後:它結束時會把此旗標關掉
+  }
+  function gridPointerEnter(e,td){
+    if(!blGridDragging||!blGridAnchor||e.buttons!==1) return;
+    var p=gridCoord(td);
     if(p.round===blGridAnchor.round) gridSetRange(blGridAnchor,p);
-  };
+  }
   document.addEventListener('mouseup',function(){ blGridDragging=false; });
 
   function gridSelected(fallback){
-    var a=Array.from(document.querySelectorAll('#output-billing-panel input.bl-grid-cell.bl-grid-selected'));
+    var a=Array.from(document.querySelectorAll('#output-billing-panel td.bl-grid-selected'));
     return a.length?a:(fallback?[fallback]:[]);
   }
-  function gridMove(el,dr,dc,extend){
-    var p=gridCoord(el), target=null;
+  function gridMove(td,dr,dc,extend){
+    var p=gridCoord(td), target=null;
     if(dr){
-      var sameCol=gridCells(p.round).filter(function(x){ return +x.dataset.blCol===p.col; })
-        .sort(function(a,b){ return +a.dataset.blRow-+b.dataset.blRow; });
-      var ix=sameCol.indexOf(el); target=sameCol[ix+dr]||null;
+      target=gridCellAt(p.round,p.row+dr,p.col);
       // 同欄到底時，接續另一個計價區的同欄第一/最後一格。
       if(!target&&!extend){
         var other=p.round===1?2:1;
@@ -21490,14 +21958,12 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         target=dr>0?oc[0]:oc[oc.length-1];
       }
     } else if(dc){
-      var sameRow=gridCells(p.round).filter(function(x){ return +x.dataset.blRow===p.row; })
-        .sort(function(a,b){ return +a.dataset.blCol-+b.dataset.blCol; });
-      var j=sameRow.indexOf(el); target=sameRow[j+dc]||null;
+      target=gridCellAt(p.round,p.row,p.col+dc);
     }
     if(!target) return;
     var tp=gridCoord(target);
     if(extend&&blGridAnchor&&blGridAnchor.round===tp.round) gridSetRange(blGridAnchor,tp);
-    else gridSetRange(tp,tp);
+    else { blGridSel={}; gridSetRange(tp,tp); }
     gridFocus(target);
   }
   function gridNormalize(field,value){
@@ -21508,26 +21974,29 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if((m=s.match(/^(\d{1,2})-(\d{1,2})$/))) return new Date().getFullYear()+'-'+pad(m[1])+'-'+pad(m[2]);
     return v;
   }
-  function gridApply(el,value){
-    if(!el||el.disabled) return;
-    var field=el.dataset.blField;
+  // 唯讀格(噸數/預估總價/單價…)不可寫入,直接略過;貼上/清除掃到它們時不會出錯也不會改到值
+  function gridApply(td,value){
+    var inp=gridInput(td); if(!inp) return;
+    var field=inp.dataset.blField;
     var v=gridNormalize(field,value);
-    el.value=v;
-    if(field==='bill_price'||field==='util_bill_price') el.value=fmtBill(v);
-    window.blCell(+el.dataset.blRound,+el.dataset.blZid,field,el.value);
+    inp.value=v;
+    if(field==='bill_price'||field==='util_bill_price') inp.value=fmtBill(v);
+    window.blCell(+inp.dataset.blRound,+inp.dataset.blZid,field,inp.value);
   }
-  function gridDelete(el){
-    gridSelected(el).forEach(function(x){ gridApply(x,''); });
+  function gridDelete(td){
+    gridSelected(td).forEach(function(x){ gridApply(x,''); });
   }
-  function gridCopyText(el){
-    var selected=gridSelected(el); if(!selected.length) return '';
+  function gridCopyText(td){
+    var selected=gridSelected(td); if(!selected.length) return '';
+    var inSel={}; selected.forEach(function(x){ inSel[gridKeyOf(gridCoord(x))]=true; });
     var ps=selected.map(gridCoord),round=ps[0].round;
     var r0=Math.min.apply(null,ps.map(function(p){return p.row;})),r1=Math.max.apply(null,ps.map(function(p){return p.row;}));
     var c0=Math.min.apply(null,ps.map(function(p){return p.col;})),c1=Math.max.apply(null,ps.map(function(p){return p.col;}));
     var lines=[];
     for(var r=r0;r<=r1;r++){
       var vals=[];
-      for(var c=c0;c<=c1;c++){ var x=gridCellAt(round,r,c); vals.push(x?x.value:''); }
+      // Ctrl 跳格多選不是矩形:框內沒被選到的格輸出空白,才不會夾帶沒選的資料
+      for(var c=c0;c<=c1;c++){ var x=gridCellAt(round,r,c); vals.push(x&&inSel[round+'|'+r+'|'+c]?gridValue(x):''); }
       lines.push(vals.join('\t'));
     }
     return lines.join('\n');
@@ -21543,40 +22012,71 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
     document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(e){} ta.remove();
   }
-  window.blGridPaste=function(e,el){
+  function gridPaste(e,td){
     var txt=e.clipboardData&&e.clipboardData.getData('text/plain');
     if(txt==null) return;
     e.preventDefault();
     var matrix=txt.replace(/\r/g,'').split('\n').map(function(line){ return line.split('\t'); });
     if(matrix.length>1&&matrix[matrix.length-1].length===1&&matrix[matrix.length-1][0]==='') matrix.pop();
-    var selected=gridSelected(el);
+    var selected=gridSelected(td);
     // 單一內容貼到多選範圍：每格填入相同內容。
     if(matrix.length===1&&matrix[0].length===1&&selected.length>1){
       selected.forEach(function(x){ gridApply(x,matrix[0][0]); });
       return;
     }
-    var coords=selected.map(gridCoord),round=+el.dataset.blRound;
-    var startRow=coords.length?Math.min.apply(null,coords.map(function(p){return p.row;})):+el.dataset.blRow;
-    var startCol=coords.length?Math.min.apply(null,coords.map(function(p){return p.col;})):+el.dataset.blCol;
+    var coords=selected.map(gridCoord),round=+td.dataset.blRound;
+    var startRow=coords.length?Math.min.apply(null,coords.map(function(p){return p.row;})):+td.dataset.blRow;
+    var startCol=coords.length?Math.min.apply(null,coords.map(function(p){return p.col;})):+td.dataset.blCol;
     var last=null;
     matrix.forEach(function(rowVals,ri){ rowVals.forEach(function(v,ci){ var x=gridCellAt(round,startRow+ri,startCol+ci); if(x){ gridApply(x,v); last=x; } }); });
-    var first=gridCellAt(round,startRow,startCol)||el;
+    var first=gridCellAt(round,startRow,startCol)||td;
     if(last) gridSetRange(gridCoord(first),gridCoord(last));
-  };
-  window.blGridKey=function(e,el){
+  }
+  function gridKey(e,td){
     if(e.isComposing) return;
     var activeEl=blGridActive?gridCellAt(blGridActive.round,blGridActive.row,blGridActive.col):null;
-    var base=activeEl||el;
+    var base=activeEl||td;
     var mod=e.metaKey||e.ctrlKey;
-    if(mod&&String(e.key).toLowerCase()==='c'){ e.preventDefault(); gridCopy(el); return; }
-    if(e.key==='Backspace'||e.key==='Delete'){ e.preventDefault(); gridDelete(el); return; }
+    if(mod&&String(e.key).toLowerCase()==='c'){ e.preventDefault(); gridCopy(td); return; }
+    if(mod) return;   // 其他 Ctrl 組合(含 Ctrl+A/V)交還瀏覽器
+    if(e.key==='Backspace'||e.key==='Delete'){ e.preventDefault(); gridDelete(td); return; }
     if(e.key==='Enter'){ e.preventDefault(); gridMove(base,1,0,false); return; }
     if(e.key==='ArrowUp'){ e.preventDefault(); gridMove(base,-1,0,e.shiftKey); return; }
     if(e.key==='ArrowDown'){ e.preventDefault(); gridMove(base,1,0,e.shiftKey); return; }
     if(e.key==='ArrowLeft'){ e.preventDefault(); gridMove(base,0,-1,e.shiftKey); return; }
     if(e.key==='ArrowRight'){ e.preventDefault(); gridMove(base,0,1,e.shiftKey); }
-  };
+  }
+  // 事件委派:輸入格與唯讀格共用同一套處理,表格重繪也不必重掛
+  (function gridBind(){
+    var SEL='#output-billing-panel td.bl-cell';
+    var cellOf=function(e){ return e.target&&e.target.closest?e.target.closest(SEL):null; };
+    document.addEventListener('mousedown',function(e){ var td=cellOf(e); if(td) gridPointerDown(e,td); });
+    document.addEventListener('mouseover',function(e){ var td=cellOf(e); if(td) gridPointerEnter(e,td); });
+    document.addEventListener('focusin',function(e){ var td=cellOf(e); if(td) gridFocusCell(td); });
+    document.addEventListener('keydown',function(e){ var td=cellOf(e); if(td) gridKey(e,td); });
+    document.addEventListener('paste',function(e){ var td=cellOf(e); if(td) gridPaste(e,td); });
+  })();
 
+  // 點工款項/點工保留款:本次計價填了請款日期,才去抓點工單。
+  // 比對「請款期別」而非日期本身——同一期的點工單請款日常散在 16～19 日,比對日期會漏抓(使用者 2026-07 指示)。
+  // 保留款取「這次所產生的」(該批點工單的 retention),不是核銷出去的 retention_paid_amount。
+  function laborOfRound(round){
+    var periods={}, add=function(d){ var s=billRoundOf(d); if(s) periods[s.ym+'|'+s.round]=true; };
+    (blRowsCache[round]||[]).forEach(function(row){
+      if(row.zid==null) return;
+      add((blRecords[round+'|'+row.zid]||{}).bill_date);
+    });
+    (blCross[round]||[]).forEach(function(r){ add(r.bill_date); });
+    var out={amount:0,retention:0};
+    if(!Object.keys(periods).length) return out;   // 沒有請款日期 → 不抓
+    blLabor.forEach(function(r){
+      var s=billRoundOf(r.bill_date); if(!s||!periods[s.ym+'|'+s.round]) return;
+      var amt=num(r.actual_amount);
+      out.amount+=amt;
+      if(r.has_retention) out.retention+=(r.retention==null?Math.round(amt*0.2):num(r.retention));
+    });
+    return out;
+  }
   window.blRenderSummary=function(round){
     var rows=blRowsCache[round]||[];
     var estTotal=0, utilTotal=0, tons=0, qty=0, billed=0;
@@ -21591,12 +22091,13 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       var co=row.company||'(未分類)';
       byCo[co]=(byCo[co]||0)+rowBilled;   // 鎮山/麗生 = 各公司「已請款」金額
     });
-    blCarryovers.forEach(function(r){
-      if(+r.settlement_round!==+round) return;
+    // 跨月請款:只加實收金額與公司歸屬,噸數/支數/預估不加(產量已算在來源月,加了會重複計算產量)
+    (blCross[round]||[]).forEach(function(r){
       var amt=billNum(r.bill_price)+billNum(r.util_bill_price); billed+=amt;
       var co=r.company||'(未分類)'; byCo[co]=(byCo[co]||0)+amt;
     });
     var zhen=byCo['鎮山']||0, li=byCo['麗生']||0;
+    var lab=laborOfRound(round);
     var card=function(lbl,val,cls){ return '<div class="bl-scard"><span class="lbl">'+lbl+'</span><span class="big'+(cls?' '+cls:'')+'">'+val+'</span></div>'; };
     var html='<div class="bl-summary">'
       +card('預估總價(不含水電)',ntd(estTotal))
@@ -21604,6 +22105,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       +card('實際請款金額',ntd(billed),'ov-red')
       +card('鎮山請款',ntd(zhen),'ov-red')
       +card('麗生請款',ntd(li),'ov-red')
+      +card('點工款項',ntd(lab.amount),'ov-red')
+      +card('點工保留款',ntd(lab.retention))
       +card('本月總噸數',t2(tons)+' t')
       +card('本月總支數',intf(qty))
       +'</div>';
@@ -21677,24 +22180,12 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       if(blDemo){ blDemoRec[payload.ym+'|'+payload.round+'|'+payload.zone_id]=payload; ok++; blDirty[k]=false; continue; }
       var r=await sbFetch('/rest/v1/billing_records?on_conflict=ym,round,zone_id',
         {method:'POST', headers:{'Prefer':'resolution=merge-duplicates,return=minimal'}, body:JSON.stringify(payload)});
-      // 歷史未請款在今天核銷：保留來源月份，另建承接紀錄歸入請款日期所屬月份／次別。
-      if(r.ok && payload.bill_date && (billedValue(payload.bill_price)||billedValue(payload.util_bill_price))){
-        var settle=ymRoundOf(payload.bill_date);
-        if(settle.ym!==blMonth || settle.round!==round){
-          var cp={source_ym:blMonth,source_round:round,settlement_ym:settle.ym,settlement_round:settle.round,zone_id:zid,
-            proj_num:payload.proj_num,zone_code:payload.zone_code,proc_code:payload.proc_code,sub_code:payload.sub_code,company:payload.company,
-            bill_price:payload.bill_price,util_bill_price:payload.util_bill_price,bill_date:payload.bill_date,note:payload.note,updated_at:new Date().toISOString()};
-          var cr=await sbFetch('/rest/v1/billing_carryovers?on_conflict=source_ym,source_round,zone_id',
-            {method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify(cp)});
-          if(!cr.ok){r=cr;console.warn('billing carryover save failed',cr.status,cr.data);}
-        }
-      }
+      // 跨月請款不另存表:列本身留在來源產量月,由 loadCrossBills 依 bill_date 即時算給對應月份看。
       if(r.ok){ ok++; blDirty[k]=false; } else { fail++; console.warn('billing_records save failed',r.status,r.data); lastErr=r; }
     }
     if(fail){
       var hint='';
-      if(lastErr && lastErr.status===401) hint='(權限不足:請先執行 billing_records_migration.sql／billing_carryovers_migration.sql)';
-      else if(lastErr && lastErr.data && /billing_carryovers/i.test(String(lastErr.data.message||''))) hint='(請先執行 billing_carryovers_migration.sql)';
+      if(lastErr && lastErr.status===401) hint='(權限不足:請先執行 billing_records_migration.sql)';
       else if(lastErr && lastErr.data && lastErr.data.message) hint='('+lastErr.data.message+')';
       blSaved('已儲存 '+ok+' 筆,'+fail+' 筆失敗 '+hint,'var(--danger)');
     }
@@ -21741,15 +22232,14 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         if(arcBilled(r.util_bill_price)) arcUtil[ak]=true;
       });
     }
+    // 舊月快照(blLegacyUnbilled)不在 daily_output 裡,recIdx 的 zone_id 對不上,故另建 產量月|工程區 索引:
+    // 只要該區在該產量月已於請款核對填過金額(含跨月後補),就從未請款移除。
     var settledMain={},settledUtil={};
-    if(!blDemo){
-      var cres=await sbFetchAll('/rest/v1/billing_carryovers?select=source_ym,proj_num,zone_code,bill_price,util_bill_price');
-      (Array.isArray(cres.data)?cres.data:[]).forEach(function(r){
-        var ck=r.source_ym+'|'+zkey(r.proj_num,r.zone_code);
-        if(arcBilled(r.bill_price)) settledMain[ck]=true;
-        if(arcBilled(r.util_bill_price)) settledUtil[ck]=true;
-      });
-    }
+    Object.keys(recIdx).forEach(function(k){
+      var r=recIdx[k], ck=r.ym+'|'+zkey(r.proj_num,r.zone_code);
+      if(arcBilled(r.bill_price)) settledMain[ck]=true;
+      if(arcBilled(r.util_bill_price)) settledUtil[ck]=true;
+    });
     // 依報驗日期把每支構件歸入 產量月 + 計價次別 + 工程區
     var groups={};
     blDaily.forEach(function(r){
@@ -21935,11 +22425,6 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(blDemo){ arr=blDemoArc.slice(); }
     else {
       var res=await sbFetchAll('/rest/v1/billing_archive?select=*'); arr=Array.isArray(res.data)?res.data:[];
-      var crs=await sbFetchAll('/rest/v1/billing_carryovers?select=*');
-      (Array.isArray(crs.data)?crs.data:[]).forEach(function(c){ arr.push({id:c.id,_carry:true,ym:c.settlement_ym,round:c.settlement_round,
-        from_date:null,to_date:null,proj_num:c.proj_num,zone_code:c.zone_code,proc_code:c.proc_code,sub_code:c.sub_code,company:c.company,
-        tons:0,qty:0,total_price:0,bill_price:c.bill_price,util_bill_price:c.util_bill_price,bill_date:c.bill_date,
-        note:'歷史未請款承接（來源 '+c.source_ym+'）'+(c.note?'；'+c.note:'')}); });
     }
     var arq=outputQuery('ar-search');
     if(arq) arr=arr.filter(function(r){
@@ -21947,15 +22432,21 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       return outputSearchMatch(r,arq,item);
     });
     if(!arr.length){ el.innerHTML='<div class="empty-state">'+(arq?'沒有符合搜尋條件的請款紀錄':'尚無封存的請款紀錄(在「請款核對」頁按「封存本次請款」)')+'</div>'; return; }
+    // 依「請款日期」分組:哪個月的第幾次請款(1～15 日=第一次,16 日後=第二次),與產量月/次別無關。
     var groups={};
-    arr.forEach(function(r){ var mo=(String(r.bill_date||r.archived_at||'').slice(0,7))||'(未填請款日期)'; (groups[mo]||(groups[mo]=[])).push(r); });
+    arr.forEach(function(r){
+      var s=billRoundOf(r.bill_date||r.archived_at);
+      var gk=s?(s.ym+'|'+s.round):'|0';
+      (groups[gk]||(groups[gk]=[])).push(r);
+    });
     var months=Object.keys(groups).sort(function(a,b){ return a<b?1:a>b?-1:0; });
     var grand=0, html='';
     months.forEach(function(mo){
-      var rs=groups[mo], sub=0, body='';
+      var rs=groups[mo], sub=0, body='', byCo={};
       rs.sort(function(a,b){ return String(a.ym).localeCompare(String(b.ym)) || (a.round-b.round) || String(a.proj_num||'').localeCompare(String(b.proj_num||''),undefined,{numeric:true}); });
       rs.forEach(function(r){
         var amt=billNum(r.bill_price)+billNum(r.util_bill_price); sub+=amt;
+        byCo[r.company||'(未分類)']=(byCo[r.company||'(未分類)']||0)+amt;
         var period=(r.from_date&&r.to_date)?(esc(r.from_date)+'～'+esc(r.to_date)):'—';
         body+='<tr class="ar-r'+(r.round===2?2:1)+'">'
           +'<td>'+esc(r.bill_date||'—')+'</td>'
@@ -21969,11 +22460,14 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
           +'<td class="num">'+(billNum(r.util_bill_price)?fmtBill(r.util_bill_price):'—')+'</td>'
           +'<td class="num">'+money(amt)+'</td>'
           +'<td'+coStyle(r.company)+'>'+esc(r.company||'—')+'</td><td>'+esc(r.note||'')+'</td>'
-          +'<td>'+(r._carry?'<span class="ov-noutil">跨月承接</span>':'<button class="btn" style="padding:2px 8px;color:var(--danger)" onclick="arDelete('+r.id+',this)">刪除</button>')+'</td>'
+          +'<td><button class="btn" style="padding:2px 8px;color:var(--danger)" onclick="arDelete('+r.id+',this)">刪除</button></td>'
           +'</tr>';
       });
       grand+=sub;
-      html+='<div class="ub-group-h">'+esc(mo)+' 請款　小計 '+ntd(sub)+'</div>'
+      var gp=mo.split('|'), gLbl=gp[0]?(gp[0]+' 第'+(gp[1]==='1'?'一':'二')+'次請款'):'(未填請款日期)';
+      html+='<div class="ub-group-h">'+esc(gLbl)+'　小計 '+ntd(sub)
+        +'　<span style="color:var(--accent3)">鎮山 '+ntd(byCo['鎮山']||0)+'</span>'
+        +'　<span style="color:var(--yellow)">麗生 '+ntd(byCo['麗生']||0)+'</span></div>'
         +'<div class="card" style="padding:0;overflow:auto"><table class="data-table ov-tbl"><thead><tr>'
         +'<th>請款日期</th><th>產量月/次別</th><th>計價期間</th><th>工程編號</th><th>工程區</th><th>加工代號</th><th>工程副號</th>'
         +'<th class="num">總噸數</th><th class="num">總支數</th><th class="num">預估總價</th>'
@@ -24343,9 +24837,361 @@ function spxPasteGrid(key,cells2d,anchor){ const cfg=SPX[key], arr=prodArr(key);
 
 
 <script>
+/* ═══════════ GridXL 引擎（來自 .claude/skills/excel-grid/reference/gridxl.js）═══════════
+ * 注意：host 的 tblSel 是 top-level `let`，不掛在 window 上，故此處以裸識別字
+ * 取用共用底層（classic script 共享同一個 global lexical scope），勿改回 global.*。
+ * 新增列請用 GridXL.register(key,cfg)；勿在各表另刻鍵盤／複製貼上邏輯。
+ * ══════════════════════════════════════════════════════════════════════════ */
+/* ============================================================================
+ * GridXL — 一份設定就長出一張「1:1 Excel 行為」的表格引擎
+ * ----------------------------------------------------------------------------
+ * 這支檔案是 steelcore App 裡「SP鋼材狀態表 / 保留料 / 成品材 / 明細輸入」那套
+ * 經證實可用的 SPX 引擎的「通用化 + 依賴注入」版本。把它整段貼進 index.html 的
+ * <script> 內一次,之後每張表只要呼叫 GridXL.register(key, config) 就自動擁有:
+ *   1. 復原 / 重做(整表快照,Ctrl+Z / Ctrl+Y,含工具列按鈕 gxUndo/gxRedo)
+ *   2. 方向鍵漫遊選取;移到格子「直接打字」= 取代內容進入編輯(Excel overtype);
+ *      或按 Enter 進入編輯(保留原內容)
+ *   3. 編輯完按 Enter → 自動移到「同一欄下一列」
+ *   4. 移到格子按 Delete / Backspace → 清空該格(不進編輯)
+ *   5. 拖曳 / Shift+方向鍵多選 → 多格複製、多格刪除、多格貼上(單值填滿選取範圍)
+ *   6. 單格複製 / 單格刪除 / 單格貼上(日期欄以文字輸入呈現,故一併適用)
+ *
+ * 依賴(index.html 內「已存在」的共用底層,詳見 reference/host-layer.md):
+ *   esc, sbFetch,
+ *   tblSel, cellRC, tblApplySel, tblSelRect, tblClearSel, tblInitSelection,
+ *   layoutMoveCell,
+ *   rowPassesColFilters, colFilterActive, openColFilter, cascadedColValues
+ * 這些在目前的 index.html 都有;GridXL 不重造輪子,直接沿用。
+ * ==========================================================================*/
+(function (global) {
+'use strict';
+
+const CFG = {};                    // key -> config
+const ARROWS = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
+const DELTA  = {ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]};
+let seq = 0;
+const hist = {}, redo = {}, histTimer = {}, filterText = {}, saveState = {};
+
+/* ── 設定登記 ──────────────────────────────────────────────────────────────
+ * config 欄位:
+ *   tbl        Supabase 資料表名(用預設 save 時必填)
+ *   arr()      回傳「資料陣列」的 getter(引擎直接就地增刪這個陣列)
+ *   setArr(a)  還原整表時的 setter(復原/重做會用到)
+ *   cols[]     欄位定義,每欄:
+ *                k          物件屬性名 / DB 欄名
+ *                h          表頭文字
+ *                sel:[...]  下拉選單(一般)
+ *                status     true = 狀態欄(套 stcell-<值> 樣式,單擊變色)
+ *                combo:[a,b] 合併欄:顯示 a-b,底層存成兩個 DB 欄
+ *                num        數字欄(存 number / null)
+ *                bool       是/否欄(存 true/false/null)
+ *                date       日期欄(以文字輸入,存字串;可用 host 的 prodDate 正規化)
+ *                def        新空白列預設值
+ *                defFn()    新空白列預設值(動態,如今天日期)
+ *                noData     此欄不算「有資料」(判斷空白列時忽略,如狀態/預設下拉)
+ *                wide       長文欄(整欄等寬並加寬)
+ *   sort(a,b)  資料列排序(可省略)
+ *   noBlank    true = 不顯示最上方空白輸入列(改用「＋新增列」)
+ *   afterChange(key)  存檔/增刪後的重繪 hook(重畫看板、選項等,可省略)
+ *   save(row,cfg)     自訂寫入(可省略;預設走 Supabase REST：新增 POST、更新 PATCH)
+ *   coerce(col,val)   自訂型別轉換(可省略;預設處理 bool/num/date/text)
+ */
+function register(key, config) {
+  CFG[key] = config;
+  hist[key] = []; redo[key] = []; histTimer[key] = null; filterText[key] = '';
+  saveState[key] = { t:null, busy:false, again:false };
+  return config;
+}
+const cfgOf = k => CFG[k];
+const arrOf = k => CFG[k].arr();
+
+/* ── 值 / 型別 ────────────────────────────────────────────────────────────*/
+function comboStr(r,c){ return c.combo.map(f=>(r[f]==null?'':String(r[f])).trim()).filter(Boolean).join('-'); }
+function setCombo(r,c,val){ const s=String(val==null?'':val).trim(), i=s.indexOf('-');
+  if(i<0){ r[c.combo[0]]=s; r[c.combo[1]]=''; } else { r[c.combo[0]]=s.slice(0,i).trim(); r[c.combo[1]]=s.slice(i+1).trim(); } }
+function colStr(r,c){ if(c.combo) return comboStr(r,c); if(c.bool) return r[c.k]===true?'是':r[c.k]===false?'否':''; const v=r[c.k]; return v==null?'':String(v); }
+function coerce(cfg,c,v){ if(cfg.coerce) return cfg.coerce(c,v);
+  if(c.bool) return v===true?true:v===false?false:(v==='是'?true:v==='否'?false:null);
+  if(c.num){ const n=parseFloat(String(v==null?'':v).replace(/,/g,'')); return isNaN(n)?null:n; }
+  if(c.date) return (typeof prodDate==='function')?prodDate(v):(v==null?'':String(v));
+  return v==null?'':String(v); }
+function today(){ const d=new Date(), p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+function blankObj(cfg){ const o={}; cfg.cols.forEach(c=>{ o[c.k]= c.bool?null:(c.defFn?c.defFn():(c.def!=null?c.def:'')); }); o._key=++seq; return o; }
+function rowHasData(cfg,r){ return !!(r && cfg.cols.some(c=>!c.noData && colStr(r,c).trim()!=='')); }
+function rowIsBlank(cfg,r){ return !!(r && !r.id && !rowHasData(cfg,r)); }
+function ensureBlank(key){ const cfg=cfgOf(key), arr=arrOf(key); if(cfg.noBlank) return; if(!arr.some(r=>rowIsBlank(cfg,r))) arr.push(blankObj(cfg)); }
+function keyRows(key){ arrOf(key).forEach(r=>{ if(r._key==null) r._key=++seq; }); }
+function newRow(key){ const arr=arrOf(key); arr.push(blankObj(cfgOf(key))); return arr.length-1; }
+function afterChange(key){ const cfg=cfgOf(key); if(cfg.afterChange) cfg.afterChange(key); }
+
+/* ── 復原 / 重做(整表 JSON 快照,同一串連續輸入 400ms 內合併成一筆) ────────*/
+function snapshot(key){ if(histTimer[key]){clearTimeout(histTimer[key]);} else { hist[key].push(JSON.stringify(arrOf(key))); if(hist[key].length>50)hist[key].shift(); redo[key]=[]; } histTimer[key]=setTimeout(()=>{histTimer[key]=null;},400); }
+function snapshotNow(key){ clearTimeout(histTimer[key]); histTimer[key]=null; hist[key].push(JSON.stringify(arrOf(key))); if(hist[key].length>50)hist[key].shift(); redo[key]=[]; }
+function undo(key){ if(!hist[key]||!hist[key].length) return; redo[key].push(JSON.stringify(arrOf(key))); cfgOf(key).setArr(JSON.parse(hist[key].pop())); render(key); saveAfterUndo(key); afterChange(key); }
+function redoAct(key){ if(!redo[key]||!redo[key].length) return; hist[key].push(JSON.stringify(arrOf(key))); cfgOf(key).setArr(JSON.parse(redo[key].pop())); render(key); saveAfterUndo(key); afterChange(key); }
+function saveAfterUndo(key){ const cfg=cfgOf(key); arrOf(key).forEach((r,i)=>{ if(rowHasData(cfg,r)) markDirty(key,i); }); }
+
+/* ── 自動儲存(編輯後 debounce 寫入 Supabase) ─────────────────────────────*/
+function markDirty(key,i){ const row=arrOf(key)[i]; if(!row) return; row._dirty=true; const s=saveState[key]; clearTimeout(s.t); s.t=setTimeout(()=>flush(key),250); }
+async function flush(key){
+  const cfg=cfgOf(key), s=saveState[key];
+  if(s.busy){ s.again=true; return; }
+  const dirty=arrOf(key).filter(r=>r._dirty && rowHasData(cfg,r));
+  if(!dirty.length) return;
+  s.busy=true; let saved=0;
+  try{
+    for(const row of dirty){
+      let ok=false;
+      if(cfg.save){ ok=await cfg.save(row,cfg); }
+      else {
+        const payload={}; cfg.cols.forEach(c=>{ if(c.combo){ c.combo.forEach(f=>{ payload[f]=(row[f]==null?'':String(row[f])); }); } else payload[c.k]=coerce(cfg,c,row[c.k]); });
+        if(row.id){ const r=await sbFetch('/rest/v1/'+cfg.tbl+'?id=eq.'+row.id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)}); if(r.ok){ok=true;} else if(r.status===401||r.status===403){ hint('需登入才能儲存',true); break; } }
+        else { const r=await sbFetch('/rest/v1/'+cfg.tbl,{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)}); if(r.ok&&r.data&&r.data[0]){row.id=r.data[0].id;ok=true;} else if(r.status===401||r.status===403){ hint('需登入才能儲存',true); break; } }
+      }
+      if(ok){ row._dirty=false; saved++; }
+    }
+  } finally { s.busy=false; if(s.again){ s.again=false; flush(key); } }
+  if(saved){ afterChange(key); hint('✓ 已自動儲存'); }
+}
+function hint(msg,err){ if(typeof layoutSaveHint==='function' && !err){ layoutSaveHint(); return; }
+  let el=document.getElementById('layout-save-hint'); if(!el){ el=document.createElement('div'); el.id='layout-save-hint'; el.style.cssText='position:fixed;bottom:20px;right:20px;color:#fff;font-weight:600;font-family:var(--mono,monospace);font-size:12px;padding:6px 14px;border-radius:8px;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:opacity .3s'; document.body.appendChild(el); }
+  el.style.background=err?'#b91c1c':'#16a34a'; el.textContent=msg; el.style.opacity='1'; clearTimeout(el._t); el._t=setTimeout(()=>{el.style.opacity='0';},1400);
+}
+
+/* ── 篩選(沿用 host 的欄位多選下拉 colFilterState[key]) ──────────────────*/
+function rowVisible(key,r,kw){ const cfg=cfgOf(key);
+  if(rowIsBlank(cfg,r)) return true;
+  if(cfg.visible && !cfg.visible(r)) return false;
+  if(typeof rowPassesColFilters==='function' && !rowPassesColFilters(key, ck=>{ const c=cfg.cols.find(x=>x.k===ck); return c?colStr(r,c):''; })) return false;
+  if(kw) return cfg.cols.map(c=>colStr(r,c)).join(' ').toLowerCase().indexOf(kw)>=0;
+  return true;
+}
+function openFilter(ev,key,colKey){ const cfg=cfgOf(key);
+  if(typeof openColFilter!=='function') return;
+  const vals=cascadedColValues(key, arrOf(key).filter(r=>!rowIsBlank(cfg,r)), (r,ck)=>{ const c=cfg.cols.find(x=>x.k===ck); return c?colStr(r,c):''; }, colKey);
+  openColFilter(ev,key,colKey,vals);
+}
+function search(key){ const el=document.getElementById('gxSearch-'+key); filterText[key]=(el?el.value:'').trim().toLowerCase(); renderBody(key); }
+
+/* ── 渲染 ─────────────────────────────────────────────────────────────────*/
+function render(key){ renderHead(key); renderBody(key); }
+function renderHead(key){ const cfg=cfgOf(key), head=document.getElementById('gxHead-'+key); if(!head) return;
+  const active=(k)=> (typeof colFilterActive==='function' && colFilterActive(key,k))?' active':'';
+  head.innerHTML='<tr>'+cfg.cols.map(c=>'<th>'+esc(c.h)+'<button class="cf-th-btn'+active(c.k)+'" title="篩選" onclick="event.stopPropagation();GridXL.openFilter(event,\''+key+'\',\''+c.k+'\')">▼</button></th>').join('')+'<th></th></tr>';
+  const t=document.getElementById('gx-'+key); if(t && head.offsetHeight) t.style.setProperty('--lt-head-h', head.offsetHeight+'px');
+}
+function renderBody(key){ const cfg=cfgOf(key), body=document.getElementById('gxBody-'+key); if(!body) return;
+  keyRows(key); ensureBlank(key);
+  const arr=arrOf(key), kw=filterText[key];
+  const vis=[]; arr.forEach((r,i)=>{ if(rowVisible(key,r,kw)) vis.push(i); });
+  const blankIdx=vis.filter(i=>rowIsBlank(cfg,arr[i]));
+  const dataIdx=vis.filter(i=>!rowIsBlank(cfg,arr[i]));
+  if(cfg.sort) dataIdx.sort((a,b)=>cfg.sort(arr[a],arr[b]));
+  let html=''; blankIdx.forEach(i=>html+=rowHtml(key,i)); dataIdx.forEach(i=>html+=rowHtml(key,i));
+  if(!dataIdx.length && !blankIdx.length) html='<tr><td colspan="'+(cfg.cols.length+1)+'" style="text-align:center;color:var(--text3);padding:24px">尚無資料</td></tr>';
+  body.innerHTML=html;
+  const cnt=document.getElementById('gxCount-'+key); if(cnt) cnt.textContent=dataIdx.length+' 列';
+  if(cfg.afterRender) cfg.afterRender(key,dataIdx.map(i=>arr[i]));
+  const t=document.getElementById('gx-'+key); if(t && typeof tblInitSelection==='function') tblInitSelection(t);
+  equalizeWide(key);
+}
+function equalizeWide(key){ const cfg=cfgOf(key), body=document.getElementById('gxBody-'+key); if(!body) return;
+  cfg.cols.forEach((c,ci)=>{ if(!c.wide) return; const inputs=[]; let max=0;
+    Array.from(body.children).forEach(tr=>{ const td=tr.children[ci]; if(!td) return; const inp=td.querySelector('input'); if(!inp) return; inputs.push(inp); const w=inp.offsetWidth; if(w>max) max=w; });
+    if(!inputs.length) return; max=Math.max(400,Math.min(max,640)); inputs.forEach(inp=>{ inp.style.width=max+'px'; }); });
+}
+function rowHtml(key,i){ const cfg=cfgOf(key), arr=arrOf(key), r=arr[i], blank=rowIsBlank(cfg,r), RO=blank?'':' readonly';
+  let h='<tr data-key="'+r._key+'"'+(blank?' class="lt-input-row"':'')+'>';
+  cfg.cols.forEach(c=>{ const td=c.wide?'<td class="col-wide">':'<td>';
+    if(c.status){ const cur=r[c.k]||c.def||'-';
+      const opts=c.sel.map(o=>'<option value="'+esc(o)+'"'+((cur===o)?' selected':'')+'>'+esc(o)+'</option>').join('');
+      h+=td+'<select class="lt-edit-sel stcell-'+esc(cur)+'" onchange="this.className=\'lt-edit-sel stcell-\'+this.value;GridXL.edit(\''+key+'\','+i+',\''+c.k+'\',this.value)">'+opts+'</select></td>';
+    } else if(c.sel){ const cur=colStr(r,c);
+      const opts=c.sel.map(o=>'<option value="'+esc(o)+'"'+((cur===o)?' selected':'')+'>'+esc(o||'—')+'</option>').join('');
+      h+=td+'<select class="lt-edit-sel" onchange="GridXL.edit(\''+key+'\','+i+',\''+c.k+'\',this.value)">'+opts+'</select></td>';
+    } else {
+      h+=td+'<input type="text" class="lt-edit"'+RO+' value="'+esc(c.fmt?c.fmt(r,colStr(r,c)):colStr(r,c))+'" placeholder="'+esc(c.h)+'" oninput="GridXL.editText(\''+key+'\','+i+',\''+c.k+'\',this)" autocomplete="off"/></td>';
+    }
+  });
+  h+='<td class="del-col"><button class="btn-del-row" title="刪除整列" onclick="GridXL.delRow(\''+key+'\','+i+')">✕</button></td></tr>';
+  return h;
+}
+function edit(key,i,field,val){ const r=arrOf(key)[i]; if(!r) return; const cfg=cfgOf(key), c=cfg.cols.find(x=>x.k===field); snapshot(key); r[field]=c?coerce(cfg,c,val):val; if(cfg.onEdit)cfg.onEdit(r,field,i); markDirty(key,i); afterChange(key); }
+// onEdit 只掛在「使用者逐格編輯」路徑,貼上(pasteGrid)刻意不觸發:整段貼歷史資料時不得代填衍生欄位。
+function editText(key,i,field,el){ const r=arrOf(key)[i]; if(!r) return; const cfg=cfgOf(key), c=cfg.cols.find(x=>x.k===field); snapshot(key); if(c&&c.combo) setCombo(r,c,el.value); else r[field]=el.value; if(cfg.onEdit)cfg.onEdit(r,field,i); markDirty(key,i); }
+function addRow(key){ snapshotNow(key); ensureBlank(key); render(key); }
+function delRow(key,i){ const cfg=cfgOf(key), arr=arrOf(key), row=arr[i]; if(!row) return; snapshotNow(key); if(row.id && cfg.tbl) sbFetch('/rest/v1/'+cfg.tbl+'?id=eq.'+row.id,{method:'DELETE'}); arr.splice(i,1); render(key); afterChange(key); }
+
+/* 於最上方空白輸入列按 Enter = 完成此列 → 補一列新空白列並把游標移到它的第一格 */
+function commitInputRow(key,t){ const cfg=cfgOf(key), arr=arrOf(key); const tr=t.closest('tr'); if(!tr) return;
+  const idx=arr.findIndex(r=>String(r._key)===String(tr.dataset.key)); if(idx<0) return;
+  if(!rowHasData(cfg,arr[idx])){ layoutMoveCell(t,1,0); return; }
+  markDirty(key,idx); ensureBlank(key); render(key);
+  setTimeout(()=>{ const body=document.getElementById('gxBody-'+key); const f=body?body.querySelector('tr.lt-input-row input,tr.lt-input-row select'):null; if(f) f.focus(); },10);
+}
+
+/* ── 鍵盤 / 選取(以 .gx-table class 判斷) ────────────────────────────────*/
+function keyOf(t){ const tb=t&&t.closest?t.closest('.gx-table'):null; return tb?tb.id.replace('gx-',''):null; }
+function extendSel(el,dirKey){ const table=el.closest('.gx-table'); if(!table) return; const td=el.closest('td'); if(!td) return;
+  const S=tblSel;
+  if(!S.table||S.table!==table||!S.anchor){ S.table=table; S.anchor=cellRC(td); S.focus=S.anchor; }
+  const d=DELTA[dirKey], rows=Array.from(table.querySelector('tbody').children);
+  let nr=S.focus.r+d[0], nc=S.focus.c+d[1];
+  if(nr<0)nr=0; if(nr>=rows.length)nr=rows.length-1;
+  const ncells=Array.from(rows[nr].children); if(nc<0)nc=0; if(nc>=ncells.length)nc=ncells.length-1;
+  S.focus={r:nr,c:nc}; tblApplySel();
+  const f=ncells[nc]?ncells[nc].querySelector('input,select'):null; if(f) f.focus({preventScroll:false});
+}
+function deleteSelection(t){ const key=keyOf(t); if(!key) return; const cfg=cfgOf(key), table=document.getElementById('gx-'+key); const S=tblSel; S.table=table;
+  let rect=tblSelRect(table); if(!rect){ const td=t.closest('td'); if(!td) return; const rc=cellRC(td); rect={r1:rc.r,r2:rc.r,c1:rc.c,c2:rc.c}; }
+  const arr=arrOf(key), rows=Array.from(document.getElementById('gxBody-'+key).children);
+  snapshotNow(key);
+  for(let r=rect.r1;r<=rect.r2;r++){ const tr=rows[r]; if(!tr||!tr.dataset.key) continue;
+    const idx=arr.findIndex(x=>String(x._key)===tr.dataset.key); if(idx<0) continue;
+    for(let c=rect.c1;c<=rect.c2 && c<cfg.cols.length;c++){ const col=cfg.cols[c]; if(col.combo) col.combo.forEach(f=>arr[idx][f]=''); else if(!col.noData) arr[idx][col.k]=(col.num||col.date)?null:''; }
+    markDirty(key,idx);
+  }
+  render(key);
+}
+
+/* type-to-edit(Excel overtype):唯讀資料格上直接打字 → 清空並以該字元進入編輯。
+ * 這是相對舊 SPX 的關鍵補強——不必先按 Enter。 */
+function isPrintable(e){ return e.key.length===1 && !e.ctrlKey && !e.metaKey && !e.altKey; }
+
+document.addEventListener('keydown', function(e){
+  const t=e.target; if(!t||(t.tagName!=='INPUT'&&t.tagName!=='SELECT')) return;
+  const table=t.closest('.gx-table'); if(!table) return;
+  const key=table.id.replace('gx-','');
+  if(e.key==='Delete'||e.key==='Backspace'){ const editingTxt=t.tagName==='INPUT'&&t.type==='text'&&!t.hasAttribute('readonly'); if(!editingTxt){ e.preventDefault(); e.stopPropagation(); deleteSelection(t); return; } }
+  const tr=t.closest('tr');
+  if(e.key==='Enter' && tr && tr.classList.contains('lt-input-row')){ e.preventDefault(); e.stopPropagation(); commitInputRow(key,t); return; }
+  if(t.tagName==='SELECT'){
+    if(e.shiftKey && ARROWS.indexOf(e.key)>=0){ e.preventDefault(); extendSel(t,e.key); return; }
+    if(e.key==='Enter'||(e.altKey&&e.key==='ArrowDown')){ e.preventDefault(); if(t.showPicker){try{t.showPicker();}catch(x){}} return; }
+    if(ARROWS.indexOf(e.key)>=0){ e.preventDefault(); const d=DELTA[e.key]; layoutMoveCell(t,d[0],d[1]); return; }
+    return;
+  }
+  const isEditable=t.classList.contains('lt-edit');
+  if(e.shiftKey && ARROWS.indexOf(e.key)>=0){ e.preventDefault(); extendSel(t,e.key); return; }
+  if(e.key==='Escape' && isEditable && !t.hasAttribute('readonly')){ e.preventDefault(); e.stopPropagation(); t.setAttribute('readonly',''); t.focus(); return; }
+  if(e.key==='Enter' && isEditable){
+    if(t.hasAttribute('readonly')){ e.preventDefault(); e.stopPropagation(); t.removeAttribute('readonly'); t.focus(); try{t.setSelectionRange(t.value.length,t.value.length);}catch(x){} return; }
+    e.preventDefault(); t.setAttribute('readonly',''); layoutMoveCell(t,1,0); return;
+  }
+  // ★ type-to-edit:唯讀格上打可見字元 → 取代內容進入編輯
+  if(isEditable && t.hasAttribute('readonly') && isPrintable(e)){
+    e.preventDefault(); const idx=rowIndexOf(key,t); t.removeAttribute('readonly'); t.value=e.key; t.focus();
+    try{t.setSelectionRange(t.value.length,t.value.length);}catch(x){}
+    if(idx>=0) editText(key,idx,fieldOf(key,t),t);
+    return;
+  }
+  if(isEditable && !t.hasAttribute('readonly')) return;
+  if(!e.shiftKey && ARROWS.indexOf(e.key)>=0){ e.preventDefault(); const d=DELTA[e.key]; layoutMoveCell(t,d[0],d[1]); }
+}, true);
+
+// Ctrl+Z / Ctrl+Y / Ctrl+A
+document.addEventListener('keydown', function(e){
+  if(!(e.ctrlKey||e.metaKey)) return;
+  const a=document.activeElement; const table=a&&a.closest?a.closest('.gx-table'):null; if(!table) return;
+  const key=table.id.replace('gx-','');
+  const editingTxt=a.tagName==='INPUT'&&a.classList.contains('lt-edit')&&!a.hasAttribute('readonly');
+  if(e.key==='a'||e.key==='A'){ e.preventDefault(); const rows=Array.from(table.querySelector('tbody').children); if(!rows.length||!rows[0].children.length) return; const S=tblSel; S.table=table; S.anchor={r:0,c:0}; const lastR=rows.length-1; const lastC=Math.max(0,rows[lastR].children.length-2); S.focus={r:lastR,c:lastC}; tblApplySel(); return; }
+  if(editingTxt) return;
+  if(e.key==='z'||e.key==='Z'){ e.preventDefault(); undo(key); }
+  else if(e.key==='y'||e.key==='Y'){ e.preventDefault(); redoAct(key); }
+}, true);
+
+// 貼上:攔截 .gx-table 內的貼上(capture + stopImmediatePropagation),避免落到 host 的泛用貼上分支
+document.addEventListener('paste', function(e){
+  const a=document.activeElement; const td=a&&a.closest?a.closest('td'):null; const table=td?td.closest('.gx-table'):null;
+  if(!table) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const key=table.id.replace('gx-','');
+  const S=tblSel; S.table=table;
+  let rect=tblSelRect(table);
+  const rc=cellRC(td);
+  if(!rect || (rect.r1===rect.r2 && rect.c1===rect.c2)){ S.anchor={r:rc.r,c:rc.c}; S.focus=S.anchor; rect={r1:rc.r,r2:rc.r,c1:rc.c,c2:rc.c}; }
+  else { S.anchor={r:rect.r1,c:rect.c1}; S.focus={r:rect.r2,c:rect.c2}; }
+  const text=(e.clipboardData||window.clipboardData).getData('text'); if(!text) return;
+  const gridLines=text.replace(/\r/g,'').split('\n'); while(gridLines.length>1 && gridLines[gridLines.length-1]==='') gridLines.pop();
+  let cells2d=gridLines.map(l=>l.split('\t'));
+  // 單值 → 填滿目前選取矩形
+  if(cells2d.length===1 && cells2d[0].length===1 && (rect.r2>rect.r1||rect.c2>rect.c1)){
+    const val=cells2d[0][0]; cells2d=[]; for(let r=rect.r1;r<=rect.r2;r++){ const line=[]; for(let c=rect.c1;c<=rect.c2;c++) line.push(val); cells2d.push(line); }
+  }
+  pasteGrid(key, cells2d, {r:rect.r1,c:rect.c1});
+}, true);
+
+/* ── 貼上:自動補列 + 依欄位填入 ─────────────────────────────────────────*/
+function pasteGrid(key,cells2d,anchor){ const cfg=cfgOf(key), arr=arrOf(key);
+  snapshotNow(key);
+  const domRows=Array.from(document.getElementById('gxBody-'+key).children);
+  const startC=anchor.c, affected=[];
+  const fill=(ri,line)=>{ const row=arr[ri]; line.forEach((val,dc)=>{ const ci=startC+dc; if(ci>=cfg.cols.length) return; const col=cfg.cols[ci]; if(col.combo) setCombo(row,col,val); else row[col.k]= (col.bool||col.num||col.date)?coerce(cfg,col,val):val; }); affected.push(ri); };
+  const anchorTr=domRows[anchor.r];
+  const anchorIdx=(anchorTr&&anchorTr.dataset&&anchorTr.dataset.key)?arr.findIndex(r=>String(r._key)===anchorTr.dataset.key):-1;
+  if(anchorIdx<0||rowIsBlank(cfg,arr[anchorIdx])){
+    let ri=anchorIdx>=0?anchorIdx:newRow(key);
+    cells2d.forEach((line,dr)=>{ if(dr>0) ri=newRow(key); fill(ri,line); });
+  } else {
+    const visDataIdx=[]; domRows.forEach(tr=>{ if(!tr.dataset||!tr.dataset.key) return; const idx=arr.findIndex(r=>String(r._key)===tr.dataset.key); if(idx>=0&&!rowIsBlank(cfg,arr[idx])) visDataIdx.push(idx); });
+    let startVis=visDataIdx.indexOf(anchorIdx); if(startVis<0)startVis=0;
+    cells2d.forEach((line,dr)=>{ const pos=startVis+dr; const ri=pos<visDataIdx.length?visDataIdx[pos]:newRow(key); fill(ri,line); });
+  }
+  affected.forEach(ri=>markDirty(key,ri));
+  ensureBlank(key); render(key); afterChange(key);
+}
+
+/* helpers for type-to-edit */
+function rowIndexOf(key,t){ const tr=t.closest('tr'); if(!tr) return -1; return arrOf(key).findIndex(r=>String(r._key)===String(tr.dataset.key)); }
+function fieldOf(key,t){ const td=t.closest('td'); const tr=t.closest('tr'); if(!td||!tr) return null; const ci=Array.from(tr.children).indexOf(td); const c=cfgOf(key).cols[ci]; return c?c.k:null; }
+
+/* ── 對外 API ─────────────────────────────────────────────────────────────*/
+global.GridXL = {
+  register, render, renderHead, renderBody,
+  undo, redo:redoAct, edit, editText, addRow, delRow, openFilter, search, commitInputRow,
+  pasteGrid, blankObj:key=>blankObj(cfgOf(key)), newRow,
+  today, rowIsBlank:(key,r)=>rowIsBlank(cfgOf(key),r), _cfg:CFG,
+  coerceVal:(key,c,v)=>coerce(cfgOf(key),c,v), rowHasData:(key,r)=>rowHasData(cfgOf(key),r)
+};
+})(window);
+
 /* ═══════════ 扣款明細／修改構件 ═══════════ */
-const DED_KEYS=['category','record_date','doc_no','zone_code','reason','expected_work','expected_amount','actual_amount','deduction_date','note'];
-let dedRows=[],dedLocal=false,dedReady=false,dedCat='';
+/* 欄位對應「扣款」資料夾的 5 份 TSV。各分類欄位不同 → 依分類切換 cols(dedCols)。
+   DB 一律存全部欄位;seq_no=點工單扣款的「編號」(獨立於點工單編號 doc_no),
+   voided=作廢(如 B821-C17-004 作廢拆單,金額/扣款日期留空且不計入合計)。 */
+const DED_CATS=['點工單扣款','品管扣款','材料','工安扣款','運費扣款'];
+const DED_C={
+  category:       {k:'category',        h:'分類',     sel:['',...DED_CATS]},
+  // noData 必須跟 defFn 成對:否則預設的今天日期會讓空白列被當成「有資料」,
+  // ensureBlank 每次重畫都再補一列 → 無限長出空列。
+  record_date:    {k:'record_date',     h:'日期',     date:true, defFn:()=>GridXL.today(), noData:true},
+  doc_no:         {k:'doc_no',          h:'編號'},
+  zone_code:      {k:'zone_code',       h:'工程區'},
+  seq_no:         {k:'seq_no',          h:'編號'},
+  reason:         {k:'reason',          h:'事由'},
+  expected_work:  {k:'expected_work',   h:'預計工數', num:true},
+  expected_amount:{k:'expected_amount', h:'金額',     num:true},
+  // 作廢列的扣款金額顯示「-」(僅顯示;底層數值保留,取消作廢即恢復,合計本就排除作廢)
+  actual_amount:  {k:'actual_amount',   h:'扣款金額', num:true, fmt:(r,v)=>r.voided===true?'-':v},
+  deduction_date: {k:'deduction_date',  h:'扣款日期', date:true},
+  voided:         {k:'voided',          h:'作廢',     sel:['','是','否'], bool:true, noData:true},
+  note:           {k:'note',            h:'備註',     wide:true},
+};
+const DED_FIELDS=Object.keys(DED_C);
+// 每個分類的欄位順序;['欄位','表頭'] = 沿用該欄但換成該分類的用語
+const DED_LAYOUT={
+  '':          ['category','record_date','doc_no','zone_code','seq_no',['reason','事由／扣款項目'],'expected_work','expected_amount','actual_amount','deduction_date','voided','note'],
+  // 欄位順序刻意與「扣款/扣款明細 - 點工單扣款.tsv」逐欄對齊,直接從 Excel 整段貼上才不會錯位;
+  // 作廢是本系統新增的欄位,故擺在 TSV 既有欄位之後。
+  '點工單扣款':['record_date',['doc_no','點工單編號'],'zone_code',['seq_no','編號'],['expected_work','預計扣款工數'],['expected_amount','預計扣款金額'],['actual_amount','實際扣款金額'],'deduction_date',['reason','扣款項目'],'voided'],
+  '品管扣款':  ['record_date','doc_no','zone_code','reason','expected_amount','actual_amount','deduction_date'],
+  '材料':      ['record_date','doc_no','zone_code','reason','expected_amount','actual_amount','deduction_date'],
+  '工安扣款':  ['record_date','doc_no','reason','expected_amount','actual_amount','deduction_date'],
+  '運費扣款':  ['record_date','doc_no','reason','expected_amount','actual_amount','deduction_date',['note','備註']],
+};
+function dedCols(cat){return (DED_LAYOUT[cat]||DED_LAYOUT['']).map(x=>{const[k,h]=Array.isArray(x)?x:[x,null];return Object.assign({},DED_C[k],h?{h}:null);});}
+let dedRows=[],dedLocal=false,dedReady=false,dedCat='',dedLocalSeq=0,dedLastVisible=[];
 const dedStore='zs_deduction_details_v1';
 function xEsc(v){return String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function xToday(){const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
@@ -24353,27 +25199,87 @@ function xLocalRead(k){try{const a=JSON.parse(localStorage.getItem(k)||'[]');ret
 function xLocalWrite(k,a){try{localStorage.setItem(k,JSON.stringify(a));}catch(e){}}
 function xNum(v){const n=parseFloat(v);return isFinite(n)?n:0;}
 function xCell(type,val,onchange,ro){return '<input '+(type?'type="'+type+'" ':'')+(ro?'readonly class="lt-ro" ':'')+'value="'+xEsc(val)+'" onchange="'+onchange+'">';}
+// 寫入一律送全部欄位(不只目前分類顯示的那幾欄),避免切分類時把隱藏欄位洗成 null。
+async function dedSave(row){
+  if(!row.category)row.category=dedCat||DED_CATS[0];
+  const payload={};DED_FIELDS.forEach(k=>{payload[k]=GridXL.coerceVal('ded',DED_C[k],row[k]);});
+  payload.voided=payload.voided===true;                 // DB 為 not null default false
+  if(dedLocal){if(!row.id)row.id='local-'+(++dedLocalSeq);return true;}
+  if(row.id){
+    const r=await sbFetch('/rest/v1/deduction_details?id=eq.'+encodeURIComponent(row.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(payload)});
+    return !!r.ok;
+  }
+  const r=await sbFetch('/rest/v1/deduction_details',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)});
+  if(r.ok&&r.data&&r.data[0]){row.id=r.data[0].id;return true;}
+  return false;
+}
+function dedPersistLocal(){if(!dedLocal)return;xLocalWrite(dedStore,dedRows.filter(r=>GridXL.rowHasData('ded',r)).map(r=>{const o=Object.assign({},r);delete o._key;delete o._dirty;return o;}));}
+GridXL.register('ded',{
+  tbl:'deduction_details',
+  arr:()=>dedRows,
+  setArr:a=>{dedRows=a;},
+  cols:dedCols(''),
+  save:dedSave,
+  // 分類切換用隱藏列達成(不動陣列);category 還沒填的新列一律先顯示,存檔時補上目前分類
+  visible:r=>!dedCat||!r.category||r.category===dedCat,
+  // 輸入「扣款金額」且扣款日期還空著 → 自動帶今天。只補空不覆蓋(改歷史金額不得洗掉原扣款日期);
+  // editText 逐鍵觸發、正在打字,不能整表重畫(會失焦),直接改該列的日期輸入格。
+  onEdit:(r,field)=>{
+    const setCell=(k,v)=>{const tr=document.querySelector('#gxBody-ded tr[data-key="'+r._key+'"]');
+      const ci=GridXL._cfg.ded.cols.findIndex(c=>c.k===k);
+      const inp=tr&&ci>=0?tr.children[ci]?.querySelector('input'):null;if(inp)inp.value=v;};
+    // 勾作廢:扣款日期=勾選當天、扣款金額顯示「-」;取消作廢:清掉作廢日期、金額恢復原值
+    if(field==='voided'){
+      if(r.voided===true){r.deduction_date=GridXL.today();setCell('deduction_date',r.deduction_date);setCell('actual_amount','-');}
+      else{r.deduction_date=null;setCell('deduction_date','');setCell('actual_amount',r.actual_amount??'');}
+      return;
+    }
+    // 輸入扣款金額且扣款日期空 → 自動帶今天(只補空不覆蓋)
+    if(field!=='actual_amount'||r.voided===true)return;
+    if(String(r.actual_amount??'').trim()===''||r.deduction_date)return;
+    r.deduction_date=GridXL.today();
+    setCell('deduction_date',r.deduction_date);
+  },
+  sort:(a,b)=>String(b.record_date||'').localeCompare(String(a.record_date||''))||String(a.doc_no||'').localeCompare(String(b.doc_no||''),'zh-Hant',{numeric:true}),
+  // dedLastVisible 存的是 dedRows 內同一批物件的參照,打字後值已是新的,
+  // 重算摘要不必重畫表格(重畫會讓正在輸入的格子失焦)。
+  afterChange:()=>{dedPersistLocal();dedRenderTabs();dedSummary(dedLastVisible);},
+  afterRender:(k,rows)=>{dedLastVisible=rows;dedSummary(rows);},
+});
 async function deductionsInit(){
   if(!dedReady){const r=await sbFetchAll('/rest/v1/deduction_details?select=*&order=record_date.desc,created_at.desc');dedLocal=!!(r&&r.ok===false);dedRows=dedLocal?xLocalRead(dedStore):(Array.isArray(r.data)?r.data:[]);dedReady=true;}
-  deductionsRender();
+  deductionsCat(dedCat);
 }
-function deductionsCat(c,btn){dedCat=c;document.querySelectorAll('#ded-cat-tabs .layout-tab').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');deductionsRender();}
-function deductionsRender(){
-  const cat=dedCat,q=(document.getElementById('ded-search')?.value||'').toLowerCase();
-  const rows=dedRows.filter(r=>(!cat||r.category===cat)&&(!q||DED_KEYS.some(k=>String(r[k]||'').toLowerCase().includes(q))));
-  document.getElementById('ded-body').innerHTML=rows.map(r=>{const i=dedRows.indexOf(r),oc=(k)=>`deductionsChange(${i},'${k}',this.value)`;return '<tr data-i="'+i+'">'+
-    '<td><select onchange="'+oc('category')+'">'+['點工單扣款','品管扣款','材料','工安扣款','運費扣款'].map(v=>'<option'+(r.category===v?' selected':'')+'>'+v+'</option>').join('')+'</select></td>'+[
-    xCell('date',r.record_date||'',oc('record_date')),xCell('',r.doc_no||'',oc('doc_no')),xCell('',r.zone_code||'',oc('zone_code')),xCell('',r.reason||'',oc('reason')),xCell('number',r.expected_work??'',oc('expected_work')),xCell('number',r.expected_amount??'',oc('expected_amount')),xCell('number',r.actual_amount??'',oc('actual_amount')),xCell('date',r.deduction_date||'',oc('deduction_date')),xCell('',r.note||'',oc('note'))].map(v=>'<td>'+v+'</td>').join('')+'<td><button class="btn-sm btn-danger" onclick="deductionsDelete('+i+')">刪除</button></td></tr>';}).join('')||'<tr><td colspan="11" class="empty-state">尚無扣款資料</td></tr>';
-  const total=rows.reduce((s,r)=>s+xNum(r.actual_amount),0);document.getElementById('ded-foot').innerHTML='<tr><td colspan="7"><b>合計 '+rows.length+' 筆</b></td><td class="num"><b>'+total.toLocaleString()+'</b></td><td colspan="3"></td></tr>';
-  tblInitSelection(document.getElementById('ded-grid'));
+function deductionsCat(c){
+  dedCat=c||'';
+  GridXL._cfg.ded.cols=dedCols(dedCat);   // 依分類換欄位
+  dedRenderTabs();
+  GridXL.render('ded');
 }
-async function deductionsAdd(){const row={category:dedCat||'點工單扣款',record_date:xToday(),doc_no:'',zone_code:'',reason:'',expected_work:null,expected_amount:null,actual_amount:null,deduction_date:null,note:''};if(dedLocal){row.id='local-'+Date.now();dedRows.unshift(row);xLocalWrite(dedStore,dedRows);}else{const r=await sbFetch('/rest/v1/deduction_details',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)});if(!r.ok){alert('新增失敗('+(r.status||'?')+')：'+((r.data&&(r.data.message||r.data.hint))||'請確認已在 Supabase 執行 deductions_modparts_migration.sql'));return;}dedRows.unshift(Array.isArray(r.data)?r.data[0]:r.data);}deductionsRender();}
-let dedSaveTimer;
-function deductionsChange(i,k,v){const r=dedRows[i];if(!r)return;r[k]=['expected_work','expected_amount','actual_amount'].includes(k)?(v===''?null:Number(v)):v;clearTimeout(dedSaveTimer);dedSaveTimer=setTimeout(()=>deductionsSave(i),300);}
-async function deductionsSave(i){const r=dedRows[i];if(!r)return;if(dedLocal){xLocalWrite(dedStore,dedRows);return;}const body={};DED_KEYS.forEach(k=>{let v=r[k];if((k==='record_date'||k==='deduction_date')&&v==='')v=null;body[k]=v??null;});await sbFetch('/rest/v1/deduction_details?id=eq.'+encodeURIComponent(r.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(body)});deductionsRender();}
-async function deductionsDelete(i){const r=dedRows[i];if(!r||!await uiConfirm('確定刪除此筆扣款？'))return;if(!dedLocal)await sbFetch('/rest/v1/deduction_details?id=eq.'+encodeURIComponent(r.id),{method:'DELETE'});dedRows.splice(i,1);if(dedLocal)xLocalWrite(dedStore,dedRows);deductionsRender();}
-function deductionsKey(e){tableArrowNav(e);}
-function deductionsExport(){const rows=dedRows.filter(r=>!dedCat||r.category===dedCat);const a=[['分類','日期','編號','工程區','事由／扣款項目','預計工數','預計金額','實際扣款','扣款日期','備註']];rows.forEach(r=>a.push(DED_KEYS.map(k=>r[k]??'')));const ws=XLSX.utils.aoa_to_sheet(a),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'扣款明細');XLSX.writeFile(wb,'扣款明細_'+xToday()+'.xlsx');}
+function dedRenderTabs(){
+  const el=document.getElementById('ded-cat-tabs');if(!el)return;
+  const n=c=>dedRows.filter(r=>r.id&&(!c||r.category===c)).length;
+  el.innerHTML=[['','全部分類'],...DED_CATS.map(c=>[c,c])].map(([v,label])=>
+    '<button class="layout-tab'+(dedCat===v?' active':'')+'" onclick="deductionsCat(\''+v+'\')">'+esc(label)+' <span style="opacity:.5">'+n(v)+'</span></button>').join('');
+}
+function dedSummary(rows){
+  const el=document.getElementById('ded-summary');if(!el)return;
+  const live=rows.filter(r=>r.voided!==true),voided=rows.length-live.length;
+  const exp=live.reduce((s,r)=>s+xNum(r.expected_amount),0),act=live.reduce((s,r)=>s+xNum(r.actual_amount),0);
+  const pend=live.filter(r=>!r.deduction_date).length;
+  el.innerHTML='合計 <b>'+live.length+'</b> 筆 ｜ 金額 <b>'+exp.toLocaleString()+'</b> ｜ 實際扣款 <b>'+act.toLocaleString()+'</b>'
+    +(pend?' ｜ 未扣款 <b>'+pend+'</b> 筆':'')+(voided?' ｜ 作廢 '+voided+' 筆(不計入合計)':'');
+}
+function deductionsExport(){
+  const cols=dedCols(dedCat);
+  const rows=dedRows.filter(r=>GridXL.rowHasData('ded',r)&&(!dedCat||r.category===dedCat))
+    .sort((a,b)=>String(b.record_date||'').localeCompare(String(a.record_date||'')));
+  const a=[cols.map(c=>c.h)];
+  rows.forEach(r=>a.push(cols.map(c=>{const v=c.bool?(r[c.k]===true?'是':r[c.k]===false?'否':''):(r[c.k]??'');return c.fmt?c.fmt(r,v):v;})));
+  const ws=XLSX.utils.aoa_to_sheet(a),wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'扣款明細');
+  XLSX.writeFile(wb,'扣款明細'+(dedCat?'_'+dedCat:'')+'_'+xToday()+'.xlsx');
+}
 
 const MP_KEYS=['cp_no','part_no','proj_num','zone_code','qty','unit_weight','drawing_no','online_date','ship_date'];
 let mpRows=[],mpLocal=false,mpReady=false,mpBom=[];const mpStore='zs_modified_components_v1';
