@@ -50,7 +50,7 @@
 body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:300;min-height:100vh;display:flex;flex-direction:column}
 
 /* ── Login ── */
-#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+#login-screen,#pending-screen,#rejected-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
 .login-wrap{width:100%;max-width:400px}
 .login-brand{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.15em;color:var(--accent);margin-bottom:4px}
 .login-brand-sub{font-family:var(--mono);font-size:10px;letter-spacing:.25em;color:var(--text3);text-transform:uppercase;margin-bottom:32px}
@@ -1422,6 +1422,39 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
   </div>
 </div>
 
+<!-- ── 帳號待審核 ── -->
+<div id="pending-screen" style="display:none">
+  <div class="login-wrap">
+    <div class="login-logo" role="img" aria-label="鎮山工程"></div>
+    <div class="login-brand">鎮山工程</div>
+    <div class="login-brand-sub">Management System</div>
+    <div class="login-card" style="align-items:center;text-align:center;gap:14px">
+      <div style="font-size:32px">⏳</div>
+      <div style="font-family:var(--mono);font-size:14px;line-height:1.8;color:var(--text1)">
+        您的帳號正在等待管理員審核，<br/>請耐心等待，通常會在 1-2 天內完成。
+      </div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);padding:8px 14px;word-break:break-all" id="pending-screen-email"></div>
+      <button class="btn-primary" style="margin-top:6px" onclick="logout()">登出 / 切換帳號</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 帳號未授權(拒絕/封鎖)── -->
+<div id="rejected-screen" style="display:none">
+  <div class="login-wrap">
+    <div class="login-logo" role="img" aria-label="鎮山工程"></div>
+    <div class="login-brand">鎮山工程</div>
+    <div class="login-brand-sub">Management System</div>
+    <div class="login-card" style="align-items:center;text-align:center;gap:14px">
+      <div style="font-size:32px">🚫</div>
+      <div style="font-family:var(--mono);font-size:14px;line-height:1.8;color:var(--text1)">
+        此帳號未被授權使用本系統，<br/>請聯絡管理員。
+      </div>
+      <button class="btn-primary" style="margin-top:6px" onclick="logout()">登出</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── 主頁行程 modal ── -->
 <div class="modal-overlay" id="dash-event-modal">
   <div class="modal">
@@ -1870,7 +1903,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <button class="rail-item" data-sec="staff" onclick="onRailClick('staff')" title="人員管理" aria-label="人員管理"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-4 2.5-6 6-6s6 2 6 6M14 15c3.5 0 6 1.5 6 5"/></svg></button>
         <button class="rail-item" data-sec="eg" onclick="onRailClick('eg')" title="長榮專區" aria-label="長榮專區"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V3h16v18M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2M9 21v-3h6v3M2 21h20"/></svg></button>
         <button class="rail-item" data-sec="hr" id="rail-hr" style="display:none" onclick="onRailClick('hr')" title="人事薪資" aria-label="人事薪資"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V4h8v3M3 12h18M10 12v2h4v-2"/></svg></button>
-        <button class="rail-item" data-sec="admin" id="rail-admin" style="display:none" onclick="onRailClick('admin')" title="管理員" aria-label="管理員"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z"/></svg></button>
+        <button class="rail-item" data-sec="admin" id="rail-admin" style="display:none;position:relative" onclick="onRailClick('admin')" title="管理員" aria-label="管理員"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z"/></svg><span id="rail-admin-badge" style="display:none;position:absolute;top:2px;right:2px;min-width:14px;height:14px;padding:0 3px;border-radius:8px;background:#dc2626;color:#fff;font-size:9px;line-height:14px;text-align:center;font-family:var(--mono)"></span></button>
       </div>
       <div class="rail-foot">
         <button class="panel-toggle" id="panel-toggle" onclick="togglePanel()" title="收合/展開子選單"><span class="pt-ico">◧</span></button>
@@ -3567,16 +3600,22 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="page-title" style="margin-bottom:0">帳號管理</div>
         <button class="btn-add-new" id="accounts-save-btn" onclick="saveAllAccounts()">💾 儲存全部</button>
       </div>
-      <div class="search-bar">
-        <input class="search-input" id="accounts-search" placeholder="搜尋帳號、顯示名稱..." oninput="filterAccounts()"/>
+      <div class="search-bar" style="gap:8px;flex-wrap:wrap">
+        <input class="search-input" id="accounts-search" placeholder="搜尋帳號、顯示名稱..." oninput="filterAccounts()" style="flex:1;min-width:180px"/>
+        <div id="accounts-status-tabs" style="display:flex;gap:6px">
+          <button class="btn acc-status-tab" data-st="" onclick="setAccountsStatusFilter('')">全部</button>
+          <button class="btn acc-status-tab" data-st="pending" onclick="setAccountsStatusFilter('pending')">⏳ 待審核 <span id="acc-pending-count"></span></button>
+          <button class="btn acc-status-tab" data-st="approved" onclick="setAccountsStatusFilter('approved')">已核准</button>
+          <button class="btn acc-status-tab" data-st="rejected" onclick="setAccountsStatusFilter('rejected')">已拒絕</button>
+        </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr>
-              <th>帳號 (Email)</th><th>顯示名稱</th><th>綁定公司名冊</th><th>管理員</th><th>狀態</th><th>頁面權限</th>
+              <th>帳號 (Email)</th><th>顯示名稱</th><th>綁定公司名冊</th><th>管理員</th><th>審核</th><th>停用</th><th>頁面權限</th><th>刪除</th>
             </tr></thead>
-            <tbody id="accounts-body"><tr><td colspan="6" class="empty-state">載入中...</td></tr></tbody>
+            <tbody id="accounts-body"><tr><td colspan="8" class="empty-state">載入中...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -3584,8 +3623,10 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         ※ 顯示名稱留空時,會自動使用綁定的公司名冊姓名。<br>
         ※ 名稱/綁定/管理員改好後,按右上角「儲存全部」一次存檔。<br>
         ※ 綁定公司名冊後,會自動把該帳號的 Email 寫入名冊中該員工的 Email 欄。<br>
+        ※ 新帳號以 Google 登入後會是「⏳ 待審核」,必須在此按「通過」才能使用系統;按「拒絕」則永久無法進入(可再次按「通過」復原)。<br>
         ※ <b>停用</b>與<b>頁面權限</b>為即時生效(按下即存),對方下次登入/重新整理套用。<br>
-        ※ <b>離職員工請按「停用」</b>,資料庫端會拒絕其一切讀寫;<b>切勿刪除該列</b>(刪掉等於解除封鎖)。<br>
+        ※ <b>員工離職時,除了「停用」該帳號,也建議一併確認其 Google 帳號不再具有管理員身分</b>,資料庫端會拒絕已停用帳號的一切讀寫。<br>
+        ※ <b>「刪除」是永久移除該帳號資料,無法復原</b>,一般情況建議用「停用」就好(可保留紀錄、也能隨時恢復);「刪除」適合用在誤建立的測試帳號等情境。被刪除的人若再次用同一個 Google 帳號登入,會被視為全新帳號、需要重新走一次審核。<br>
         ※ 想知道某個帳號做過什麼,到<b>「操作紀錄」</b>頁查。
       </div>
     </div>
@@ -8157,6 +8198,7 @@ const AUDIT_FIELD_LABEL={
   id:'ID', created_at:'建立時間', updated_at:'更新時間', created_by:'建立者', user_id:'使用者',
   name:'名稱', account:'帳號', email:'Email', phone:'電話', remark:'備註', note:'備註',
   status:'狀態', qty:'數量', unit:'單位', spec:'規格', date:'日期', seq:'排序', title:'標題', content:'內容',
+  reviewed_at:'審核時間', reviewed_by:'審核人', applied_at:'申請時間', notified_at:'通知時間',
   // 構件 / 進度 / 產量
   proj_num:'工程編號', proj_no:'工程編號', proj_name:'工程名稱', zone_id:'工程區ID', zone_code:'工程區', zone:'工程區',
   part_no:'構件編號', comp_no:'構件編號', net_weight:'淨重', weight:'重量', length:'長度',
@@ -8514,11 +8556,12 @@ function confirmGuest(){
 async function loadProfile() {
   if(!currentSession) return;
   const uid=currentSession.user?.id; if(!uid) return;
-  const r=await sbFetch(`/rest/v1/profiles?id=eq.${uid}&select=name,account,is_admin,staff_id,perms,disabled`);
+  const r=await sbFetch(`/rest/v1/profiles?id=eq.${uid}&select=name,account,is_admin,staff_id,perms,disabled,status`);
   let name=r.data?.[0]?.name||'', account=r.data?.[0]?.account||currentSession.user?.email||'';
   let isAdmin=r.data?.[0]?.is_admin||false;
   const perms=r.data?.[0]?.perms||null, disabled=!!r.data?.[0]?.disabled;
   const staffId=r.data?.[0]?.staff_id||null;
+  let status=r.data?.[0]?.status||'approved';   // 舊資料/資料庫尚未加欄位時,預設視為已核准,避免既有帳號被擋
   // 兩者結合: 顯示名稱留空時,改用綁定的公司名冊姓名
   if(!name && staffId){
     const sr=await sbFetch(`/rest/v1/staff?id=eq.${staffId}&select=name`);
@@ -8526,15 +8569,27 @@ async function loadProfile() {
   }
   if(!name) name=account;
   if(!r.data?.[0]) {
+    // 全新帳號(目前只有 Google 登入會走到這裡,因為帳密註冊已移除):一律建立為「待審核」,並通知管理員審核
     const gname=currentSession.user?.user_metadata?.full_name||currentSession.user?.user_metadata?.name||account;
-    await sbFetch('/rest/v1/profiles',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:uid,name:gname,account})});
-    name=gname;
+    await sbFetch('/rest/v1/profiles',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:uid,name:gname,account,status:'pending'})});
+    name=gname; status='pending';
+    notifyAdminNewAccount(gname,account).catch(()=>{});   // 不阻塞登入流程,失敗不影響使用者體驗(管理員仍可在後台看到待審核清單)
   }
   const meta=currentSession.user?.user_metadata||{};
   const googleIdentity=(currentSession.user?.identities||[]).find(x=>x.provider==='google');
   const identityMeta=googleIdentity?.identity_data||{};
   const avatarUrl=meta.avatar_url||meta.picture||identityMeta.avatar_url||identityMeta.picture||'';
-  currentUser={id:uid,name,account,isAdmin,perms,disabled,avatarUrl};
+  currentUser={id:uid,name,account,isAdmin,perms,disabled,avatarUrl,status};
+}
+// 呼叫 Edge Function 通知管理員有新帳號待審核(見 supabase/functions/notify-new-account)
+async function notifyAdminNewAccount(name,account){
+  try{
+    await fetch(SUPA_URL+'/functions/v1/notify-new-account',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+currentSession.access_token,'apikey':SUPA_KEY},
+      body:JSON.stringify({name,account})
+    });
+  }catch(e){ console.warn('通知管理員失敗(不影響帳號建立,管理員仍可於帳號管理頁看到待審核清單)',e); }
 }
 async function logout() {
   if(!isGuest){
@@ -8546,6 +8601,8 @@ async function logout() {
   clearSavedSession();
   currentSession=null; currentUser=null; isGuest=false;
   document.getElementById('app-screen').style.display='none';
+  document.getElementById('pending-screen').style.display='none';
+  document.getElementById('rejected-screen').style.display='none';
   document.getElementById('login-screen').style.display='flex';
 }
 async function checkOAuthCallback() {
@@ -8563,11 +8620,28 @@ async function checkOAuthCallback() {
   await loadProfile(); enterApp();
 }
 function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整理);登入/登出後重新登入一律進主頁
+  if(!isGuest && currentUser && currentUser.status==='pending'){   // 新帳號審核中:顯示等待畫面,不放行
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('rejected-screen').style.display='none';
+    document.getElementById('app-screen').style.display='none';
+    document.getElementById('pending-screen-email').textContent=currentUser.account||'';
+    document.getElementById('pending-screen').style.display='flex';
+    return;
+  }
+  if(!isGuest && currentUser && (currentUser.status==='rejected'||currentUser.status==='banned')){   // 已拒絕/封鎖:一律顯示相同訊息,不透露細節
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('pending-screen').style.display='none';
+    document.getElementById('app-screen').style.display='none';
+    document.getElementById('rejected-screen').style.display='flex';
+    return;
+  }
   if(!isGuest && currentUser && currentUser.disabled){   // 離職/停用帳號:直接擋在門外(資料庫端 RLS 也會擋)
     alert('此帳號已被停用,請聯絡管理員。');
     logout(); return;
   }
   _notifPopped=false;   // 每次登入都可重新彈通知
+  document.getElementById('pending-screen').style.display='none';
+  document.getElementById('rejected-screen').style.display='none';
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app-screen').style.display='flex';
   const u=currentUser||{name:'?',isAdmin:false};
@@ -8580,6 +8654,7 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
   const showAdmin=(u.isAdmin&&!isGuest);
   const railAdmin=document.getElementById('rail-admin');
   if(railAdmin) railAdmin.style.display=showAdmin?'':'none';
+  if(showAdmin) refreshPendingBadge(); else { const b=document.getElementById('rail-admin-badge'); if(b) b.style.display='none'; }
   initPanel();
   applyPermsUI();   // 依帳號權限顯示/隱藏各頁面與分類
   // 操作紀錄:只有「真的登入」才記一筆;restore=true 是重新整理,記了只會洗版
@@ -13336,42 +13411,100 @@ async function staffSenSave(){
   await loadStaff();
 }
 
+// ── 左側「管理員」圖示角標:顯示目前待審核帳號數 ──
+async function refreshPendingBadge(){
+  const b=document.getElementById('rail-admin-badge'); if(!b) return;
+  const r=await sbFetch('/rest/v1/profiles?select=id&status=eq.pending');
+  const n=Array.isArray(r.data)?r.data.length:0;
+  if(n>0){ b.textContent=n>99?'99+':String(n); b.style.display=''; } else { b.style.display='none'; }
+}
+
 // ── 帳號管理 (管理員) ──
-let allAccounts=[], accStaffList=[];
+let allAccounts=[], accStaffList=[], accStatusFilter='';
 async function loadAccounts() {
   const body=document.getElementById('accounts-body');
-  body.innerHTML='<tr><td colspan="6" class="empty-state">載入中...</td></tr>';
+  body.innerHTML='<tr><td colspan="8" class="empty-state">載入中...</td></tr>';
   const [pRes,sRes]=await Promise.all([
-    sbFetchAll('/rest/v1/profiles?select=id,name,account,is_admin,staff_id,perms,disabled&order=account'),
+    sbFetchAll('/rest/v1/profiles?select=id,name,account,is_admin,staff_id,perms,disabled,status,applied_at&order=account'),
     sbFetchAll('/rest/v1/staff?select=id,name&order=name')
   ]);
   allAccounts=Array.isArray(pRes.data)?pRes.data:[];
   accStaffList=Array.isArray(sRes.data)?sRes.data:[];
-  if(!pRes.ok){body.innerHTML='<tr><td colspan="6" class="empty-state">讀取帳號失敗('+pRes.status+')，請確認 profiles 的讀取權限</td></tr>';return;}
-  renderAccounts(allAccounts);
+  if(!pRes.ok){body.innerHTML='<tr><td colspan="8" class="empty-state">讀取帳號失敗('+pRes.status+')，請確認 profiles 的讀取權限</td></tr>';return;}
+  const pendingCount=allAccounts.filter(a=>(a.status||'approved')==='pending').length;
+  const badge=document.getElementById('acc-pending-count');
+  if(badge) badge.textContent=pendingCount?`(${pendingCount})`:'';
+  updateAccountsStatusTabsUI();
+  filterAccounts();
+}
+function setAccountsStatusFilter(st){ accStatusFilter=st; updateAccountsStatusTabsUI(); filterAccounts(); }
+function updateAccountsStatusTabsUI(){
+  document.querySelectorAll('.acc-status-tab').forEach(b=>{
+    b.style.background=(b.dataset.st===accStatusFilter)?'var(--accent2)':'';
+    b.style.color=(b.dataset.st===accStatusFilter)?'#fff':'';
+  });
 }
 function filterAccounts(){
   const q=(document.getElementById('accounts-search').value||'').toLowerCase();
-  renderAccounts(allAccounts.filter(a=>(a.account||'').toLowerCase().includes(q)||(a.name||'').toLowerCase().includes(q)));
+  let list=allAccounts.filter(a=>(a.account||'').toLowerCase().includes(q)||(a.name||'').toLowerCase().includes(q));
+  if(accStatusFilter) list=list.filter(a=>(a.status||'approved')===accStatusFilter);
+  // 待審核排最前面,方便管理員第一眼就看到
+  list=[...list].sort((a,b)=>{
+    const pa=(a.status||'approved')==='pending'?0:1, pb=(b.status||'approved')==='pending'?0:1;
+    return pa-pb;
+  });
+  renderAccounts(list);
 }
 function renderAccounts(list){
   const body=document.getElementById('accounts-body');
-  if(!list.length){body.innerHTML='<tr><td colspan="6" class="empty-state">無帳號資料</td></tr>';return;}
+  if(!list.length){body.innerHTML='<tr><td colspan="8" class="empty-state">無帳號資料</td></tr>';return;}
   const staffOpts=id=>['<option value="">— 未綁定 —</option>'].concat(
     (accStaffList||[]).map(s=>`<option value="${s.id}"${String(s.id)===String(id)?' selected':''}>${(s.name||'').replace(/</g,'&lt;')}</option>`)
   ).join('');
+  const STATUS_BADGE={
+    pending:'<span style="color:#b45309;background:#fef3c7;border:1px solid #fcd34d;border-radius:20px;padding:2px 10px;font-size:11px">⏳ 待審核</span>',
+    approved:'<span style="color:#15803d;background:#dcfce7;border:1px solid #86efac;border-radius:20px;padding:2px 10px;font-size:11px">✔ 已核准</span>',
+    rejected:'<span style="color:#b91c1c;background:#fee2e2;border:1px solid #fca5a5;border-radius:20px;padding:2px 10px;font-size:11px">✕ 已拒絕</span>',
+    banned:'<span style="color:#b91c1c;background:#fee2e2;border:1px solid #fca5a5;border-radius:20px;padding:2px 10px;font-size:11px">🚫 已封鎖</span>'
+  };
   body.innerHTML=list.map(a=>{
-    const off=!!a.disabled, jid=String(a.id).replace(/'/g,'');
+    const off=!!a.disabled, jid=String(a.id).replace(/'/g,''), st=a.status||'approved';
+    const badge=STATUS_BADGE[st]||STATUS_BADGE.approved;
+    const btn=(label,color,border,onclick)=>`<button class="btn" style="padding:3px 8px;font-size:11px;white-space:nowrap;color:${color};border-color:${border}" onclick="${onclick}">${label}</button>`;
+    const actionBtns = st==='pending'
+      ? btn('✔ 通過','#15803d','#86efac',`reviewAccount('${jid}','approved')`) + btn('✕ 拒絕','#b91c1c','#f1c0c0',`reviewAccount('${jid}','rejected')`)
+      : st==='rejected'
+        ? btn('改為通過','#15803d','#86efac',`reviewAccount('${jid}','approved')`)
+        : btn('改為拒絕','#b91c1c','#f1c0c0',`reviewAccount('${jid}','rejected')`);
     return `<tr data-id="${a.id}"${off?' style="opacity:.55"':''}>
     <td style="font-family:var(--mono);font-size:12px">${(a.account||'—').replace(/</g,'&lt;')}</td>
     <td><input type="text" class="acc-name search-input" style="width:140px;padding:6px 8px" value="${(a.name||'').replace(/"/g,'&quot;')}" placeholder="(用名冊姓名)"/></td>
     <td><select class="acc-staff filter-select" style="min-width:130px">${staffOpts(a.staff_id)}</select></td>
     <td style="text-align:center"><input type="checkbox" class="acc-admin" ${a.is_admin?'checked':''} style="width:16px;height:16px;cursor:pointer"/></td>
+    <td style="text-align:center;white-space:nowrap">
+      <div>${badge}</div>
+      <div style="margin-top:4px;display:flex;flex-wrap:nowrap;gap:4px;justify-content:center">${actionBtns}</div>
+    </td>
     <td style="text-align:center">${off
       ? `<button class="btn" style="padding:4px 10px;color:#b91c1c;border-color:#f1c0c0" onclick="toggleAccountDisabled('${jid}',false)">已停用·點擊啟用</button>`
       : `<button class="btn" style="padding:4px 10px" onclick="toggleAccountDisabled('${jid}',true)">停用</button>`}</td>
     <td style="text-align:center"><button class="btn" style="padding:4px 10px" onclick="openPermModal('${jid}')">🔑 設定</button></td>
+    <td style="text-align:center"><button class="btn" style="padding:4px 10px;color:#b91c1c;border-color:#f1c0c0" onclick="deleteAccount('${jid}')">🗑 刪除</button></td>
   </tr>`;}).join('');
+}
+// ── 通過 / 拒絕 待審核帳號(即時 PATCH,直接寫 status,不需要 Edge Function)──
+async function reviewAccount(id,newStatus){
+  const acc=allAccounts.find(a=>String(a.id)===String(id)); if(!acc) return;
+  const label=newStatus==='approved'?'通過':'拒絕';
+  if(currentUser&&String(currentUser.id)===String(id)){ alert('不能審核自己的帳號。'); return; }
+  if(!await uiConfirm(`確定要「${label}」「${acc.account||acc.name||id}」這個帳號?`)) return;
+  const r=await sbFetch(`/rest/v1/profiles?id=eq.${id}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({
+    status:newStatus, reviewed_at:new Date().toISOString(), reviewed_by:currentUser?.account||currentUser?.name||'admin'
+  })});
+  if(!r.ok){ alert('更新失敗('+r.status+')'); return; }
+  acc.status=newStatus;
+  filterAccounts();
+  refreshPendingBadge();
 }
 // ── 停用 / 啟用帳號(即時 PATCH)──
 async function toggleAccountDisabled(id,disabled){
@@ -13387,7 +13520,24 @@ async function toggleAccountDisabled(id,disabled){
   const r=await sbFetch(`/rest/v1/profiles?id=eq.${id}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({disabled})});
   if(!r.ok){ alert('更新失敗('+r.status+')'); return; }
   acc.disabled=disabled;
-  renderAccounts(allAccounts.filter(a=>{const q=(document.getElementById('accounts-search').value||'').toLowerCase();return !q||(a.account||'').toLowerCase().includes(q)||(a.name||'').toLowerCase().includes(q);}));
+  filterAccounts();
+}
+// ── 刪除帳號(永久移除該筆 profiles 資料,不可復原)──
+async function deleteAccount(id){
+  const acc=allAccounts.find(a=>String(a.id)===String(id)); if(!acc) return;
+  if(currentUser&&String(currentUser.id)===String(id)){ alert('不能刪除自己的帳號。'); return; }
+  if(acc.is_admin){
+    const otherAdmins=allAccounts.filter(a=>a.is_admin&&!a.disabled&&String(a.id)!==String(id)).length;
+    if(otherAdmins===0){ alert('這是最後一個有效的管理員,不能刪除。'); return; }
+  }
+  const label=acc.account||acc.name||id;
+  if(!await uiConfirm(`確定要「永久刪除」「${label}」這個帳號?\n\n此動作無法復原,該帳號的顯示名稱、綁定、權限設定都會一併消失。\n若只是要暫時擋掉該帳號(例如員工離職但想保留紀錄),建議改用左邊的「停用」,不要用刪除。\n\n若該使用者之後又用同一個 Google 帳號登入,會被視為全新帳號,需要重新審核。`)) return;
+  if(!await uiConfirm(`再次確認:真的要刪除「${label}」嗎?`)) return;
+  const r=await sbFetch(`/rest/v1/profiles?id=eq.${id}`,{method:'DELETE'});
+  if(!r.ok){ alert('刪除失敗('+r.status+')'); return; }
+  allAccounts=allAccounts.filter(a=>String(a.id)!==String(id));
+  filterAccounts();
+  refreshPendingBadge();
 }
 // ── 頁面權限設定視窗 ──
 let _permEditId=null;
