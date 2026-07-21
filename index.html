@@ -1666,6 +1666,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     <div class="modal-title" id="leave-modal-title">登記</div>
     <div style="font-size:12px;color:var(--text3);margin:-4px 0 8px" id="leave-modal-sub">—</div>
     <div style="font-size:11px;color:var(--text3);margin:-2px 0 8px">此頁專記「特休」;日常休特休請在出勤回報選假別『特休』即可自動計入。</div>
+    <div id="leave-modal-history" style="max-height:160px;overflow:auto;margin:0 0 10px;border:1px solid var(--border);border-radius:8px;font-size:12px"></div>
     <div class="modal-grid">
       <div class="lf"><label>類型</label>
         <select id="leave-f-entry">
@@ -1679,7 +1680,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <div class="lf full"><label>備註</label><input type="text" id="leave-f-note" placeholder="選填"/></div>
     </div>
     <div class="modal-actions">
-      <button class="btn-modal-cancel" onclick="closeModal('leave-modal')">取消</button>
+      <button class="btn-modal-cancel" onclick="closeModal('leave-modal')">關閉</button>
       <button class="btn-modal-ok" onclick="leaveSaveModal()" id="btn-save-leave">儲存</button>
     </div>
   </div>
@@ -3613,9 +3614,9 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr>
-              <th>帳號 (Email)</th><th>顯示名稱</th><th>綁定公司名冊</th><th>管理員</th><th>審核</th><th>停用</th><th>頁面權限</th><th>刪除</th>
+              <th>帳號 (Email)</th><th>顯示名稱</th><th>綁定公司名冊</th><th>管理員</th><th>審核</th><th>停用</th><th>強制登出</th><th>頁面權限</th><th>刪除</th>
             </tr></thead>
-            <tbody id="accounts-body"><tr><td colspan="8" class="empty-state">載入中...</td></tr></tbody>
+            <tbody id="accounts-body"><tr><td colspan="9" class="empty-state">載入中...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -3625,6 +3626,8 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         ※ 綁定公司名冊後,會自動把該帳號的 Email 寫入名冊中該員工的 Email 欄。<br>
         ※ 新帳號以 Google 登入後會是「⏳ 待審核」,必須在此按「通過」才能使用系統;按「拒絕」則永久無法進入(可再次按「通過」復原)。<br>
         ※ <b>停用</b>與<b>頁面權限</b>為即時生效(按下即存),對方下次登入/重新整理套用。<br>
+        ※ <b>強制登出</b>:對方裝置最慢在下個線上狀態回報週期內（約數秒〜<span id="acc-force-logout-sec"></span>秒）會被自動登出、退回登入畫面,不必等對方重新整理或重新登入。若資料庫尚未新增 <code>force_logout_at</code> 欄位,按鈕會顯示錯誤訊息並附上需執行的 SQL。<br>
+        ※ 「⏳ 待審核」的數量與清單為<b>即時反應</b>:其他管理員審核/新申請帳號時,本頁會自動更新(正在編輯中的欄位不會被覆蓋,建議先按「儲存全部」再等待更新)。<br>
         ※ <b>員工離職時,除了「停用」該帳號,也建議一併確認其 Google 帳號不再具有管理員身分</b>,資料庫端會拒絕已停用帳號的一切讀寫。<br>
         ※ <b>「刪除」是永久移除該帳號資料,無法復原</b>,一般情況建議用「停用」就好(可保留紀錄、也能隨時恢復);「刪除」適合用在誤建立的測試帳號等情境。被刪除的人若再次用同一個 Google 帳號登入,會被視為全新帳號、需要重新走一次審核。<br>
         ※ 想知道某個帳號做過什麼,到<b>「操作紀錄」</b>頁查。
@@ -8302,12 +8305,19 @@ function _auditSummary(body){
 }
 // 不經過 sbFetch 的原始請求:紀錄與線上狀態自己要能送出,
 // 不可被唯讀攔截擋掉(唯讀頁面也要留下「他來看過」的痕跡),也不可再觸發一次紀錄。
-async function _sbRaw(path, opts={}){
+async function _sbRaw(path, opts={}, _retried){
   if(!currentSession||isGuest) return null;
   try{
-    return await fetch(SUPA_URL+path, {...opts, headers:Object.assign(
+    const r = await fetch(SUPA_URL+path, {...opts, cache:'no-store', headers:Object.assign(
       {'apikey':SUPA_KEY,'Content-Type':'application/json','Authorization':'Bearer '+currentSession.access_token},
       opts.headers||{})});
+    // token 過期時 sbFetch 會自動 refresh 重試,但線上狀態/強制登出偵測原本沒有這段,
+    // 導致 token 過期後 checkForceLogout()/presencePing() 會一直靜默失敗(踢人永遠偵測不到)。
+    if (r.status===401 && !_retried && currentSession.refresh_token){
+      const ok = await refreshAccessToken();
+      if (ok) return _sbRaw(path, opts, true);
+    }
+    return r;
   }catch(e){ return null; }
 }
 // 寫一筆紀錄。呼叫端通常「不 await」(不拖慢使用者的操作),失敗就算了 —— 紀錄不該擋住正事。
@@ -8334,12 +8344,14 @@ function auditSetPage(page){
 }
 
 // ── 線上狀態:右上角顯示「誰在線上、正在看哪一頁」(類似 Google 試算表)──
-const PRESENCE_PING_MS=30000;    // 自己每 30 秒回報一次
-const PRESENCE_POLL_MS=20000;    // 每 20 秒抓一次別人
-const PRESENCE_STALE_MS=90000;   // 超過 90 秒沒回報 = 已離線(關分頁不一定送得出 DELETE)
+const PRESENCE_PING_MS=8000;     // 自己每 8 秒回報一次(含強制登出偵測),讓右上角頭像/所在頁面更即時反映
+const PRESENCE_POLL_MS=6000;     // 每 6 秒抓一次別人,線上狀態趨近即時
+const PRESENCE_STALE_MS=25000;   // 超過 25 秒沒回報 = 已離線(關分頁不一定送得出 DELETE)
 let _presTimers=[], _presList=[];
+let _flBaseline=undefined;   // 強制登出基準值:undefined=尚未初始化,只在「值變動」時才觸發踢人,避免登入當下被舊資料誤判
 async function presencePing(){
   if(!currentSession||isGuest||!currentUser||!currentUser.id) return;
+  checkForceLogout();   // 不 await:踢人判斷不該卡住線上狀態回報
   await _sbRaw('/rest/v1/user_presence?on_conflict=user_id',{
     method:'POST', headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
     body:JSON.stringify({user_id:currentUser.id, account:currentUser.account||null, name:currentUser.name||null,
@@ -8347,14 +8359,30 @@ async function presencePing(){
       updated_at:new Date().toISOString()})
   });
 }
+// 強制登出偵測:管理員在帳號管理頁按「強制登出」會寫入 profiles.force_logout_at,
+// 這裡每個回報週期都順便檢查一次自己的值是否被改動過,一旦變動就視為被踢,立即登出。
+async function checkForceLogout(){
+  if(!currentSession||isGuest||!currentUser||!currentUser.id) return;
+  const r=await _sbRaw('/rest/v1/profiles?id=eq.'+currentUser.id+'&select=force_logout_at');
+  if(!r||!r.ok) return;
+  let data=[]; try{ data=await r.json(); }catch(e){ return; }
+  const fl=(data&&data[0])?data[0].force_logout_at:null;
+  if(_flBaseline===undefined){ _flBaseline=fl; return; }   // 第一次只記基準值,不觸發(避免用登入前的舊資料誤判)
+  if(fl && fl!==_flBaseline){
+    _flBaseline=fl;
+    alert('您的帳號已被管理員強制登出,請重新登入。');
+    await logout();
+  }
+}
 async function presencePoll(){
   if(!currentSession||isGuest) return;
   const since=new Date(Date.now()-PRESENCE_STALE_MS).toISOString();
   const res=await _sbRaw('/rest/v1/user_presence?select=*&updated_at=gte.'+encodeURIComponent(since)+'&order=updated_at.desc');
-  if(!res||!res.ok) return;
-  let list=[]; try{ list=await res.json(); }catch(e){ return; }
-  _presList=Array.isArray(list)?list:[];
-  renderPresence();
+  if(res&&res.ok){
+    let list=null; try{ list=await res.json(); }catch(e){ list=null; }
+    if(list){ _presList=Array.isArray(list)?list:[]; renderPresence(); }
+  }
+  if(currentUser&&currentUser.isAdmin) adminPendingPoll();   // 待審核數量/清單即時反應,跟線上狀態共用同一個輪詢週期
 }
 // 依 user_id 給一個固定的顏色,同一個人每次都同色
 function _presColor(id){
@@ -8371,12 +8399,16 @@ function renderPresence(){
   const shown=others.slice(0,5);
   box.innerHTML=shown.map(p=>{
     const nm=p.name||p.account||'?';
-    const title=nm+'\n正在看:'+(p.page_label||'—')+'\n'+(p.account||'');
+    // 隱私防呆:對方目前所在頁面,如果「我」自己沒有權限看到該頁,一律顯示「主頁」,
+    // 避免讓看的人得知某個帳號正在瀏覽一個連自己都看不到的(通常是較敏感的)頁面。
+    const pageVisibleToMe=pagePerm(p.page)!=='hide';
+    const pageLabel=pageVisibleToMe ? (p.page_label||'—') : '主頁';
+    const title=nm+'\n正在看:'+pageLabel+'\n'+(p.account||'');
     // 首字母墊底,頭貼疊在上面;頭貼載入失敗就自己移除 → 露出首字母
     const img=p.avatar_url
       ? `<img src="${esc(p.avatar_url)}" alt="${esc(nm)}" referrerpolicy="no-referrer" onerror="this.remove()"/>`
       : '';
-    return `<div class="pres-dot" style="background:${_presColor(p.user_id)}" title="${esc(title)}">${esc(nm[0].toUpperCase())}${img}<span class="pres-tip">${esc(nm)} · ${esc(p.page_label||'—')}</span></div>`;
+    return `<div class="pres-dot" style="background:${_presColor(p.user_id)}" title="${esc(title)}">${esc(nm[0].toUpperCase())}${img}<span class="pres-tip">${esc(nm)} · ${esc(pageLabel)}</span></div>`;
   }).join('') + (others.length>shown.length?`<div class="pres-dot pres-more" title="還有 ${others.length-shown.length} 人在線上">+${others.length-shown.length}</div>`:'');
 }
 function presenceStart(){
@@ -8391,11 +8423,16 @@ function presenceStart(){
 function _presVis(){ if(!document.hidden){ presencePing(); presencePoll(); } }
 function presenceStop(){
   _presTimers.forEach(clearInterval); _presTimers=[]; _presList=[];
+  _flBaseline=undefined;   // 下次登入時,以登入當下的值重新當作基準,避免拿舊帳號的殘留值誤判
   document.removeEventListener('visibilitychange', _presVis);
   const box=document.getElementById('presence-bar'); if(box){ box.innerHTML=''; box.style.display='none'; }
 }
+// ── 待審核帳號:數量角標即時反應(只有單一管理員使用,不需要即時同步整張清單)──
+async function adminPendingPoll(){
+  await refreshPendingBadge();
+}
 // 註:關分頁時不主動刪自己那一列 —— sendBeacon 送不出 DELETE 也帶不了授權標頭。
-// 改由「超過 90 秒沒回報就視為離線」處理,效果一樣,少一段永遠失敗的程式碼。
+// 改由「超過 25 秒沒回報就視為離線」處理,效果一樣,少一段永遠失敗的程式碼。
 async function presenceClear(){
   if(!currentSession||isGuest||!currentUser||!currentUser.id) return;
   await _sbRaw('/rest/v1/user_presence?user_id=eq.'+currentUser.id,{method:'DELETE'});
@@ -13417,23 +13454,29 @@ async function refreshPendingBadge(){
   const r=await sbFetch('/rest/v1/profiles?select=id&status=eq.pending');
   const n=Array.isArray(r.data)?r.data.length:0;
   if(n>0){ b.textContent=n>99?'99+':String(n); b.style.display=''; } else { b.style.display='none'; }
+  // 帳號管理頁「⏳ 待審核」分頁上的數字:即使目前沒有重載整張清單,也讓數字本身即時同步
+  const accBadge=document.getElementById('acc-pending-count');
+  if(accBadge) accBadge.textContent = n>0 ? `(${n})` : '';
 }
 
 // ── 帳號管理 (管理員) ──
 let allAccounts=[], accStaffList=[], accStatusFilter='';
-async function loadAccounts() {
+async function loadAccounts(silent) {
   const body=document.getElementById('accounts-body');
-  body.innerHTML='<tr><td colspan="8" class="empty-state">載入中...</td></tr>';
+  // silent=true(背景輪詢刷新):不清空表格、不顯示「載入中」,避免每個輪詢週期畫面就閃一次。
+  if(!silent) body.innerHTML='<tr><td colspan="9" class="empty-state">載入中...</td></tr>';
   const [pRes,sRes]=await Promise.all([
     sbFetchAll('/rest/v1/profiles?select=id,name,account,is_admin,staff_id,perms,disabled,status,applied_at&order=account'),
     sbFetchAll('/rest/v1/staff?select=id,name&order=name')
   ]);
   allAccounts=Array.isArray(pRes.data)?pRes.data:[];
   accStaffList=Array.isArray(sRes.data)?sRes.data:[];
-  if(!pRes.ok){body.innerHTML='<tr><td colspan="8" class="empty-state">讀取帳號失敗('+pRes.status+')，請確認 profiles 的讀取權限</td></tr>';return;}
+  if(!pRes.ok){body.innerHTML='<tr><td colspan="9" class="empty-state">讀取帳號失敗('+pRes.status+')，請確認 profiles 的讀取權限</td></tr>';return;}
   const pendingCount=allAccounts.filter(a=>(a.status||'approved')==='pending').length;
   const badge=document.getElementById('acc-pending-count');
   if(badge) badge.textContent=pendingCount?`(${pendingCount})`:'';
+  const flSecEl=document.getElementById('acc-force-logout-sec');
+  if(flSecEl) flSecEl.textContent=Math.round(PRESENCE_PING_MS/1000);
   updateAccountsStatusTabsUI();
   filterAccounts();
 }
@@ -13457,7 +13500,7 @@ function filterAccounts(){
 }
 function renderAccounts(list){
   const body=document.getElementById('accounts-body');
-  if(!list.length){body.innerHTML='<tr><td colspan="8" class="empty-state">無帳號資料</td></tr>';return;}
+  if(!list.length){body.innerHTML='<tr><td colspan="9" class="empty-state">無帳號資料</td></tr>';return;}
   const staffOpts=id=>['<option value="">— 未綁定 —</option>'].concat(
     (accStaffList||[]).map(s=>`<option value="${s.id}"${String(s.id)===String(id)?' selected':''}>${(s.name||'').replace(/</g,'&lt;')}</option>`)
   ).join('');
@@ -13488,6 +13531,7 @@ function renderAccounts(list){
     <td style="text-align:center">${off
       ? `<button class="btn" style="padding:4px 10px;color:#b91c1c;border-color:#f1c0c0" onclick="toggleAccountDisabled('${jid}',false)">已停用·點擊啟用</button>`
       : `<button class="btn" style="padding:4px 10px" onclick="toggleAccountDisabled('${jid}',true)">停用</button>`}</td>
+    <td style="text-align:center"><button class="btn" style="padding:4px 10px;color:#b45309;border-color:#fcd34d" onclick="forceLogoutAccount('${jid}')" title="強制將此帳號目前所有裝置踢出登入">🚪 強制登出</button></td>
     <td style="text-align:center"><button class="btn" style="padding:4px 10px" onclick="openPermModal('${jid}')">🔑 設定</button></td>
     <td style="text-align:center"><button class="btn" style="padding:4px 10px;color:#b91c1c;border-color:#f1c0c0" onclick="deleteAccount('${jid}')">🗑 刪除</button></td>
   </tr>`;}).join('');
@@ -13521,6 +13565,20 @@ async function toggleAccountDisabled(id,disabled){
   if(!r.ok){ alert('更新失敗('+r.status+')'); return; }
   acc.disabled=disabled;
   filterAccounts();
+}
+// ── 強制登出(踢人):寫入 force_logout_at,對方裝置會在下一次線上狀態回報週期內偵測到並自動登出 ──
+// 注意:本功能需要 profiles 資料表有 force_logout_at (timestamptz) 欄位,若尚未新增,PATCH 會失敗並顯示提示。
+async function forceLogoutAccount(id){
+  const acc=allAccounts.find(a=>String(a.id)===String(id)); if(!acc) return;
+  if(currentUser&&String(currentUser.id)===String(id)){ alert('不能強制登出自己的帳號,如需登出請直接按左下角「登出」。'); return; }
+  const label=acc.account||acc.name||id;
+  if(!await uiConfirm(`確定要強制將「${label}」登出嗎?\n對方若正在使用系統,約在 ${Math.round(PRESENCE_PING_MS/1000)} 秒內會被自動踢出、退回登入畫面。`)) return;
+  const r=await sbFetch(`/rest/v1/profiles?id=eq.${id}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({force_logout_at:new Date().toISOString()})});
+  if(!r.ok){
+    alert('強制登出失敗('+r.status+')。\n若是第一次使用此功能,可能是資料庫 profiles 資料表尚未新增 force_logout_at 欄位,請先在 Supabase SQL 執行:\nALTER TABLE profiles ADD COLUMN IF NOT EXISTS force_logout_at timestamptz;');
+    return;
+  }
+  alert(`已送出強制登出指令,「${label}」將於數秒〜${Math.round(PRESENCE_PING_MS/1000)}秒內被登出。`);
 }
 // ── 刪除帳號(永久移除該筆 profiles 資料,不可復原)──
 async function deleteAccount(id){
@@ -24241,7 +24299,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       else if(r.entry_type==='grant') grantAdj+=h;   // 手動加給(特殊情況)
     });
     var granted=estDays*8+grantAdj, used=usedAtt+ledgerUse;
-    return { period:period, estDays:estDays, granted:granted, used:used, usedAtt:usedAtt, ledgerUse:ledgerUse, payout:payout, remain:granted-used-payout };
+    return { period:period, estDays:estDays, grantAdj:grantAdj, granted:granted, used:used, usedAtt:usedAtt, ledgerUse:ledgerUse, payout:payout, remain:granted-used-payout };
   }
 
   window.leaveInit=async function(){
@@ -24283,11 +24341,12 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var remainCls=sm.remain<0?' style="text-align:center;font-weight:700;color:var(--danger)"':' style="text-align:center;font-weight:700"';
       var per=sm.period.start?('<span style="font-size:11px;color:var(--text3)">'+sm.period.start+'<br>~'+sm.period.end+'</span>'):'—';
       var usedTip=sm.usedAtt?(' title="出勤回報特休 '+d2(sm.usedAtt)+' 天'+(sm.ledgerUse?(' + 台帳補登 '+d2(sm.ledgerUse)+' 天'):'')+'"'):'';
+      var estCell=sm.estDays+' 天'+(sm.grantAdj?('<br><span style="font-size:10px;color:var(--text3)">+加給 '+d2(sm.grantAdj)+' 天</span>'):'');
       return '<tr>'
         +'<td>'+esc(s.name||'—')+'</td><td>'+esc(s.department||'—')+'</td>'
         +'<td>'+esc(s.hire_date||'—')+'</td>'
         +'<td style="text-align:center">'+per+'</td>'
-        +'<td style="text-align:center">'+sm.estDays+' 天</td>'
+        +'<td style="text-align:center">'+estCell+'</td>'
         +'<td style="text-align:center"'+usedTip+'>'+d2(sm.used)+'</td>'
         +'<td style="text-align:center">'+d2(sm.payout)+'</td>'
         +'<td'+remainCls+'>'+d2(sm.remain)+' 天</td>'
@@ -24296,12 +24355,43 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     }).join('');
   };
 
+  var ENTRY_LABEL={use:'補登休假',payout:'折現',grant:'手動加給'};
+  function leaveRenderHistory(s){
+    var box=document.getElementById('leave-modal-history'); if(!box) return;
+    var period = s.hire_date ? Payroll.annualPeriod(s.hire_date, today()) : {start:'',end:''};
+    var rows=(lvByStaff[s.id]||[]).filter(function(r){ return isAnnual(r.leave_type)&&inPeriod(r.ref_date,period); })
+      .slice().sort(function(a,b){ return String(b.ref_date||'').localeCompare(String(a.ref_date||'')); });
+    if(!rows.length){ box.innerHTML='<div style="padding:8px;color:var(--text3)">本期尚無登記紀錄</div>'; return; }
+    box.innerHTML='<table style="width:100%;border-collapse:collapse">'+rows.map(function(r){
+      return '<tr style="border-bottom:1px solid var(--border)">'
+        +'<td style="padding:4px 6px;white-space:nowrap">'+esc(r.ref_date||'')+'</td>'
+        +'<td style="padding:4px 6px;white-space:nowrap">'+esc(ENTRY_LABEL[r.entry_type]||r.entry_type||'')+'</td>'
+        +'<td style="padding:4px 6px;text-align:right;white-space:nowrap">'+d2(num(r.hours))+' 天</td>'
+        +'<td style="padding:4px 6px;color:var(--text3)">'+esc(r.note||'')+'</td>'
+        +'<td style="padding:4px 6px;text-align:center"><button class="btn-icon" style="color:var(--danger)" title="刪除這筆紀錄" onclick="leaveDeleteEntry(\''+r.id+'\')">🗑</button></td>'
+        +'</tr>';
+    }).join('')+'</table>';
+  }
+
+  window.leaveDeleteEntry=async function(id){
+    if(!await uiConfirm('確定刪除這筆登記紀錄?刪除後「剩餘」會立即重新計算。')) return;
+    var res=await sbFetch('/rest/v1/leave_ledger?id=eq.'+id,{method:'DELETE'});
+    if(!res.ok){ alert('刪除失敗(HTTP '+res.status+')'); return; }
+    Object.keys(lvByStaff).forEach(function(sid){ lvByStaff[sid]=(lvByStaff[sid]||[]).filter(function(r){ return String(r.id)!==String(id); }); });
+    var s=lvStaff.filter(function(x){ return String(x.id)===String(lvEditSid); })[0];
+    if(s){ leaveRenderHistory(s); var sm=annualSummary(s);
+      document.getElementById('leave-modal-sub').textContent='本期 '+(sm.period.start||'—')+' ~ '+(sm.period.end||'—')+' · 應給 '+sm.estDays+(sm.grantAdj?(' (+手動加給 '+d2(sm.grantAdj)+' 天)'):'')+' · 剩餘 '+d2(sm.remain)+' 天(日常特休請直接記在出勤回報)';
+    }
+    leaveRender();
+  };
+
   window.leaveOpenModal=function(sid){
     var s=lvStaff.filter(function(x){ return String(x.id)===String(sid); })[0]; if(!s) return;
     lvEditSid=s.id;
     var sm=annualSummary(s);
     document.getElementById('leave-modal-title').textContent='特休登記 — '+(s.name||'');
-    document.getElementById('leave-modal-sub').textContent='本期 '+(sm.period.start||'—')+' ~ '+(sm.period.end||'—')+' · 應給 '+sm.estDays+' 天 · 剩餘 '+d2(sm.remain)+' 天(日常特休請直接記在出勤回報)';
+    document.getElementById('leave-modal-sub').textContent='本期 '+(sm.period.start||'—')+' ~ '+(sm.period.end||'—')+' · 應給 '+sm.estDays+(sm.grantAdj?(' (+手動加給 '+d2(sm.grantAdj)+' 天)'):'')+' · 剩餘 '+d2(sm.remain)+' 天(日常特休請直接記在出勤回報)';
+    leaveRenderHistory(s);
     document.getElementById('leave-f-entry').value='use';
     document.getElementById('leave-f-days').value='';
     document.getElementById('leave-f-date').value=today();
@@ -24327,7 +24417,13 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(!res.ok){ console.warn('leave save failed',res.status,res.data); alert('儲存失敗(HTTP '+res.status+')'+(res.data&&res.data.message?(' '+res.data.message):'')+((res.status===401||res.status===403)?'\n→ 帳號需為 HR(perms.payroll 或管理員)':'')); return; }
     var saved=(Array.isArray(res.data)&&res.data[0])?res.data[0]:payload;
     (lvByStaff[lvEditSid]=lvByStaff[lvEditSid]||[]).push(saved);
-    closeModal('leave-modal'); leaveRender();
+    var s=lvStaff.filter(function(x){ return String(x.id)===String(lvEditSid); })[0];
+    if(s){ leaveRenderHistory(s); var sm=annualSummary(s);
+      document.getElementById('leave-modal-sub').textContent='本期 '+(sm.period.start||'—')+' ~ '+(sm.period.end||'—')+' · 應給 '+sm.estDays+(sm.grantAdj?(' (+手動加給 '+d2(sm.grantAdj)+' 天)'):'')+' · 剩餘 '+d2(sm.remain)+' 天(日常特休請直接記在出勤回報)';
+    }
+    document.getElementById('leave-f-days').value='';
+    document.getElementById('leave-f-note').value='';
+    leaveRender();
   };
 })();
 </script>
