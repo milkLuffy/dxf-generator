@@ -4789,6 +4789,15 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       #page-mypage .mypage-duty-list{display:flex;flex-wrap:wrap;gap:8px}
       #page-mypage .mypage-duty-chip{background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:6px 12px;font-size:12px;font-family:var(--mono)}
       #page-mypage .mypage-duty-chip.soon{border-color:#e6b800;background:rgba(255,204,0,.12);color:#8a6d00}
+      #page-mypage .mypage-leave-sel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);padding:7px 9px;font-size:13px;min-width:110px}
+      #page-mypage .mypage-leave-tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;background:var(--bg3);border:1px solid var(--border)}
+      #page-mypage .mypage-leave-view{display:flex;gap:0}
+      #page-mypage .mpv-btn{border:1px solid var(--border);background:var(--bg2);color:var(--text3)}
+      #page-mypage .mpv-btn:first-child{border-radius:var(--rad) 0 0 var(--rad)}
+      #page-mypage .mpv-btn:last-child{border-radius:0 var(--rad) var(--rad) 0;border-left:none}
+      #page-mypage .mpv-btn.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+      #page-mypage .mypage-stat .s{font-size:10px;color:var(--text3);margin-top:3px;font-family:var(--mono)}
+      #page-mypage .mypage-stat .u{font-size:12px;font-weight:500;margin-left:2px;color:var(--text3)}
     </style>
     <div class="page" id="page-mypage">
       <div class="page-header">
@@ -4798,6 +4807,39 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <div class="mypage-card">
         <h4>🏖️ 特休</h4>
         <div id="mypage-leave-body">載入中...</div>
+      </div>
+
+      <div class="mypage-card" style="padding:0;overflow:hidden">
+        <div style="padding:16px 18px 0"><h4 style="margin-bottom:8px">📋 請假紀錄</h4></div>
+        <div class="attendlog-filter" style="padding:0 18px">
+          <div class="attendlog-dates">
+            <label>假別</label>
+            <select id="mypage-leave-type" class="mypage-leave-sel" onchange="myPageLoadLeaveLog()"><option value="">全部</option></select>
+          </div>
+          <div class="attendlog-dates">
+            <label>起</label><input type="date" id="mypage-leave-from" class="date-wk" data-wk="mypage-leave-from-show" onchange="myPageLoadLeaveLog()"/>
+            <span class="date-wk-show" id="mypage-leave-from-show">—</span>
+            <label>迄</label><input type="date" id="mypage-leave-to" class="date-wk" data-wk="mypage-leave-to-show" onchange="myPageLoadLeaveLog()"/>
+            <span class="date-wk-show" id="mypage-leave-to-show">—</span>
+          </div>
+          <div class="attendlog-quick">
+            <button class="btn-sm" onclick="myPageLeaveRange('period')" style="border:1px solid var(--border)" title="與上方特休相同的到職週年區間">本期</button>
+            <button class="btn-sm" onclick="myPageLeaveRange('year')" style="border:1px solid var(--border)">今年</button>
+            <button class="btn-sm" onclick="myPageLeaveRange('all')" style="border:1px solid var(--border)">全部</button>
+          </div>
+          <div class="mypage-leave-view">
+            <button class="btn-sm mpv-btn active" id="mypage-leave-vcard" onclick="myPageLeaveView('card')">小卡</button>
+            <button class="btn-sm mpv-btn" id="mypage-leave-vtable" onclick="myPageLeaveView('table')">明細</button>
+          </div>
+          <span id="mypage-leave-count" style="font-size:13px;color:var(--text3);margin-left:auto"></span>
+        </div>
+        <div id="mypage-leave-cards" style="padding:0 18px 16px"><div style="color:var(--text3);font-size:13px">載入中...</div></div>
+        <div class="table-scroll" id="mypage-leave-tablewrap" style="display:none">
+          <table class="log-table" id="mypage-leave-table">
+            <thead><tr><th>日期</th><th>假別</th><th>時數</th><th>天數</th><th>備註</th></tr></thead>
+            <tbody id="mypage-leave-log-body"><tr><td colspan="5" class="empty-state">載入中...</td></tr></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="mypage-card">
@@ -24487,6 +24529,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 <script>
 (function(){
   var mpStaff=null;
+  var mpPeriod=null;    // 本期特休區間(到職週年制),請假紀錄預設沿用同一區間
+  var mpLeaveView='card';   // 請假紀錄顯示方式:小卡(預設)/明細
   function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
   function d2(h){ return Math.round(h/8*100)/100; }   // 時→天(2位小數)
   function isAnnual(t){ return t==='特休'||t==='annual'; }
@@ -24506,9 +24550,13 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         if(r.ok && Array.isArray(r.data) && r.data[0]) mpStaff=r.data[0];
       }catch(e){}
     }
+    mpPeriod=(mpStaff&&mpStaff.hire_date&&typeof Payroll!=='undefined')?Payroll.annualPeriod(mpStaff.hire_date, today()):null;
     myPageRenderLeave();
     myPageLoadDuty();
     myPageAttendRange('month');   // 打卡紀錄預設顯示本月
+    myPageFillLeaveTypes();
+    myPageLeaveView(mpLeaveView); // 請假紀錄預設顯示小卡
+    myPageLeaveRange('period');   // 請假紀錄預設 = 本期特休區間
   };
 
   async function myPageRenderLeave(){
@@ -24547,6 +24595,115 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       lb.innerHTML='<div style="color:var(--text3);font-size:13px">特休資料載入失敗,請稍後重新整理。</div>';
     }
   }
+
+  /* ── 請假紀錄:假別下拉篩選 + 區間(預設沿用特休的到職週年區間)── */
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function fmtD(d){ return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+  function addDays(dateStr,n){ var d=new Date(dateStr+'T00:00:00'); if(isNaN(d)) return dateStr; d.setDate(d.getDate()+n); return fmtD(d); }
+
+  function myPageFillLeaveTypes(){
+    var sel=document.getElementById('mypage-leave-type'); if(!sel) return;
+    var list=(typeof ATT_LEAVE!=='undefined'&&Array.isArray(ATT_LEAVE))?ATT_LEAVE:['','特休','事假','病假','喪假','公假','婚假','產假','曠職','補休','過年','颱風'];
+    var keep=sel.value;
+    sel.innerHTML='<option value="">全部假別</option>'+list.filter(function(t){ return !!t; })
+      .map(function(t){ return '<option value="'+esc(t)+'">'+esc(t)+'</option>'; }).join('');
+    if(keep) sel.value=keep;
+  }
+
+  window.myPageLeaveRange=function(kind){
+    var f=document.getElementById('mypage-leave-from'), t=document.getElementById('mypage-leave-to');
+    if(!f||!t) return;
+    var now=new Date();
+    if(kind==='period'){
+      if(mpPeriod&&mpPeriod.start){ f.value=mpPeriod.start; t.value=addDays(mpPeriod.end,-1); }   // period.end 為開區間,顯示到前一天
+      else { f.value=fmtD(new Date(now.getFullYear(),0,1)); t.value=fmtD(new Date(now.getFullYear(),11,31)); }   // 無到職日 → 退回今年
+    }
+    else if(kind==='year'){ f.value=fmtD(new Date(now.getFullYear(),0,1)); t.value=fmtD(new Date(now.getFullYear(),11,31)); }
+    else { f.value=''; t.value=''; }
+    if(typeof refreshDateWk==='function') refreshDateWk(document.getElementById('page-mypage'));
+    myPageLoadLeaveLog();
+  };
+
+  window.myPageLeaveView=function(v){
+    mpLeaveView=(v==='table')?'table':'card';
+    var cw=document.getElementById('mypage-leave-cards'), tw=document.getElementById('mypage-leave-tablewrap');
+    if(cw) cw.style.display=(mpLeaveView==='card')?'':'none';
+    if(tw) tw.style.display=(mpLeaveView==='table')?'':'none';
+    var bc=document.getElementById('mypage-leave-vcard'), bt=document.getElementById('mypage-leave-vtable');
+    if(bc) bc.classList.toggle('active', mpLeaveView==='card');
+    if(bt) bt.classList.toggle('active', mpLeaveView==='table');
+  };
+
+  // 小卡:依假別彙總(天數為主、時數/筆數為輔),最後一張為合計
+  function myPageRenderLeaveCards(list){
+    var cw=document.getElementById('mypage-leave-cards'); if(!cw) return;
+    if(!list.length){ cw.innerHTML='<div style="color:var(--text3);font-size:13px">此區間查無請假紀錄</div>'; return; }
+    var sum={}, order=[];
+    list.forEach(function(a){
+      var t=a.leave_type||'—';
+      if(!sum[t]){ sum[t]={hours:0,n:0}; order.push(t); }
+      sum[t].hours+=num(a.leave_hours); sum[t].n++;
+    });
+    order.sort(function(a,b){ return sum[b].hours-sum[a].hours; });
+    var totH=0, totN=0;
+    order.forEach(function(t){ totH+=sum[t].hours; totN+=sum[t].n; });
+    var card=function(label,hours,n,hi){
+      return '<div class="mypage-stat"'+(hi?' style="border-color:var(--accent2)"':'')+'>'
+        +'<div class="n"'+(hi?' style="color:var(--accent2)"':'')+'>'+d2(hours)+'<span class="u">天</span></div>'
+        +'<div class="l">'+esc(label)+'</div>'
+        +'<div class="s">'+(Math.round(hours*100)/100)+' 小時 · '+n+' 筆</div>'
+        +'</div>';
+    };
+    cw.innerHTML='<div class="mypage-leave-grid">'
+      +order.map(function(t){ return card(t, sum[t].hours, sum[t].n, isAnnual(t)); }).join('')
+      +(order.length>1?card('合計', totH, totN, false):'')
+      +'</div>';
+  }
+
+  window.myPageLoadLeaveLog=async function(){
+    var body=document.getElementById('mypage-leave-log-body'); if(!body) return;
+    var cnt=document.getElementById('mypage-leave-count');
+    var cw=document.getElementById('mypage-leave-cards');
+    var name=mpName();
+    if(!name){
+      body.innerHTML='<tr><td colspan="5" class="empty-state">尚未取得姓名資料</td></tr>';
+      if(cw) cw.innerHTML='<div style="color:var(--text3);font-size:13px">尚未取得姓名資料</div>';
+      if(cnt)cnt.textContent=''; return;
+    }
+    body.innerHTML='<tr><td colspan="5" class="empty-state">載入中...</td></tr>';
+    if(cw) cw.innerHTML='<div style="color:var(--text3);font-size:13px">載入中...</div>';
+    var type=(document.getElementById('mypage-leave-type')||{}).value||'';
+    var from=(document.getElementById('mypage-leave-from')||{}).value||'';
+    var to=(document.getElementById('mypage-leave-to')||{}).value||'';
+    var path='/rest/v1/att_report?select=work_date,leave_type,leave_hours,note&staff_name=eq.'+encodeURIComponent(name)
+      +'&leave_hours=gt.0&order=work_date.desc&limit=2000';
+    if(type) path+='&leave_type=eq.'+encodeURIComponent(type);
+    if(from) path+='&work_date=gte.'+from;
+    if(to)   path+='&work_date=lte.'+to;
+    try{
+      var r=await sbFetch(path);
+      var list=((r.ok&&Array.isArray(r.data))?r.data:[]).filter(function(a){ return !!a.leave_type; });
+      var totH=0; list.forEach(function(a){ totH+=num(a.leave_hours); });
+      if(cnt) cnt.textContent='共 '+list.length+' 筆 · 合計 '+(Math.round(totH*100)/100)+' 小時('+d2(totH)+' 天)';
+      myPageRenderLeaveCards(list);
+      if(!list.length){ body.innerHTML='<tr><td colspan="5" class="empty-state">此區間查無請假紀錄</td></tr>'; return; }
+      body.innerHTML=list.map(function(a){
+        var h=num(a.leave_hours);
+        return '<tr>'
+          +'<td style="white-space:nowrap">'+esc(typeof fmtDateWk==='function'?fmtDateWk(a.work_date):(a.work_date||'—'))+'</td>'
+          +'<td><span class="mypage-leave-tag"'+(isAnnual(a.leave_type)?' style="border-color:var(--accent2);color:var(--accent2)"':'')+'>'+esc(a.leave_type||'—')+'</span></td>'
+          +'<td style="font-family:var(--mono)">'+(Math.round(h*100)/100)+'</td>'
+          +'<td style="font-family:var(--mono);color:var(--text3)">'+d2(h)+'</td>'
+          +'<td style="color:var(--text3)">'+esc(a.note||'')+'</td>'
+        +'</tr>';
+      }).join('');
+    }catch(e){
+      console.warn('mypage leave log load failed',e);
+      body.innerHTML='<tr><td colspan="5" class="empty-state">載入失敗</td></tr>';
+      if(cw) cw.innerHTML='<div style="color:var(--text3);font-size:13px">載入失敗</div>';
+      if(cnt) cnt.textContent='';
+    }
+  };
 
   async function myPageLoadDuty(){
     var db=document.getElementById('mypage-duty-body'); if(!db) return;
