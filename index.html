@@ -1918,6 +1918,9 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="nav-item active" onclick="navTo('dashboard')" id="nav-dashboard">
             <span class="nav-icon">📊</span><span class="nav-label">主頁</span>
           </div>
+          <div class="nav-item" onclick="navTo('mypage')" id="nav-mypage">
+            <span class="nav-icon">👤</span><span class="nav-label">個人頁面</span>
+          </div>
           <div class="nav-item" onclick="window.open('https://egstpsa.evergreennet.com/dana-na/auth/url_xm52bsJ1cg3szywW/welcome.cgi','_blank')" id="nav-evergreen-sys" title="開啟長榮系統(新分頁)">
             <span class="nav-icon">🌐</span><span class="nav-label">長榮系統</span>
           </div>
@@ -2042,6 +2045,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
   (function(){
     var icons={
       'nav-dashboard':'<path d="M4 13h3v7H4zM10.5 4h3v16h-3zM17 9h3v11h-3z"/>',
+      'nav-mypage':'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.5 3.5-7 8-7s8 2.5 8 7"/>',
       'nav-evergreen-sys':'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>',
       'nav-hardware':'<path d="M14.7 6.3a4 4 0 0 0-5-5l2.1 2.1-2.4 2.4-2.1-2.1a4 4 0 0 0 5 5L20 16.4 16.4 20l-7.7-7.7"/>',
       'nav-labor':'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V4h8v3M3 12h18M10 12v2h4v-2"/>',
@@ -4771,6 +4775,56 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <div id="mp-tab-report" style="display:none">
         <div class="card" style="margin-bottom:14px"><div class="dash-date-nav" style="margin:0"><button class="dash-nav-btn" onclick="modpartsPeriod(-1)">« 上一期</button><input type="date" id="mp-from" class="dash-date" onchange="modpartsReport()"><span>～</span><input type="date" id="mp-to" class="dash-date" onchange="modpartsReport()"><button class="dash-nav-btn" onclick="modpartsPeriod(1)">下一期 »</button><button class="dash-nav-btn" onclick="modpartsDefaultPeriod()">本期</button><span style="flex:1"></span><button class="btn-sm btn-export" onclick="modpartsExport(true)">⬇ 匯出 Excel</button></div></div>
         <div class="layout-table-wrap"><table class="layout-table" id="mp-report-grid"><thead><tr><th>CP編號</th><th>構件編號</th><th>工程編號</th><th>工程區</th><th class="num">數量</th><th class="num">單重(kg)</th><th class="num">總重(kg)</th><th>圖號</th><th>上線日期</th><th>出貨日期</th></tr></thead><tbody id="mp-report-body"></tbody><tfoot id="mp-report-foot"></tfoot></table></div>
+      </div>
+    </div>
+
+    <!-- 個人頁面:我的特休/打卡紀錄/週六值班 -->
+    <style>
+      #page-mypage .mypage-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:16px 18px;margin-bottom:14px}
+      #page-mypage .mypage-card h4{margin:0 0 10px;font-size:13px;color:var(--accent2)}
+      #page-mypage .mypage-leave-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+      #page-mypage .mypage-stat{text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:var(--rad);padding:10px 6px}
+      #page-mypage .mypage-stat .n{font-size:20px;font-weight:700;font-family:var(--mono)}
+      #page-mypage .mypage-stat .l{font-size:11px;color:var(--text3);margin-top:2px}
+      #page-mypage .mypage-duty-list{display:flex;flex-wrap:wrap;gap:8px}
+      #page-mypage .mypage-duty-chip{background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:6px 12px;font-size:12px;font-family:var(--mono)}
+      #page-mypage .mypage-duty-chip.soon{border-color:#e6b800;background:rgba(255,204,0,.12);color:#8a6d00}
+    </style>
+    <div class="page" id="page-mypage">
+      <div class="page-header">
+        <div><div class="page-title">個人頁面</div><div class="page-subtitle" id="mypage-subtitle">我的特休、打卡紀錄與週六值班</div></div>
+      </div>
+
+      <div class="mypage-card">
+        <h4>🏖️ 特休</h4>
+        <div id="mypage-leave-body">載入中...</div>
+      </div>
+
+      <div class="mypage-card">
+        <h4>🗓️ 週六值班</h4>
+        <div id="mypage-duty-body">載入中...</div>
+      </div>
+
+      <div class="mypage-card" style="padding:0;overflow:hidden">
+        <div style="padding:16px 18px 0"><h4 style="margin-bottom:8px">🕐 打卡紀錄</h4></div>
+        <div class="attendlog-filter" style="padding:0 18px">
+          <div class="attendlog-dates">
+            <label>起</label><input type="date" id="mypage-attend-from" onchange="myPageLoadAttend()"/>
+            <label>迄</label><input type="date" id="mypage-attend-to" onchange="myPageLoadAttend()"/>
+          </div>
+          <div class="attendlog-quick">
+            <button class="btn-sm" onclick="myPageAttendRange('today')" style="border:1px solid var(--border)">今天</button>
+            <button class="btn-sm" onclick="myPageAttendRange('month')" style="border:1px solid var(--border)">本月</button>
+            <button class="btn-sm" onclick="myPageAttendRange('all')" style="border:1px solid var(--border)">全部</button>
+          </div>
+          <span id="mypage-attend-count" style="font-size:13px;color:var(--text3);margin-left:auto"></span>
+        </div>
+        <div class="table-scroll">
+          <table class="log-table" id="mypage-attend-table">
+            <thead><tr><th>日期</th><th>時間</th><th>類型</th></tr></thead>
+            <tbody id="mypage-attend-body"><tr><td colspan="3" class="empty-state">載入中...</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -8370,7 +8424,7 @@ async function checkForceLogout(){
   if(_flBaseline===undefined){ _flBaseline=fl; return; }   // 第一次只記基準值,不觸發(避免用登入前的舊資料誤判)
   if(fl && fl!==_flBaseline){
     _flBaseline=fl;
-    alert('您的帳號已被管理員強制登出,請重新登入。');
+    alert('已被強制登出');
     await logout();
   }
 }
@@ -8616,7 +8670,7 @@ async function loadProfile() {
   const googleIdentity=(currentSession.user?.identities||[]).find(x=>x.provider==='google');
   const identityMeta=googleIdentity?.identity_data||{};
   const avatarUrl=meta.avatar_url||meta.picture||identityMeta.avatar_url||identityMeta.picture||'';
-  currentUser={id:uid,name,account,isAdmin,perms,disabled,avatarUrl,status};
+  currentUser={id:uid,name,account,isAdmin,perms,disabled,avatarUrl,status,staffId};
 }
 // 呼叫 Edge Function 通知管理員有新帳號待審核(見 supabase/functions/notify-new-account)
 async function notifyAdminNewAccount(name,account){
@@ -8727,7 +8781,7 @@ function goHome() {
 // ── 兩欄式導覽:圖示軌(分類) + 子選單面板 ──
 const SECTION_TITLE={main:'主選單',prod:'產量與報驗',tools:'工具',staff:'人員管理',eg:'長榮專區',hr:'人事薪資',admin:'管理員'};
 const PAGE_SECTION={
-  dashboard:'main', labor:'main', hardware:'main', deductions:'main',
+  dashboard:'main', mypage:'main', labor:'main', hardware:'main', deductions:'main',
   bom:'prod', layout:'prod', daily:'prod', inspect:'prod', a201a202:'prod', prod:'prod', modparts:'prod',
   bomtool:'tools', sp:'tools', dxf:'tools', hazard:'tools', selfcheck:'tools',
   staff:'staff', egstaff:'staff', attend:'staff', attendlog:'staff',
@@ -8742,6 +8796,7 @@ const SECTION_FIRST={main:'dashboard',prod:'bom',tools:'bomtool',staff:'staff',e
 // 每個頁面三態:hide(隱藏) / read(唯讀) / edit(可編輯)
 const PAGE_META=[
   {k:'dashboard',    label:'主頁',           sec:'main'},
+  {k:'mypage',       label:'個人頁面',       sec:'main'},
   {k:'evergreen-sys',label:'長榮系統(外部)', sec:'main'},
   {k:'hardware',     label:'五金庫存',       sec:'main'},
   {k:'labor',        label:'點工單',         sec:'main'},
@@ -8878,6 +8933,7 @@ function navTo(page) {
   auditSetPage(page);   // 記住目前頁面:之後的每筆紀錄都會標上,同時回報「我在這一頁」
   if(page!=='attend') attendStop(); // 離開打卡機就關相機
   if(page==='dashboard') loadDashboard();
+  if(page==='mypage') myPageInit();
   if(page==='dxf') dxfFillProjNums();
   if(page==='bom') { if(allBOM.length) setBomView(bomView); loadBOM(); }
   if(page==='inspect') inspInit();
@@ -13572,13 +13628,12 @@ async function forceLogoutAccount(id){
   const acc=allAccounts.find(a=>String(a.id)===String(id)); if(!acc) return;
   if(currentUser&&String(currentUser.id)===String(id)){ alert('不能強制登出自己的帳號,如需登出請直接按左下角「登出」。'); return; }
   const label=acc.account||acc.name||id;
-  if(!await uiConfirm(`確定要強制將「${label}」登出嗎?\n對方若正在使用系統,約在 ${Math.round(PRESENCE_PING_MS/1000)} 秒內會被自動踢出、退回登入畫面。`)) return;
+  if(!await uiConfirm(`確定強制登出「${label}」嗎?`)) return;
   const r=await sbFetch(`/rest/v1/profiles?id=eq.${id}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({force_logout_at:new Date().toISOString()})});
   if(!r.ok){
     alert('強制登出失敗('+r.status+')。\n若是第一次使用此功能,可能是資料庫 profiles 資料表尚未新增 force_logout_at 欄位,請先在 Supabase SQL 執行:\nALTER TABLE profiles ADD COLUMN IF NOT EXISTS force_logout_at timestamptz;');
     return;
   }
-  alert(`已送出強制登出指令,「${label}」將於數秒〜${Math.round(PRESENCE_PING_MS/1000)}秒內被登出。`);
 }
 // ── 刪除帳號(永久移除該筆 profiles 資料,不可復原)──
 async function deleteAccount(id){
@@ -24424,6 +24479,149 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     document.getElementById('leave-f-days').value='';
     document.getElementById('leave-f-note').value='';
     leaveRender();
+  };
+})();
+</script>
+
+<!-- ═══════════ 個人頁面:我的特休/打卡紀錄/週六值班 ═══════════ -->
+<script>
+(function(){
+  var mpStaff=null;
+  function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
+  function d2(h){ return Math.round(h/8*100)/100; }   // 時→天(2位小數)
+  function isAnnual(t){ return t==='特休'||t==='annual'; }
+  function inPeriod(dateStr,p){ return !!dateStr && dateStr>=p.start && dateStr<p.end; }
+  function today(){ return (typeof currentDate==='string'&&currentDate)?currentDate:new Date().toISOString().slice(0,10); }
+  function mpName(){ return (mpStaff&&mpStaff.name)||(typeof currentUser!=='undefined'&&currentUser&&currentUser.name)||''; }
+
+  window.myPageInit=async function(){
+    var lb=document.getElementById('mypage-leave-body'), db=document.getElementById('mypage-duty-body');
+    if(typeof isGuest!=='undefined'&&isGuest || !currentUser){ if(lb)lb.textContent='—'; if(db)db.textContent='—'; return; }
+    if(lb) lb.innerHTML='載入中...';
+    if(db) db.innerHTML='載入中...';
+    mpStaff=null;
+    if(currentUser.staffId){
+      try{
+        var r=await sbFetch('/rest/v1/staff?id=eq.'+currentUser.staffId+'&select=*');
+        if(r.ok && Array.isArray(r.data) && r.data[0]) mpStaff=r.data[0];
+      }catch(e){}
+    }
+    myPageRenderLeave();
+    myPageLoadDuty();
+    myPageAttendRange('month');   // 打卡紀錄預設顯示本月
+  };
+
+  async function myPageRenderLeave(){
+    var lb=document.getElementById('mypage-leave-body'); if(!lb) return;
+    if(!mpStaff || !mpStaff.hire_date){
+      lb.innerHTML='<div style="color:var(--text3);font-size:13px">尚未綁定員工資料或到職日,無法自動試算特休。如有需要請聯繫管理員在「帳號管理」設定綁定的員工。</div>';
+      return;
+    }
+    try{
+      var period=Payroll.annualPeriod(mpStaff.hire_date, today());
+      var estDays=Payroll.annualLeaveDays(mpStaff.hire_date, today());
+      var usedAtt=0;
+      var ra=await sbFetch('/rest/v1/att_report?select=work_date,leave_hours&staff_name=eq.'+encodeURIComponent(mpStaff.name)+'&leave_type=eq.'+encodeURIComponent('特休')+'&leave_hours=gt.0&work_date=gte.'+period.start+'&work_date=lt.'+period.end);
+      if(ra.ok && Array.isArray(ra.data)) ra.data.forEach(function(a){ usedAtt+=num(a.leave_hours); });
+      var ledgerUse=0, payout=0, grantAdj=0;
+      var rl=await sbFetch('/rest/v1/leave_ledger?select=*&staff_id=eq.'+mpStaff.id);
+      if(rl.ok && Array.isArray(rl.data)) rl.data.forEach(function(r){
+        if(!isAnnual(r.leave_type) || !inPeriod(r.ref_date,period)) return;
+        var h=num(r.hours);
+        if(r.entry_type==='use') ledgerUse+=h;
+        else if(r.entry_type==='payout') payout+=h;
+        else if(r.entry_type==='grant') grantAdj+=h;
+      });
+      var granted=estDays*8+grantAdj, used=usedAtt+ledgerUse, remain=granted-used-payout;
+      lb.innerHTML=
+        '<div class="mypage-leave-grid">'
+        +'<div class="mypage-stat"><div class="n">'+esc(mpStaff.hire_date||'—')+'</div><div class="l">到職日</div></div>'
+        +'<div class="mypage-stat"><div class="n">'+d2(granted)+'</div><div class="l">本期應給(天)</div></div>'
+        +'<div class="mypage-stat"><div class="n">'+d2(used)+'</div><div class="l">已休(天)</div></div>'
+        +'<div class="mypage-stat"><div class="n">'+d2(payout)+'</div><div class="l">已折現(天)</div></div>'
+        +'<div class="mypage-stat" style="border-color:var(--accent2)"><div class="n" style="color:'+(remain<0?'var(--danger)':'var(--accent2)')+'">'+d2(remain)+'</div><div class="l">剩餘(天)</div></div>'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--text3);margin-top:10px">本期:'+esc(period.start)+' ~ '+esc(period.end)+'(到職週年制)。日常請假只要在「出勤回報」把假別選『特休』即會自動計入已休,不必重複登記。</div>';
+    }catch(e){
+      console.warn('mypage leave load failed',e);
+      lb.innerHTML='<div style="color:var(--text3);font-size:13px">特休資料載入失敗,請稍後重新整理。</div>';
+    }
+  }
+
+  async function myPageLoadDuty(){
+    var db=document.getElementById('mypage-duty-body'); if(!db) return;
+    var name=mpName();
+    if(!name){ db.innerHTML='<div style="color:var(--text3);font-size:13px">尚未取得姓名資料。</div>'; return; }
+    try{
+      if(!window.ICAL || typeof window.ICAL.parse!=='function') throw new Error('日曆元件尚未載入');
+      var headers={'apikey':SUPA_KEY};
+      if(currentSession) headers.Authorization='Bearer '+currentSession.access_token;
+      var res=await fetch(SUPA_URL+'/functions/v1/apple-calendar?fresh='+Date.now(),{headers:headers,cache:'no-store'});
+      if(!res.ok) throw new Error('同步服務回應 '+res.status);
+      var ics=await res.text();
+      var todayStr=(typeof dashTodayStr==='function')?dashTodayStr():new Date().toISOString().slice(0,10);
+      var rows=dashParseAppleCalendar(ics, todayStr, window.ICAL, 120);   // 往後查120天
+      var matchKey=name.length>=2?name.slice(-2):name;   // 行事曆常只寫名字(去姓),取姓名後兩字比對即可
+      var mine=rows.filter(function(r){
+        if(!r.event_date) return false;
+        var d=new Date(r.event_date+'T12:00:00');
+        if(d.getDay()!==6) return false;   // 只看週六
+        return String(r.title||'').indexOf(matchKey)>=0;
+      });
+      var seen={}, dates=[];
+      mine.forEach(function(r){ if(!seen[r.event_date]){ seen[r.event_date]=true; dates.push(r.event_date); } });
+      dates.sort();
+      if(!dates.length){ db.innerHTML='<div style="color:var(--text3);font-size:13px">近期(120天內)查無您的週六值班排程。</div>'; return; }
+      var soonCut=new Date(); soonCut.setDate(soonCut.getDate()+14);
+      db.innerHTML='<div class="mypage-duty-list">'+dates.map(function(dt){
+        var isSoon=new Date(dt+'T12:00:00')<=soonCut;
+        return '<span class="mypage-duty-chip'+(isSoon?' soon':'')+'">'+esc(dt)+'</span>';
+      }).join('')+'</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-top:10px">資料來源:公司共用行事曆,標示為近2週內的值班日。</div>';
+    }catch(err){
+      console.warn('mypage duty load failed',err);
+      db.innerHTML='<div style="color:var(--text3);font-size:13px">值班資料暫時無法讀取(行事曆同步失敗),請稍後再試。</div>';
+    }
+  }
+
+  window.myPageAttendRange=function(kind){
+    var from=document.getElementById('mypage-attend-from'), to=document.getElementById('mypage-attend-to');
+    if(!from||!to) return;
+    var pad=function(n){ return String(n).padStart(2,'0'); };
+    var fmt=function(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
+    var now=new Date();
+    if(kind==='today'){ from.value=fmt(now); to.value=fmt(now); }
+    else if(kind==='month'){ from.value=fmt(new Date(now.getFullYear(),now.getMonth(),1)); to.value=fmt(new Date(now.getFullYear(),now.getMonth()+1,0)); }
+    else { from.value=''; to.value=''; }
+    myPageLoadAttend();
+  };
+
+  window.myPageLoadAttend=async function(){
+    var body=document.getElementById('mypage-attend-body'); if(!body) return;
+    var name=mpName();
+    if(!name){ body.innerHTML='<tr><td colspan="3" class="empty-state">尚未取得姓名資料</td></tr>'; return; }
+    body.innerHTML='<tr><td colspan="3" class="empty-state">載入中...</td></tr>';
+    var from=document.getElementById('mypage-attend-from').value;
+    var to=document.getElementById('mypage-attend-to').value;
+    var path='/rest/v1/attendance?select=*&name=eq.'+encodeURIComponent(name)+'&order=created_at.desc&limit=2000';
+    if(from) path+='&created_at=gte.'+encodeURIComponent(new Date(from+'T00:00:00').toISOString());
+    if(to) path+='&created_at=lte.'+encodeURIComponent(new Date(to+'T23:59:59.999').toISOString());
+    try{
+      var r=await sbFetch(path);
+      var list=(r.ok && Array.isArray(r.data))?r.data:[];
+      var cnt=document.getElementById('mypage-attend-count'); if(cnt) cnt.textContent='共 '+list.length+' 筆';
+      if(!list.length){ body.innerHTML='<tr><td colspan="3" class="empty-state">尚無打卡紀錄</td></tr>'; return; }
+      body.innerHTML=list.map(function(a){
+        var dt=new Date(a.created_at);
+        var d=dt.toLocaleDateString('zh-TW');
+        var t=dt.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+        var color=a.type==='上班'?'var(--green)':'var(--accent2)';
+        return '<tr><td>'+d+'</td><td>'+t+'</td><td><span style="color:'+color+';font-weight:500">'+(a.type||'—')+'</span></td></tr>';
+      }).join('');
+    }catch(e){
+      console.warn('mypage attend load failed',e);
+      body.innerHTML='<tr><td colspan="3" class="empty-state">載入失敗</td></tr>';
+    }
   };
 })();
 </script>
