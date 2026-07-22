@@ -2017,6 +2017,9 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="nav-item" onclick="navTo('pricing')" id="nav-pricing">
             <span class="nav-icon">💰</span><span class="nav-label">計價</span>
           </div>
+          <div class="nav-item" onclick="navTo('cost')" id="nav-cost">
+            <span class="nav-icon">🧾</span><span class="nav-label">成本</span>
+          </div>
           <div class="nav-item" onclick="navTo('accounts')" id="nav-accounts">
             <span class="nav-icon">🔑</span><span class="nav-label">帳號管理</span>
           </div>
@@ -2074,6 +2077,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       'nav-payrollcfg':'<circle cx="12" cy="12" r="3"/><path d="M19 12h3M2 12h3M12 2v3M12 19v3M17 7l2-2M5 19l2-2M17 17l2 2M5 5l2 2"/>',
       'nav-output':'<path d="M4 20V10h4v10M10 20V4h4v16M16 20v-7h4v7M2 20h20"/>',
       'nav-pricing':'<circle cx="12" cy="12" r="9"/><path d="M16 8c-.7-1-1.8-1.5-4-1.5-2.5 0-4 1-4 2.5s1.2 2.2 4 2.8 4 1.3 4 2.8-1.5 2.8-4 2.8c-2.2 0-3.7-.6-4.5-1.7M12 4v16"/>',
+      'nav-cost':'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
       'nav-accounts':'<circle cx="8" cy="15" r="4"/><path d="m11 12 8-8 2 2-2 2 2 2-3 3-2-2-3 3"/>',
       'nav-notify':'<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>',
       'nav-audit':'<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4"/><path d="M8 11h8M8 15h8M8 19h4"/>'
@@ -2402,7 +2406,6 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="layout-tabs">
           <button class="layout-tab active" id="ltab-input" onclick="layoutSwitchTab('input')">明細輸入</button>
           <button class="layout-tab" id="ltab-chart" onclick="layoutSwitchTab('chart')">配置圖</button>
-          <button class="layout-tab" id="ltab-virtual" onclick="layoutSwitchTab('virtual')">虛擬現場</button>
         </div>
 
         <!-- 明細輸入 -->
@@ -2435,15 +2438,6 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
             <button class="btn-sm btn-export" onclick="layoutPrintChart()">🖨 列印 (橫式A4)</button>
           </div>
           <div class="layout-chart-wrap" id="layout-chart"></div>
-        </div>
-
-        <!-- 虛擬現場 -->
-        <div id="layout-virtual-panel" style="display:none">
-          <div class="layout-toolbar no-print">
-            <span class="layout-hint">每格 6m,構件依實際長度橫跨床位</span>
-            <button class="btn-sm btn-export" onclick="layoutPrintChart()">🖨 列印 (橫式A4)</button>
-          </div>
-          <div class="layout-chart-wrap" id="layout-virtual"></div>
         </div>
       </div>
     </div>
@@ -2802,6 +2796,22 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         .ovr-one-value .big.hi{color:var(--red)}
         @media(max-width:760px){.ovr-one-grid{grid-template-columns:1fr;width:100%}}
         .ov-red{color:var(--red);font-weight:600}
+        /* 歷史總覽 */
+        .ovh-seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--rad);overflow:hidden}
+        .ovh-seg .btn{border:none;border-radius:0;border-right:1px solid var(--border)}
+        .ovh-seg .btn:last-child{border-right:none}
+        .ovh-seg .btn.active{background:var(--accent2);color:#fff}
+        .ovh-cards{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+        .ovh-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:9px 14px;min-width:130px}
+        .ovh-card .lbl{display:block;font-size:11px;color:var(--text3);margin-bottom:2px}
+        .ovh-card .big{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--text)}
+        .ovh-card .big.hi{color:var(--red)}
+        .ovh-chart{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:12px 14px 6px;margin-bottom:12px;overflow-x:auto}
+        .ovh-chart svg{display:block;width:100%;height:auto;min-width:520px}
+        .ovh-lg{display:flex;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--text3);padding:2px 2px 8px}
+        .ovh-lg i{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+        .ovh-axis{font-family:var(--mono);font-size:10px;fill:var(--text3)}
+        .ovh-grid{stroke:currentColor;opacity:.14}
         .ov-neg-seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--rad);overflow:hidden}
         .ov-neg-btn{background:var(--bg2);border:none;border-left:1px solid var(--border);color:var(--text2);font-size:12px;padding:6px 12px;cursor:pointer}
         .ov-neg-btn:first-child{border-left:none}
@@ -3000,6 +3010,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <button class="layout-tab"        id="ovtab-price" onclick="ovrView('price')">計價統計</button>
           <button class="layout-tab"        id="ovtab-manu"  onclick="ovrView('manu')">製造統計</button>
           <button class="layout-tab"        id="ovtab-eg"    onclick="ovrView('eg')">長榮製造統計</button>
+          <button class="layout-tab"        id="ovtab-hist"  onclick="ovrView('hist')">歷史總覽</button>
         </div>
 
         <!-- 一頁回報：用一個基準日期整合四種日／週期／月統計 -->
@@ -3080,6 +3091,33 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
             <button class="btn" id="ovr-eg-expand" onclick="ovrExpandTbl('eg')" title="攤平整份表格，方便截整頁畫面">展開全部列 ▼</button>
           </div>
           <div id="ovr-eg-content"><div class="empty-state">載入中...</div></div>
+        </div>
+
+        <!-- 歷史總覽（年/月/週/日 噸數與產值走勢；自然月 1 日～月底） -->
+        <div id="ovr-hist-view" style="display:none">
+          <div class="ovr-toolbar">
+            <span class="ovr-seg-sep" style="border-left:none;padding-left:0;margin-left:0">粒度</span>
+            <div class="ovh-seg">
+              <button class="btn ovh-g" id="ovh-g-year"  onclick="ovrHistGran('year')">年</button>
+              <button class="btn ovh-g active" id="ovh-g-month" onclick="ovrHistGran('month')">月</button>
+              <button class="btn ovh-g" id="ovh-g-week"  onclick="ovrHistGran('week')">週</button>
+              <button class="btn ovh-g" id="ovh-g-day"   onclick="ovrHistGran('day')">日</button>
+            </div>
+            <span class="ovr-seg-sep">區間</span>
+            <input type="date" id="ovh-from" class="date-wk" data-wk="ovh-from-show" onchange="ovrRenderHist()"/>
+            <span class="date-wk-show" id="ovh-from-show">—</span>
+            <span style="color:var(--text3)">~</span>
+            <input type="date" id="ovh-to" class="date-wk" data-wk="ovh-to-show" onchange="ovrRenderHist()"/>
+            <span class="date-wk-show" id="ovh-to-show">—</span>
+            <button class="btn" onclick="ovrHistRange('month')">本月</button>
+            <button class="btn" onclick="ovrHistRange('q')">近3月</button>
+            <button class="btn" onclick="ovrHistRange('year')">今年</button>
+            <button class="btn" onclick="ovrHistRange('all')">全部</button>
+            <button class="btn" id="ovh-val-btn" style="margin-left:auto" onclick="ovrHistToggleValue()">隱藏產值</button>
+            <button class="btn btn-export" onclick="ovrHistExport()" title="匯出目前區間與粒度的表格">📊 匯出 Excel</button>
+          </div>
+          <div id="ovh-hint" style="font-family:var(--mono);font-size:11px;color:var(--text3);margin:-6px 0 10px"></div>
+          <div id="ovh-content"><div class="empty-state">載入中...</div></div>
         </div>
       </div>
 
@@ -4867,6 +4905,77 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
             <tbody id="mypage-attend-body"><tr><td colspan="3" class="empty-state">載入中...</td></tr></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- 成本(管理員):人事 + 五金,當日/本月/自訂區間 -->
+    <style>
+      #page-cost .ct-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+      #page-cost .ct-bar input[type=date]{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:13px;padding:6px 9px;outline:none}
+      #page-cost .ct-seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--rad);overflow:hidden}
+      #page-cost .ct-seg button{border:none;border-right:1px solid var(--border);border-radius:0;background:var(--bg3);color:var(--text2);font-family:var(--mono);font-size:11px;padding:6px 11px;cursor:pointer}
+      #page-cost .ct-seg button:last-child{border-right:none}
+      #page-cost .ct-seg button.active{background:var(--accent2);color:#fff}
+      #page-cost .ct-cards{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+      #page-cost .ct-card{flex:1 1 150px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:10px 14px;min-width:145px}
+      #page-cost .ct-card .lbl{display:block;font-size:11px;color:var(--text3);margin-bottom:3px}
+      /* 三行式:標題 / 大數字 / 小註記各自成行,小註記字多時自動換行不截斷 */
+      #page-cost .ct-card .big{display:block;font-family:var(--mono);font-size:19px;font-weight:700;color:var(--text);line-height:1.25}
+      #page-cost .ct-card .sub{display:block;font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:4px;white-space:normal;word-break:break-word;line-height:1.5}
+      #page-cost .ct-card.tot{border-color:var(--accent2)}
+      #page-cost .ct-card.tot .big{color:var(--accent2)}
+      #page-cost .ct-card.hr .big{color:#e0555b}
+      #page-cost .ct-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+      #page-cost .ct-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden}
+      #page-cost .ct-box-h{background:var(--bg3);padding:8px 12px;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--accent2);display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border)}
+      #page-cost table{width:100%;border-collapse:collapse;font-size:12px}
+      #page-cost th{background:var(--bg3);color:var(--text3);font-family:var(--mono);font-size:11px;font-weight:500;padding:6px 8px;text-align:left;position:sticky;top:0}
+      #page-cost td{padding:5px 8px;border-bottom:1px solid rgba(128,128,128,.12);white-space:nowrap}
+      #page-cost td.num,#page-cost th.num{text-align:right;font-family:var(--mono)}
+      #page-cost tfoot td,#page-cost tr.ct-foot td{font-weight:700;background:var(--bg3);border-top:2px solid var(--border);position:sticky;bottom:0}
+      #page-cost .ct-scroll{max-height:420px;overflow:auto}
+      #page-cost .ct-warn{background:rgba(224,85,91,.1);border:1px solid rgba(224,85,91,.35);color:var(--text2);border-radius:var(--rad);padding:8px 12px;font-size:12px;margin-bottom:12px}
+    </style>
+    <div class="page" id="page-cost">
+      <div class="page-header">
+        <div><div class="page-title">🧾 成本</div><div class="page-subtitle">人事與五金成本;當日 / 本月 / 自訂區間</div></div>
+      </div>
+      <div class="ct-bar">
+        <div class="ct-seg">
+          <button id="ct-q-today" onclick="costRange('today')">當日</button>
+          <button id="ct-q-month" class="active" onclick="costRange('month')">本月</button>
+          <button id="ct-q-prev" onclick="costRange('prev')">上月</button>
+        </div>
+        <span class="ovr-seg-sep">區間</span>
+        <input type="date" id="ct-from" class="date-wk" data-wk="ct-from-show" onchange="costLoad()"/>
+        <span class="date-wk-show" id="ct-from-show">—</span>
+        <span style="color:var(--text3)">~</span>
+        <input type="date" id="ct-to" class="date-wk" data-wk="ct-to-show" onchange="costLoad()"/>
+        <span class="date-wk-show" id="ct-to-show">—</span>
+        <span class="ovr-seg-sep">五金口徑</span>
+        <div class="ct-seg">
+          <button id="ct-hw-buy" class="active" onclick="costHwMode('buy')" title="hw_purchases 實付金額,等於現金流出">採購實付</button>
+          <button id="ct-hw-use" onclick="costHwMode('use')" title="hw_usage 數量 × 最近一次進貨單價(估算)">領用耗用</button>
+        </div>
+        <span id="ct-status" style="font-family:var(--mono);font-size:12px;color:var(--text3);margin-left:auto"></span>
+      </div>
+      <div id="ct-warn"></div>
+      <div class="ct-cards" id="ct-cards"></div>
+      <div class="ct-grid">
+        <div class="ct-box" style="grid-column:1/-1">
+          <div class="ct-box-h"><span>👷 人事 · 出勤工數 × 日薪</span><span id="ct-reg-sum"></span></div>
+          <div class="ct-scroll"><table id="ct-reg-tbl"><thead><tr><th>姓名</th><th class="num">工數</th><th class="num">日薪</th><th class="num">金額</th></tr></thead><tbody><tr><td colspan="4" class="empty-state">載入中...</td></tr></tbody></table></div>
+        </div>
+        <div class="ct-box" style="grid-column:1/-1">
+          <div class="ct-box-h"><span id="ct-hw-title">🔩 五金 · 採購實付</span><span id="ct-hw-sum"></span></div>
+          <div class="ct-scroll"><table id="ct-hw-tbl"><thead><tr><th>日期</th><th>種類</th><th>品名</th><th class="num">數量</th><th class="num">單價</th><th class="num">金額</th><th>對象</th></tr></thead><tbody><tr><td colspan="7" class="empty-state">載入中...</td></tr></tbody></table></div>
+        </div>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:12px;line-height:1.8">
+        ※ 正職人事成本 ＝ 出勤回報工數(正常時數÷8 ＋ 加班時數÷6) × 日薪;日薪取自員工薪資設定,月薪制以 <b>月薪÷30</b> 換算(同 Payroll.dailyWage)。<br>
+        ※ 這是<b>發生成本的估算</b>,不等於實際發放薪資 —— 不含勞健保雇主負擔、獎金、特休折現,辦公室加班也未套用 1.34/1.67 倍率。正式數字請看「人事薪資 → 薪資計算」。<br>
+        ※ <b>不含點工單</b>:點工屬外包工資,不計入本頁人事成本;點工金額請看「點工單」與「扣款明細」。<br>
+        ※ 五金「採購實付」為實際付款(精確,但進貨當天會跳高);「領用耗用」為領用量 × 該品項最近一次進貨單價(平滑,反映真實消耗,屬估算)。
       </div>
     </div>
 
@@ -8829,7 +8938,7 @@ const PAGE_SECTION={
   staff:'staff', egstaff:'staff', attend:'staff', attendlog:'staff',
   attendance:'eg', egdaily:'eg',
   emp:'hr', payroll:'hr', leave:'hr', payrollcfg:'hr',
-  output:'admin', pricing:'admin', accounts:'admin', notify:'admin', audit:'admin'
+  output:'admin', pricing:'admin', cost:'admin', accounts:'admin', notify:'admin', audit:'admin'
 };
 // 每個分類的「首頁」(點圖示或觸控時導向)
 const SECTION_FIRST={main:'dashboard',prod:'bom',tools:'bomtool',staff:'staff',eg:'attendance',hr:'emp',admin:'output'};
@@ -8867,11 +8976,12 @@ const PAGE_META=[
   {k:'payrollcfg',   label:'費率設定',       sec:'hr'},
   {k:'output',       label:'產值',           sec:'admin'},
   {k:'pricing',      label:'計價',           sec:'admin'},
+  {k:'cost',         label:'成本',           sec:'admin'},
   {k:'accounts',     label:'帳號管理',       sec:'admin'},
   {k:'notify',       label:'通知管理',       sec:'admin'},
   {k:'audit',        label:'操作紀錄',       sec:'admin'},
 ];
-const ADMIN_PAGES=new Set(['output','pricing','accounts','notify','audit']);   // 一般帳號預設隱藏的管理頁
+const ADMIN_PAGES=new Set(['output','pricing','cost','accounts','notify','audit']);   // 一般帳號預設隱藏的管理頁
 // 人事薪資專區:整區用單一 perms 鍵 'payroll' 控管(與資料庫 is_hr() 一致),未授權一律隱藏
 const HR_PAGES=new Set(['emp','leave','payroll','payslip','payrollcfg']);
 // 訪客固定可見(唯讀):主頁、長榮系統、BOM工程列表、工具整區。其餘一律隱藏。
@@ -8986,6 +9096,7 @@ function navTo(page) {
   if(page==='selfcheck') selfcheckInit();
   if(page==='pricing') pricingInit();
   if(page==='output') outputInit();
+  if(page==='cost') costInit();
   if(page==='attend') attendInit();
   if(page==='attendlog') loadAttendLog();
   if(page==='attendance') attendanceInit();
@@ -12305,22 +12416,28 @@ function renderCompTable() {
           const title = singleDate ? ' title="進料日期:'+singleDate+'"' : '';
           html += '<td><span class="mat-cell" data-part="'+(r.part_no||'').replace(/"/g,'&quot;')+'" onclick="openMaterialModal(this)" style="color:'+color+'"'+title+'>'+display+' ✎</span></td>';
         }
-      } else if (c === 'A201' && zoneOnlineMap[r.part_no]) {
-        // auto from 線上進度表 上線日期 (read-only,畫面只顯示 mm-dd 節省空間,完整日期看 title)
-        const full = zoneOnlineMap[r.part_no];
-        html += '<td><input type="text" value="'+zoneDateShort(full)+'" data-part="'+r.part_no+'" data-col="'+c+'" readonly style="color:var(--accent3)" title="自動帶入上線日期:'+full+'"/></td>';
-      } else if (c === 'A202' && zoneDailyMap[r.part_no]) {
-        // auto from 每日產量 日期 (read-only,只顯示 mm-dd)
-        const full = zoneDailyMap[r.part_no];
-        html += '<td><input type="text" value="'+zoneDateShort(full)+'" data-part="'+r.part_no+'" data-col="'+c+'" readonly style="color:var(--accent3)" title="自動帶入每日產量日期:'+full+'"/></td>';
-      } else if (c === '出貨' && zoneShipMap[r.part_no]) {
-        // auto from 線上進度表 出貨日期 (read-only,只顯示 mm-dd)
-        const full = zoneShipMap[r.part_no];
-        html += '<td><input type="text" value="'+zoneDateShort(full)+'" data-part="'+r.part_no+'" data-col="'+c+'" readonly style="color:var(--accent3)" title="自動帶入出貨日期:'+full+'"/></td>';
-      } else if (c === '流水編號' && zoneSerialMap[r.part_no]) {
-        // auto from 每日產量 流水編號 (read-only)
-        const d = (zoneSerialMap[r.part_no]||'').replace(/"/g,'&quot;');
-        html += '<td><input type="text" value="'+d+'" data-part="'+r.part_no+'" data-col="'+c+'" readonly style="color:var(--accent3)" title="自動帶入流水編號"/></td>';
+      } else if (c === 'A201') {
+        // auto from 線上進度表 上線日期,一律唯讀(畫面只顯示 mm-dd 節省空間,完整日期看 title)。
+        // 未上線時也不可輸入 —— A201 唯一來源是「線上進度表 → 明細輸入」,手打進 component_ext 也不會被顯示。
+        const full = zoneOnlineMap[r.part_no] || '';
+        const title = full ? ('自動帶入上線日期:'+full) : '尚未上線;A201 由「線上進度表 → 明細輸入」自動帶入,不可手動填寫';
+        html += '<td><input type="text" value="'+(full?zoneDateShort(full):'')+'" data-part="'+r.part_no+'" data-col="'+c+'" readonly style="color:var(--accent3)" title="'+title+'"/></td>';
+      } else if (c === 'A202') {
+        // auto from 每日產量 日期,一律唯讀(只顯示 mm-dd);尚未報驗時空白,同樣不可手動填寫
+        const full = zoneDailyMap[r.part_no] || '';
+        const title = full ? ('自動帶入每日產量日期:'+full) : '尚未報驗;A202 由「每日產量」自動帶入,不可手動填寫';
+        html += '<td><input type="text" value="'+(full?zoneDateShort(full):'')+'" data-part="'+r.part_no+'" data-col="'+c+'" readonly style="color:var(--accent3)" title="'+title+'"/></td>';
+      } else if (c === '出貨') {
+        // auto from 線上進度表 出貨日期,一律唯讀(只顯示 mm-dd)
+        const full = zoneShipMap[r.part_no] || '';
+        const title = full ? ('自動帶入出貨日期:'+full) : '尚未出貨;出貨日期由「線上進度表 → 明細輸入」自動帶入,不可手動填寫';
+        html += '<td><input type="text" value="'+(full?zoneDateShort(full):'')+'" data-part="'+r.part_no+'" data-col="'+c+'" readonly style="color:var(--accent3)" title="'+title+'"/></td>';
+      } else if (c === '流水編號') {
+        // auto from 每日產量 流水編號,一律唯讀
+        const raw = zoneSerialMap[r.part_no] || '';
+        const d = raw.replace(/"/g,'&quot;');
+        const title = raw ? '自動帶入流水編號' : '尚無流水編號;由「每日產量」自動帶入,不可手動填寫';
+        html += '<td><input type="text" value="'+d+'" data-part="'+r.part_no+'" data-col="'+c+'" readonly style="color:var(--accent3)" title="'+title+'"/></td>';
       } else {
         const val = (ext[c]||'').replace(/"/g,'&quot;');
         html += '<td><input type="text" value="'+val+'" data-part="'+r.part_no+'" data-col="'+c+'" oninput="compExtEdit(this)" onfocus="compExtFocus(this)" onchange="compExtCommit(this)"/></td>';
@@ -13728,7 +13845,14 @@ function openPermModal(id){
     <td style="padding:6px 8px"><b>💼 薪資可視範圍</b><div style="font-size:11px;color:var(--text3)">「人事薪資」各頁只顯示此範圍的員工薪資</div></td>
     <td style="padding:4px 8px;text-align:right"><select id="perm-scope-sel" ${isAdmin?'disabled':''} style="padding:4px 8px;min-width:130px">
       ${sopt('all','全部')}${sopt('office','只辦公人員')}${sopt('field','只現場/外勞')}</select></td></tr>`;
-  document.getElementById('perm-modal-body').innerHTML=pageRows+hrRow+scopeRow;
+  // 產值金額:控制「產值 → 歷史總覽」是否看得到金額(噸數不受影響);管理員一律看得到
+  const ovv = isAdmin ? 'show' : (perms.output_value||'show');
+  const vopt=(v,t)=>`<option value="${v}"${ovv===v?' selected':''}>${t}</option>`;
+  const valRow = `<tr style="background:var(--bg3)">
+    <td style="padding:6px 8px"><b>📊 產值金額</b><div style="font-size:11px;color:var(--text3)">設為隱藏時,「歷史總覽」只看得到噸數,也切不出金額</div></td>
+    <td style="padding:4px 8px;text-align:right"><select id="perm-outval-sel" ${isAdmin?'disabled':''} style="padding:4px 8px;min-width:130px">
+      ${vopt('show','💲 可看金額')}${vopt('hide','🚫 只看噸數')}</select></td></tr>`;
+  document.getElementById('perm-modal-body').innerHTML=pageRows+hrRow+scopeRow+valRow;
   document.getElementById('perm-modal-note').innerHTML = isAdmin
     ? '⚠ 此帳號為<b>管理員</b>,一律擁有全部頁面的編輯權與全部薪資範圍;要限制請先取消其管理員身分並儲存。'
     : '未設定的頁面預設:管理頁(產值/計價/帳號管理)隱藏,其餘可編輯。「人事薪資」需設可編輯/唯讀才會出現,並受「薪資可視範圍」限制。';
@@ -13739,6 +13863,7 @@ async function savePermModal(){
   const perms={};
   document.querySelectorAll('#perm-modal-body .perm-sel').forEach(s=>{ perms[s.dataset.k]=s.value; });
   const sc=document.getElementById('perm-scope-sel'); if(sc) perms.payroll_scope=sc.value;   // 薪資可視範圍
+  const ov=document.getElementById('perm-outval-sel'); if(ov) perms.output_value=ov.value;   // 產值金額可視性
   const btn=document.getElementById('perm-modal-save'); btn.disabled=true; btn.textContent='儲存中...';
   const r=await sbFetch(`/rest/v1/profiles?id=eq.${_permEditId}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({perms})});
   btn.disabled=false; btn.textContent='儲存';
@@ -14762,8 +14887,6 @@ function layoutSaveAfterUndo() {
   layoutRows.forEach((r, i) => { if (r.part_no || r.bed) layoutMarkDirty(i); });
 }
 const BEDS = ['D4','D5','D6','D7','D8','D9~D10','D11~D12','D13~D14','D15','D16~D17','D18~D19','D19~D22','D22','D22~','HOLD'];
-const VBEDS = ['D4','D5','D6','D7','D8','D9','D10','D11','D12','D13','D14','D15','D16','D17','D18','D19','D20','D21','D22','D23'];
-const VBED_LEN = 6000; // mm per virtual bed
 const STATUSES = ['上線中','待出貨','已出貨','HOLD'];
 let layoutRows = [];
 let layoutBOMCache = [];
@@ -14771,6 +14894,10 @@ let layoutZoneMap = {};
 let layoutRowSeq = 0;
 let layoutFilterText = '';
 let layoutDailyOutputKeys = new Set();
+// 「已上線支數」用的三份參考資料(建議清單要按剩餘數量判斷,不能只看有沒有上線過):
+let layoutShippedQty = {};     // 工程編號|構件編號 -> 已出貨的上線支數(這些列不在 layoutRows 裡)
+let layoutDailyQty = {};       // 工程編號|構件編號 -> 每日產量支數(已報驗,可能未經線上進度表)
+let layoutBOMQtyMap = {};      // 工程編號|構件編號 -> BOM 總支數(建議清單要 O(1) 查,不能每次掃全表)
 
 function layoutDailyKey(projNum, partNo) {
   return String(projNum || '').trim().toUpperCase() + '|' + String(partNo || '').trim().toUpperCase();
@@ -14789,11 +14916,57 @@ function layoutApplyDailyStatus(row) {
 async function layoutLoadDailyOutputKeys() {
   const r = await sbFetchAll('/rest/v1/daily_output?select=proj_num,part_no');
   layoutDailyOutputKeys = new Set();
+  layoutDailyQty = {};
   if (Array.isArray(r.data)) {
     r.data.forEach(x => {
-      if (x.proj_num && x.part_no) layoutDailyOutputKeys.add(layoutDailyKey(x.proj_num, x.part_no));
+      if (!x.proj_num || !x.part_no) return;
+      const k = layoutDailyKey(x.proj_num, x.part_no);
+      layoutDailyOutputKeys.add(k);
+      layoutDailyQty[k] = (layoutDailyQty[k] || 0) + 1;   // 每日產量一列 = 一支
     });
   }
+}
+// A201(上線日期)唯一來源就是這張「明細輸入」表(layout_items 的 work_date);構件總表那一欄是唯讀自動帶入,
+// 不必再去讀 component_ext(讀了也用不到:compExtDisplayValue 對 A201 只認 zoneOnlineMap)。
+// 這裡只收「已出貨」的上線支數 —— 未出貨的列 layoutInit 一律載進 layoutRows(不分工程),
+// 由 layoutUsedQty 即時統計,才不會跟本表剛輸入的資料重複計算,也不會因為載入後又新增而算漏。
+async function layoutLoadOnlineKeys() {
+  layoutShippedQty = {};
+  const lr = await sbFetchAll('/rest/v1/layout_items?select=proj_num,part_no,work_date,qty&ship_date=not.is.null');
+  if (Array.isArray(lr.data)) {
+    lr.data.forEach(x => {
+      if (!x.proj_num || !x.part_no || !x.work_date) return;
+      const k = layoutDailyKey(x.proj_num, x.part_no);
+      layoutShippedQty[k] = (layoutShippedQty[k] || 0) + (parseInt(x.qty) || 1);
+    });
+  }
+}
+// 本表各構件目前已登記支數:一次掃完 layoutRows 建表。
+// (建議清單有幾百個候選,每個都各自掃一次 layoutRows 會變成 O(n²),打字就卡住)
+function layoutUsedQtyMap(excludeI) {
+  const m = {};
+  layoutRows.forEach((r, idx) => {
+    if (idx === excludeI || !r.part_no) return;
+    const k = layoutDailyKey(r.proj_num, r.part_no);
+    m[k] = (m[k] || 0) + (parseInt(r.qty) || 0);
+  });
+  return m;
+}
+// 某構件「已上線支數」:已出貨 + 本表現有(含剛輸入未存的);另外若每日產量的支數更多(可能未經進度表直接匯入),以較大者為準。
+function layoutOnlineUsedK(k, inTableQty) {
+  return Math.max(layoutDailyQty[k] || 0, (layoutShippedQty[k] || 0) + (inTableQty || 0));
+}
+function layoutOnlineUsed(projNum, partNo, excludeI) {
+  return layoutOnlineUsedK(layoutDailyKey(projNum, partNo), layoutUsedQty(projNum, partNo, excludeI));
+}
+// 建議清單是否要隱藏此構件:數量已滿(或構件總表手動註記 A201)才隱藏,只上線一部分仍要看得到。
+// usedMap 由呼叫端預先算好傳入(見 layoutUsedQtyMap);沒傳就退回逐筆計算。
+function layoutPartExhausted(projNum, partNo, excludeI, usedMap) {
+  const k = layoutDailyKey(projNum, partNo);
+  const bom = layoutBOMQtyMap[k] != null ? layoutBOMQtyMap[k] : layoutBOMQty(projNum, partNo);
+  if (bom <= 0) return false;                   // BOM 沒寫數量就不擋
+  const inTable = usedMap ? (usedMap[k] || 0) : layoutUsedQty(projNum, partNo, excludeI);
+  return layoutOnlineUsedK(k, inTable) >= bom;
 }
 function todayStr() {
   const d = new Date();
@@ -14818,7 +14991,7 @@ async function layoutInit() {
     sbFetchAll('/rest/v1/layout_items?select=*&ship_date=is.null&order=id.desc'),
     sbCount('/rest/v1/layout_items?select=id&ship_date=not.is.null')
   ];
-  if (!layoutRefLoaded) jobs.push(layoutLoadDailyOutputKeys(), layoutLoadBOM());
+  if (!layoutRefLoaded) jobs.push(layoutLoadDailyOutputKeys(), layoutLoadBOM(), layoutLoadOnlineKeys());
   const [r, shippedCount] = await Promise.all(jobs);
   layoutRefLoaded = true;
   layoutShippedCount = shippedCount || 0;
@@ -14889,32 +15062,40 @@ async function layoutLoadBOM() {
     if (Array.isArray(pr.data)) allBOM = pr.data;
   }
   // get all zones with project + code（分頁抓取，避免 Supabase 單次只回 1000 筆）
-  const zr = await sbFetchAll('/rest/v1/zones?select=id,zone_code,project_id');
+  const zr = await sbFetchAll('/rest/v1/zones?select=id,zone_code,project_id,status');
   layoutZoneMap = {};
   if (Array.isArray(zr.data)) {
-    zr.data.forEach(z => { layoutZoneMap[z.id] = {code: z.zone_code, pid: z.project_id}; });
+    zr.data.forEach(z => { layoutZoneMap[z.id] = {code: z.zone_code, pid: z.project_id, status: z.status || ''}; });
   }
   layoutBOMCache = [];
+  const projById = {};
+  (allBOM||[]).forEach(p => { projById[p.id] = p; });   // 先建索引,避免每個構件都 find 一次整份工程清單
   const cr = await sbFetchAll('/rest/v1/components?select=*');
   if (Array.isArray(cr.data)) {
     layoutBOMCache = cr.data.map(c => {
       const zinfo = layoutZoneMap[c.zone_id] || {};
-      const proj = allBOM.find(p => p.id === zinfo.pid);
-      return {...c, _zone_code: zinfo.code || '', _proj_num: proj ? proj.proj_num : ''};
+      const proj = projById[zinfo.pid];
+      return {...c, _zone_code: zinfo.code || '', _proj_num: proj ? proj.proj_num : '', _zone_status: zinfo.status || ''};
     });
   }
+  // BOM 支數索引:建議清單每打一個字都要判斷剩餘數量,逐筆掃全表會卡,改成 O(1) 查表
+  layoutBOMQtyMap = {};
+  layoutBOMCache.forEach(c => {
+    if (!c.part_no) return;
+    const k = layoutDailyKey(c._proj_num, c.part_no);
+    layoutBOMQtyMap[k] = (layoutBOMQtyMap[k] || 0) + (parseInt(c.qty) || 0);
+  });
   console.log('BOM cache loaded:', layoutBOMCache.length, 'components');
 }
 
 function layoutSwitchTab(tab) {
-  ['input','chart','virtual'].forEach(t => {
+  ['input','chart'].forEach(t => {
     const tabBtn = document.getElementById('ltab-'+t);
     const panel = document.getElementById('layout-'+t+'-panel');
     if (tabBtn) tabBtn.className = 'layout-tab' + (t===tab?' active':'');
     if (panel) panel.style.display = t===tab?'':'none';
   });
   if (tab==='chart') renderLayoutChart();
-  if (tab==='virtual') renderVirtualChart();
   if (tab==='input') { layoutEnsureBlankRow(); pgState.layout = 0; renderLayoutInput(); }
 }
 
@@ -14985,6 +15166,11 @@ function rowVisible(row) {
 // BOM total qty for a part in a project
 function layoutBOMQty(projNum, partNo) {
   if (!partNo) return 0;
+  // 快路徑:查預建索引(建議清單每個候選都會呼叫,不能逐筆掃全表)
+  if (projNum) {
+    const hit = layoutBOMQtyMap[layoutDailyKey(projNum, partNo)];
+    if (hit != null) return hit;
+  }
   const pn = partNo.trim().toUpperCase();
   const matches = layoutBOMCache.filter(c =>
     (c.part_no||'').toUpperCase() === pn && (!projNum || c._proj_num === projNum)
@@ -15231,9 +15417,14 @@ function layoutShipDateBlur() {
   renderLayoutStats();
 }
 
-function layoutDelRow(i) {
-  layoutSnapshotNow();
+async function layoutDelRow(i) {
   const row = layoutRows[i];
+  // 防呆:已存進資料庫的列刪掉就回不來,一律先確認(空白/未儲存的列不囉嗦)
+  if (row && row.id && !layoutRowIsBlank(row)) {
+    const who = [row.proj_num, row.zone_code, row.part_no].filter(Boolean).join(' / ') || ('第 ' + (i+1) + ' 列');
+    if (!await uiConfirm('確定刪除這一列?\n\n' + who + '\n\n資料庫紀錄會一併刪除,無法復原。', {danger:true})) return;
+  }
+  layoutSnapshotNow();
   if (row && row.id) sbFetch('/rest/v1/layout_items?id=eq.' + row.id, {method:'DELETE'});
   layoutRows.splice(i, 1);
   layoutEnsureBlankRow();
@@ -15620,29 +15811,47 @@ function layoutPartInput(i, input) {
   // 已輸入工程編號 → 一律只顯示該工程的構件(查無則不顯示，不退回全部專案)
   const wantProj = (layoutRows[i].proj_num||'').trim().toUpperCase();
   if (wantProj) pool = pool.filter(c => (c._proj_num||'').trim().toUpperCase() === wantProj);
-  const projHasParts = pool.length > 0;   // 該工程是否有構件(過濾已報驗前)
-  // 只顯示「未報驗」構件:已在每日產量出現過的(已報驗)不列入下拉,避免整個工程一長串太雜
-  pool = pool.filter(c => !layoutDailyOutputKeys.has(layoutDailyKey(c._proj_num, c.part_no)));
-  // fuzzy (contains) match on part_no, unique; empty q shows all
+  const projHasParts = pool.length > 0;   // 該工程是否有構件(過濾前)
+  // 先算好本表已用支數(整份只掃一次),後面每個候選都是 O(1) 查表,打字才不會卡
+  const usedMap = layoutUsedQtyMap(i);
+  // 只顯示「還有剩餘數量」的構件:依 BOM 支數扣掉已上線支數,扣完才隱藏。
+  // 例:B15Y01 共 5 支,先上線 3 支 → 仍會出現(剩 2 支);等 5 支都上線了才從清單消失。
+  // 比對與過濾合併成同一趟,不再產生中間陣列。
   const seen = {};
   const matches = [];
-  pool.forEach(c => {
+  let exhausted = 0;
+  for (let pi = 0; pi < pool.length; pi++) {
+    const c = pool[pi];
     const pn = (c.part_no||'').toUpperCase();
-    if ((q === '' || pn.indexOf(q) >= 0) && !seen[c.part_no]) { seen[c.part_no] = 1; matches.push(c); }
-  });
+    if (!pn || seen[pn]) continue;
+    if (q !== '' && pn.indexOf(q) < 0) continue;      // 先比字串(便宜),再算數量(貴)
+    if (layoutPartExhausted(c._proj_num, c.part_no, i, usedMap)) { exhausted++; continue; }
+    seen[pn] = 1;
+    matches.push(c);
+  }
+  // BOM 狀態「進行中」的工程區優先排在前面(其餘維持原順序)
+  const rank = s => (s === '進行中' ? 0 : s === '未開始' ? 1 : 2);
+  matches.sort((a, b) => rank(a._zone_status) - rank(b._zone_status));
   if (!matches.length) {
     // 有指定工程編號卻找不到任何(未報驗)構件 → 顯示提示,並區分「皆已報驗」與「查無構件資料」
     if (wantProj) {
-      const msg = (pool.length === 0 && projHasParts)
-        ? '「'+wantProj+'」構件皆已報驗，無未報驗構件'
-        : '「'+wantProj+'」查無構件資料（請確認該工程已匯入構件總表）';
+      const msg = !projHasParts
+        ? '「'+wantProj+'」查無構件資料（請確認該工程已匯入構件總表）'
+        : (exhausted > 0 ? '「'+wantProj+'」符合的構件已全部上線完畢' : '「'+wantProj+'」查無符合的構件編號');
       layoutShowSuggest(input, '<div class="lt-suggest-item" style="cursor:default;color:var(--text3)">'+msg+'</div>');
     }
     return;
   }
-  const itemsHtml = matches.map(c =>
-    '<div class="lt-suggest-item" onmousedown="layoutPickPart('+i+',\''+c.part_no+'\',\''+(c._proj_num||'')+'\')">'+c.part_no+' <span style="color:var(--text3);font-size:10px">'+(c._proj_num||'')+'</span></div>'
+  // 只列構件編號(不顯示工程編號與數量);清單過長時先給前 80 筆,再打幾個字就會收斂
+  const LIMIT = 80;
+  const shown = matches.length > LIMIT ? matches.slice(0, LIMIT) : matches;
+  let itemsHtml = shown.map(c =>
+    '<div class="lt-suggest-item" onmousedown="layoutPickPart('+i+',\''+c.part_no+'\',\''+(c._proj_num||'')+'\')">'+c.part_no+'</div>'
   ).join('');
+  if (matches.length > LIMIT) {
+    itemsHtml += '<div class="lt-suggest-item" style="cursor:default;color:var(--text3);font-size:10px">…還有 '
+      +(matches.length-LIMIT)+' 筆，請再輸入幾個字縮小範圍</div>';
+  }
   layoutShowSuggest(input, itemsHtml);
 }
 function layoutHideSuggest() {
@@ -16020,77 +16229,9 @@ function renderLayoutChart() {
   wrap.innerHTML = html;
 }
 
-// 虛擬現場: each bed 6m, parts placed by length proportion, long parts span beds
-function renderVirtualChart() {
-  const wrap = document.getElementById('layout-virtual');
-  // Only active (not shipped) parts that have a bed and spec length
-  const items = layoutRows.filter(r => r.part_no && r.bed && !r.ship_date);
-  // Build: for each virtual bed, list of segments. We place parts starting at their assigned bed.
-  // Simplification: parts are assigned to a starting VBED (use first matching of their bed code among VBEDS),
-  // then occupy ceil(length/6000) consecutive beds.
-  // Map BEDS bed value to a starting virtual bed (best-effort: take leading Dnn)
-  function startVBed(bedVal) {
-    if (!bedVal) return null;
-    const m = bedVal.match(/D(\d+)/);
-    if (!m) return null;
-    return 'D' + m[1];
-  }
-  // Track occupancy: for each vbed index, how many "lanes" used
-  const lanes = []; // array of arrays; lanes[laneIdx][vbedIdx] = item or null
-  function placeItem(item) {
-    const len = specLength(item.spec) || VBED_LEN;
-    const span = Math.max(1, Math.ceil(len / VBED_LEN));
-    const sv = startVBed(item.bed);
-    let startIdx = VBEDS.indexOf(sv);
-    if (startIdx < 0) startIdx = 0;
-    // find a lane where [startIdx, startIdx+span) is free
-    for (let l = 0; l < lanes.length; l++) {
-      let free = true;
-      for (let k = 0; k < span; k++) { if (lanes[l][startIdx+k]) { free = false; break; } }
-      if (free) {
-        for (let k = 0; k < span; k++) lanes[l][startIdx+k] = {item, head: k===0, span};
-        return;
-      }
-    }
-    // new lane
-    const lane = new Array(VBEDS.length).fill(null);
-    for (let k = 0; k < span; k++) lane[startIdx+k] = {item, head: k===0, span};
-    lanes.push(lane);
-  }
-  items.forEach(placeItem);
-  if (!lanes.length) lanes.push(new Array(VBEDS.length).fill(null));
-
-  let html = '<table class="layout-chart-table virtual"><thead><tr>';
-  VBEDS.forEach(b => { html += '<th>'+b+'</th>'; });
-  html += '</tr></thead><tbody>';
-  lanes.forEach(lane => {
-    html += '<tr>';
-    let c = 0;
-    while (c < VBEDS.length) {
-      const slot = lane[c];
-      if (slot && slot.head) {
-        const it = slot.item;
-        const len = specLength(it.spec);
-        html += '<td colspan="'+slot.span+'" class="cell-'+it.status+'" style="border:1px solid var(--accent2)"><div class="lcell"><span class="lcell-part">'+it.part_no+'</span><span style="font-size:9px;color:var(--text3)">'+(len?(len/1000).toFixed(1)+'m':'')+'</span></div></td>';
-        c += slot.span;
-      } else if (slot && !slot.head) {
-        c++; // covered by colspan
-      } else {
-        html += '<td></td>';
-        c++;
-      }
-    }
-    html += '</tr>';
-  });
-  html += '</tbody></table>';
-  wrap.innerHTML = '<div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px">每格 = 6m;構件依長度比例橫跨床位</div>' + html;
-}
-
 function layoutPrintChart() {
   // Determine which chart is visible
-  const chartPanel = document.getElementById('layout-chart-panel');
-  const isChart = chartPanel && chartPanel.style.display !== 'none';
-  const srcChart = isChart ? document.getElementById('layout-chart') : document.getElementById('layout-virtual');
+  const srcChart = document.getElementById('layout-chart');
   // Build a print area containing only the table (no title or statistics).
   let pa = document.getElementById('layout-print-area');
   if (pa) pa.remove();
@@ -18658,7 +18799,11 @@ async function layoutDeleteSelection(activeEl) {
     if (fields.length) clears.push({ key: row._key, fields });
   }
   if (!clears.length && !removeKeys.size) return;
-  if (removeKeys.size > 5 && !await uiConfirm('將移除 ' + removeKeys.size + ' 列資料(含資料庫紀錄),確定?')) return;
+  // 防呆:只要會移除整列(等於刪資料庫紀錄)就一定要確認,不論一列或多列
+  if (removeKeys.size && !await uiConfirm('將移除 ' + removeKeys.size + ' 列資料,資料庫紀錄會一併刪除且無法復原。\n\n確定刪除?', {danger:true})) return;
+  // 多格清空也先問一聲(單格清空屬正常編輯,不打擾)
+  if (!removeKeys.size && clears.length > 1
+      && !await uiConfirm('將清空 ' + clears.length + ' 列的欄位資料,確定?', {danger:true})) return;
   layoutSnapshotNow();   // 支援 Ctrl+Z 復原
   clears.forEach(cl => {
     if (removeKeys.has(cl.key)) return;   // 整列要移除的不用再清欄位
@@ -18978,7 +19123,9 @@ function renderDaily() {
 async function delDailyGroup(idsStr) {
   const ids = String(idsStr||'').split(',').map(s=>parseInt(s,10)).filter(n=>!isNaN(n));
   if (!ids.length) return;
-  if (!await uiConfirm('刪除這筆每日產量記錄（共 '+ids.length+' 支）?')) return;
+  const g0 = dailyRows.find(r => ids.indexOf(r.id) >= 0) || {};
+  const who = [g0.date, g0.proj_num, g0.zone_code, g0.part_no].filter(Boolean).join(' / ');
+  if (!await uiConfirm('確定刪除這筆每日產量紀錄?\n\n' + (who || '(無法辨識)') + '\n共 ' + ids.length + ' 支,刪除後無法復原。', {danger:true})) return;
   for (const id of ids) {
     await sbFetch('/rest/v1/daily_output?id=eq.' + id, { method:'DELETE', headers:{'Prefer':'return=minimal'} });
   }
@@ -21805,15 +21952,227 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
 
   window.ovrView=function(v){
     ovrCurView=v;
-    var views={one:'ovr-one-view',daily:'ovr-daily-view',price:'ovr-price-view',manu:'ovr-manu-view',eg:'ovr-eg-view'};
-    var tabs={one:'ovtab-one',daily:'ovtab-daily',price:'ovtab-price',manu:'ovtab-manu',eg:'ovtab-eg'};
+    var views={one:'ovr-one-view',daily:'ovr-daily-view',price:'ovr-price-view',manu:'ovr-manu-view',eg:'ovr-eg-view',hist:'ovr-hist-view'};
+    var tabs={one:'ovtab-one',daily:'ovtab-daily',price:'ovtab-price',manu:'ovtab-manu',eg:'ovtab-eg',hist:'ovtab-hist'};
     Object.keys(views).forEach(function(k){
       var el=document.getElementById(views[k]); if(el) el.style.display=(k===v)?'':'none';
       var tb=document.getElementById(tabs[k]); if(tb) tb.classList.toggle('active',k===v);
     });
     if(v==='one') ovrRenderOne();
     else if(v==='daily') ovrRenderDaily();
+    else if(v==='hist') ovrHistInit();
     else ovrRenderStat(v);
+  };
+
+  /* ══════ 歷史總覽:年/月/週/日 噸數與產值走勢 ══════
+     · 資料來源與計價/製造統計同一份 ovrDaily + ovrZoneMap,產值公式一致(噸 × 工程區單價),不另外查詢也不另立算法。
+     · 水電產值(util_price × util_weight_kg)是「工程區層級的總量」而非逐日發生,放進時間序列會跨期重複計算 → 歷史總覽不含水電。 */
+  var ovhGran='month', ovhShowVal=true, ovhInited=false;
+
+  // 產值金額可視性:管理員一律可見;其餘帳號可由「帳號管理 → 權限」設 output_value='hide' 鎖住
+  function ovhCanSeeValue(){
+    try{
+      if(typeof currentUser==='undefined'||!currentUser) return false;
+      if(currentUser.isAdmin) return true;
+      return ((currentUser.perms||{}).output_value)!=='hide';
+    }catch(e){ return false; }
+  }
+
+  function isoWeekKey(dateStr){
+    var d=new Date(dateStr+'T00:00:00');
+    var day=(d.getDay()+6)%7;              // 週一=0
+    d.setDate(d.getDate()-day+3);          // 移到該週的週四(ISO 週歸屬年份由週四決定)
+    var y=d.getFullYear();
+    var jan4=new Date(y,0,4);
+    var jd=(jan4.getDay()+6)%7;
+    var week1Thu=new Date(y,0,4-jd+3);
+    var w=Math.round((d-week1Thu)/604800000)+1;
+    return y+'-W'+pad(w);
+  }
+  function histKey(dateStr,gran){
+    if(gran==='year')  return dateStr.slice(0,4);
+    if(gran==='month') return dateStr.slice(0,7);
+    if(gran==='week')  return isoWeekKey(dateStr);
+    return dateStr;
+  }
+  function histLabel(key,gran){
+    if(gran==='year')  return key;
+    if(gran==='month') return key.slice(0,4)+'/'+key.slice(5,7);
+    if(gran==='week')  return key;
+    return key.slice(0,4)+'/'+key.slice(5,7)+'/'+key.slice(8,10);
+  }
+  function histColHead(gran){
+    return gran==='year'?'年':gran==='month'?'月':gran==='week'?'週':'日';
+  }
+  function granName(gran){ return histColHead(gran); }
+  // 單趟掃描分桶(不是每桶各掃一次),資料量大也不會卡
+  function histBuckets(from,to,gran){
+    var map={},keys=[];
+    for(var i=0;i<ovrDaily.length;i++){
+      var r=ovrDaily[i],dt=r.date;
+      if(!dt||dt<from||dt>to) continue;
+      var k=histKey(dt,gran),b=map[k];
+      if(!b){ b=map[k]={key:k,tons:0,qty:0,val:0}; keys.push(k); }
+      var z=ovrZoneMap[zkey(r.proj_num,r.zone_code)]||{};
+      var t=num(r.net_weight)/1000;
+      b.tons+=t; b.qty++; b.val+=t*num(z.unit_price);
+    }
+    keys.sort();
+    return keys.map(function(k){ return map[k]; });
+  }
+
+  window.ovrHistGran=function(g){
+    ovhGran=g;
+    ['year','month','week','day'].forEach(function(k){
+      var b=document.getElementById('ovh-g-'+k); if(b) b.classList.toggle('active',k===g);
+    });
+    ovrRenderHist();
+  };
+  window.ovrHistRange=function(kind){
+    var f=document.getElementById('ovh-from'),t=document.getElementById('ovh-to');
+    if(!f||!t) return;
+    var today=todayStr();
+    if(kind==='month'){ f.value=monthStartOf(today); t.value=monthEndOf(today); }
+    else if(kind==='q'){ f.value=monthStartOf(shiftMonthYm(today.slice(0,7),-2)+'-01'); t.value=monthEndOf(today); }
+    else if(kind==='year'){ f.value=today.slice(0,4)+'-01-01'; t.value=today.slice(0,4)+'-12-31'; }
+    else {                                    // 全部:取 daily_output 最早～最晚
+      var lo='',hi='';
+      for(var i=0;i<ovrDaily.length;i++){ var d=ovrDaily[i].date; if(!d) continue; if(!lo||d<lo)lo=d; if(!hi||d>hi)hi=d; }
+      f.value=lo||monthStartOf(today); t.value=hi||monthEndOf(today);
+    }
+    if(typeof refreshDateWk==='function') refreshDateWk(document.getElementById('ovr-hist-view'));
+    ovrRenderHist();
+  };
+  window.ovrHistToggleValue=function(){
+    if(!ovhCanSeeValue()) return;
+    ovhShowVal=!ovhShowVal;
+    ovrRenderHist();
+  };
+
+  function ovrHistInit(){
+    if(!ovhInited){
+      ovhInited=true;
+      if(!ovhCanSeeValue()) ovhShowVal=false;
+      ovrHistRange('year');        // 預設:今年 1/1 ~ 12/31(一開就看得到整年走勢)
+      return;
+    }
+    ovrRenderHist();
+  }
+
+  // ── 折線圖(inline SVG,不依賴外部繪圖庫)──
+  function histChart(rows,gran,showVal){
+    var W=900,H=300,padL=58,padR=showVal?68:18,padT=14,padB=34;
+    var iw=W-padL-padR, ih=H-padT-padB;
+    var maxT=0,maxV=0;
+    rows.forEach(function(b){ if(b.tons>maxT)maxT=b.tons; if(b.val>maxV)maxV=b.val; });
+    if(maxT<=0)maxT=1; if(maxV<=0)maxV=1;
+    var n=rows.length;
+    var x=function(i){ return n<=1 ? padL+iw/2 : padL+iw*i/(n-1); };
+    var yT=function(v){ return padT+ih-(ih*v/maxT); };
+    var yV=function(v){ return padT+ih-(ih*v/maxV); };
+    var s='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" role="img">';
+    // 橫向格線 + 左軸(噸)/右軸(產值)刻度
+    for(var g=0;g<=4;g++){
+      var yy=padT+ih*g/4, tv=maxT*(4-g)/4;
+      s+='<line class="ovh-grid" x1="'+padL+'" y1="'+yy+'" x2="'+(W-padR)+'" y2="'+yy+'" stroke-width="1"/>';
+      s+='<text class="ovh-axis" x="'+(padL-6)+'" y="'+(yy+3)+'" text-anchor="end">'+t2(tv)+'</text>';
+      if(showVal) s+='<text class="ovh-axis" x="'+(W-padR+6)+'" y="'+(yy+3)+'">'+Math.round(maxV*(4-g)/4/10000)+'萬</text>';
+    }
+    // X 軸標籤(點多時抽稀,避免糊成一片)
+    var step=Math.max(1,Math.ceil(n/12));
+    rows.forEach(function(b,i){
+      if(i%step && i!==n-1) return;
+      s+='<text class="ovh-axis" x="'+x(i)+'" y="'+(H-12)+'" text-anchor="middle">'+esc(histLabel(b.key,gran))+'</text>';
+    });
+    var line=function(vals,yf,color){
+      if(!n) return '';
+      var d=vals.map(function(v,i){ return (i?'L':'M')+x(i).toFixed(1)+' '+yf(v).toFixed(1); }).join(' ');
+      var o='<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+      vals.forEach(function(v,i){ o+='<circle cx="'+x(i).toFixed(1)+'" cy="'+yf(v).toFixed(1)+'" r="'+(n>60?2:3.2)+'" fill="'+color+'"/>'; });
+      return o;
+    };
+    if(showVal) s+=line(rows.map(function(b){return b.val;}), yV, '#e0555b');
+    s+=line(rows.map(function(b){return b.tons;}), yT, '#4f8ef7');
+    s+='</svg>';
+    var lg='<div class="ovh-lg"><span><i style="background:#4f8ef7"></i>總噸數(左軸 t)</span>'
+      +(showVal?'<span><i style="background:#e0555b"></i>總產值(右軸 NT$)</span>':'')+'</div>';
+    return '<div class="ovh-chart">'+s+lg+'</div>';
+  }
+
+  // 匯出目前粒度/區間的表格;產值被隱藏(或無權限)時連同金額一起不匯出,避免繞過權限
+  window.ovrHistExport=function(){
+    if(typeof XLSX==='undefined'){ alert('Excel 元件尚未載入,請稍後再試'); return; }
+    var from=(document.getElementById('ovh-from')||{}).value||'';
+    var to=(document.getElementById('ovh-to')||{}).value||'';
+    if(!from||!to||from>to){ alert('請選擇有效的日期區間'); return; }
+    var rows=histBuckets(from,to,ovhGran);
+    if(!rows.length){ alert('此區間查無產量資料,沒有可匯出的內容'); return; }
+    var showVal=ovhCanSeeValue()&&ovhShowVal;
+    var gn=granName(ovhGran), n=rows.length;
+    var totT=0,totV=0,totQ=0;
+    rows.forEach(function(b){ totT+=b.tons; totV+=b.val; totQ+=b.qty; });
+    var head=[gn,'總噸數(t)','總支數']; if(showVal) head.push('總產值(NT$)');
+    var aoa=[
+      ['歷史噸數與產值總覽'],
+      ['區間',from+' ~ '+to,'粒度','每'+gn,'產值口徑',showVal?'含金額':'僅噸數(金額已隱藏)'],
+      ['說明','自然月(1 日～月底);產值＝各工程區噸數 × 目前單價,不含水電產值'],
+      [],
+      head
+    ];
+    rows.forEach(function(b){
+      var r=[histLabel(b.key,ovhGran), +t2(b.tons), b.qty];
+      if(showVal) r.push(Math.round(b.val));
+      aoa.push(r);
+    });
+    var tot=['合計', +t2(totT), totQ]; if(showVal) tot.push(Math.round(totV));
+    aoa.push(tot);
+    var avg=['平均(每'+gn+')', +t2(n?totT/n:0), Math.round(n?totQ/n:0)];
+    if(showVal) avg.push(Math.round(n?totV/n:0));
+    aoa.push(avg);
+    var ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[{wch:16},{wch:14},{wch:12},{wch:16}];
+    var wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '歷史總覽');
+    XLSX.writeFile(wb, '歷史噸數與產值_每'+gn+'_'+from+'_'+to+'.xlsx');
+  };
+
+  window.ovrRenderHist=function(){
+    var box=document.getElementById('ovh-content'); if(!box) return;
+    var hint=document.getElementById('ovh-hint');
+    var from=(document.getElementById('ovh-from')||{}).value||'';
+    var to=(document.getElementById('ovh-to')||{}).value||'';
+    var canVal=ovhCanSeeValue(), showVal=canVal&&ovhShowVal;
+    var vb=document.getElementById('ovh-val-btn');
+    if(vb){ vb.style.display=canVal?'':'none'; vb.textContent=showVal?'隱藏產值':'顯示產值'; }
+    if(!from||!to||from>to){ box.innerHTML='<div class="empty-state">請選擇有效的日期區間</div>'; if(hint)hint.textContent=''; return; }
+    var rows=histBuckets(from,to,ovhGran);
+    var totT=0,totV=0,totQ=0;
+    rows.forEach(function(b){ totT+=b.tons; totV+=b.val; totQ+=b.qty; });
+    if(hint){
+      var h='自然月(1 日～月底)· 產值＝各工程區噸數 × 目前單價,不含水電產值';
+      if(rows.length===1) h+=' ｜ 目前區間只有 1 個'+(ovhGran==='year'?'年':ovhGran==='month'?'月':ovhGran==='week'?'週':'日')+',點「今年」或「全部」較看得出趨勢';
+      hint.textContent=h;
+    }
+    if(!rows.length){ box.innerHTML='<div class="empty-state">此區間查無產量資料</div>'; return; }
+    var gn=granName(ovhGran), n=rows.length;
+    var cards='<div class="ovh-cards">'
+      +'<div class="ovh-card"><span class="lbl">總噸數</span><span class="big">'+t2(totT)+' t</span></div>'
+      +'<div class="ovh-card"><span class="lbl">總支數</span><span class="big">'+intf(totQ)+' 支</span></div>'
+      +(showVal?'<div class="ovh-card"><span class="lbl">總產值</span><span class="big hi">'+ntd(totV)+'</span></div>':'')
+      +'<div class="ovh-card"><span class="lbl">平均噸數(每'+gn+')</span><span class="big">'+t2(n?totT/n:0)+' t</span></div>'
+      +(showVal?'<div class="ovh-card"><span class="lbl">平均產值(每'+gn+')</span><span class="big hi">'+ntd(n?totV/n:0)+'</span></div>':'')
+      +'<div class="ovh-card"><span class="lbl">期數</span><span class="big">'+n+' '+gn+'</span></div>'
+      +'</div>';
+    var tbl='<div class="card" style="padding:0;overflow:auto"><div class="table-scroll"><table class="ov-tbl" style="width:100%;border-collapse:collapse">'
+      +'<thead><tr><th style="text-align:left">'+histColHead(ovhGran)+'</th><th class="num">總噸數 (t)</th>'
+      +(showVal?'<th class="num">總產值 (NT$)</th>':'')+'</tr></thead><tbody>'
+      +rows.map(function(b){
+        return '<tr><td>'+esc(histLabel(b.key,ovhGran))+'</td><td class="num">'+t2(b.tons)+'</td>'
+          +(showVal?'<td class="num ov-red">'+money(b.val)+'</td>':'')+'</tr>';
+      }).join('')
+      +'</tbody><tfoot><tr><td>合計</td><td class="num">'+t2(totT)+'</td>'
+      +(showVal?'<td class="num">'+money(totV)+'</td>':'')+'</tr></tfoot></table></div></div>';
+    box.innerHTML=cards+histChart(rows,ovhGran,showVal)+tbl;
   };
 
   function oneSummary(from,to){
@@ -24778,6 +25137,160 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     }catch(e){
       console.warn('mypage attend load failed',e);
       body.innerHTML='<tr><td colspan="3" class="empty-state">載入失敗</td></tr>';
+    }
+  };
+})();
+</script>
+
+<!-- ═══════════ 管理員:成本(人事 + 五金)═══════════ -->
+<script>
+(function(){
+  var ctHwMode='buy';
+  function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function fmtD(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function ntd(x){ return 'NT$'+Math.round(num(x)).toLocaleString('en-US'); }
+  function n2(x){ return num(x).toFixed(2); }
+  function money(x){ return Math.round(num(x)).toLocaleString('en-US'); }
+
+  window.costRange=function(kind){
+    var f=document.getElementById('ct-from'), t=document.getElementById('ct-to');
+    if(!f||!t) return;
+    var now=new Date();
+    if(kind==='today'){ f.value=fmtD(now); t.value=fmtD(now); }
+    else if(kind==='prev'){ f.value=fmtD(new Date(now.getFullYear(),now.getMonth()-1,1)); t.value=fmtD(new Date(now.getFullYear(),now.getMonth(),0)); }
+    else { f.value=fmtD(new Date(now.getFullYear(),now.getMonth(),1)); t.value=fmtD(new Date(now.getFullYear(),now.getMonth()+1,0)); }
+    ['today','month','prev'].forEach(function(k){
+      var b=document.getElementById('ct-q-'+k); if(b) b.classList.toggle('active',k===kind);
+    });
+    if(typeof refreshDateWk==='function') refreshDateWk(document.getElementById('page-cost'));
+    costLoad();
+  };
+  window.costHwMode=function(m){
+    ctHwMode=m;
+    var b1=document.getElementById('ct-hw-buy'), b2=document.getElementById('ct-hw-use');
+    if(b1) b1.classList.toggle('active',m==='buy');
+    if(b2) b2.classList.toggle('active',m==='use');
+    var ti=document.getElementById('ct-hw-title'); if(ti) ti.textContent=(m==='buy')?'🔩 五金 · 採購實付':'🔩 五金 · 領用耗用(估算)';
+    costLoad();
+  };
+  window.costInit=function(){
+    if(!document.getElementById('ct-from').value) costRange('month');
+    else costLoad();
+  };
+
+  // 五金領用估算單價:取該品項在領用日(含)之前最近一次進貨單價;沒有就用最早一次
+  function priceLookup(purchases){
+    var byItem={};
+    purchases.forEach(function(p){
+      var k=(p.category||'')+'|'+(p.name||'');
+      (byItem[k]=byItem[k]||[]).push({d:p.tx_date||'', price:num(p.price)});
+    });
+    Object.keys(byItem).forEach(function(k){ byItem[k].sort(function(a,b){ return a.d<b.d?-1:a.d>b.d?1:0; }); });
+    return function(cat,name,onDate){
+      var arr=byItem[(cat||'')+'|'+(name||'')]; if(!arr||!arr.length) return null;
+      var hit=null;
+      for(var i=0;i<arr.length;i++){ if(arr[i].d<=onDate) hit=arr[i]; else break; }
+      return (hit||arr[0]).price;
+    };
+  }
+
+  window.costLoad=async function(){
+    var from=(document.getElementById('ct-from')||{}).value||'';
+    var to=(document.getElementById('ct-to')||{}).value||'';
+    var st=document.getElementById('ct-status'), warn=document.getElementById('ct-warn');
+    if(!from||!to||from>to){ if(st) st.textContent='請選擇有效區間'; return; }
+    if(st) st.textContent='載入中...';
+    if(warn) warn.innerHTML='';
+    try{
+      var res=await Promise.all([
+        sbFetchAll('/rest/v1/att_report?select=work_date,staff_name,work_hours,ot_hours&work_date=gte.'+from+'&work_date=lte.'+to),
+        sbFetchAll('/rest/v1/staff?select=id,name,department'),
+        sbFetchAll('/rest/v1/employee_pay?select=staff_id,pay_type,base_salary,daily_wage'),
+        sbFetchAll('/rest/v1/hw_purchases?select=*'),
+        sbFetchAll('/rest/v1/hw_usage?select=*&tx_date=gte.'+from+'&tx_date=lte.'+to),
+        sbFetchAll('/rest/v1/daily_output?select=date,net_weight&date=gte.'+from+'&date=lte.'+to)
+      ]);
+      var arr=function(i){ return Array.isArray(res[i].data)?res[i].data:[]; };
+      // 點工單(labor_orders)屬外包工資,不計入本頁人事成本,故不讀取
+      var att=arr(0), staff=arr(1), pays=arr(2), purAll=arr(3), usage=arr(4), out=arr(5);
+
+      // ── 正職:工數 × 日薪 ──
+      var payBySid={}; pays.forEach(function(p){ payBySid[String(p.staff_id)]=p; });
+      var sidByName={}; staff.forEach(function(s){ if(s.name) sidByName[s.name]=s; });
+      var reg={}, regTot=0, noPay={};
+      att.forEach(function(a){
+        var nm=a.staff_name; if(!nm) return;
+        var gong=num(a.work_hours)/8+num(a.ot_hours)/6;      // 與出勤回報 KPI「工數」同一算法
+        if(gong<=0) return;
+        var s=sidByName[nm], pay=s?payBySid[String(s.id)]:null;
+        var dw=pay?Payroll.dailyWage(pay):0;
+        if(!pay||dw<=0) noPay[nm]=1;
+        var r=reg[nm]||(reg[nm]={name:nm,gong:0,dw:dw,amt:0});
+        r.gong+=gong; r.dw=dw; r.amt+=gong*dw; regTot+=gong*dw;
+      });
+      var regRows=Object.keys(reg).map(function(k){return reg[k];}).sort(function(a,b){ return b.amt-a.amt; });
+
+      // ── 五金 ──
+      var hwRows=[], hwTot=0, hwNoPrice=0;
+      if(ctHwMode==='buy'){
+        purAll.filter(function(p){ var d=p.tx_date||''; return d>=from&&d<=to; })
+          .sort(function(a,b){ return String(b.tx_date||'').localeCompare(String(a.tx_date||'')); })
+          .forEach(function(p){
+            var amt=num(p.total)|| (num(p.qty)*num(p.price));
+            hwTot+=amt;
+            hwRows.push({d:p.tx_date,cat:p.category,name:p.name,qty:p.qty,unit:p.unit,price:num(p.price),amt:amt,who:p.vendor||''});
+          });
+      }else{
+        var lookup=priceLookup(purAll);
+        usage.slice().sort(function(a,b){ return String(b.tx_date||'').localeCompare(String(a.tx_date||'')); })
+          .forEach(function(u){
+            var pr=lookup(u.category,u.name,u.tx_date||to);
+            if(pr==null){ pr=0; hwNoPrice++; }
+            var amt=num(u.qty)*pr;
+            hwTot+=amt;
+            hwRows.push({d:u.tx_date,cat:u.category,name:u.name,qty:u.qty,unit:u.unit,price:pr,amt:amt,who:u.person||''});
+          });
+      }
+
+      var tons=0; out.forEach(function(o){ tons+=num(o.net_weight)/1000; });
+      var total=regTot+hwTot;
+
+      // 沒有薪資資料時要講清楚原因(employee_pay 受 is_hr RLS 保護,非 HR 帳號讀不到)
+      var w=[];
+      if(!pays.length) w.push('讀不到員工薪資設定(employee_pay 受 HR 權限保護)→ 正職人事成本會是 0。需要具備 HR 權限(perms.payroll)的帳號才看得到。');
+      else if(Object.keys(noPay).length) w.push('以下人員未設定日薪/月薪,金額以 0 計:'+Object.keys(noPay).slice(0,12).join('、')+(Object.keys(noPay).length>12?' 等':''));
+      if(ctHwMode==='use'&&hwNoPrice) w.push('有 '+hwNoPrice+' 筆領用找不到對應的進貨單價,金額以 0 計。');
+      if(warn) warn.innerHTML=w.length?('<div class="ct-warn">⚠ '+w.map(esc).join('<br>')+'</div>'):'';
+
+      document.getElementById('ct-cards').innerHTML=
+         '<div class="ct-card tot"><span class="lbl">總成本</span><span class="big">'+ntd(total)+'</span><span class="sub">'+esc(from)+' ~ '+esc(to)+'</span></div>'
+        +'<div class="ct-card hr"><span class="lbl">人事成本</span><span class="big">'+ntd(regTot)+'</span><span class="sub">'+regRows.length+' 人 · 不含點工單</span></div>'
+        +'<div class="ct-card"><span class="lbl">五金成本</span><span class="big">'+ntd(hwTot)+'</span><span class="sub">'+(ctHwMode==='buy'?'採購實付':'領用耗用(估算)')+' · '+hwRows.length+' 筆</span></div>'
+        +'<div class="ct-card"><span class="lbl">產量</span><span class="big">'+n2(tons)+' t</span><span class="sub">'+out.length+' 支</span></div>'
+        +'<div class="ct-card"><span class="lbl">每噸成本</span><span class="big">'+(tons>0?ntd(total/tons):'—')+'</span><span class="sub">總成本 ÷ 噸數</span></div>';
+
+      var regB=document.querySelector('#ct-reg-tbl tbody');
+      regB.innerHTML=regRows.length?regRows.map(function(r){
+        return '<tr><td>'+esc(r.name)+'</td><td class="num">'+n2(r.gong)+'</td><td class="num">'+(r.dw>0?money(r.dw):'<span style="color:var(--danger)">未設定</span>')+'</td><td class="num">'+money(r.amt)+'</td></tr>';
+      }).join('')+'<tr class="ct-foot"><td>合計 '+regRows.length+' 人</td><td class="num">'+n2(regRows.reduce(function(s,r){return s+r.gong;},0))+'</td><td></td><td class="num">'+money(regTot)+'</td></tr>'
+        :'<tr><td colspan="4" class="empty-state">此區間無出勤資料</td></tr>';
+      document.getElementById('ct-reg-sum').textContent=ntd(regTot);
+
+      var hwB=document.querySelector('#ct-hw-tbl tbody');
+      hwB.innerHTML=hwRows.length?hwRows.map(function(h){
+        return '<tr><td>'+esc(h.d||'')+'</td><td>'+esc(h.cat||'')+'</td><td>'+esc(h.name||'')+'</td>'
+          +'<td class="num">'+n2(h.qty)+' '+esc(h.unit||'')+'</td><td class="num">'+money(h.price)+'</td>'
+          +'<td class="num">'+money(h.amt)+'</td><td>'+esc(h.who)+'</td></tr>';
+      }).join('')+'<tr class="ct-foot"><td colspan="5">合計 '+hwRows.length+' 筆</td><td class="num">'+money(hwTot)+'</td><td></td></tr>'
+        :'<tr><td colspan="7" class="empty-state">此區間無五金'+(ctHwMode==='buy'?'進貨':'領用')+'紀錄</td></tr>';
+      document.getElementById('ct-hw-sum').textContent=ntd(hwTot);
+
+      if(st) st.textContent='已更新';
+    }catch(e){
+      console.warn('cost load failed',e);
+      if(st) st.textContent='載入失敗';
+      if(warn) warn.innerHTML='<div class="ct-warn">⚠ 成本資料載入失敗,請稍後重新整理。</div>';
     }
   };
 })();
