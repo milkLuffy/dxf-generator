@@ -2664,8 +2664,8 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="axx-hint" id="a202-hint"></div>
         <div class="axx-wrap">
           <table class="axx-table">
-            <thead><tr><th style="width:92px">時間</th><th style="width:76px">輸入完成</th><th style="width:60px">日期</th><th style="width:88px">工程編號</th><th style="width:90px">工程區</th><th style="width:90px">代號</th><th style="width:88px">流水編號</th><th style="width:52px">支數</th><th>構件編號</th><th style="width:56px">照片</th></tr></thead>
-            <tbody id="a202-body"><tr><td colspan="10" class="axx-empty">載入中…</td></tr></tbody>
+            <thead><tr><th style="width:92px">時間</th><th style="width:76px">輸入完成</th><th style="width:60px">日期</th><th style="width:88px">工程編號</th><th style="width:90px">工程區</th><th style="width:90px">代號</th><th style="width:90px">副號</th><th style="width:88px">流水編號</th><th style="width:52px">支數</th><th>構件編號</th><th style="width:56px">照片</th></tr></thead>
+            <tbody id="a202-body"><tr><td colspan="11" class="axx-empty">載入中…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -19236,6 +19236,16 @@ function axxMD(iso) {
   const p = String(iso||'').split('-');
   return p.length===3 ? (parseInt(p[1])+'/'+parseInt(p[2])) : (iso||'');
 }
+// 同「報驗」顯示:同一構件多支時合併為「構件編號*支數」(僅 1 支則不加 *n),依首次出現順序排列
+function axxPartsStr(parts) {
+  const order = [], cnt = {};
+  (parts || []).forEach(p => {
+    const key = String(p == null ? '' : p);
+    if (cnt[key] == null) { cnt[key] = 0; order.push(key); }
+    cnt[key]++;
+  });
+  return order.map(p => cnt[p] > 1 ? (p + '*' + cnt[p]) : p).join(' ');
+}
 function axxCompanyOfProj(projNum) {
   const key = String(projNum||'').trim().toUpperCase();
   const p = (allBOM||[]).find(x => String(x.proj_num||'').trim().toUpperCase() === key);
@@ -19371,7 +19381,7 @@ function a201Render() {
       '<td class="axx-num">' + esc(g.proc || '—') + '</td>' +
       '<td class="axx-num">' + esc(r ? r.serial_no : '—') + '</td>' +
       '<td class="axx-num">' + g.qty + '</td>' +
-      '<td class="axx-parts">' + esc(g.parts.join(' ')) + '</td>' +
+      '<td class="axx-parts">' + esc(axxPartsStr(g.parts)) + '</td>' +
     '</tr>';
   }).join('');
 }
@@ -19406,23 +19416,25 @@ async function a202LoadInner() {
   const [dr, rr, zr] = await Promise.all([
     sbFetchAll('/rest/v1/daily_output?select=date,proj_num,zone_code,proc_code,serial_no,part_no,company'),
     sbFetchAll('/rest/v1/a202_records?select=*'),
-    sbFetchAll('/rest/v1/zones?select=project_id,zone_code,proc_code')
+    sbFetchAll('/rest/v1/zones?select=project_id,zone_code,proc_code,sub_code')
   ]);
   if (rr.ok === false && rr.status === 404) { axxMissingTable(hint, 'a202_records'); }
   a202Recs = Array.isArray(rr.data) ? rr.data : [];
-  // 工程編號+工程區 → 加工代號:核對 zones 資料表最新值,優先於 daily_output 當時儲存的舊值
+  // 工程編號+工程區 → 加工代號 / 副號:核對 zones 資料表最新值,優先於 daily_output 當時儲存的舊值
   const projById = {}; (allBOM||[]).forEach(p => { projById[p.id] = String(p.proj_num||'').trim().toUpperCase(); });
-  const procMap = {};
+  const procMap = {}, subMap = {};
   (Array.isArray(zr.data) ? zr.data : []).forEach(z => {
     const proj = projById[z.project_id]; if (!proj) return;
-    procMap[proj + '|' + String(z.zone_code||'').trim().toUpperCase()] = z.proc_code || '';
+    const zk = proj + '|' + String(z.zone_code||'').trim().toUpperCase();
+    procMap[zk] = z.proc_code || '';
+    subMap[zk] = z.sub_code || '';
   });
   const groups = {};
   (Array.isArray(dr.data) ? dr.data : []).forEach(r => {
     if (!r.date || !r.serial_no) return;
     const serial = String(r.serial_no).trim();
     const k = r.date + '|' + serial;
-    if (!groups[k]) groups[k] = { date: r.date, serial, qty: 0, parts: [], projs: new Set(), zones: new Set(), procs: new Set(), company: '' };
+    if (!groups[k]) groups[k] = { date: r.date, serial, qty: 0, parts: [], projs: new Set(), zones: new Set(), procs: new Set(), subs: new Set(), company: '' };
     groups[k].qty += 1;   // 每日產量一列 = 一支
     if (r.part_no) groups[k].parts.push(r.part_no);
     if (r.proj_num) groups[k].projs.add(r.proj_num);
@@ -19431,11 +19443,13 @@ async function a202LoadInner() {
     const liveProc = procMap[zKey];
     const proc = (liveProc != null && liveProc !== '') ? liveProc : (r.proc_code || '');
     if (proc) groups[k].procs.add(proc);
+    const sub = subMap[zKey];   // 副號:同 BOM工程區,取 zones.sub_code 最新值
+    if (sub) groups[k].subs.add(sub);
     if (r.company) groups[k].company = r.company;
   });
   a202Groups = Object.values(groups).map(g => ({
     date: g.date, serial: g.serial, qty: g.qty, parts: g.parts,
-    proj: [...g.projs].join(' '), zone: [...g.zones].join(' '), proc: [...g.procs].join(' '),
+    proj: [...g.projs].join(' '), zone: [...g.zones].join(' '), proc: [...g.procs].join(' '), sub: [...g.subs].join(' '),
     company: axxCompanyOfSerial(g.serial, g.company)
   })).sort((a,b) => b.date.localeCompare(a.date) || b.serial.localeCompare(a.serial, undefined, {numeric:true}));
   a202Render();
@@ -19454,7 +19468,7 @@ function a202Render() {
   let rows = a202Groups.filter(g => g.company === a202Co);
   // 完成＝「輸入完成」及「照片」皆勾選;只要有一項未勾就仍算未完成、不隱藏
   if (pendingOnly) rows = rows.filter(g => { const r = recOf[g.date+'|'+g.serial]; return !(r && r.done && r.photo); });
-  if (!rows.length) { body.innerHTML = '<tr><td colspan="10" class="axx-empty">'+(pendingOnly?'沒有未完成的項目':'尚無資料')+'</td></tr>'; return; }
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="11" class="axx-empty">'+(pendingOnly?'沒有未完成的項目':'尚無資料')+'</td></tr>'; return; }
   body.innerHTML = rows.map(g => {
     const r = recOf[g.date+'|'+g.serial];
     const arg = "'" + g.date + "','" + g.serial.replace(/'/g,'') + "'";
@@ -19465,9 +19479,10 @@ function a202Render() {
       '<td class="axx-num">' + esc(g.proj) + '</td>' +
       '<td class="axx-num">' + esc(g.zone) + '</td>' +
       '<td class="axx-num">' + esc(g.proc) + '</td>' +
+      '<td class="axx-num">' + esc(g.sub) + '</td>' +
       '<td class="axx-num">' + esc(g.serial) + '</td>' +
       '<td class="axx-num">' + g.qty + '</td>' +
-      '<td class="axx-parts">' + esc(g.parts.join(' ')) + '</td>' +
+      '<td class="axx-parts">' + esc(axxPartsStr(g.parts)) + '</td>' +
       '<td><input type="checkbox" class="axx-chk" ' + ((r && r.photo) ? 'checked ' : '') + 'onchange="a202Toggle(' + arg + ',\'photo\',this.checked)"/></td>' +
     '</tr>';
   }).join('');
