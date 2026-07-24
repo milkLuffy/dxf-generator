@@ -16306,8 +16306,26 @@ function layoutExportExcel() {
 // ── 申驗單產生器 ──
 let inspTemplateBuffer = null;
 let inspSharedBaseBuffer = null;   // 共用後三頁範本(全公司共用,只設定一次)
+let inspDefaultCoverBuffer = null; // 共用預設第一頁(封面)範本(全公司共用,只設定一次);工程未自訂第一頁時預設使用
 let inspZones = [];
 let inspComponents = [];
+let inspCompExt = {};   // part_no -> extra obj (含 R0~R6 版次欄位)，供「版次」判定用
+
+// 版次判定:BOM 固定欄位 R0~R6。若被選中構件所有 R 開頭欄位皆無資料 → R0;
+// 否則顯示「有資料的 R 欄位中編號最大的那一個」(即最後一次改版)。
+function inspCompRev(partNo) {
+  const ext = inspCompExt[partNo] || {};
+  let best = -1;
+  for (const k in ext) {
+    const m = /^R(\d+)$/.exec(k);
+    if (!m) continue;
+    const v = ext[k];
+    if (v == null || String(v).trim() === '') continue;
+    const idx = parseInt(m[1]);
+    if (idx > best) best = idx;
+  }
+  return 'R' + (best < 0 ? 0 : best);
+}
 
 // app_config 讀寫:共用後三頁範本存於 app_config.key='insp_shared_pages'
 async function inspSaveConfig(key, value) {
@@ -16323,6 +16341,14 @@ async function inspGetSharedBase() {
   const r = await sbFetch('/rest/v1/app_config?select=value&key=eq.insp_shared_pages');
   const row = Array.isArray(r.data) && r.data[0] ? r.data[0] : null;
   if (row && row.value) { inspSharedBaseBuffer = base64ToArrayBuffer(row.value); return inspSharedBaseBuffer; }
+  return null;
+}
+// 取得共用預設第一頁(封面)範本(ArrayBuffer);無則回 null。結果快取於 inspDefaultCoverBuffer
+async function inspGetDefaultCover() {
+  if (inspDefaultCoverBuffer) return inspDefaultCoverBuffer;
+  const r = await sbFetch('/rest/v1/app_config?select=value&key=eq.insp_default_cover');
+  const row = Array.isArray(r.data) && r.data[0] ? r.data[0] : null;
+  if (row && row.value) { inspDefaultCoverBuffer = base64ToArrayBuffer(row.value); return inspDefaultCoverBuffer; }
   return null;
 }
 
@@ -16423,39 +16449,66 @@ async function inspLoadTemplate(pid) {
   const statusEl = document.getElementById('insp-template-status');
   const r = await sbFetch('/rest/v1/projects?select=template_name,inspect_template&id=eq.' + pid);
   const proj = Array.isArray(r.data) && r.data[0] ? r.data[0] : null;
-  // 共用後三頁範本狀態(全公司共用,只需設定一次)
+  // 共用預設第一頁(封面) 與 共用後三頁 範本狀態(全公司共用,各只需設定一次)
+  const coverBuf = await inspGetDefaultCover();
   const baseBuf = await inspGetSharedBase();
+  let coverHtml;
+  if (coverBuf) {
+    coverHtml = '<div style="margin-top:10px;font-family:var(--mono);font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+      '<span>✅ 共用預設第一頁：已設定(各工程預設使用)</span>' +
+      '<label class="tmpl-btn"><input type="file" accept=".docx" style="display:none" onchange="inspUploadDefaultCover(event)"/>更新共用預設第一頁</label>' +
+      '</div>';
+  } else {
+    coverHtml = '<div style="margin-top:10px;font-family:var(--mono);font-size:12px;color:#c0392b;display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+      '<span>⚠ 尚未設定共用預設第一頁(請上傳一次封面 .docx)</span>' +
+      '<label class="tmpl-btn upload"><input type="file" accept=".docx" style="display:none" onchange="inspUploadDefaultCover(event)"/>設定共用預設第一頁</label>' +
+      '</div>';
+  }
   let sharedHtml;
   if (baseBuf) {
-    sharedHtml = '<div style="margin-top:10px;font-family:var(--mono);font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+    sharedHtml = '<div style="margin-top:6px;font-family:var(--mono);font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
       '<span>✅ 共用後三頁範本：已設定</span>' +
       '<label class="tmpl-btn"><input type="file" accept=".docx" style="display:none" onchange="inspUploadSharedBase(event)"/>更新共用後三頁</label>' +
       '</div>';
   } else {
-    sharedHtml = '<div style="margin-top:10px;font-family:var(--mono);font-size:12px;color:#c0392b;display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+    sharedHtml = '<div style="margin-top:6px;font-family:var(--mono);font-size:12px;color:#c0392b;display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
       '<span>⚠ 尚未設定共用後三頁範本(請先上傳一次完整四頁檔)</span>' +
       '<label class="tmpl-btn upload"><input type="file" accept=".docx" style="display:none" onchange="inspUploadSharedBase(event)"/>設定共用後三頁</label>' +
       '</div>';
   }
+  const sharedBlock = coverHtml + sharedHtml;
   if (proj && proj.inspect_template) {
-    // decode base64 to ArrayBuffer
+    // 此工程有「自訂第一頁」(覆寫共用預設),優先使用
     inspTemplateBuffer = base64ToArrayBuffer(proj.inspect_template);
     statusEl.innerHTML = '<div class="tmpl-loaded">' +
       '<span class="tmpl-icon">📄</span>' +
-      '<div class="tmpl-info"><div class="tmpl-name">' + (proj.template_name || '已上傳範本') + '</div>' +
-      '<div class="tmpl-meta">已從雲端載入，可直接產生</div></div>' +
+      '<div class="tmpl-info"><div class="tmpl-name">' + (proj.template_name || '此工程自訂第一頁') + '</div>' +
+      '<div class="tmpl-meta">此工程使用「自訂第一頁」(已覆寫共用預設)</div></div>' +
       '<label class="tmpl-btn"><input type="file" accept=".docx" style="display:none" onchange="inspUploadTemplate(event)"/>更換第一頁</label>' +
+      '<button class="tmpl-btn" style="border:none;cursor:pointer" onclick="inspRestoreDefaultCover(\'' + pid + '\')">還原為共用預設</button>' +
       '</div>' +
       '<div class="tmpl-drop" style="margin-top:10px;padding:14px" ondragover="inspDragOver(event)" ondragleave="inspDragLeave(event)" ondrop="inspDropTemplate(event)">' +
-        '<div class="tmpl-drop-text">要換第一頁？將新的 <strong>第一頁 .docx</strong> 拖曳到這裡即可</div>' +
-      '</div>' + sharedHtml;
+        '<div class="tmpl-drop-text">要單獨換此工程的第一頁？將新的 <strong>第一頁 .docx</strong> 拖曳到這裡即可</div>' +
+      '</div>' + sharedBlock;
+  } else if (coverBuf) {
+    // 此工程未自訂 → 使用共用預設第一頁
+    inspTemplateBuffer = coverBuf;
+    statusEl.innerHTML = '<div class="tmpl-loaded">' +
+      '<span class="tmpl-icon">📄</span>' +
+      '<div class="tmpl-info"><div class="tmpl-name">共用預設第一頁</div>' +
+      '<div class="tmpl-meta">此工程使用共用預設封面，可直接產生</div></div>' +
+      '<label class="tmpl-btn"><input type="file" accept=".docx" style="display:none" onchange="inspUploadTemplate(event)"/>為此工程單獨更換</label>' +
+      '</div>' +
+      '<div class="tmpl-drop" style="margin-top:10px;padding:14px" ondragover="inspDragOver(event)" ondragleave="inspDragLeave(event)" ondrop="inspDropTemplate(event)">' +
+        '<div class="tmpl-drop-text">此工程要用不一樣的第一頁？將 <strong>第一頁 .docx</strong> 拖曳到這裡即可(只影響此工程)</div>' +
+      '</div>' + sharedBlock;
   } else {
     inspTemplateBuffer = null;
     statusEl.innerHTML = '<div class="tmpl-drop" ondragover="inspDragOver(event)" ondragleave="inspDragLeave(event)" ondrop="inspDropTemplate(event)">' +
-      '<div class="tmpl-drop-text">此工程尚未上傳第一頁<br>將 <strong>第一頁 .docx</strong> 拖曳到這裡，或</div>' +
+      '<div class="tmpl-drop-text">尚未設定共用預設第一頁,且此工程未自訂第一頁<br>請先於下方「設定共用預設第一頁」,或將 <strong>第一頁 .docx</strong> 拖曳到這裡(只影響此工程)</div>' +
       '<label class="tmpl-btn upload"><input type="file" accept=".docx" style="display:none" onchange="inspUploadTemplate(event)"/>⬆ 選擇第一頁檔案</label>' +
       '<div class="tmpl-drop-text" style="font-size:11px">（後三頁會自動帶入）</div>' +
-      '</div>' + sharedHtml;
+      '</div>' + sharedBlock;
   }
 }
 
@@ -16520,6 +16573,52 @@ function inspProcessSharedFile(file) {
 function inspUploadSharedBase(e) {
   inspProcessSharedFile(e.target.files[0]);
   e.target.value = '';
+}
+
+// 設定/更新「共用預設第一頁(封面)」(只需一次):上傳單張封面 .docx,標記後存 app_config
+// 之後所有工程未自訂第一頁時,都會預設使用此封面。
+function inspProcessDefaultCoverFile(file) {
+  if (!file) return;
+  if (!inspCheckDocx(file)) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const zt = new PizZip(ev.target.result);
+      const xt = zt.file('word/document.xml').asText();
+      const nT = (xt.match(/<w:tbl>/g) || []).length;
+      if (nT >= 3) { setInspStatus('共用預設第一頁應只含第一頁(封面),偵測到多頁完整檔;請上傳單張封面 .docx', false); return; }
+      startTemplateMarking(ev.target.result, null, file.name, 'default_cover');
+    } catch(err) {
+      console.error(err);
+      setInspStatus('共用預設第一頁解析失敗：' + err.message, false);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+function inspUploadDefaultCover(e) {
+  inspProcessDefaultCoverFile(e.target.files[0]);
+  e.target.value = '';
+}
+function inspDropDefaultCover(e) {
+  e.preventDefault(); e.currentTarget.classList.remove('drag-over');
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  inspProcessDefaultCoverFile(f);
+}
+// 還原此工程為「共用預設第一頁」:清掉此工程專屬的 inspect_template
+async function inspRestoreDefaultCover(pid) {
+  if (!pid) return;
+  if (!confirm('確定將此工程還原為「共用預設第一頁」?\n將移除此工程專屬的第一頁範本,改用全公司共用的預設封面。')) return;
+  setInspStatus('還原中...', false);
+  const r = await sbFetch('/rest/v1/projects?id=eq.' + pid, {
+    method: 'PATCH', headers: {'Prefer': 'return=minimal'},
+    body: JSON.stringify({inspect_template: null, template_name: null})
+  });
+  if (r.ok) {
+    setInspStatus('已還原為共用預設第一頁', true);
+    await inspLoadTemplate(pid);
+  } else {
+    setInspStatus('還原失敗：' + ((r.data && r.data.message) || '未知錯誤'), false);
+  }
 }
 
 // 拖拉上傳共用處理
@@ -16609,6 +16708,10 @@ function forceSizeOnMarkerRun(xml, marker, sz) {
 // injectMarker 並把該格字級設為 16pt(第一頁被標記的資訊)
 function injectMarker16(cellXml, marker) {
   return forceSizeOnMarkerRun(injectMarker(cellXml, marker), marker, 32);
+}
+// injectMarker 並把該格字級設為 12pt(sz 半點=24);圖號/版次欄用
+function injectMarker12(cellXml, marker) {
+  return forceSizeOnMarkerRun(injectMarker(cellXml, marker), marker, 24);
 }
 
 // 從關鍵字往前找最近的 □ 並替換 (跨 run 比對,處理 <w:t>□</w:t> 獨立 run)
@@ -16931,6 +17034,8 @@ function startTemplateMarking(buf, pid, fileName, target) {
   for (let ri = 0; ri < Math.min(grid.length, 10); ri++) {
     for (let ci = 0; ci < grid[ri].length; ci++) {
       const t = (grid[ri][ci].text || '').replace(/[\s\u3000]/g, '');
+      // \u9802\u90e8\u8868\u55ae\u6a19\u7c64(\u5de5\u7a0b\u7de8\u865f/\u5de5\u7a0b\u540d\u7a31)\u4e5f\u542b\u300c\u7de8\u865f/\u2026\u300d,\u4e0d\u662f\u6210\u54c1\u7de8\u865f\u6b04,\u5148\u6392\u9664\u907f\u514d\u8aa4\u5224
+      if (t === '\u5de5\u7a0b\u7de8\u865f' || t === '\u5de5\u7a0b\u540d\u7a31') continue;
       if (keyNames.some(k => t.indexOf(k) >= 0)) { headerRow = ri; colIdx = ci; break outer; }
     }
   }
@@ -16975,6 +17080,7 @@ async function pickColumn(headerRow, colIdx) {
       const t = grid[ri][ci].text;
       let marker = null;
       if (t === '工程名稱') marker = '{proj_name}';
+      else if (t === '工程編號') marker = '{proj_no}';   // 封面新增:工程編號(如 B820)
       else if (t === '申請日期') marker = '{apply_date}';
       else if (t === '檢驗日期') marker = '{inspect_date}';
       if (marker && ci + 1 < grid[ri].length) {
@@ -16985,19 +17091,21 @@ async function pickColumn(headerRow, colIdx) {
           edits.push({start: vc.absStart, end: vc.absEnd, newText: injectFirstPara(cellXml, marker)});
         } else {
           const cellXml = xml.slice(vc.absStart, vc.absEnd);
-          // 工程名稱 旁邊的值 -> 16pt
-          const fn = (marker === '{proj_name}') ? injectMarker16 : injectMarker;
+          // 工程名稱 / 工程編號 旁邊的值 -> 16pt
+          const fn = (marker === '{proj_name}' || marker === '{proj_no}') ? injectMarker16 : injectMarker;
           edits.push({start: vc.absStart, end: vc.absEnd, newText: fn(cellXml, marker)});
         }
       }
     }
   }
 
-  // 1b. 檢驗項目 cell: 二次加工完成/MT/VT -> ■, UT -> {ut_box}
+  // 1b. 檢驗項目 cell: 二次加工完成/VT -> ■, UT -> {ut_box}, MT -> {mt_box}(依有/無板)
   for (let ri = 0; ri < grid.length; ri++) {
     for (let ci = 0; ci < grid[ri].length; ci++) {
       const cell = grid[ri][ci];
-      if (cell.text.indexOf('二次加工') >= 0 && cell.text.indexOf('NDT') >= 0) {
+      // 只用「二次加工」判定檢驗項目格即可(第一頁只有這格含此字);
+      // 舊版還要求同時含「NDT」,但新版封面該格沒有 NDT → 會整個略過,導致 二次加工/MT 沒變黑框。
+      if (cell.text.indexOf('二次加工') >= 0) {
         let cx = xml.slice(cell.absStart, cell.absEnd);
         // 二次加工 -> 永遠 ■。改用 markBoxBefore(往前找最近的 □),
         // 這樣不論 □ 與「二次加工」是否在同一個 run 都能正確變黑框。
@@ -17005,8 +17113,8 @@ async function pickColumn(headerRow, colIdx) {
         //  另一種範本 □ 獨立成一個 run 時就不會變黑框。)
         cx = markBoxBefore(cx, '二次加工', '■');
         // UT/MT/VT: 往前找最近的 □ (跨 run 也能比對,涵蓋獨立的 <w:t>□</w:t> 結構)
-        cx = markBoxBefore(cx, 'UT', '{ut_box}');         // UT 使用者選擇
-        cx = markBoxBefore(cx, 'MT', '■');                // MT 永遠 ■
+        cx = markBoxBefore(cx, 'UT', '{ut_box}');         // UT 依勾選構件的 UT部位
+        cx = markBoxBefore(cx, 'MT', '{mt_box}');         // MT 依構件有/無板:全部 RH無板 → □,否則 ■
         cx = markBoxBefore(cx, 'VT', '■');                // VT 永遠 ■
         edits.push({start: cell.absStart, end: cell.absEnd, newText: cx});
       }
@@ -17069,6 +17177,26 @@ async function pickColumn(headerRow, colIdx) {
     }
   }
 
+  // 2d. 圖號/版次 column (第一頁): 標記 {d1}..{d20} 用來填「圖號/版次」(如 S4-D529/R1)
+  let dColIdx = -1;
+  for (let ci = 0; ci < grid[headerRow].length; ci++) {
+    const t = (grid[headerRow][ci].text || '').replace(/[\s　]/g, '');
+    if (t.indexOf('圖號') >= 0 || t.indexOf('版次') >= 0) { dColIdx = ci; break; }
+  }
+  if (dColIdx >= 0) {
+    let dnum = 0;
+    for (let rj = headerRow + 1; rj < grid.length; rj++) {
+      if (dColIdx >= grid[rj].length) continue;
+      const pCell = grid[rj][colIdx];
+      if (pCell && pCell.text === '') {
+        dnum++;
+        const dCell = grid[rj][dColIdx];
+        edits.push({start: dCell.absStart, end: dCell.absEnd, newText: injectMarker12(xml.slice(dCell.absStart, dCell.absEnd), '{d'+dnum+'}')});
+        if (dnum >= 20) break;
+      }
+    }
+  }
+
   // 3. Pages 2-4 fixed-structure cell markers
   const fixedEdits = markFixedPages(xml);
   fixedEdits.forEach(e => edits.push(e));
@@ -17085,6 +17213,22 @@ async function pickColumn(headerRow, colIdx) {
   zip.file('word/document.xml', xml);
   const markedBuf = zip.generate({type:'arraybuffer'});
   const b64 = arrayBufferToBase64(markedBuf);
+
+  // 共用預設第一頁(封面):存 app_config,不綁特定工程
+  if (pendingTemplate.target === 'default_cover') {
+    setInspStatus('共用預設第一頁標記完成，儲存中...', false);
+    const r = await inspSaveConfig('insp_default_cover', b64);
+    pendingTemplate = null;
+    if (r.ok) {
+      inspDefaultCoverBuffer = markedBuf;
+      setInspStatus('共用預設第一頁已儲存,之後各工程預設都會使用此封面(可為個別工程單獨更換)', true);
+      const pidNow = document.getElementById('insp-proj').value;
+      if (pidNow) await inspLoadTemplate(pidNow);
+    } else {
+      setInspStatus('共用預設第一頁儲存失敗：' + ((r.data && r.data.message) || '未知錯誤'), false);
+    }
+    return;
+  }
 
   // 共用後三頁範本:存 app_config,不綁特定工程
   if (pendingTemplate.target === 'shared') {
@@ -17143,6 +17287,10 @@ async function inspLoadComponents() {
   if (!zid) { el.innerHTML = '<div class="empty-state">請選擇工程區</div>'; if (selWrap) selWrap.innerHTML = '<div class="empty-state">尚未勾選構件</div>'; if (statEl) statEl.textContent = ''; return; }
   const r = await sbFetch('/rest/v1/components?select=*&zone_id=eq.' + zid + '&order=seq');
   let comps = Array.isArray(r.data) ? r.data : [];
+  // 載入 R0~R6 版次資料 (component_ext.extra)，供「已勾選構件」的「版次」欄判定
+  const exr = await sbFetch('/rest/v1/component_ext?select=part_no,extra&zone_id=eq.' + zid);
+  inspCompExt = {};
+  if (Array.isArray(exr.data)) exr.data.forEach(e => { inspCompExt[e.part_no] = e.extra || {}; });
   if (!comps.length) { el.innerHTML = '<div class="empty-state">此工程區無構件資料</div>'; if (selWrap) selWrap.innerHTML = '<div class="empty-state">尚未勾選構件</div>'; if (statEl) statEl.textContent = ''; return; }
   // 已報驗支數 per part_no (daily_output 一列 = 一支)
   const pid = document.getElementById('insp-proj').value;
@@ -17290,7 +17438,7 @@ function inspRenderSelected() {
   const items = checks.map(c => inspComponents[parseInt(c.dataset.idx)]).filter(Boolean);
   if (!items.length) { wrap.innerHTML = '<div class="empty-state">尚未勾選構件</div>'; return; }
   items.sort((a, b) => (parseInt(a.seq) || 0) - (parseInt(b.seq) || 0));
-  let html = '<div class="insp-comp-wrap"><div class="insp-comp-scroll"><table class="insp-comp-table"><thead><tr><th>序號</th><th>構件編號</th><th>規格</th><th>報驗支數</th><th>圖號</th><th>有/無板</th><th>UT部位</th></tr></thead><tbody>';
+  let html = '<div class="insp-comp-wrap"><div class="insp-comp-scroll"><table class="insp-comp-table"><thead><tr><th>序號</th><th>構件編號</th><th>規格</th><th>報驗支數</th><th>圖號</th><th>版次</th><th>有/無板</th><th>UT部位</th></tr></thead><tbody>';
   items.forEach(c => {
     const idx = inspComponents.indexOf(c);
     const prefix = ((c.spec||'').match(/^[A-Za-z]+/) || [''])[0];
@@ -17307,7 +17455,7 @@ function inspRenderSelected() {
         (ei === utList.length - 1 ? '<button type="button" class="insp-ut-add" onclick="inspUTAdd(' + idx + ')" title="再新增一個UT部位">＋</button>' : '') +
       '</span>').join('') +
     '</div>';
-    html += '<tr><td>' + (c.seq||'') + '</td><td>' + (c.part_no||'') + '</td><td>' + (c.spec||'') + '</td><td>' + (c._inspQty||1) + '</td><td>' + (c.drawing_no||'') + '</td><td class="insp-board-col">' + boardSel + '</td><td class="insp-board-col">' + utSel + '</td></tr>';
+    html += '<tr><td>' + (c.seq||'') + '</td><td>' + (c.part_no||'') + '</td><td>' + (c.spec||'') + '</td><td>' + (c._inspQty||1) + '</td><td>' + (c.drawing_no||'') + '</td><td>' + inspCompRev(c.part_no||'') + '</td><td class="insp-board-col">' + boardSel + '</td><td class="insp-board-col">' + utSel + '</td></tr>';
   });
   html += '</tbody></table></div></div>';
   wrap.innerHTML = html;
@@ -17469,7 +17617,7 @@ function inspDuplicatePages(xml, nPages) {
   const p3unit = xml.slice(p3s, p3End);
   let p1copies = '', p3copies = '';
   for (let k = 1; k < nPages; k++) {
-    p1copies += inspShiftMarkers(p1unit, ['p','v','b'], 20*k);
+    p1copies += inspShiftMarkers(p1unit, ['p','v','b','d'], 20*k);
     let c3 = inspShiftMarkers(p3unit, ['g','nb','n','u','q','z','s','h'], 20*k);
     c3 = inspShiftMarkers(c3, ['pt'], k);
     p3copies += c3;
@@ -17644,9 +17792,12 @@ async function generateInspection() {
   const utPartsOf = c => (Array.isArray(c && c._utList) ? c._utList : []).map(v => String(v||'').trim()).filter(v => v && v !== '無');
   const hasUTPart = c => utPartsOf(c).length > 0;
   const anyUTPart = checked.some(hasUTPart);
-  // Inspection items: 二次加工/MT/VT 固定 ■;UT 改由各構件「UT部位」決定
+  // Inspection items: 二次加工/VT 固定 ■;UT 依各構件「UT部位」決定;MT 依有/無板決定
   // 任一構件選了 UT部位(!=無) → 第一頁 UT 打 ■
   data['ut_box'] = anyUTPart ? '■' : '□';
+  // MT:當「勾選的構件全部都是 RH無板」時不勾(□);只要有任一支非 RH無板就打 ■
+  const allRHNoBoard = checked.length > 0 && checked.every(c => (c && c._board || '') === 'RH無板');
+  data['mt_box'] = allRHNoBoard ? '□' : '■';
   // Page 1 成品編號 + 協力商檢驗者, Page 3 rows — cover ALL parts (pages auto-duplicated per 20)
   const nParts = checked.length;
   const nPages = Math.ceil(nParts / 20);  // number of page-1/page-3 copies needed
@@ -17657,6 +17808,8 @@ async function generateInspection() {
     const c = checked[i-1];
     data['p' + i] = c ? ((c.part_no || '') + (inspQtyOf(c) > 1 ? '*' + inspQtyOf(c) : '')) : '';
     data['v' + i] = c ? person : '';
+    // 封面「圖號/版次」= 圖號 + '/' + 版次(R0~R6);無圖號時只顯示版次
+    data['d' + i] = c ? (function(){ const rev = inspCompRev(c.part_no || ''); const dw = (c.drawing_no || ''); return dw ? (dw + '/' + rev) : rev; })() : '';
     data['g' + i] = c ? (c.drawing_no || '') : '';
     data['n' + i] = c ? (c.part_no || '') : '';
     data['u' + i] = c ? '支' : '';
