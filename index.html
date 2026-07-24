@@ -2643,8 +2643,8 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="axx-hint" id="a201-hint"></div>
         <div class="axx-wrap">
           <table class="axx-table">
-            <thead><tr><th style="width:92px">時間</th><th style="width:76px">輸入完成</th><th style="width:60px">日期</th><th style="width:88px">工程編號</th><th style="width:90px">工程區</th><th style="width:90px">代號</th><th style="width:88px">流水編號</th><th style="width:52px">支數</th><th>構件編號</th></tr></thead>
-            <tbody id="a201-body"><tr><td colspan="9" class="axx-empty">載入中…</td></tr></tbody>
+            <thead><tr><th style="width:92px">時間</th><th style="width:76px">輸入完成</th><th style="width:60px">日期</th><th style="width:88px">工程編號</th><th style="width:90px">工程區</th><th style="width:90px">代號</th><th style="width:90px">副號</th><th style="width:88px">流水編號</th><th style="width:52px">支數</th><th>構件編號</th><th style="width:92px">鍵入系統</th></tr></thead>
+            <tbody id="a201-body"><tr><td colspan="11" class="axx-empty">載入中…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -2664,8 +2664,8 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="axx-hint" id="a202-hint"></div>
         <div class="axx-wrap">
           <table class="axx-table">
-            <thead><tr><th style="width:92px">時間</th><th style="width:76px">輸入完成</th><th style="width:60px">日期</th><th style="width:88px">工程編號</th><th style="width:90px">工程區</th><th style="width:90px">代號</th><th style="width:90px">副號</th><th style="width:88px">流水編號</th><th style="width:52px">支數</th><th>構件編號</th><th style="width:56px">照片</th></tr></thead>
-            <tbody id="a202-body"><tr><td colspan="11" class="axx-empty">載入中…</td></tr></tbody>
+            <thead><tr><th style="width:92px">時間</th><th style="width:76px">輸入完成</th><th style="width:60px">日期</th><th style="width:88px">工程編號</th><th style="width:90px">工程區</th><th style="width:90px">代號</th><th style="width:90px">副號</th><th style="width:88px">流水編號</th><th style="width:52px">支數</th><th>構件編號</th><th style="width:56px">照片</th><th style="width:92px">鍵入系統</th></tr></thead>
+            <tbody id="a202-body"><tr><td colspan="12" class="axx-empty">載入中…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -19282,35 +19282,40 @@ async function a201LoadInner() {
   const [lr, rr, zr] = await Promise.all([
     sbFetchAll('/rest/v1/layout_items?select=work_date,proj_num,zone_code,part_no,qty'),
     sbFetchAll('/rest/v1/a201_records?select=*'),
-    sbFetchAll('/rest/v1/zones?select=project_id,zone_code,proc_code')
+    sbFetchAll('/rest/v1/zones?select=project_id,zone_code,proc_code,sub_code')
   ]);
   if (rr.ok === false && rr.status === 404) { axxMissingTable(hint, 'a201_records'); }
   a201Recs = Array.isArray(rr.data) ? rr.data : [];
-  // 工程編號+工程區 → 加工代號:核對 zones 資料表最新值,不採用舊快取
+  // 工程編號+工程區 → 加工代號 / 副號:核對 zones 資料表最新值,不採用舊快取
   const projById = {}; (allBOM||[]).forEach(p => { projById[p.id] = String(p.proj_num||'').trim().toUpperCase(); });
-  const procMap = {};
+  const procMap = {}, subMap = {};
   (Array.isArray(zr.data) ? zr.data : []).forEach(z => {
     const proj = projById[z.project_id]; if (!proj) return;
-    procMap[proj + '|' + String(z.zone_code||'').trim().toUpperCase()] = z.proc_code || '';
+    const zk = proj + '|' + String(z.zone_code||'').trim().toUpperCase();
+    procMap[zk] = z.proc_code || '';
+    subMap[zk] = z.sub_code || '';
   });
   const groups = {};
   (Array.isArray(lr.data) ? lr.data : []).forEach(it => {
     if (!it.work_date || !it.proj_num) return;
     const proj = String(it.proj_num).trim().toUpperCase();
     const k = it.work_date + '|' + proj;
-    if (!groups[k]) groups[k] = { date: it.work_date, proj, qty: 0, parts: [], zones: new Set(), procs: new Set() };
+    if (!groups[k]) groups[k] = { date: it.work_date, proj, qty: 0, parts: [], zones: new Set(), procs: new Set(), subs: new Set() };
     groups[k].qty += parseInt(it.qty) || 1;
     if (it.part_no) groups[k].parts.push(it.part_no);
     if (it.zone_code) {
       const zc = String(it.zone_code).trim();
       groups[k].zones.add(zc);
-      const proc = procMap[proj + '|' + zc.toUpperCase()];
+      const zk = proj + '|' + zc.toUpperCase();
+      const proc = procMap[zk];
       if (proc) groups[k].procs.add(proc);
+      const sub = subMap[zk];
+      if (sub) groups[k].subs.add(sub);
     }
   });
   a201Groups = Object.values(groups).map(g => ({
     date: g.date, proj: g.proj, qty: g.qty, parts: g.parts,
-    zone: [...g.zones].join(' '), proc: [...g.procs].join(' ')
+    zone: [...g.zones].join(' '), proc: [...g.procs].join(' '), sub: [...g.subs].join(' ')
   })).sort((a,b) => b.date.localeCompare(a.date) || b.proj.localeCompare(a.proj));
   a201Groups.forEach(g => g.company = axxCompanyOfProj(g.proj));
   if (!(rr.ok === false)) await a201AssignSerials();
@@ -19369,9 +19374,10 @@ function a201Render() {
   const recOf = {}; a201Recs.forEach(r => { recOf[r.work_date + '|' + String(r.proj_num).trim().toUpperCase()] = r; });
   let rows = a201Groups.filter(g => g.company === a201Co);
   if (pendingOnly) rows = rows.filter(g => { const r = recOf[g.date+'|'+g.proj]; return !(r && r.done); });
-  if (!rows.length) { body.innerHTML = '<tr><td colspan="9" class="axx-empty">'+(pendingOnly?'沒有未完成的項目':'尚無資料')+'</td></tr>'; return; }
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="11" class="axx-empty">'+(pendingOnly?'沒有未完成的項目':'尚無資料')+'</td></tr>'; return; }
   body.innerHTML = rows.map(g => {
     const r = recOf[g.date+'|'+g.proj];
+    const arg = "'" + g.date + "','" + String(g.proj).replace(/'/g,'') + "'";
     return '<tr>' +
       '<td class="axx-time">' + esc((r && r.done_time) || '') + '</td>' +
       '<td><input type="checkbox" class="axx-chk" ' + (r ? '' : 'disabled title="尚未建立紀錄(需登入)" ') + ((r && r.done) ? 'checked ' : '') + 'onchange="a201Toggle(' + (r ? r.id : 'null') + ',this.checked)"/></td>' +
@@ -19379,9 +19385,11 @@ function a201Render() {
       '<td class="axx-num">' + esc(g.proj) + '</td>' +
       '<td class="axx-num">' + esc(g.zone || '—') + '</td>' +
       '<td class="axx-num">' + esc(g.proc || '—') + '</td>' +
+      '<td class="axx-num">' + esc(g.sub || '—') + '</td>' +
       '<td class="axx-num">' + esc(r ? r.serial_no : '—') + '</td>' +
       '<td class="axx-num">' + g.qty + '</td>' +
       '<td class="axx-parts">' + esc(axxPartsStr(g.parts)) + '</td>' +
+      '<td><button class="btn" style="padding:2px 8px;font-size:11px" ' + (r ? '' : 'disabled title="尚未建立紀錄(需登入)" ') + 'onclick="a201KeyIn(' + arg + ')">鍵入系統</button></td>' +
     '</tr>';
   }).join('');
 }
@@ -19393,6 +19401,46 @@ async function a201Toggle(id, checked) {
   if (r.ok) Object.assign(rec, body);
   else alert('儲存失敗,請確認已登入');
   a201Render();
+}
+// ── A201 一鍵鍵入 Oracle Forms：工作站 A201、加工欄不輸入（到加工後 2 下 Enter 進明細）──
+async function a201KeyIn(date, proj) {
+  const g = a201Groups.find(x => x.date === date && String(x.proj) === String(proj));
+  if (!g) { alert('找不到該列資料'); return; }
+  const rec = a201Recs.find(r => r.work_date === date && String(r.proj_num).trim().toUpperCase() === String(proj).trim().toUpperCase());
+  const serial = rec ? rec.serial_no : '';
+  if (!serial) { alert('這列還沒有流水編號（需登入後自動產生）'); return; }
+  const parts = a202PartsWithQty(g.parts);
+  const payload = {
+    date: g.date,            // 例 2026-07-24（agent 端轉成 8 碼）
+    serial: serial,          // 單據編號＝流水編號
+    proj: g.proj,            // 工程
+    sub: g.sub,              // 副號（zones.sub_code）
+    zone: g.zone,            // 分區＝工程區
+    proc: g.proc,            // 加工代號（A201 不會鍵入，僅供顯示）
+    company: g.company,      // 鎮山/麗生 → agent 端對到外包商代號
+    station: 'A201',         // 工作站填 A201
+    mode: 'A201',            // A201 模式：加工欄不輸入，2 下 Enter 進明細
+    parts: parts             // [{part, qty}, ...]
+  };
+  const summary = '【A201】日期 ' + g.date + '　單據 ' + serial + '\n工程 ' + g.proj + '　副號 ' + g.sub + '　分區 ' + g.zone +
+    '\n構件 ' + parts.map(p => p.qty > 1 ? p.part + '*' + p.qty : p.part).join(' ') +
+    '\n\n確定要自動鍵入 Oracle Forms 嗎？（打完不會自動送出，請自行核對後確認）';
+  if (!confirm(summary)) return;
+  try {
+    const res = await fetch(KEYIN_AGENT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok !== false) {
+      // 成功：不彈視窗打擾，讓使用者直接看 Forms 畫面
+    } else {
+      alert('鍵入失敗：' + (data.error || ('HTTP ' + res.status)));
+    }
+  } catch (e) {
+    alert('無法連線本機程式，請先啟動 keyin_agent（' + KEYIN_AGENT_URL + '）\n\n' + e);
+  }
 }
 
 // ── A202 ──
@@ -19468,7 +19516,7 @@ function a202Render() {
   let rows = a202Groups.filter(g => g.company === a202Co);
   // 完成＝「輸入完成」及「照片」皆勾選;只要有一項未勾就仍算未完成、不隱藏
   if (pendingOnly) rows = rows.filter(g => { const r = recOf[g.date+'|'+g.serial]; return !(r && r.done && r.photo); });
-  if (!rows.length) { body.innerHTML = '<tr><td colspan="11" class="axx-empty">'+(pendingOnly?'沒有未完成的項目':'尚無資料')+'</td></tr>'; return; }
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="12" class="axx-empty">'+(pendingOnly?'沒有未完成的項目':'尚無資料')+'</td></tr>'; return; }
   body.innerHTML = rows.map(g => {
     const r = recOf[g.date+'|'+g.serial];
     const arg = "'" + g.date + "','" + g.serial.replace(/'/g,'') + "'";
@@ -19484,8 +19532,51 @@ function a202Render() {
       '<td class="axx-num">' + g.qty + '</td>' +
       '<td class="axx-parts">' + esc(axxPartsStr(g.parts)) + '</td>' +
       '<td><input type="checkbox" class="axx-chk" ' + ((r && r.photo) ? 'checked ' : '') + 'onchange="a202Toggle(' + arg + ',\'photo\',this.checked)"/></td>' +
+      '<td><button class="btn" style="padding:2px 8px;font-size:11px" onclick="a202KeyIn(' + arg + ')">鍵入系統</button></td>' +
     '</tr>';
   }).join('');
+}
+// ── A202 一鍵鍵入 Oracle Forms：把該列資料送到本機 keyin_agent.py ──
+const KEYIN_AGENT_URL = 'http://localhost:8765/keyin';
+// 同一構件多支合併成 {part, qty}，供 Forms 明細「一列填數量」使用（依首次出現順序）
+function a202PartsWithQty(parts) {
+  const order = [], cnt = {};
+  (parts || []).forEach(p => { const k = String(p == null ? '' : p).trim(); if (!k) return; if (cnt[k] == null) { cnt[k] = 0; order.push(k); } cnt[k]++; });
+  return order.map(p => ({ part: p, qty: cnt[p] }));
+}
+async function a202KeyIn(date, serial) {
+  const g = a202Groups.find(x => x.date === date && String(x.serial) === String(serial));
+  if (!g) { alert('找不到該列資料'); return; }
+  const parts = a202PartsWithQty(g.parts);
+  const payload = {
+    date: g.date,            // 例 2026-07-22（agent 端轉成 2026/07/22）
+    serial: g.serial,        // 單據編號＝流水編號
+    proj: g.proj,            // 工程
+    sub: g.sub,              // 副號（zones.sub_code）
+    zone: g.zone,            // 分區＝工程區
+    proc: g.proc,            // 加工代號
+    company: g.company,      // 鎮山/麗生 → agent 端對到外包商代號
+    parts: parts             // [{part, qty}, ...]
+  };
+  const summary = '日期 ' + g.date + '　單據 ' + g.serial + '\n工程 ' + g.proj + '　副號 ' + g.sub + '　分區 ' + g.zone + '　加工 ' + g.proc +
+    '\n構件 ' + parts.map(p => p.qty > 1 ? p.part + '*' + p.qty : p.part).join(' ') +
+    '\n\n確定要自動鍵入 Oracle Forms 嗎？（打完不會自動送出，請自行核對後確認）';
+  if (!confirm(summary)) return;
+  try {
+    const res = await fetch(KEYIN_AGENT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok !== false) {
+      // 成功：不彈視窗打擾，讓使用者直接看 Forms 畫面
+    } else {
+      alert('鍵入失敗：' + (data.error || ('HTTP ' + res.status)));
+    }
+  } catch (e) {
+    alert('無法連線本機程式，請先啟動 keyin_agent.py（' + KEYIN_AGENT_URL + '）\n\n' + e);
+  }
 }
 // A202 紀錄採 upsert:第一次勾選時自動建立 (date+serial_no) 紀錄
 async function a202Toggle(date, serial, field, checked) {
