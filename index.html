@@ -215,6 +215,31 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .pr-sum-row input{width:110px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:13px;padding:5px 7px;text-align:right;outline:none}
 .pr-sum-row input:focus{border-color:var(--accent)}
 .pr-saved{font-family:var(--mono);font-size:12px;color:var(--success)}
+.pr-tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-top:8px}
+.pr-zones{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px;font-family:var(--mono);font-size:12px;color:var(--text3)}
+.pr-zchip{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:3px 9px;color:var(--text2)}
+.pr-zchip b{color:var(--accent2);font-weight:700}
+.pr-zchip.util b{color:var(--green)}
+.pr-zbtn{font-family:var(--mono);font-size:13px;font-weight:600;padding:7px 14px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);border-radius:8px;cursor:pointer;white-space:nowrap;transition:all .12s}
+.pr-zbtn:hover{border-color:var(--accent2);color:var(--text)}
+.pr-zbtn.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.pr-basic-wrap{overflow-x:auto}
+.pr-basic{border-collapse:collapse;font-family:var(--mono);font-size:13px}
+.pr-basic th,.pr-basic td{border:1px solid var(--border);padding:6px 10px}
+.pr-basic thead th{background:var(--bg3);color:var(--accent2);font-weight:700;text-align:center;white-space:nowrap;min-width:150px}
+.pr-basic th.pr-b-corner{background:transparent;border-top:none;border-left:none;min-width:0}
+.pr-basic td.pr-b-lbl{color:var(--text3);white-space:nowrap;background:var(--bg3);font-size:12px}
+.pr-basic td input{width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;padding:6px 8px;text-align:right;outline:none}
+.pr-basic td input:focus{border-color:var(--accent2)}
+.pr-basic td input.pr-ro{background:transparent;border-color:transparent;color:var(--text3)}
+.pr-basic td .pr-sv{font-family:var(--mono);font-size:13px;color:var(--accent2);font-weight:700;display:block;text-align:right}
+.pr-hu-row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.pr-hu-row>.pr-card{flex:1 1 340px;margin-bottom:18px}
+.pr-tbl th.pr-grp{background:var(--bg2);color:var(--accent);font-size:13px;letter-spacing:.03em}
+.pr-zempty{color:var(--danger)}
+.pr-reauto{font-family:var(--mono);font-size:12px;padding:5px 10px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);border-radius:6px;cursor:pointer;white-space:nowrap}
+.pr-reauto:hover{border-color:var(--accent2);color:var(--text)}
+.pr-card-title .pr-auto-hint{float:right;text-transform:none;letter-spacing:0;color:var(--green);font-size:11px}
 
 /* ── Dashboard ── */
 .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
@@ -857,11 +882,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .st-已報驗{background:rgba(92,184,138,.18);color:var(--green)}
 .st-已出貨{background:rgba(125,211,192,.18);color:var(--accent3)}
 .st-未報驗{background:rgba(90,98,120,.2);color:var(--text3)}
+.st-預報{background:rgba(167,139,250,.20);color:#a78bfa}
 .st-HOLD{background:rgba(224,96,96,.18);color:var(--red)}
 .cell-上線中{background:rgba(245,197,66,.06)}
 .cell-待出貨{background:rgba(79,142,247,.06)}
 .cell-已報驗{background:rgba(92,184,138,.06)}
 .cell-已出貨{background:rgba(125,211,192,.06)}
+.cell-預報{background:rgba(167,139,250,.08)}
 .cell-HOLD{background:rgba(224,96,96,.06)}
 .insp-upload-row{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);padding:12px 16px}
 .insp-template-status{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:14px 18px}
@@ -896,6 +923,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .insp-sel-stat{font-family:var(--mono);font-size:12px;color:var(--accent2);font-weight:400;margin-left:10px}
 .insp-comp-table th,.insp-comp-table td{text-align:center}
 .insp-comp-table .insp-board-col{text-align:center}
+/* 預報構件:④ 表被標記為預報的列 + 暫存區分組 */
+.insp-comp-table tr.insp-pre-row td{background:rgba(167,139,250,.10)}
+.insp-comp-table tr.insp-pre-row:hover td{background:rgba(167,139,250,.16)}
+.insp-comp-table .insp-pre-chk{accent-color:#a78bfa!important}
+.pre-group{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden;margin-bottom:12px}
+.pre-group-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;background:rgba(167,139,250,.10);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12px;color:var(--text2)}
+.pre-group-title{color:var(--text2)}
+.pre-group-stat{font-size:10px;padding:2px 8px;border-radius:10px;white-space:nowrap;background:rgba(167,139,250,.18);color:#a78bfa;border:1px solid rgba(167,139,250,.35)}
+.pre-group-head .pre-group-title b{color:#a78bfa}
+.pre-selall{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);white-space:nowrap}
+.pre-group .insp-comp-wrap{border:none;border-radius:0}
+.pre-chk{accent-color:#a78bfa!important}
 .insp-board-sel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:11px;padding:4px 6px;outline:none;cursor:pointer}
 .insp-board-sel:focus{border-color:var(--accent2)}
 .insp-board-sel:disabled{background:transparent;border-color:transparent;color:transparent;cursor:default;pointer-events:none}
@@ -1139,6 +1178,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 #layout-input-table select.stcell-上線中{background:rgba(245,197,66,.16)!important}
 #layout-input-table select.stcell-待出貨{background:rgba(79,142,247,.16)!important}
 #layout-input-table select.stcell-已出貨{background:rgba(125,211,192,.16)!important}
+#layout-input-table select.stcell-預報{background:rgba(167,139,250,.16)!important;color:#a78bfa}
 #layout-input-table select.stcell-HOLD{background:rgba(224,96,96,.16)!important}
 /* 所有可編輯欄(上線日期/工程編號/編號/出貨日期)統一用灰底樣式,
    移除藍色粗框+外陰影(原本會超出到標題列);hover / focus 只淡淡變藍邊,跟床位、數量一致 */
@@ -2603,6 +2643,9 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <div class="section-label" style="margin-top:24px;margin-bottom:8px">④ 已勾選構件（依序號排列）<span class="insp-sel-stat" id="insp-sel-stat"></span></div>
       <div id="insp-selected"><div class="empty-state">尚未勾選構件</div></div>
 
+      <div class="section-label" style="margin-top:24px;margin-bottom:8px">📌 預報構件暫存區<span style="font-weight:400;color:var(--text3);font-size:12px;margin-left:8px">勾「預報」的構件會暫存在這；真正要報驗時按「補報驗」直接產單（申請/檢驗日期用當天，製造 Key in 日期沿用預報當天），補完即消失</span></div>
+      <div id="insp-pre-panel"><div class="empty-state">目前沒有預報構件</div></div>
+
       <div class="section-label" style="margin-top:24px;margin-bottom:8px">⑤ 申驗單範本（上傳第一頁，後三頁自動帶入）</div>
       <div class="insp-template-status" id="insp-template-status">
         <div class="empty-state" style="padding:16px">請先選擇工程</div>
@@ -2723,17 +2766,19 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     <div class="page" id="page-pricing">
       <div class="page-title">計價</div>
       <div class="proj-section">
-        <div class="section-label">① 選擇工程與工程區（每個工程區獨立計價）</div>
+        <div class="section-label">① 選擇工程（工程區依代號尾字自動分類：G 大樑 · B 小樑 · C 柱 · 其餘雜項；含「水電」者歸大小樑水電）</div>
         <div class="proj-row">
-          <select class="filter-select" id="pricing-proj" onchange="pricingLoadZones()" style="width:100%;padding:9px 12px;font-size:14px">
+          <select class="filter-select" id="pricing-proj" onchange="pricingLoadProject()" style="width:100%;padding:9px 12px;font-size:14px">
             <option value="">— 選擇工程 —</option>
-          </select>
-          <select class="filter-select" id="pricing-zone" onchange="pricingLoadSheet()" style="width:100%;padding:9px 12px;font-size:14px">
-            <option value="">— 選擇工程區 —</option>
           </select>
         </div>
       </div>
-      <div id="pricing-sheet" style="margin-top:18px"><div class="empty-state">請先選擇工程與工程區</div></div>
+      <div class="pr-tabs" id="pricing-tabs" style="display:none">
+        <button class="layout-tab active" id="prtab-beam" onclick="pricingTab('beam')">大小樑（含水電）</button>
+        <button class="layout-tab" id="prtab-misc" onclick="pricingTab('misc')">雜項</button>
+        <button class="layout-tab" id="prtab-col"  onclick="pricingTab('col')">柱子</button>
+      </div>
+      <div id="pricing-sheet" style="margin-top:18px"><div class="empty-state">請先選擇工程</div></div>
     </div>
 
     <!-- 產值（管理員） -->
@@ -4522,6 +4567,8 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
             <span id="att-rpt-label" style="font-family:var(--mono);font-size:13px;color:var(--text);min-width:110px;text-align:center">—</span>
             <button class="dash-nav-btn" onclick="attRptNav(1)">下個月 »</button>
             <button class="dash-nav-btn" onclick="attRptNav(0)">本月</button>
+            <span style="flex:1"></span>
+            <button class="btn-add-new" onclick="attReportExportPDF()">🖨️ 輸出 PDF（橫式一頁）</button>
           </div>
         </div>
         <div class="card">
@@ -8389,7 +8436,7 @@ const AUDIT_SKIP_PARAMS=new Set(['select','order','limit','offset','on_conflict'
 const AUDIT_TBL_LABEL={
   profiles:'帳號', staff:'公司名冊', eg_staff:'長榮人員', projects:'工程', zones:'工程區',
   components:'構件', component_ext:'構件附加', material_receipts:'進料', layout_items:'線上進度表',
-  daily_output:'每日產量', att_report:'出勤回報', attend_log:'打卡紀錄', calendar_events:'行事曆',
+  daily_output:'每日產量', pre_inspections:'預報構件', att_report:'出勤回報', attend_log:'打卡紀錄', calendar_events:'行事曆',
   announcements:'公司公佈欄', notifications:'通知', gen_logs:'產生紀錄', app_config:'系統設定',
   app_notifications:'發佈通知', notification_settings:'通知規則', notification_reads:'通知已讀',
   billing_records:'請款紀錄', billing_archive:'請款封存', labor_orders:'點工單',
@@ -8412,6 +8459,9 @@ const AUDIT_FIELD_LABEL={
   part_no:'構件編號', comp_no:'構件編號', net_weight:'淨重', weight:'重量', length:'長度',
   work_date:'施作日期', ship_date:'出貨日期', bed:'床位', serial_no:'單據編號', doc_no:'單據編號',
   company:'公司', inspect_time:'報驗時間', proc_code:'製程', sub_code:'區別',
+  // 預報構件
+  insp_qty:'報驗支數', board:'有/無板', ut_list:'UT部位', rev:'版次', work_loc:'施作地點',
+  keyin_date:'製造Key in日期', insp_person:'協力商檢驗者', company_unit:'公司單位', client:'業主',
   // 五金
   category:'分類', stock:'庫存', safety:'安全庫存', tx_date:'日期', price:'單價', total:'總價',
   vendor:'廠商', person:'領用人', remaining:'剩餘',
@@ -14899,19 +14949,39 @@ let layoutShippedQty = {};     // 工程編號|構件編號 -> 已出貨的上�
 let layoutDailyQty = {};       // 工程編號|構件編號 -> 每日產量支數(已報驗,可能未經線上進度表)
 let layoutBOMQtyMap = {};      // 工程編號|構件編號 -> BOM 總支數(建議清單要 O(1) 查,不能每次掃全表)
 
+let layoutPreInspKeys = new Set();   // 預報構件(pre_inspections)的 proj|part 鍵
 function layoutDailyKey(projNum, partNo) {
   return String(projNum || '').trim().toUpperCase() + '|' + String(partNo || '').trim().toUpperCase();
 }
 function layoutApplyDailyStatus(row) {
   if (!row || !row.part_no || row.ship_date || row.status === '已出貨' || row.status === 'HOLD') return;
+  const key = layoutDailyKey(row.proj_num, row.part_no);
+  // 預報構件:雖已寫入每日產量,但尚未正式報驗 → 狀態顯示「預報」(紫),優先於待出貨。
+  // 補報驗後 pre_inspections 該筆被刪除,此處自動回落到「待出貨」(仍在每日產量)。
+  if (layoutPreInspKeys.has(key)) {
+    row.status = '預報';
+    row.inspected = false;
+    return;
+  }
   // 已報驗/已申驗狀態以「每日產量」為準:有資料才算已報驗;每日產量刪掉後要跟著清掉
-  if (layoutDailyOutputKeys.has(layoutDailyKey(row.proj_num, row.part_no))) {
+  if (layoutDailyOutputKeys.has(key)) {
     if (row.status !== '待出貨') row.status = '待出貨';
     row.inspected = true;
   } else {
     row.inspected = false;
-    if (row.status === '待出貨') row.status = '上線中';
+    if (row.status === '待出貨' || row.status === '預報') row.status = '上線中';
   }
+}
+// 載入預報構件鍵(pre_inspections)。表很小(平常近乎空),每次進線上進度表都重抓,
+// 確保補報驗後狀態立即回落到「待出貨」。
+async function layoutLoadPreInspKeys() {
+  layoutPreInspKeys = new Set();
+  try {
+    const r = await sbFetchAll('/rest/v1/pre_inspections?select=proj_num,part_no');
+    if (Array.isArray(r.data)) r.data.forEach(x => {
+      if (x.proj_num && x.part_no) layoutPreInspKeys.add(layoutDailyKey(x.proj_num, x.part_no));
+    });
+  } catch(e) {}
 }
 async function layoutLoadDailyOutputKeys() {
   const r = await sbFetchAll('/rest/v1/daily_output?select=proj_num,part_no');
@@ -14992,6 +15062,7 @@ async function layoutInit() {
     sbCount('/rest/v1/layout_items?select=id&ship_date=not.is.null')
   ];
   if (!layoutRefLoaded) jobs.push(layoutLoadDailyOutputKeys(), layoutLoadBOM(), layoutLoadOnlineKeys());
+  jobs.push(layoutLoadPreInspKeys());   // 預報構件鍵每次都重抓(表極小),補報後狀態即時回落
   const [r, shippedCount] = await Promise.all(jobs);
   layoutRefLoaded = true;
   layoutShippedCount = shippedCount || 0;
@@ -15349,7 +15420,9 @@ function layoutRowHtml(i) {
     let html = '';
     const row = layoutRows[i];
     const bedOpts = '<option value=""></option>' + BEDS.map(b => '<option value="'+b+'"'+(row.bed===b?' selected':'')+'>'+b+'</option>').join('');
-    const statusOpts = STATUSES.map(s => '<option value="'+s+'"'+(row.status===s?' selected':'')+'>'+s+'</option>').join('');
+    // 「預報」為衍生狀態(由 pre_inspections 決定,不在手選清單),若本列為預報則臨時補進選項以正確顯示
+    const statusList = (row.status && STATUSES.indexOf(row.status) < 0) ? STATUSES.concat([row.status]) : STATUSES;
+    const statusOpts = statusList.map(s => '<option value="'+s+'"'+(row.status===s?' selected':'')+'>'+s+'</option>').join('');
     // 資料列的文字格預設唯讀(Excel 式:方向鍵漫遊選取,Enter 進入編輯);最上方空白輸入列保持可直接打字
     const RO = layoutRowIsInput(row) ? '' : ' readonly';
     // 空白輸入列固定黏在表頭下方(捲動時永遠看得到)
@@ -16391,18 +16464,16 @@ async function inspInit() {
   document.getElementById('insp-template-status').innerHTML = '<div class="empty-state" style="padding:16px">請先選擇工程</div>';
   inspTemplateBuffer = null;
   inspSetDefaultRecv();
+  renderPreInspPanel();   // 載入預報構件暫存區
 }
 
 // 受檢日期/時間 預設值:上午(00:00-11:59)→當天 13:00;下午(12:00-23:59)→隔天 08:00
 function inspSetDefaultRecv() {
-  const now = new Date();
-  const afternoon = now.getHours() >= 12;
-  const target = new Date(now);
-  if (afternoon) target.setDate(target.getDate() + 1);   // 下午 → 隔天
+  const recv = inspDefaultRecv(new Date());
   const dEl = document.getElementById('insp-recv-date');
   const tEl = document.getElementById('insp-recv-time');
-  if (dEl) dEl.value = (target.getMonth()+1) + '/' + target.getDate();
-  if (tEl) tEl.value = afternoon ? '08:00' : '13:00';
+  if (dEl) dEl.value = recv.date;
+  if (tEl) tEl.value = recv.time;
 }
 
 async function inspLoadZones() {
@@ -17378,10 +17449,17 @@ function inspSetBoardEnabled(cb) {
   } else {
     c._board = '';   // 取消勾選清空,下次勾選還原成有板
     c._utList = [];   // UT部位一併還原成預設「無」
+    c._pre = false;   // 預報標記一併清除(整支取消勾選就不再記得預報)
   }
 }
 function inspBoardChange(i, sel) {
   if (inspComponents[i]) inspComponents[i]._board = sel.value;
+}
+// 勾「預報」:標記此構件為預報構件(產單時排除於 Word 外、但仍寫每日產量、暫存待補報)
+function inspTogglePre(i, cb) {
+  if (inspComponents[i]) inspComponents[i]._pre = cb.checked;
+  inspRenderSelected();
+  inspUpdateSelCount();
 }
 // UT 部位下拉選項(預設「無」);「新增部位」讓使用者自訂部位名稱
 const INSP_UT_PARTS = ['無','水電補孔','外伸翼板','補強板','對接','補孔','托樑','柱底板','柱上柱','補板','樑上柱','封板'];
@@ -17438,7 +17516,7 @@ function inspRenderSelected() {
   const items = checks.map(c => inspComponents[parseInt(c.dataset.idx)]).filter(Boolean);
   if (!items.length) { wrap.innerHTML = '<div class="empty-state">尚未勾選構件</div>'; return; }
   items.sort((a, b) => (parseInt(a.seq) || 0) - (parseInt(b.seq) || 0));
-  let html = '<div class="insp-comp-wrap"><div class="insp-comp-scroll"><table class="insp-comp-table"><thead><tr><th>序號</th><th>構件編號</th><th>規格</th><th>報驗支數</th><th>圖號</th><th>版次</th><th>有/無板</th><th>UT部位</th></tr></thead><tbody>';
+  let html = '<div class="insp-comp-wrap"><div class="insp-comp-scroll"><table class="insp-comp-table"><thead><tr><th>序號</th><th>構件編號</th><th>規格</th><th>報驗支數</th><th>圖號</th><th>版次</th><th>有/無板</th><th>UT部位</th><th title="勾選=預報構件：這次不列入申驗單，但仍計入每日產量，暫存於下方「預報構件暫存區」等真正報驗時補單">預報</th></tr></thead><tbody>';
   items.forEach(c => {
     const idx = inspComponents.indexOf(c);
     const prefix = ((c.spec||'').match(/^[A-Za-z]+/) || [''])[0];
@@ -17455,7 +17533,8 @@ function inspRenderSelected() {
         (ei === utList.length - 1 ? '<button type="button" class="insp-ut-add" onclick="inspUTAdd(' + idx + ')" title="再新增一個UT部位">＋</button>' : '') +
       '</span>').join('') +
     '</div>';
-    html += '<tr><td>' + (c.seq||'') + '</td><td>' + (c.part_no||'') + '</td><td>' + (c.spec||'') + '</td><td>' + (c._inspQty||1) + '</td><td>' + (c.drawing_no||'') + '</td><td>' + inspCompRev(c.part_no||'') + '</td><td class="insp-board-col">' + boardSel + '</td><td class="insp-board-col">' + utSel + '</td></tr>';
+    const preChk = '<td class="insp-pre-col" style="text-align:center"><input type="checkbox" class="insp-pre-chk"' + (c._pre ? ' checked' : '') + ' onchange="inspTogglePre(' + idx + ',this)" title="勾選=預報構件（這次不出單、暫存待補報）"/></td>';
+    html += '<tr' + (c._pre ? ' class="insp-pre-row"' : '') + '><td>' + (c.seq||'') + '</td><td>' + (c.part_no||'') + '</td><td>' + (c.spec||'') + '</td><td>' + (c._inspQty||1) + '</td><td>' + (c.drawing_no||'') + '</td><td>' + inspCompRev(c.part_no||'') + '</td><td class="insp-board-col">' + boardSel + '</td><td class="insp-board-col">' + utSel + '</td>' + preChk + '</tr>';
   });
   html += '</tbody></table></div></div>';
   wrap.innerHTML = html;
@@ -17493,8 +17572,11 @@ function inspUpdateSelCount() {
     totalQty += n;
     totalW += perW * n;
   });
+  // 預報構件數:這次不列入申驗單,但仍計入每日產量
+  let preCnt = 0;
+  checks.forEach(cb => { const c = inspComponents[parseInt(cb.dataset.idx)]; if (c && c._pre) preCnt += (parseInt(c._inspQty) || 1); });
   const stat = document.getElementById('insp-sel-stat');
-  if (stat) stat.textContent = n ? ('數量 ' + totalQty + ' ・ 重量 ' + totalW.toFixed(2) + ' kg (' + (totalW/1000).toFixed(2) + ' t)') : '';
+  if (stat) stat.textContent = n ? ('數量 ' + totalQty + ' ・ 重量 ' + totalW.toFixed(2) + ' kg (' + (totalW/1000).toFixed(2) + ' t)' + (preCnt ? '　·　其中預報 ' + preCnt + ' 支（本次申驗單只出 ' + (totalQty - preCnt) + ' 支）' : '')) : '';
   inspSyncCheckAll();
 }
 
@@ -17688,19 +17770,158 @@ function inspLockWordLayout(xml) {
   });
   return xml;
 }
+// ── 申驗單 Word 組建(共用引擎)──────────────────────────────────────────
+// 「首次報驗」與「補報驗(預報構件)」兩條路徑共用同一份組單邏輯。
+// checked：構件陣列(需含 part_no/spec/drawing_no/_inspQty/_board/_utList/_zone_code/_sub;
+//          可選 _rev 版次快照,補報時沿用預報當下的版次)。
+// ctx：{ templateBuffer, proj_name, proj_no, owner, companyUnit, zoneCode, procCode,
+//        workLoc, person, docNo, recvDate, recvTime, today, inspectDay, keyinDate }。
+// 日期一律由 ctx 帶入 → 補報時申請/檢驗日期用「補報當天」,keyin_date 沿用「預報當天」。
+// 只負責產生並下載 Word;不寫每日產量、不動 UI 狀態。成功回傳檔名,失敗丟出例外。
+async function inspBuildDocx(checked, ctx) {
+  const today = ctx.today;
+  const inspectDay = ctx.inspectDay;
+  const person = ctx.person || '';
+  const docNo = ctx.docNo || '';
+  const data = {
+    proj_name: ctx.proj_name || '',
+    proj_no: ctx.proj_no || '',
+    proj_full: (ctx.proj_no || '') + (ctx.proj_name || ''),
+    owner: ctx.owner || '',
+    apply_date: rocDate(today),
+    inspect_date: rocDate(inspectDay),
+    apply_roc: rocDate(today),
+    keyin_date: ctx.keyinDate || westDot(today),
+    date_roc_slash: rocSlash(today),
+    doc_no: docNo,
+    serial_no: docNo,
+    insp_person: person,
+    recv_date: ctx.recvDate || '',
+    recv_time: ctx.recvTime || '',
+    total_qty: String(checked.reduce((s,c)=>s+(Math.max(1,parseInt(c&&c._inspQty)||1)),0)),
+    work_loc: ctx.workLoc || '',
+    am_box: (today.getHours() < 12) ? '□' : '■',
+    pm_box: (today.getHours() < 12) ? '■' : '□',
+    company_unit: ctx.companyUnit || '鎮山工程'
+  };
+  const inspQtyOf = c => Math.max(1, parseInt(c && c._inspQty) || 1);
+  const totalParts = checked.length;
+  for (let pg = 1; pg <= Math.ceil(totalParts/20); pg++) {
+    let sum = 0;
+    for (let k = 20*(pg-1); k < Math.min(20*pg, totalParts); k++) sum += inspQtyOf(checked[k]);
+    data['pt' + pg] = String(sum);
+  }
+  const utPartsOf = c => (Array.isArray(c && c._utList) ? c._utList : []).map(v => String(v||'').trim()).filter(v => v && v !== '無');
+  const hasUTPart = c => utPartsOf(c).length > 0;
+  const anyUTPart = checked.some(hasUTPart);
+  data['ut_box'] = anyUTPart ? '■' : '□';
+  const allRHNoBoard = checked.length > 0 && checked.every(c => (c && c._board || '') === 'RH無板');
+  data['mt_box'] = allRHNoBoard ? '□' : '■';
+  const nParts = checked.length;
+  const nPages = Math.ceil(nParts / 20);
+  const NDT_BOARD_SET = ['RH有板','BH無板','BH有板','BOX有板','Q有板'];
+  const NB_YES = '是(✓   )否(    )', NB_NO = '是(    )否(✓   )', NB_BLANK = '是(    )否(    )';
+  // 版次:優先用快照 _rev(補報用),否則即時查 inspCompExt
+  const revOf = c => (c && c._rev != null && c._rev !== '') ? c._rev : inspCompRev((c && c.part_no) || '');
+  for (let i = 1; i <= nPages * 20; i++) {
+    const c = checked[i-1];
+    data['p' + i] = c ? ((c.part_no || '') + (inspQtyOf(c) > 1 ? '*' + inspQtyOf(c) : '')) : '';
+    data['v' + i] = c ? person : '';
+    data['d' + i] = c ? (function(){ const rev = revOf(c); const dw = (c.drawing_no || ''); return dw ? (dw + '/' + rev) : rev; })() : '';
+    data['g' + i] = c ? (c.drawing_no || '') : '';
+    data['n' + i] = c ? (c.part_no || '') : '';
+    data['u' + i] = c ? '支' : '';
+    data['q' + i] = c ? String(inspQtyOf(c)) : '';
+    data['z' + i] = c ? (c._zone_code || ctx.zoneCode || '') : '';
+    data['h' + i] = c ? (ctx.procCode || '') : '';
+    data['s' + i] = c ? (c._sub || '') : '';
+    data['b' + i] = c ? (c._board || '') : '';
+    data['nb' + i] = c ? (NDT_BOARD_SET.indexOf(c._board || '') >= 0 ? NB_YES : NB_NO) : NB_BLANK;
+  }
+  data['parts_box'] = checked.map(c => (c.part_no || '') + (inspQtyOf(c) > 1 ? '*' + inspQtyOf(c) : '')).join(' ');
+  const projNumVal = ctx.proj_no || '';
+  const ndtParts = checked.filter(c => NDT_BOARD_SET.indexOf(c._board || '') >= 0 || hasUTPart(c));
+  for (let j = 1; j <= 5; j++) {
+    const c = ndtParts[j-1];
+    const utPart = c && hasUTPart(c) ? utPartsOf(c).join('、') : '';
+    data['ndproj'+j] = c ? projNumVal : '';
+    data['ndpart'+j] = c ? (c.part_no || '') : '';
+    data['ndloc'+j]  = c ? (utPart ? ('銲道 ' + utPart) : '銲道') : '';
+    data['nddraw'+j] = c ? (c.drawing_no || '') : '';
+    data['ndlen'+j]  = c ? (utPart ? 'MT VT UT' : 'MT VT') : '';
+  }
+  data['ndresult'] = ndtParts.length > 5 ? '其餘同上' : '';
+
+  let zip = new PizZip(ctx.templateBuffer);
+  let docXml = zip.file('word/document.xml').asText();
+  const isFragment = (docXml.match(/<w:tbl>/g) || []).length < 3;
+  if (isFragment) {
+    const baseBuf = await inspGetSharedBase();
+    if (!baseBuf) throw new Error('尚未設定共用後三頁範本,請先在範本區上傳一次完整四頁檔');
+    const baseZip = new PizZip(baseBuf);
+    const baseXml = baseZip.file('word/document.xml').asText();
+    docXml = inspAssembleFull(docXml, baseXml);
+    zip = baseZip;
+  }
+  if (nPages > 1) docXml = inspDuplicatePages(docXml, nPages);
+  if (ndtParts.length === 0 && !anyUTPart) docXml = inspRemovePage4(docXml);
+  docXml = inspLockWordLayout(docXml);
+  zip.file('word/document.xml', docXml);
+  const doc = new docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    delimiters: {start: '{', end: '}'},
+    nullGetter: function() { return ''; }
+  });
+  doc.render(data);
+  const out = doc.getZip().generate({
+    type: 'blob',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  });
+  const ymd = String(today.getFullYear()) + String(today.getMonth()+1).padStart(2,'0') + String(today.getDate()).padStart(2,'0');
+  const fname = (ctx.proj_no || '申驗單') + '_申驗單_' + ymd + '_' + docNo + (ctx.fnameSuffix || '') + '.docx';
+  const url = URL.createObjectURL(out);
+  const a = document.createElement('a'); a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  return fname;
+}
+
+// 解析某工程要用的第一頁範本(不動 UI):有自訂第一頁用自訂,否則用共用預設封面。
+async function inspResolveTemplateBuffer(projId) {
+  let buf = null;
+  if (projId) {
+    const r = await sbFetch('/rest/v1/projects?select=inspect_template&id=eq.' + projId);
+    const proj = Array.isArray(r.data) && r.data[0] ? r.data[0] : null;
+    if (proj && proj.inspect_template) buf = base64ToArrayBuffer(proj.inspect_template);
+  }
+  if (!buf) buf = await inspGetDefaultCover();
+  return buf;
+}
+
+// 受檢日期/時間 預設值(上午→當天13:00;下午→隔天08:00)。inspSetDefaultRecv 與補報共用。
+function inspDefaultRecv(now) {
+  const afternoon = now.getHours() >= 12;
+  const t = new Date(now);
+  if (afternoon) t.setDate(t.getDate() + 1);
+  return { date: (t.getMonth()+1) + '/' + t.getDate(), time: afternoon ? '08:00' : '13:00' };
+}
+
 let _inspGenerating = false;
 async function generateInspection() {
   if (_inspGenerating) return;   // 防止快速連按造成重複報驗
-  // Validate
-  if (!inspTemplateBuffer) { setInspStatus('請先上傳範本 .docx', false); return; }
   if (typeof PizZip === 'undefined' || typeof docxtemplater === 'undefined') {
     setInspStatus('Word 函式庫尚未載入，請檢查網路連線', false); return;
   }
-  const checked = Array.from(document.querySelectorAll('.insp-comp-chk:checked')).map(c => inspComponents[parseInt(c.dataset.idx)]);
-  if (!checked.length) { setInspStatus('請至少勾選一個構件', false); return; }
+  const checkedAll = Array.from(document.querySelectorAll('.insp-comp-chk:checked')).map(c => inspComponents[parseInt(c.dataset.idx)]);
+  if (!checkedAll.length) { setInspStatus('請至少勾選一個構件', false); return; }
   // #2 報驗支數不可超過可報數量(BOM 數量扣掉已報)
-  const over = checked.find(c => (parseInt(c._inspQty)||1) > (c._remaining != null ? c._remaining : (parseInt(c.qty)||1)));
+  const over = checkedAll.find(c => (parseInt(c._inspQty)||1) > (c._remaining != null ? c._remaining : (parseInt(c.qty)||1)));
   if (over) { setInspStatus('「' + (over.part_no||'') + '」報驗支數超過可報數量(剩 ' + over._remaining + ' 支)', false); return; }
+  // 拆分:預報構件(這次不出單、暫存待補) vs 實報構件(這次進申驗單)
+  const realChecked = checkedAll.filter(c => !c._pre);
+  const preChecked  = checkedAll.filter(c => c._pre);
+  // 有實報構件才需要範本;全部都預報時只寫產量+暫存,不產 Word
+  if (realChecked.length && !inspTemplateBuffer) { setInspStatus('請先上傳範本 .docx', false); return; }
   _inspGenerating = true;
 
   // Project info
@@ -17708,23 +17929,19 @@ async function generateInspection() {
   const proj = allBOM.find(p => String(p.id) === String(pid));
   const projName = proj ? proj.proj_name : '';
   const company = proj ? (proj.company || '') : '';
-  // Selected zone code (分區)
   const zid = document.getElementById('insp-zone').value;
   const zoneObj = (inspZones||[]).find(z => String(z.id) === String(zid));
   const zoneCode = zoneObj ? zoneObj.zone_code : '';
-  // tag checked components with zone + sub for page 3 (副號 from zone.sub_code)
   const zoneSub = zoneObj ? (zoneObj.sub_code || '') : '';
   const procCode = zoneObj ? (zoneObj.proc_code || '') : '';
-  const _projC = allBOM.find(p => String(p.id) === String(pid));
-  const _companyVal = _projC ? (_projC.company || '') : '';
-  const companyUnit = (_companyVal === '麗生') ? '麗生工程' : '鎮山工程';
-  checked.forEach(c => { c._zone_code = zoneCode; c._sub = zoneSub; });
+  const companyUnit = (company === '麗生') ? '麗生工程' : '鎮山工程';
+  checkedAll.forEach(c => { c._zone_code = zoneCode; c._sub = zoneSub; });
 
   // #4 施作地點: look up 床位 for selected parts from 線上進度表 (layout_items)
   let workLoc = '';
   try {
     const projNum = proj ? proj.proj_num : '';
-    const partList = checked.map(c => c.part_no).filter(Boolean);
+    const partList = checkedAll.map(c => c.part_no).filter(Boolean);
     if (projNum && partList.length) {
       const inq = partList.map(p => '"' + p + '"').join(',');
       const lr = await sbFetch('/rest/v1/layout_items?select=part_no,bed&proj_num=eq.' + encodeURIComponent(projNum) + '&part_no=in.(' + encodeURIComponent(inq) + ')');
@@ -17733,7 +17950,7 @@ async function generateInspection() {
         lr.data.forEach(row => {
           let b = (row.bed || '').trim();
           if (!b) return;
-          b = b.split('~')[0].trim();   // D18~19 -> D18
+          b = b.split('~')[0].trim();
           if (b && beds.indexOf(b) < 0) beds.push(b);
         });
       }
@@ -17741,11 +17958,8 @@ async function generateInspection() {
     }
   } catch(e) {}
 
-  // Dates
   const today = new Date();
   const inspectDay = nextInspectDate(today);
-
-  // Top input fields
   const person = (document.getElementById('insp-person').value || '').trim();
   let docNo = (document.getElementById('insp-docno').value || '').trim();
   const recvDate = (document.getElementById('insp-recv-date').value || '').trim();
@@ -17756,142 +17970,55 @@ async function generateInspection() {
     const docInput = document.getElementById('insp-docno');
     if (docInput) docInput.value = docNo;
   }
-  const serialNo = docNo;   // 流水編號 = 單據編號
-
-  // Build data object — page 1
-  const data = {
-    proj_name: projName,
-    proj_no: proj ? proj.proj_num : '',
-    proj_full: (proj ? proj.proj_num : '') + projName,
-    owner: proj ? (proj.client || '') : '',
-    apply_date: rocDate(today),
-    inspect_date: rocDate(inspectDay),
-    apply_roc: rocDate(today),
-    keyin_date: westDot(today),
-    date_roc_slash: rocSlash(today),
-    doc_no: docNo,
-    serial_no: serialNo,
-    insp_person: person,
-    recv_date: recvDate,
-    recv_time: recvTime,
-    total_qty: String(checked.reduce((s,c)=>s+(Math.max(1,parseInt(c&&c._inspQty)||1)),0)),
-    work_loc: workLoc,
-    am_box: (today.getHours() < 12) ? '□' : '■',
-    pm_box: (today.getHours() < 12) ? '■' : '□',
-    company_unit: companyUnit
-  };
-  // per-page 合計請驗量 (max 20 each) — 依各構件報驗支數加總
-  const inspQtyOf = c => Math.max(1, parseInt(c && c._inspQty) || 1);
-  const totalParts = checked.length;
-  for (let pg = 1; pg <= Math.ceil(totalParts/20); pg++) {
-    let sum = 0;
-    for (let k = 20*(pg-1); k < Math.min(20*pg, totalParts); k++) sum += inspQtyOf(checked[k]);
-    data['pt' + pg] = String(sum);
-  }
-  // UT 部位:有任何一個非「無」的部位即視為需 UT 檢驗;多個部位用頓號合併顯示
-  const utPartsOf = c => (Array.isArray(c && c._utList) ? c._utList : []).map(v => String(v||'').trim()).filter(v => v && v !== '無');
-  const hasUTPart = c => utPartsOf(c).length > 0;
-  const anyUTPart = checked.some(hasUTPart);
-  // Inspection items: 二次加工/VT 固定 ■;UT 依各構件「UT部位」決定;MT 依有/無板決定
-  // 任一構件選了 UT部位(!=無) → 第一頁 UT 打 ■
-  data['ut_box'] = anyUTPart ? '■' : '□';
-  // MT:當「勾選的構件全部都是 RH無板」時不勾(□);只要有任一支非 RH無板就打 ■
-  const allRHNoBoard = checked.length > 0 && checked.every(c => (c && c._board || '') === 'RH無板');
-  data['mt_box'] = allRHNoBoard ? '□' : '■';
-  // Page 1 成品編號 + 協力商檢驗者, Page 3 rows — cover ALL parts (pages auto-duplicated per 20)
-  const nParts = checked.length;
-  const nPages = Math.ceil(nParts / 20);  // number of page-1/page-3 copies needed
-  // 有/無板符合下列值 -> 非破壞檢查打「是」、並列入 NDT 檢驗表;其他 -> 非破壞檢查打「否」
-  const NDT_BOARD_SET = ['RH有板','BH無板','BH有板','BOX有板','Q有板'];
-  const NB_YES = '是(✓   )否(    )', NB_NO = '是(    )否(✓   )', NB_BLANK = '是(    )否(    )';
-  for (let i = 1; i <= nPages * 20; i++) {
-    const c = checked[i-1];
-    data['p' + i] = c ? ((c.part_no || '') + (inspQtyOf(c) > 1 ? '*' + inspQtyOf(c) : '')) : '';
-    data['v' + i] = c ? person : '';
-    // 封面「圖號/版次」= 圖號 + '/' + 版次(R0~R6);無圖號時只顯示版次
-    data['d' + i] = c ? (function(){ const rev = inspCompRev(c.part_no || ''); const dw = (c.drawing_no || ''); return dw ? (dw + '/' + rev) : rev; })() : '';
-    data['g' + i] = c ? (c.drawing_no || '') : '';
-    data['n' + i] = c ? (c.part_no || '') : '';
-    data['u' + i] = c ? '支' : '';
-    data['q' + i] = c ? String(inspQtyOf(c)) : '';
-    data['z' + i] = c ? (c._zone_code || zoneCode || '') : '';
-    data['h' + i] = c ? procCode : '';
-    data['s' + i] = c ? (c._sub || '') : '';
-    data['b' + i] = c ? (c._board || '') : '';   // 備註 = 有/無板
-    // 第3頁 非破壞檢查:符合 NDT 條件打「是」,其他打「否」,空列維持原樣
-    data['nb' + i] = c ? (NDT_BOARD_SET.indexOf(c._board || '') >= 0 ? NB_YES : NB_NO) : NB_BLANK;
-  }
-  // Page 2/4 構件類別/編號 box: parts joined (single space);>1 支加「*N」
-  data['parts_box'] = checked.map(c => (c.part_no || '') + (inspQtyOf(c) > 1 ? '*' + inspQtyOf(c) : '')).join(' ');
-
-  // NDT 檢驗表(第2、4頁):有/無板符合上述條件的構件才列入,只填前 5 列;超過 5 個 -> 檢驗結果「其餘同上」
-  const projNumVal = proj ? proj.proj_num : '';
-  // 有/無板符合條件,或選了 UT部位(!=無)的構件,都要列入 NDT 檢驗表
-  const ndtParts = checked.filter(c => NDT_BOARD_SET.indexOf(c._board || '') >= 0 || hasUTPart(c));
-  for (let j = 1; j <= 5; j++) {
-    const c = ndtParts[j-1];
-    const utPart = c && hasUTPart(c) ? utPartsOf(c).join('、') : '';
-    data['ndproj'+j] = c ? projNumVal : '';
-    data['ndpart'+j] = c ? (c.part_no || '') : '';
-    // 施作部位:銲道(+ UT部位);檢測長度:MT VT(+ UT)
-    data['ndloc'+j]  = c ? (utPart ? ('銲道 ' + utPart) : '銲道') : '';
-    data['nddraw'+j] = c ? (c.drawing_no || '') : '';
-    data['ndlen'+j]  = c ? (utPart ? 'MT VT UT' : 'MT VT') : '';
-  }
-  data['ndresult'] = ndtParts.length > 5 ? '其餘同上' : '';
 
   try {
-    let zip = new PizZip(inspTemplateBuffer);
-    let docXml = zip.file('word/document.xml').asText();
-    // 第一頁片段(表格數<3) -> 自動接上共用後三頁範本,組成完整四頁
-    const isFragment = (docXml.match(/<w:tbl>/g) || []).length < 3;
-    if (isFragment) {
-      const baseBuf = await inspGetSharedBase();
-      if (!baseBuf) { setInspStatus('尚未設定共用後三頁範本,請先在範本區上傳一次完整四頁檔', false); _inspGenerating = false; return; }
-      const baseZip = new PizZip(baseBuf);
-      const baseXml = baseZip.file('word/document.xml').asText();
-      docXml = inspAssembleFull(docXml, baseXml);
-      zip = baseZip;   // 改用共用範本當容器(保留 styles/字型/sectPr)
+    let fname = '';
+    // (1) 產生申驗單 Word — 只放「實報構件」,預報構件排除在外
+    if (realChecked.length) {
+      fname = await inspBuildDocx(realChecked, {
+        templateBuffer: inspTemplateBuffer,
+        proj_name: projName, proj_no: proj ? proj.proj_num : '',
+        owner: proj ? (proj.client || '') : '', companyUnit,
+        zoneCode, procCode, workLoc, person, docNo,
+        recvDate, recvTime, today, inspectDay, keyinDate: westDot(today)
+      });
     }
-    if (nPages > 1) docXml = inspDuplicatePages(docXml, nPages);
-    // 沒有任何構件需 NDT 且無任何 UT部位 時,不產生第4頁(NDT 檢驗表);有 UT部位則保留第4頁。
-    if (ndtParts.length === 0 && !anyUTPart) docXml = inspRemovePage4(docXml);
-    docXml = inspLockWordLayout(docXml);
-    zip.file('word/document.xml', docXml);
-    const doc = new docxtemplater(zip, {
-      paragraphLoop: true,
-      linebreaks: true,
-      delimiters: {start: '{', end: '}'},
-      nullGetter: function() { return ''; }
-    });
-    doc.render(data);
-    const out = doc.getZip().generate({
-      type: 'blob',
-      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    });
-    // 檔名格式:工程編號_申驗單_今天日期(YYYYMMDD)_單據編號  例:B820_申驗單_20260629_72201
-    const ymd = String(today.getFullYear()) + String(today.getMonth()+1).padStart(2,'0') + String(today.getDate()).padStart(2,'0');
-    const fname = (proj ? proj.proj_num : '申驗單') + '_申驗單_' + ymd + '_' + docNo + '.docx';
-    const url = URL.createObjectURL(out);
-    const a = document.createElement('a'); a.href = url; a.download = fname;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setInspStatus('已產生 ' + fname + '（' + checked.length + ' 項構件）', true);
-    // #5 自動存入每日產量
+    // (2) 寫入每日產量 — 實報 + 預報「全部」都要計入產量(流水編號同一個 docNo)
     try {
-      const projObj2 = allBOM.find(p => String(p.id) === String(pid));
-      await saveDailyOutput(checked, {
+      await saveDailyOutput(checkedAll, {
         proj_num: proj ? proj.proj_num : '',
-        zone_code: zoneCode,
-        doc_no: docNo,
-        proc_code: procCode,
-        sub_code: zoneSub,
+        zone_code: zoneCode, doc_no: docNo, proc_code: procCode, sub_code: zoneSub,
         inspect_time: (function(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');})(),
-        company: projObj2 ? (projObj2.company || '') : ''
+        company: company
       });
     } catch(e) { console.error('每日產量儲存失敗', e); }
-    // 及時重新整理「可報數量」(重讀每日產量),避免沒重新整理就重複報驗
+    // (3) 預報構件 → 暫存 pre_inspections(帶同一 docNo + 快照 + 原始 keyin_date)
+    let preOk = true;
+    if (preChecked.length) {
+      try {
+        const pr = await preInspInsert(preChecked, {
+          proj_id: pid, zone_id: zid, proj_num: proj ? proj.proj_num : '', proj_name: projName,
+          client: proj ? (proj.client || '') : '', zoneCode, zoneSub, procCode,
+          docNo, company, companyUnit, workLoc, keyinDate: westDot(today), person
+        });
+        preOk = !!(pr && pr.ok);
+      } catch(e) { console.error('預報構件暫存失敗', e); preOk = false; }
+    }
+    // 狀態訊息
+    if (preChecked.length && !preOk)
+      // 產量已寫、Word 也出了,但暫存失敗(多半是尚未建 pre_inspections 表)→ 明確警告,避免預報構件遺失
+      setInspStatus('⚠ 預報構件暫存失敗！這 ' + preChecked.length + ' 支已計入每日產量,但未存入暫存區(通常是尚未執行 pre_inspections_migration.sql 建表)。請先建表,再手動處理這批。', false);
+    else if (realChecked.length && preChecked.length)
+      setInspStatus('已產生 ' + fname + '（申驗單 ' + realChecked.length + ' 項；另 ' + preChecked.length + ' 項預報構件已存入暫存區）', true);
+    else if (realChecked.length)
+      setInspStatus('已產生 ' + fname + '（' + realChecked.length + ' 項構件）', true);
+    else
+      setInspStatus('已將 ' + preChecked.length + ' 項預報構件存入暫存區並計入每日產量（本次未產生申驗單）', true);
+
+    // 及時重新整理「可報數量」(重讀每日產量) + 預報暫存區
     try { await inspLoadComponents(); } catch(e) {}
-    // 及時更新「單據編號」為下一號(避免重複沿用同一號)
+    try { await renderPreInspPanel(); } catch(e) {}
+    // 及時更新「單據編號」為下一號
     try {
       const nextNo = await nextDocNo(company);
       const docInput = document.getElementById('insp-docno');
@@ -17906,6 +18033,156 @@ async function generateInspection() {
       msg = err.properties.errors.map(e => e.properties.explanation).join('; ');
     }
     setInspStatus('產生失敗：' + msg, false);
+  }
+}
+
+// ── 預報構件暫存區 ──────────────────────────────────────────────────────
+let preInspRows = [];   // 目前暫存的預報構件(供補報驗時依 id 取回快照)
+// 把預報構件寫入 pre_inspections(一構件一列,含補報所需的完整快照)
+async function preInspInsert(items, ctx) {
+  const recs = items.map(c => {
+    const tw = parseFloat(c.net_weight); const tq = parseInt(c.qty) || 0;
+    const perW = (!isNaN(tw) && tq > 0) ? tw / tq : (isNaN(tw) ? null : tw);
+    return {
+      proj_id: ctx.proj_id ? parseInt(ctx.proj_id) : null,
+      zone_id: ctx.zone_id ? parseInt(ctx.zone_id) : null,
+      proj_num: ctx.proj_num || '', proj_name: ctx.proj_name || '', client: ctx.client || '',
+      zone_code: ctx.zoneCode || '', sub_code: ctx.zoneSub || '', proc_code: ctx.procCode || '',
+      doc_no: ctx.docNo || '', company: ctx.company || '', company_unit: ctx.companyUnit || '',
+      part_no: c.part_no || '', spec: c.spec || '', drawing_no: c.drawing_no || '',
+      rev: inspCompRev(c.part_no || ''), insp_qty: Math.max(1, parseInt(c._inspQty) || 1),
+      board: c._board || '', ut_list: Array.isArray(c._utList) ? c._utList : [],
+      net_weight: perW, work_loc: ctx.workLoc || '',
+      keyin_date: ctx.keyinDate || '', insp_person: ctx.person || ''
+    };
+  });
+  if (!recs.length) return { ok: true };
+  // sbFetch 不會在 HTTP 錯誤時 throw(只回 ok:false),呼叫端需檢查 .ok,避免暫存靜默失敗
+  return await sbFetch('/rest/v1/pre_inspections', { method:'POST', headers:{'Prefer':'return=minimal'}, body: JSON.stringify(recs) });
+}
+
+// 渲染暫存區:依流水編號(doc_no)分組,每組可勾選單/多支後「補報驗」
+async function renderPreInspPanel() {
+  const wrap = document.getElementById('insp-pre-panel');
+  if (!wrap) return;
+  const r = await sbFetch('/rest/v1/pre_inspections?select=*&order=doc_no,id');
+  preInspRows = Array.isArray(r.data) ? r.data : [];
+  if (!preInspRows.length) { wrap.innerHTML = '<div class="empty-state">目前沒有預報構件</div>'; return; }
+  // group by doc_no
+  const groups = {};
+  preInspRows.forEach(row => { (groups[row.doc_no || '—'] = groups[row.doc_no || '—'] || []).push(row); });
+  const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  let html = '';
+  Object.keys(groups).forEach(docNo => {
+    const rows = groups[docNo];
+    const g0 = rows[0];
+    const totalQty = rows.reduce((s, r2) => s + (parseInt(r2.insp_qty) || 1), 0);
+    const dateStr = (g0.created_at || '').slice(0, 10);
+    html += '<div class="pre-group">';
+    html += '<div class="pre-group-head">' +
+      '<span class="pre-group-title">' + esc(g0.proj_num) + ' ' + esc(g0.proj_name) + '　·　流水編號 <b>' + esc(docNo) + '</b>　·　' + esc(g0.zone_code) + '　·　' + esc(dateStr) + '　·　共 ' + totalQty + ' 支</span>' +
+      '<span class="pre-group-stat" title="這些構件已計入每日產量(預報當下寫入),但尚未產生申驗單,待補報驗">✔ 產量已計入 ' + totalQty + ' 支　·　待補報驗</span>' +
+      '<span style="flex:1"></span>' +
+      '<label class="pre-selall"><input type="checkbox" checked onchange="preGroupToggleAll(\'' + esc(docNo) + '\',this)"/> 全選</label>' +
+      '<button class="btn btn-gen" style="padding:5px 12px" onclick="preInspReport(\'' + esc(docNo) + '\')">▶ 補報驗選取</button>' +
+      '<button class="btn" style="padding:5px 12px" onclick="preInspCancel(\'' + esc(docNo) + '\')" title="取消預報:從暫存區移除,並回收每日產量(刪除對應產量列),等同從未預報">✖ 取消預報選取</button>' +
+      '</div>';
+    html += '<div class="insp-comp-scroll"><table class="insp-comp-table"><thead><tr><th class="chk-col"></th><th>構件編號</th><th>規格</th><th>報驗支數</th><th>圖號</th><th>版次</th><th>有/無板</th><th>UT部位</th></tr></thead><tbody>';
+    rows.forEach(r2 => {
+      const ut = (Array.isArray(r2.ut_list) ? r2.ut_list : []).filter(v => v && v !== '無').join('、') || '無';
+      html += '<tr>' +
+        '<td class="chk-col"><input type="checkbox" class="pre-chk" data-docno="' + esc(docNo) + '" data-id="' + r2.id + '" checked/></td>' +
+        '<td>' + esc(r2.part_no) + '</td><td>' + esc(r2.spec) + '</td><td>' + (parseInt(r2.insp_qty)||1) + '</td>' +
+        '<td>' + esc(r2.drawing_no) + '</td><td>' + esc(r2.rev) + '</td><td>' + esc(r2.board) + '</td><td>' + esc(ut) + '</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  });
+  wrap.innerHTML = html;
+}
+function preGroupToggleAll(docNo, cb) {
+  document.querySelectorAll('.pre-chk[data-docno="' + docNo + '"]').forEach(c => { c.checked = cb.checked; });
+}
+// 取消預報:把某組內「已勾選」的預報構件,從暫存區移除,並「回收每日產量」
+//(刪除當初預報時寫入的對應 daily_output 列),等同這批從未預報過,之後可在報驗頁重新報驗。
+let _preInspCancelling = false;
+async function preInspCancel(docNo) {
+  if (_preInspCancelling) return;
+  const ids = Array.from(document.querySelectorAll('.pre-chk[data-docno="' + docNo + '"]:checked')).map(c => parseInt(c.dataset.id));
+  if (!ids.length) { setInspStatus('請至少勾選一支要取消預報的構件', false); return; }
+  const rows = preInspRows.filter(r => ids.indexOf(r.id) >= 0);
+  if (!rows.length) { setInspStatus('找不到預報構件資料,請重新整理', false); return; }
+  const totalQty = rows.reduce((s, r) => s + (parseInt(r.insp_qty) || 1), 0);
+  if (!confirm('確定要「取消預報」這 ' + rows.length + ' 項(共 ' + totalQty + ' 支)嗎？\n\n這會同時：\n・從暫存區移除\n・回收每日產量(刪除對應的產量列)\n\n等同這批從未預報過,之後可在報驗頁重新勾選報驗。')) return;
+  _preInspCancelling = true;
+  try {
+    // 1) 刪除每日產量對應列 — 依「工程編號 + 工程區 + 構件編號 + 流水編號」精準比對(一構件在同一批只出現一次)
+    let dailyDel = 0;
+    for (const r of rows) {
+      const q = '/rest/v1/daily_output?proj_num=eq.' + encodeURIComponent(r.proj_num || '') +
+        '&zone_code=eq.' + encodeURIComponent(r.zone_code || '') +
+        '&part_no=eq.' + encodeURIComponent(r.part_no || '') +
+        '&serial_no=eq.' + encodeURIComponent(r.doc_no || '');
+      const dr = await sbFetch(q, { method:'DELETE', headers:{'Prefer':'return=minimal'} });
+      if (dr && dr.ok) dailyDel++;
+    }
+    // 2) 刪除暫存
+    await sbFetch('/rest/v1/pre_inspections?id=in.(' + ids.join(',') + ')', { method:'DELETE', headers:{'Prefer':'return=minimal'} });
+    setInspStatus('已取消預報 ' + rows.length + ' 項(共 ' + totalQty + ' 支),已回收每日產量並從暫存區移除', true);
+    await renderPreInspPanel();
+    try { await inspLoadComponents(); } catch(e) {}   // 讓被取消的構件回到 ③ 可報清單
+    _preInspCancelling = false;
+  } catch(err) {
+    _preInspCancelling = false;
+    console.error(err);
+    setInspStatus('取消預報失敗：' + (err.message || err), false);
+  }
+}
+// 補報驗:把某流水編號組內「已勾選」的預報構件直接產生申驗單,並從暫存區刪除。
+// 申請/檢驗日期用補報當天;keyin_date 沿用預報當下快照。不再寫每日產量(預報時已寫)。
+let _preInspReporting = false;
+async function preInspReport(docNo) {
+  if (_preInspReporting) return;
+  if (typeof PizZip === 'undefined' || typeof docxtemplater === 'undefined') { setInspStatus('Word 函式庫尚未載入，請檢查網路連線', false); return; }
+  const ids = Array.from(document.querySelectorAll('.pre-chk[data-docno="' + docNo + '"]:checked')).map(c => parseInt(c.dataset.id));
+  if (!ids.length) { setInspStatus('請至少勾選一支要補報驗的構件', false); return; }
+  const rows = preInspRows.filter(r => ids.indexOf(r.id) >= 0);
+  if (!rows.length) { setInspStatus('找不到預報構件資料,請重新整理', false); return; }
+  _preInspReporting = true;
+  const g0 = rows[0];
+  const checked = rows.map(r => ({
+    part_no: r.part_no, spec: r.spec, drawing_no: r.drawing_no,
+    qty: r.insp_qty, net_weight: r.net_weight,
+    _inspQty: r.insp_qty, _board: r.board, _utList: Array.isArray(r.ut_list) ? r.ut_list : [],
+    _zone_code: r.zone_code, _sub: r.sub_code, _rev: r.rev
+  }));
+  try {
+    const templateBuffer = await inspResolveTemplateBuffer(g0.proj_id);
+    if (!templateBuffer) throw new Error('找不到此工程的第一頁範本,請先到報驗頁設定範本');
+    const today = new Date();
+    const recv = inspDefaultRecv(today);
+    const fname = await inspBuildDocx(checked, {
+      templateBuffer,
+      proj_name: g0.proj_name, proj_no: g0.proj_num, owner: g0.client,
+      companyUnit: g0.company_unit || ((g0.company === '麗生') ? '麗生工程' : '鎮山工程'),
+      zoneCode: g0.zone_code, procCode: g0.proc_code, workLoc: g0.work_loc,
+      person: g0.insp_person, docNo: g0.doc_no,
+      recvDate: recv.date, recvTime: recv.time,
+      today, inspectDay: nextInspectDate(today),
+      keyinDate: g0.keyin_date,   // ← 製造 Key in 沿用預報當天,其餘日期為補報當天
+      fnameSuffix: '(預報補送)'    // 檔名後綴:例 B821_申驗單_20260725_72212(預報補送).docx
+    });
+    // 補報成功 → 從暫存區刪除這幾支(不再寫每日產量,預報時已寫入)
+    await sbFetch('/rest/v1/pre_inspections?id=in.(' + ids.join(',') + ')', { method:'DELETE', headers:{'Prefer':'return=minimal'} });
+    setInspStatus('已補報驗並產生 ' + fname + '（' + rows.length + ' 項；已從暫存區移除）', true);
+    await renderPreInspPanel();
+    _preInspReporting = false;
+  } catch(err) {
+    _preInspReporting = false;
+    console.error(err);
+    let msg = err.message;
+    if (err.properties && err.properties.errors) msg = err.properties.errors.map(e => e.properties.explanation).join('; ');
+    setInspStatus('補報驗失敗：' + msg, false);
   }
 }
 
@@ -21193,6 +21470,45 @@ function attWeekExportPDF(){
   if(!win){ alert('視窗被瀏覽器封鎖，請允許彈出視窗後再試'); return; }
   win.document.open(); win.document.write(html); win.document.close();
 }
+
+// ── 月回報：輸出 PDF（送長榮出工時數彙總，A4 橫式一頁）──
+function attReportExportPDF(){
+  const box=document.getElementById('att-report-box');
+  const table=box&&box.querySelector('.att-rep-table');
+  if(!table){ alert('目前無月回報資料可輸出'); return; }
+  const r=attRangeOf(attRptMonth);
+  const mLabel=r?r.label:'';
+  const fname='鎮山'+mLabel+'出工時數回報';
+  const tableHtml=table.outerHTML;
+  const css=
+    '@page{size:A4 landscape;margin:8mm;}'+
+    '*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'+
+    'body{margin:0;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;color:#000;background:#fff;}'+
+    '#wrap{display:inline-block;transform-origin:top left;}'+
+    'table.att-rep-table{border-collapse:collapse;font-size:15px;width:max-content;min-width:293px;}'+   /* 自然約254px→293px,列印縮放後約 +20mm 寬(高度填滿一頁,水平置中) */
+    'table.att-rep-table th,table.att-rep-table td{border:1px solid #000;padding:8px 16px;}'+
+    'table.att-rep-table thead th{text-align:center;font-weight:700;background:#e8e8e8;font-size:16px;}'+
+    'table.att-rep-table .grp td{text-align:center;font-weight:700;background:#f0f0f0;letter-spacing:.05em;}'+
+    'table.att-rep-table td.lbl{text-align:center;}'+
+    'table.att-rep-table td.num{text-align:right;color:#c0392b;font-weight:700;font-variant-numeric:tabular-nums;}'+
+    'table.att-rep-table tr.total td{font-weight:700;background:#e8e8e8;}';
+  const html='<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>'+attEsc(fname)+'</title><style>'+css+'</style></head><body>'+
+    '<div id="wrap">'+tableHtml+'</div>'+   // 只印表格本身;月份/單位資訊已在表頭列(鎮山○○出工時數)
+    '<script>(function(){function fit(){var w=document.getElementById("wrap");var t=w&&w.querySelector("table");if(!w||!t)return;'+
+    'var MM=3.779527559;var availW=(297-16)*MM,availH=(210-16)*MM;'+
+    'var natW=w.offsetWidth,natH=w.offsetHeight;'+
+    'var s=Math.min(availW/natW,availH/natH,2.6);'+           // 等比放大填頁但上限 2.6，避免小表過度放大
+    'if(s<1)s=Math.min(availW/natW,availH/natH);'+            // 內容太大時仍需縮到一頁
+    'w.style.transform="scale("+s+")";'+
+    'w.style.marginLeft=Math.max(0,(availW-natW*s)/2)+"px";'+ // 水平置中
+    'w.style.marginTop=Math.max(0,(availH-natH*s)/2)+"px";'+  // 垂直置中
+    'setTimeout(function(){try{window.focus();window.print();}catch(e){}},250);}'+
+    'if(document.readyState==="complete")fit();else window.onload=fit;})();<\/script>'+
+    '</body></html>';
+  const win=window.open('','_blank');
+  if(!win){ alert('視窗被瀏覽器封鎖，請允許彈出視窗後再試'); return; }
+  win.document.open(); win.document.write(html); win.document.close();
+}
 </script>
 <script>
 var HAZARD_TPL_B64="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IhEREREBpAN+A+sBfAIAAfYB4gIAAQKwXQABA1IAGgAPABoADwAFAAoAAQAAAAAACgAAABQAAQAAAL8BZwIPArcDXwEDATcCAAKNAAAMJA3vAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIiIAQABIxAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAAAAAAADOQOCA88D1NAAASMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFlQZaBy8HDgVSAAAAAAAAG38gTCR/Ix8Z1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB3d3d3FyIUHxcfDx4NGGQADjIAAQAAAAQAAMkASQLkMAUAAGQVIABYEyAWIgIFAXQB7wHfZAAOYwAQAEgB9gHiFSAYHhNmAAAAAAEAfwQAAP///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////9j/2wDFAAwICQoJBwwKCgoNDQwOEh4TEhAQEiQaGxUeKyYtLComKSkvNUQ6LzJAMykpO1E8QEZJTE1MLjlUWlNKWURLTEkBDQ0NEhASIxMTI0kxKTFJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSQINDQ0SEBIjExMjSTEpMUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJ/8QBogAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoLEAACAQMDAgQDBQUEBAAAAX0BAgMABBEFEiExQQYTUWEHInEUMoGRoQgjQrHBFVLR8CQzYnKCCQoWFxgZGiUmJygpKjQ1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna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////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////7RGKUGhvdG9zaG9wIDMuMAA4QklNA+0KUmVzb2x1dGlvbgAAAAAQAEgAAAABAAIASAAAAAEAAjhCSU0EDRhGWCBHbG9iYWwgTGlnaHRpbmcgQW5nbGUAAAAABAAAAB44QklNBBkSRlggR2xvYmFsIEFsdGl0dWRlAAAAAAQAAAAeOEJJTQPzC1ByaW50IEZsYWdzAAAACQAAAAAAAAAAAQA4QklNBAoOQ29weXJpZ2h0IEZsYWcAAAAAAQAAOEJJTScQFEphcGFuZXNlIFByaW50IEZsYWdzAAAAAAoAAQAAAAAAAAACOEJJTQP1F0NvbG9yIEhhbGZ0b25lIFNldHRpbmdzAAAASAAvZmYAAQBsZmYABgAAAAAAAQAvZmYAAQChmZoABgAAAAAAAQAyAAAAAQBaAAAABgAAAAAAAQA1AAAAAQAtAAAABgAAAAAAAThCSU0D+BdDb2xvciBUcmFuc2ZlciBTZXR0aW5ncwAAAHAAAP////////////////////////////8D6AAAAAD/////////////////////////////A+gAAAAA/////////////////////////////wPoAAAAAP////////////////////////////8D6AAAOEJJTQQIBkd1aWRlcwAAAAAQAAAAAQAAAkAAAAJAAAAAADhCSU0EHg1VUkwgb3ZlcnJpZGVzAAAABAAAAAA4QklNBBoGU2xpY2VzAAAAAG8AAAAGAAAAAAAAAAAAAADyAAABDAAAAAcAMAAwADEALgBqAHAAZwAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAABDAAAAPIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOEJJTQQREUlDQyBVbnRhZ2dlZCBGbGFnAAAAAQEAOEJJTQQUF0xheWVyIElEIEdlbmVyYXRvciBCYXNlAAAABAAAAAc4QklNBAwVTmV3IFdpbmRvd3MgVGh1bWJuYWlsAAAN5wAAAAEAAABwAAAAZQAAAVAAAISQAAANywAYAAH/2P/gABBKRklGAAECAQBIAEgAAP/uAA5BZG9iZQBkgAAAAAH/2wCEAAwICAgJCAwJCQwRCwoLERUPDAwPFRgTExUTExgRDAwMDAwM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";
@@ -21527,274 +21843,763 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     {name:'帷幕(150元/片)', bg:150, sb:150}
   ];
 
-  var state=null;       // {zoneId, header, summary, items}
-  function storeKey(zid){ return 'steelcore_pricing_v1_'+zid; }
+  // 柱子表定（依「柱公式.xlsx / CBC」）。base=基本樓層列(0F~5F 且計入每噸分子)；floor=工時欄顯示樓層；
+  // div=工時 mh 除數(基本段/344、實作段/345)；mh=工時直接指定。金額=單價×數量，與大小樑相同。
+  var RAW_COL=[
+    {cat:'基本'},
+    {name:'基本單價 0F（長度切割+FB+吊耳+假設工程+連接板+整理+進出料，做到好）', bg:5200, floor:'0F', base:true},
+    {name:'基本單價 1F（每加1F加2600元）', bg:7800,  floor:'1F', base:true},
+    {name:'基本單價 2F', bg:10400, floor:'2F', base:true},
+    {name:'基本單價 3F', bg:13000, floor:'3F', base:true},
+    {name:'基本單價 4F', bg:15600, floor:'4F', base:true},
+    {name:'基本單價 5F', bg:18200, floor:'5F', base:true},
+    {name:'透氣孔(/孔)', bg:45,  div:344},
+    {name:'繫桿(/支)(含鑽孔*2)', bg:156, div:344},
+    {name:'剪力釘數(/支)', bg:6.5, div:344},
+    {name:'續接器(/顆)', bg:104, div:344},
+    {name:'箍筋肋條(/M)', bg:390, div:344},
+    {name:'角鐵固定座', bg:200, mh:0.58},
+    {name:'柱底板(/片)', bg:5200, div:344},
+    {name:'BH托樑(/個)', bg:1680, div:344},
+    {name:'RH托座(/個)', bg:1100, div:344},
+    {name:'槽鋼(UT)(/顆)', bg:1000, div:344},
+    {name:'續接器保護盒(/個)', bg:200, div:344},
+    {name:'高程未回饋二次施工(/支)', bg:1000, div:344},
+    {cat:'實作時算'},
+    {name:'灌漿孔(/孔)', bg:1375, div:345},
+    {name:'柱對接材料切割(/處)', bg:3500, div:345},
+    {name:'對接元(/處)', bg:6800, div:345},
+    {name:'BOX托座(/顆)', bg:60000, div:345},
+    {name:'BH托樑手工製作(/個)', bg:1100, div:345},
+    {name:'柱底貼板二次組焊(/座)', bg:5500, div:345},
+    {name:'柱內隔板組立電銲(柱開孔後填補)(/孔)', bg:5500, div:345},
+    {name:'#斜插柱二次組焊(V)(/支)', bg:300000, div:345}
+  ];
+
+  // ── 執行期狀態 ──
+  var CATS={
+    beam:{label:'大小樑'},
+    misc:{label:'雜項'},
+    col: {label:'柱子'}
+  };
+  var PROJ=null;    // {id, txt}
+  var ZONES=[];     // [{id,code,last,neg,kg,cnt,util_proc_code,util_weight_kg,util_price,unit_price,price_note}]
+  var GROUPS={beam:[],misc:[],col:[]};   // cat -> [ {key,cat,prefix,label,dual,hasG,hasB,zones,auto,util} ]
+  var PICK={beam:null,misc:null,col:null}; // cat -> 選中的 group key
+  var CAT='beam';
+  var SHEETS={};    // groupKey -> {header, util, summary, items}
+
+  function keyOf(gkey){ return 'steelcore_pricing_v2_'+(PROJ?PROJ.id:'')+'_'+gkey; }
   function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
   function fmt(n){ if(!isFinite(n)) n=0; return n.toLocaleString('zh-TW',{maximumFractionDigits:2}); }
   function mhFmt(n){ if(!isFinite(n)) n=0; return n.toLocaleString('zh-TW',{minimumFractionDigits:3,maximumFractionDigits:3}); }
+  function round2(n){ n=num(n); return Math.round(n*100)/100; }
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function escAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
   function gv(id){ var el=document.getElementById(id); return el?el.value:''; }
+  function curGroup(){ var k=PICK[CAT]; if(!k) return null; var gs=GROUPS[CAT]||[]; for(var i=0;i<gs.length;i++) if(gs[i].key===k) return gs[i]; return null; }
+  function S(){ var k=PICK[CAT]; return k?SHEETS[k]:null; }
+  function curDual(){ var g=curGroup(); return !!(g&&g.dual); }
 
-  function defaultItems(){
-    return RAW.map(function(r){
+  // 工程區代號尾字分類：G 大樑 / B 小樑 / C 柱 / 含「水電」歸水電 / 其餘雜項
+  function classifyZone(code){
+    code=String(code||'').trim();
+    if(/水電/.test(code)) return 'U';
+    var last=code.slice(-1).toUpperCase();
+    if(last==='G') return 'G';
+    if(last==='B') return 'B';
+    if(last==='C') return 'C';
+    return 'X';
+  }
+  function catOfLast(last){ return (last==='G'||last==='B')?'beam':last==='C'?'col':last==='X'?'misc':null; }
+
+  // 預設項目
+  function singleFromRaw(field){   // 單一欄：以 RAW 的 bg 或 sb 當單價；該側不適用者略過
+    var out=[];
+    RAW.forEach(function(r){
+      if(r.cat){ out.push({cat:r.cat}); return; }
+      var v=r[field]; if(v===null||v===undefined||v==='') return;
+      out.push({name:r.name,bg:v,qbg:0});
+    });
+    return out;
+  }
+  function beamDefaultItems(){
+    return RAW.map(function(r){ if(r.cat) return {cat:r.cat}; return {name:r.name,bg:r.bg,sb:r.sb,qbg:0,qsb:0}; });
+  }
+  function colDefaultItems(){
+    return RAW_COL.map(function(r){
       if(r.cat) return {cat:r.cat};
-      return {name:r.name, bg:r.bg, sb:r.sb, qbg:0, qsb:0};
+      var o={name:r.name, bg:r.bg, qbg:0};
+      if(r.base) o.base=true;
+      if(r.floor) o.floor=r.floor;
+      if(r.mh!=null) o.mh=r.mh;
+      if(r.div) o.div=r.div;
+      return o;
     });
   }
-  function blankState(zid){
-    return {
-      zoneId:zid,
-      header:{bomDate:'',kgBg:'',kgSb:'',cntBg:'',cntSb:'',spBg:'',spSb:''},
-      summary:{admin:'1.1',cdong:'',neg:'',supplier:''},
-      items:defaultItems()
-    };
+  // 依 group 型別給預設項目：柱=CBC、雜項=小樑組、大小樑=雙欄；只有大樑用 bg 單欄、只有小樑用 sb 單欄
+  function defaultItemsForGroup(g){
+    if(g.cat==='col') return colDefaultItems();
+    if(g.cat==='misc') return singleFromRaw('sb');
+    if(g.dual) return beamDefaultItems();
+    return singleFromRaw(g.hasG?'bg':'sb');
   }
 
-  // ── 對外：初始化 / 載入 ──
-  window.pricingInit=function(){
-    var sel=document.getElementById('pricing-proj');
-    var list=(typeof allBOM!=='undefined'&&Array.isArray(allBOM))?allBOM:[];
-    sel.innerHTML='<option value="">— 選擇工程 —</option>'+
-      list.map(function(p){ return '<option value="'+p.id+'">'+esc(p.proj_num)+' — '+esc(p.proj_name)+'</option>'; }).join('');
-    document.getElementById('pricing-zone').innerHTML='<option value="">— 選擇工程區 —</option>';
-    document.getElementById('pricing-sheet').innerHTML='<div class="empty-state">請先選擇工程與工程區</div>';
-    state=null;
-  };
-  window.pricingLoadZones=async function(){
-    var pid=document.getElementById('pricing-proj').value;
-    var zoneSel=document.getElementById('pricing-zone');
-    document.getElementById('pricing-sheet').innerHTML='<div class="empty-state">請選擇工程區</div>';
-    state=null;
-    if(!pid){ zoneSel.innerHTML='<option value="">— 選擇工程區 —</option>'; return; }
-    var r=await sbFetch('/rest/v1/zones?select=id,zone_code&project_id=eq.'+pid+'&order=zone_code');
-    var zones=Array.isArray(r.data)?r.data:[];
-    zoneSel.innerHTML='<option value="">— 選擇工程區 —</option>'+
-      zones.map(function(z){ return '<option value="'+z.id+'">'+esc(z.zone_code)+'</option>'; }).join('');
-  };
-  window.pricingLoadSheet=function(){
-    var zid=document.getElementById('pricing-zone').value;
-    if(!zid){ document.getElementById('pricing-sheet').innerHTML='<div class="empty-state">請選擇工程區</div>'; state=null; return; }
+  function sumZones(list,field){ var s=0; list.forEach(function(z){ s+=num(z[field]); }); return s; }
+
+  // 依「未議價」工程區、以代號前綴(去尾字)分組；每組一顆按鈕。beam 同前綴的 G+B 合成一組。
+  function computeGroups(){
+    GROUPS={beam:[],misc:[],col:[]};
+    var byKey={};
+    ZONES.forEach(function(z){
+      if(z.neg) return;                              // 只收未議價
+      var cat=catOfLast(z.last); if(!cat) return;    // 'U' 水電不列
+      var key=cat+'|'+z.code.slice(0,-1);            // 前綴＝代號去尾字
+      (byKey[key]||(byKey[key]=[])).push(z);
+    });
+    var rank={G:0,B:1,C:2};
+    Object.keys(byKey).forEach(function(key){
+      var zones=byKey[key], cat=key.split('|')[0], prefix=key.split('|').slice(1).join('|');
+      zones.sort(function(a,b){ var ra=rank[a.last]==null?9:rank[a.last], rb=rank[b.last]==null?9:rank[b.last]; return ra-rb || String(a.code).localeCompare(String(b.code),undefined,{numeric:true}); });
+      var hasG=zones.some(function(z){return z.last==='G';}), hasB=zones.some(function(z){return z.last==='B';});
+      var typeWord = cat==='beam' ? ((hasG&&hasB)?'大小樑':hasG?'大樑':'小樑') : cat==='col' ? '柱' : '雜項';
+      var label=zones.map(function(z){return z.code;}).join('.')+typeWord;
+      var dual = cat==='beam' && hasG && hasB;
+      var G=zones.filter(function(z){return z.last==='G';}), B=zones.filter(function(z){return z.last==='B';});
+      var codeG=G.length?G.map(function(z){return z.code;}).join('.'):'', codeB=B.length?B.map(function(z){return z.code;}).join('.'):'';
+      // 水電依側分（大樑/小樑各自加總）
+      function utilSide(list){
+        var kg=0, price='', codes=[];
+        list.forEach(function(z){ if(z.util_weight_kg>0)kg+=z.util_weight_kg; if(z.util_price>0&&price==='')price=z.util_price; if(z.util_proc_code&&z.util_proc_code!=='-')codes.push(z.util_proc_code); });
+        return {code:codes.join('、'), kg:round2(kg), price:price};
+      }
+      var auto, util=null;
+      if(cat==='beam'){
+        auto={kgBg:round2(sumZones(G,'kg')),cntBg:sumZones(G,'cnt'),kgSb:round2(sumZones(B,'kg')),cntSb:sumZones(B,'cnt'),
+              kg:round2(sumZones(zones,'kg')),cnt:sumZones(zones,'cnt')};
+        util={bg:utilSide(G), sb:utilSide(B)};
+      } else {
+        auto={kg:round2(sumZones(zones,'kg')),cnt:sumZones(zones,'cnt')};
+      }
+      GROUPS[cat].push({key:key,cat:cat,prefix:prefix,label:label,dual:dual,hasG:hasG,hasB:hasB,codeG:codeG,codeB:codeB,zones:zones,auto:auto,util:util});
+    });
+    Object.keys(GROUPS).forEach(function(cat){
+      GROUPS[cat].sort(function(a,b){ return String(a.zones[0].code).localeCompare(String(b.zones[0].code),undefined,{numeric:true}); });
+    });
+  }
+
+  function blankSheet(g){
+    var a=g.auto||{};
+    var header = g.dual
+      ? {bomDate:'',kgBg:a.kgBg||'',kgSb:a.kgSb||'',cntBg:a.cntBg||'',cntSb:a.cntSb||'',spBg:'',spSb:''}
+      : {bomDate:'',kg:a.kg||'',cnt:a.cnt||'',sp:''};
+    var util = g.cat==='beam' ? blankUtil(g) : null;
+    var summary = g.cat==='col'
+      ? {mgmtRate:'0.1',inspRate:'',supAdd:'100'}
+      : {admin:'1.1',cdong:'200'};
+    return {header:header, util:util, summary:summary, items:defaultItemsForGroup(g)};
+  }
+  function blankUtil(g){
+    var b=(g.util&&g.util.bg)||{}, s=(g.util&&g.util.sb)||{};
+    return {codeBg:b.code||'', kgBg:(b.kg||''), priceBg:(b.price||''), codeSb:s.code||'', kgSb:(s.kg||''), priceSb:(s.price||'')};
+  }
+  function loadSheet(g){
     var saved=null;
-    try{ var raw=localStorage.getItem(storeKey(zid)); if(raw) saved=JSON.parse(raw); }catch(e){}
-    state = saved && saved.items ? saved : blankState(zid);
-    state.zoneId=zid;
-    if(!state.summary) state.summary={admin:'1.1',cdong:'',neg:'',supplier:''};
-    if(!state.header) state.header={};
+    try{ var raw=localStorage.getItem(keyOf(g.key)); if(raw) saved=JSON.parse(raw); }catch(e){}
+    if(saved && saved.items){
+      if(!saved.summary) saved.summary = g.cat==='col'?{mgmtRate:'0.1',inspRate:'',supAdd:'100'}:{admin:'1.1',cdong:'200'};
+      if(g.cat!=='col' && !(saved.summary.cdong)) saved.summary.cdong='200';
+      if(!saved.header) saved.header={};
+      if(g.cat==='beam' && (!saved.util || saved.util.codeBg===undefined && saved.util.kgBg===undefined)) saved.util=blankUtil(g);
+      return saved;
+    }
+    return blankSheet(g);
+  }
+  function persist(){ var k=PICK[CAT]; try{ if(PROJ&&k&&SHEETS[k]) localStorage.setItem(keyOf(k), JSON.stringify(SHEETS[k])); }catch(e){} }
+
+  // ── 對外：初始化 / 載入 ──
+  // 議價判定（比照單價頁 isNegotiated）：主件有數字單價或文字備註(點工) + 有水電時水電單價需為數字
+  function zHasUtil(z){ return num(z.util_weight_kg)>0 || (z.util_proc_code && String(z.util_proc_code).trim()!=='' && String(z.util_proc_code).trim()!=='-'); }
+  // 計價頁：主件單價(或文字備註)有填即視為已議價 → 不再列出。水電是否議價不影響(水電在此頁另計)。
+  function zNegotiated(z){
+    return (z.price_note && String(z.price_note).trim()!=='') || z.unit_price!=null;
+  }
+  window.pricingInit=async function(){
+    var sel=document.getElementById('pricing-proj');
+    document.getElementById('pricing-tabs').style.display='none';
+    document.getElementById('pricing-sheet').innerHTML='<div class="empty-state">請先選擇工程</div>';
+    PROJ=null; ZONES=[]; SHEETS={}; GROUPS={beam:[],misc:[],col:[]}; PICK={beam:null,misc:null,col:null};
+    sel.innerHTML='<option value="">載入工程中…</option>';
+    // 工程清單(不依賴 allBOM 是否已載入，否則沒先開過 BOM 列表就會空白)
+    var plist=(typeof allBOM!=='undefined'&&Array.isArray(allBOM)&&allBOM.length)?allBOM.slice():null;
+    if(!plist){
+      var pr=await sbFetchAll('/rest/v1/projects?select=id,proj_num,proj_name&order=proj_num');
+      plist=Array.isArray(pr.data)?pr.data:[];
+    }
+    // 只列「未議價」工程：任一工程區的單價/水電單價尚未定 → 該工程視為未議價
+    var zr=await sbFetchAll('/rest/v1/zones?select=project_id,unit_price,util_price,util_weight_kg,util_proc_code,price_note');
+    var zs=Array.isArray(zr.data)?zr.data:[], unpriced={};
+    zs.forEach(function(z){ if(!zNegotiated(z)) unpriced[z.project_id]=true; });
+    var list=plist.filter(function(p){ return unpriced[p.id]; });
+    if(!list.length){ sel.innerHTML='<option value="">— 沒有未議價的工程 —</option>'; return; }
+    list.sort(function(a,b){ return String(a.proj_num||'').localeCompare(String(b.proj_num||''),undefined,{numeric:true,sensitivity:'base'}); });
+    sel.innerHTML='<option value="">— 選擇工程（未議價） —</option>'+
+      list.map(function(p){ return '<option value="'+p.id+'">'+esc(p.proj_num)+(p.proj_name?' — '+esc(p.proj_name):'')+'</option>'; }).join('');
+  };
+  window.pricingLoadProject=async function(){
+    var pid=document.getElementById('pricing-proj').value;
+    var sheetEl=document.getElementById('pricing-sheet');
+    var tabsEl=document.getElementById('pricing-tabs');
+    if(!pid){ PROJ=null; tabsEl.style.display='none'; sheetEl.innerHTML='<div class="empty-state">請先選擇工程</div>'; return; }
+    var opt=document.getElementById('pricing-proj').selectedOptions[0];
+    PROJ={id:pid, txt:opt?opt.text:''};
+    tabsEl.style.display='none';
+    sheetEl.innerHTML='<div class="empty-state">載入工程區與構件資料中…</div>';
+    var zr=await sbFetch('/rest/v1/zones?select=id,zone_code,unit_price,util_proc_code,util_weight_kg,util_price,price_note&project_id=eq.'+pid+'&order=zone_code');
+    var zs=Array.isArray(zr.data)?zr.data:[];
+    var byZone={};
+    if(zs.length){
+      var ids=zs.map(function(z){return z.id;}).join(',');
+      // 非本公司製作構件(__nonco='1')不列入公斤/支數統計
+      var nonco={};
+      var er=await sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no,extra&zone_id=in.('+ids+')');
+      (Array.isArray(er.data)?er.data:[]).forEach(function(e){
+        var ex=e.extra||{}; if(ex[NONCO_KEY]==='1'||ex[NONCO_KEY]===true) nonco[e.zone_id+'|'+String(e.part_no||'').trim().toUpperCase()]=1;
+      });
+      var cr=await sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,qty&zone_id=in.('+ids+')');
+      (Array.isArray(cr.data)?cr.data:[]).forEach(function(c){
+        if(nonco[c.zone_id+'|'+String(c.part_no||'').trim().toUpperCase()]) return;
+        var z=byZone[c.zone_id]||(byZone[c.zone_id]={kg:0,cnt:0});
+        z.kg+=num(c.net_weight); z.cnt+=parseInt(c.qty)||0;
+      });
+    }
+    ZONES=zs.map(function(z){
+      var a=byZone[z.id]||{kg:0,cnt:0};
+      return {id:z.id, code:z.zone_code||'', last:classifyZone(z.zone_code), kg:a.kg, cnt:a.cnt,
+        util_proc_code:z.util_proc_code||'', util_weight_kg:num(z.util_weight_kg), util_price:(z.util_price==null?null:Number(z.util_price)),
+        unit_price:(z.unit_price==null?null:Number(z.unit_price)), price_note:z.price_note||'', neg:zNegotiated(z)};
+    });
+    computeGroups();
+    SHEETS={}; PICK={beam:null,misc:null,col:null};
+    tabsEl.style.display='flex';
+    pricingTab('beam');
+  };
+  window.pricingTab=function(cat){
+    if(!PROJ||!CATS[cat]) return;
+    CAT=cat;
+    Object.keys(CATS).forEach(function(c){ var b=document.getElementById('prtab-'+c); if(b) b.classList.toggle('active', c===cat); });
+    pricingRender();
+  };
+  window.pricingPickGroup=function(cat,key){
+    CAT=cat;
+    var gs=GROUPS[CAT]||[], g=null;
+    for(var i=0;i<gs.length;i++) if(gs[i].key===key){ g=gs[i]; break; }
+    if(!g) return;
+    PICK[CAT]=key;
+    if(!SHEETS[key]) SHEETS[key]=loadSheet(g);
+    pricingRender();
+  };
+  window.pricingReautofill=async function(){
+    var g=curGroup(), st=S(); if(!g||!st) return;
+    if(!await uiConfirm('重新以工程區／構件資料帶入本組的公斤數、支數'+(g.cat==='beam'?'與水電重量':'')+'？（會覆蓋你手改過的數字，項目與單價不動）')) return;
+    var a=g.auto||{}, h=st.header;
+    if(g.dual){ h.kgBg=a.kgBg||''; h.cntBg=a.cntBg||''; h.kgSb=a.kgSb||''; h.cntSb=a.cntSb||''; }
+    else { h.kg=a.kg||''; h.cnt=a.cnt||''; }
+    if(g.cat==='beam' && st.util){
+      var b=(g.util&&g.util.bg)||{}, s=(g.util&&g.util.sb)||{};
+      st.util.codeBg=b.code||''; st.util.kgBg=b.kg||''; if(!num(st.util.priceBg)) st.util.priceBg=b.price||'';
+      st.util.codeSb=s.code||''; st.util.kgSb=s.kg||''; if(!num(st.util.priceSb)) st.util.priceSb=s.price||'';
+    }
     pricingRender();
   };
 
   // ── 渲染 ──
-  function headerCard(h){
-    function f(id,label,val,ro){ return '<div class="pr-field"><label>'+label+'</label><input id="'+id+'" '+(ro?'readonly':'oninput="pricingRecalc()"')+' value="'+escAttr(val||'')+'"></div>'; }
-    return '<div class="pr-card"><div class="pr-card-title">基本資料（大樑 / 小樑）</div><div class="pr-grid">'+
-      f('pr-h-bomdate','BOM下載日',h.bomDate)+
-      f('pr-h-kg-bg','公斤數 (大樑)',h.kgBg)+ f('pr-h-kg-sb','公斤數 (小樑)',h.kgSb)+
-      f('pr-h-cnt-bg','支數 (大樑)',h.cntBg)+ f('pr-h-cnt-sb','支數 (小樑)',h.cntSb)+
-      f('pr-h-sp-bg','本區S/P數 (大樑)',h.spBg)+ f('pr-h-sp-sb','本區S/P數 (小樑)',h.spSb)+
-      f('pr-h-ton-bg','噸數 (大樑·自動)','',true)+ f('pr-h-ton-sb','噸數 (小樑·自動)','',true)+
-      f('pr-h-avg-bg','平均單重KG (大樑·自動)','',true)+ f('pr-h-avg-sb','平均單重KG (小樑·自動)','',true)+
+  function fld(id,label,val,ro){ return '<div class="pr-field"><label>'+label+'</label><input id="'+id+'" '+(ro?'readonly':'oninput="pricingRecalc()"')+' value="'+escAttr(val==null?'':val)+'"></div>'; }
+  function groupsBar(cat){
+    var gs=GROUPS[cat]||[];
+    if(!gs.length) return '<div class="pr-zones"><span class="pr-zempty">（此工程沒有未議價的「'+esc(CATS[cat].label)+'」工程區）</span></div>';
+    var btns=gs.map(function(g){
+      return '<button class="pr-zbtn'+(PICK[cat]===g.key?' active':'')+'" onclick="pricingPickGroup(\''+cat+'\',\''+escAttr(g.key)+'\')">'+esc(g.label)+'</button>';
+    }).join('');
+    return '<div class="pr-zones">選擇工程區：'+btns+'</div>';
+  }
+  // 左=大樑、右=小樑 的側欄表（cols:[{key,label}]、rows:[{label,cell(key)}]）
+  function inp(id,val,ro){ return '<input id="'+id+'" '+(ro?'readonly class="pr-ro"':'oninput="pricingRecalc()"')+' value="'+escAttr(val==null?'':val)+'">'; }
+  function sideTable(cols, rows){
+    var thead='<tr><th class="pr-b-corner"></th>'+cols.map(function(c){return '<th>'+esc(c.label)+'</th>';}).join('')+'</tr>';
+    var body=rows.map(function(r){
+      return '<tr><td class="pr-b-lbl">'+esc(r.label)+'</td>'+cols.map(function(c){return '<td>'+r.cell(c.key)+'</td>';}).join('')+'</tr>';
+    }).join('');
+    return '<div class="pr-basic-wrap"><table class="pr-basic"><thead>'+thead+'</thead><tbody>'+body+'</tbody></table></div>';
+  }
+  function beamSides(g){
+    var cols=[];
+    if(g.hasG) cols.push({key:'bg', hk:'Bg', label:(g.codeG||'大樑')+'（大樑）'});
+    if(g.hasB) cols.push({key:'sb', hk:'Sb', label:(g.codeB||'小樑')+'（小樑）'});
+    return cols;
+  }
+  function headerCard(g,h){
+    var title='<div class="pr-card-title">基本資料 · '+esc(g.label)+
+      '<span class="pr-auto-hint">公斤/支數已自動帶入，可手改</span>'+
+      '<button class="pr-reauto" style="float:right;margin-left:8px" onclick="pricingReautofill()">↻ 重新帶入</button></div>';
+    var bom=fld('pr-h-bomdate','BOM下載日',h.bomDate);
+    if(g.dual){
+      var cols=beamSides(g);
+      var tbl=sideTable(cols, [
+        {label:'公斤數',            cell:function(k){var hk=k==='bg'?'Bg':'Sb'; return inp('pr-h-kg-'+k, h['kg'+hk]); }},
+        {label:'支數',              cell:function(k){var hk=k==='bg'?'Bg':'Sb'; return inp('pr-h-cnt-'+k, h['cnt'+hk]); }},
+        {label:'本區S/P數',         cell:function(k){var hk=k==='bg'?'Bg':'Sb'; return inp('pr-h-sp-'+k, h['sp'+hk]); }},
+        {label:'噸數（自動）',       cell:function(k){ return inp('pr-h-ton-'+k, '', true); }},
+        {label:'平均單重KG（自動）', cell:function(k){ return inp('pr-h-avg-'+k, '', true); }}
+      ]);
+      return '<div class="pr-card">'+title+'<div style="max-width:220px;margin-bottom:12px">'+bom+'</div>'+tbl+'</div>';
+    }
+    return '<div class="pr-card">'+title+'<div class="pr-grid">'+
+      bom+
+      fld('pr-h-kg','公斤數',h.kg)+ fld('pr-h-cnt','支數',h.cnt)+ fld('pr-h-sp','本區S/P數',h.sp)+
+      fld('pr-h-ton','噸數 (自動)','',true)+ fld('pr-h-avg','平均單重KG (自動)','',true)+
       '</div></div>';
   }
-  function itemsCard(items){
-    var rows='', seq=0;
+  function utilCard(g,u){
+    var cols=beamSides(g);
+    var tbl=sideTable(cols, [
+      {label:'水電重量（kg）',       cell:function(k){var hk=k==='bg'?'Bg':'Sb'; return inp('pr-u-kg-'+k, u['kg'+hk]); }},
+      {label:'水電重量（t·自動）',   cell:function(k){ return inp('pr-u-t-'+k, '', true); }},
+      {label:'水電單價（元/t）',     cell:function(k){var hk=k==='bg'?'Bg':'Sb'; return inp('pr-u-price-'+k, u['price'+hk]); }},
+      {label:'水電總價（自動）',     cell:function(k){ return inp('pr-u-amt-'+k, '', true); }}
+    ]);
+    return '<div class="pr-card"><div class="pr-card-title">水電（比照請款：重量 × 單價）<span class="pr-auto-hint">左大樑右小樑</span></div>'+tbl+
+      '<div style="text-align:right;margin-top:10px"><button class="btn" onclick="pricingUtilHistory()">🔍 查歷史水電單價</button></div></div>';
+  }
+  function itemsCard(g,items){
+    var dual=g.dual, isCol=g.cat==='col', colspan=dual?11:7, rows='', seq=0;
     for(var i=0;i<items.length;i++){
       var it=items[i];
-      if(it.cat){ rows+='<tr><td class="pr-cat" colspan="11">'+esc(it.cat)+'</td></tr>'; continue; }
+      if(it.cat){ rows+='<tr><td class="pr-cat" colspan="'+colspan+'">'+esc(it.cat)+'</td></tr>'; continue; }
       seq++;
-      var sbna=(it.sb===null||it.sb===undefined||it.sb==='');
       var nameCell= it.custom
         ? '<input class="pr-iname" style="width:100%;text-align:left" value="'+escAttr(it.name||'')+'" oninput="pricingCell('+i+',\'name\',this.value)" placeholder="自訂項目名稱">'
         : esc(it.name||'');
-      rows+='<tr data-idx="'+i+'">'+
-        '<td>'+seq+'</td>'+
-        '<td class="pr-name">'+nameCell+'</td>'+
+      var cells='<td>'+seq+'</td><td class="pr-name">'+nameCell+'</td>'+
         '<td><input value="'+escAttr(it.bg)+'" oninput="pricingCell('+i+',\'bg\',this.value)"></td>'+
         '<td class="pr-mh" id="pr-mh-bg-'+i+'">—</td>'+
-        '<td><input class="pr-qty" value="'+escAttr(it.qbg)+'" oninput="pricingCell('+i+',\'qbg\',this.value)"></td>'+
-        '<td class="pr-amt" id="pr-amt-bg-'+i+'">0</td>'+
-        (sbna
+        '<td><input class="pr-qty" id="pr-qty-bg-'+i+'" value="'+escAttr(it.qbg)+'" oninput="pricingCell('+i+',\'qbg\',this.value)"></td>'+
+        '<td class="pr-amt" id="pr-amt-bg-'+i+'">0</td>';
+      if(dual){
+        var sbna=(it.sb===null||it.sb===undefined||it.sb==='');
+        cells += sbna
           ? '<td>—</td><td>—</td><td>—</td><td class="pr-amt" id="pr-amt-sb-'+i+'">0</td>'
           : '<td><input value="'+escAttr(it.sb)+'" oninput="pricingCell('+i+',\'sb\',this.value)"></td>'+
             '<td class="pr-mh" id="pr-mh-sb-'+i+'">—</td>'+
-            '<td><input class="pr-qty" value="'+escAttr(it.qsb)+'" oninput="pricingCell('+i+',\'qsb\',this.value)"></td>'+
-            '<td class="pr-amt" id="pr-amt-sb-'+i+'">0</td>')+
-        '<td><span class="pr-del" onclick="pricingDelRow('+i+')" title="刪除此列">✕</span></td>'+
-        '</tr>';
+            '<td><input class="pr-qty" id="pr-qty-sb-'+i+'" value="'+escAttr(it.qsb)+'" oninput="pricingCell('+i+',\'qsb\',this.value)"></td>'+
+            '<td class="pr-amt" id="pr-amt-sb-'+i+'">0</td>';
+      }
+      cells += '<td><span class="pr-del" onclick="pricingDelRow('+i+')" title="刪除此列">✕</span></td>';
+      rows+='<tr data-idx="'+i+'">'+cells+'</tr>';
     }
+    var lg=esc(g.codeG||'大樑'), ls=esc(g.codeB||'小樑');
+    var q4='<th>單價</th><th>工時</th><th>數量</th><th>金額</th>';
+    var theadHTML = dual
+      ? '<tr><th rowspan="2">項次</th><th rowspan="2">項目</th><th colspan="4" class="pr-grp">'+lg+'</th><th colspan="4" class="pr-grp">'+ls+'</th><th rowspan="2">刪</th></tr><tr>'+q4+q4+'</tr>'
+      : isCol
+        ? '<tr><th>項次</th><th>項目</th><th>單價(元/PC)</th><th>工時mh</th><th>數量</th><th>金額</th><th>刪</th></tr>'
+        : '<tr><th>項次</th><th>項目</th><th>單價</th><th>工時</th><th>數量</th><th>金額</th><th>刪</th></tr>';
+    var resetLabel = '↺ 重設為表定';
+    var emptyNote = (isCol && !items.length) ? '<div class="empty-state" style="margin:6px 0">柱子表定項目待補，先按「＋ 新增項目」自行輸入。</div>' : '';
     return '<div class="pr-card"><div class="pr-card-title">項目單價 × 數量（單價可改，工時 mh 自動換算：單價×8÷2750）</div>'+
       '<div class="pr-toolbar">'+
         '<button class="btn" onclick="pricingAddRow()">＋ 新增項目</button>'+
-        '<button class="btn" onclick="pricingReset()">↺ 重設為表定</button>'+
+        '<button class="btn" onclick="pricingReset()">'+resetLabel+'</button>'+
         '<button class="btn btn-gen" style="flex:0 0 auto" onclick="pricingSave()">💾 儲存</button>'+
         '<button class="btn" onclick="pricingExport()">⬇ 匯出 Excel</button>'+
         '<span class="pr-saved" id="pr-saved"></span>'+
-      '</div>'+
-      '<div class="pr-tbl-wrap"><table class="pr-tbl"><thead><tr>'+
-        '<th>項次</th><th>項目</th>'+
-        '<th>大樑單價</th><th>大樑工時</th><th>大樑數量</th><th>大樑金額</th>'+
-        '<th>小樑單價</th><th>小樑工時</th><th>小樑數量</th><th>小樑金額</th><th>刪</th>'+
-      '</tr></thead><tbody id="pr-items-body">'+rows+'</tbody></table></div></div>';
+      '</div>'+emptyNote+
+      '<div class="pr-tbl-wrap"><table class="pr-tbl"><thead>'+theadHTML+'</thead><tbody id="pr-items-body">'+rows+'</tbody></table></div></div>';
   }
   function sumRow(label,id,isInput,val){
     if(isInput) return '<div class="pr-sum-row"><span class="pr-sum-label">'+label+'</span><input id="'+id+'" value="'+escAttr(val||'')+'" oninput="pricingRecalc()"></div>';
     return '<div class="pr-sum-row"><span class="pr-sum-label">'+label+'</span><span class="pr-sum-val" id="'+id+'">0</span></div>';
   }
-  function summaryCard(s){
-    return '<div class="pr-card"><div class="pr-card-title">計價彙總</div><div class="pr-sum">'+
-      sumRow('大樑工時金額','pr-s-bg-amt',false)+
-      sumRow('小樑工時金額','pr-s-sb-amt',false)+
-      sumRow('工時金額合計','pr-s-total',false)+
+  function svCell(id){ return '<span class="pr-sv" id="'+id+'">0</span>'; }
+  function summaryCard(g,s){
+    var dual=g.dual, isBeam=g.cat==='beam', cdongLabel='場地調整加價（元/噸）';
+    if(dual){
+      var cols=beamSides(g);
+      var side=sideTable(cols, [
+        {label:'工時金額',           cell:function(k){ return svCell('pr-s-amt-'+k); }},
+        {label:'管銷後金額',         cell:function(k){ return svCell('pr-s-after-'+k); }},
+        {label:'噸數',               cell:function(k){ return svCell('pr-s-ton-'+k); }},
+        {label:'每噸單價（元/噸）',   cell:function(k){ return svCell('pr-s-perton-'+k); }},
+        {label:'協力商報價（元/噸）', cell:function(k){ return svCell('pr-s-supplier-'+k); }},
+        {label:'平均一支金額（元/支）',cell:function(k){ return svCell('pr-s-per-'+k); }}
+      ]);
+      var shared='<div class="pr-sum" style="margin-top:14px">'+
+        sumRow('管銷倍率（預設1.1）','pr-s-admin',true,s.admin)+
+        sumRow(cdongLabel,'pr-s-cdong',true,s.cdong)+
+        sumRow('工時金額合計','pr-s-total',false)+
+        sumRow('管銷後合計','pr-s-afterall',false)+
+        sumRow('水電總價','pr-s-util',false)+
+        sumRow('含水電總價','pr-s-withutil',false)+
+        sumRow('總噸數','pr-s-tonall',false)+
+        sumRow('總工時(mh)','pr-s-mh',false)+
+        sumRow('兩區平均單價（元/噸）','pr-s-avgprice',false)+
+        '</div>';
+      return '<div class="pr-card"><div class="pr-card-title">計價彙總（左大樑右小樑）</div>'+side+shared+
+        '<div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6">協力商報價 = 每噸單價 ＋ 場地加價；兩區平均單價 =（大樑報價×大樑噸數 ＋ 小樑報價×小樑噸數）÷ 兩區噸數合計。</div></div>';
+    }
+    var rows=sumRow('工時金額合計','pr-s-total',false)+
       sumRow('管銷倍率（預設1.1）','pr-s-admin',true,s.admin)+
-      sumRow('管銷後合計','pr-s-after',false)+
-      sumRow('總噸數','pr-s-ton',false)+
+      sumRow('管銷後合計','pr-s-after',false);
+    if(isBeam) rows+=sumRow('水電總價','pr-s-util',false)+sumRow('含水電總價','pr-s-withutil',false);
+    rows+=sumRow('總噸數','pr-s-ton',false)+
       sumRow('每噸單價(元/噸)','pr-s-perton',false)+
+      sumRow(cdongLabel,'pr-s-cdong',true,s.cdong)+
+      sumRow('協力商報價（元/噸）','pr-s-supplier',false)+
       sumRow('總工時(mh)','pr-s-mh',false)+
-      sumRow('大樑平均一支金額(元/支)','pr-s-bgper',false)+
-      sumRow('小樑平均一支金額(元/支)','pr-s-sbper',false)+
-      sumRow('C棟場地調整加價','pr-s-cdong',true,s.cdong)+
-      sumRow('議價後元/噸','pr-s-neg',true,s.neg)+
-      sumRow('協力商報價元/噸','pr-s-supplier',true,s.supplier)+
+      sumRow('平均一支金額(元/支)','pr-s-bgper',false);
+    return '<div class="pr-card"><div class="pr-card-title">計價彙總</div><div class="pr-sum">'+rows+'</div></div>';
+  }
+  function colSummaryCard(s){
+    return '<div class="pr-card"><div class="pr-card-title">計價彙總（柱）</div><div class="pr-sum">'+
+      sumRow('A 基本加工費用小計','pr-c-a',false)+
+      sumRow('B 實作時算加工費用小計','pr-c-b',false)+
+      sumRow('C 工時金額合計（A＋B）','pr-c-c',false)+
+      sumRow('管理費率（預設 0.1）','pr-c-mgmt',true,s.mgmtRate)+
+      sumRow('D 管理費（C×管理費率）','pr-c-d',false)+
+      sumRow('查驗因素率（# 由甲方認定，預設空＝0）','pr-c-insp',true,s.inspRate)+
+      sumRow('E 查驗因素（(C＋D)×查驗率）','pr-c-e',false)+
+      sumRow('基本柱金額（0F~5F，另計入每噸分子）','pr-c-basecol',false)+
+      sumRow('H 每噸單價（元/噸）','pr-c-perton',false)+
+      sumRow('場地調整加價（元/噸，柱子預設 100）','pr-c-supadd',true,s.supAdd)+
+      sumRow('協力商報價（元/噸）','pr-c-supplier',false)+
+      sumRow('平均單價（元/噸）','pr-c-avgprice',false)+
+      '</div>'+
+      '<div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6">'+
+        'H 每噸單價 =（C 工時金額 ＋ D 管理費 ＋ E 查驗因素 ＋ 基本柱金額）÷ 本區噸數（依「柱公式.xlsx / CBC」）。'+
       '</div></div>';
   }
   function pricingRender(){
-    var projTxt=document.getElementById('pricing-proj').selectedOptions[0]?document.getElementById('pricing-proj').selectedOptions[0].text:'';
-    var zoneTxt=document.getElementById('pricing-zone').selectedOptions[0]?document.getElementById('pricing-zone').selectedOptions[0].text:'';
-    var head='<div style="font-family:var(--mono);font-size:13px;color:var(--text2);margin-bottom:12px">計價對象：<strong style="color:var(--accent)">'+esc(projTxt)+'</strong> ／ 工程區 <strong style="color:var(--accent2)">'+esc(zoneTxt)+'</strong></div>';
-    document.getElementById('pricing-sheet').innerHTML=head+headerCard(state.header)+itemsCard(state.items)+summaryCard(state.summary);
+    if(!PROJ) return;
+    var head='<div style="font-family:var(--mono);font-size:13px;color:var(--text2);margin-bottom:12px">計價對象：<strong style="color:var(--accent)">'+esc(PROJ.txt)+'</strong> ／ 類別 <strong style="color:var(--accent2)">'+esc(CATS[CAT].label)+'</strong></div>';
+    var html=head+groupsBar(CAT);
+    var g=curGroup(), st=S();
+    if(!g||!st){
+      if((GROUPS[CAT]||[]).length) html+='<div class="empty-state">請按上方選一個工程區開始計價</div>';
+      document.getElementById('pricing-sheet').innerHTML=html;
+      return;
+    }
+    html+='<div class="pr-hu-row">'+headerCard(g,st.header)+((g.cat==='beam'&&st.util)?utilCard(g,st.util):'')+'</div>';
+    html+=itemsCard(g,st.items)+(g.cat==='col'?colSummaryCard(st.summary):summaryCard(g,st.summary));
+    document.getElementById('pricing-sheet').innerHTML=html;
     pricingRecalc();
   }
 
   // ── 即時更新單格 ──
   window.pricingCell=function(idx,field,val){
-    if(!state||!state.items[idx]) return;
-    state.items[idx][field]=val;
+    var st=S(); if(!st||!st.items[idx]) return;
+    st.items[idx][field]=val;
     pricingRecalc();
   };
   window.pricingAddRow=function(){
-    if(!state) return;
-    state.items.push({name:'',bg:0,sb:0,qbg:0,qsb:0,custom:true});
+    var st=S(); if(!st) return;
+    st.items.push(curDual()?{name:'',bg:0,sb:0,qbg:0,qsb:0,custom:true}:{name:'',bg:0,qbg:0,custom:true});
     pricingRender();
   };
   window.pricingDelRow=function(idx){
-    if(!state||!state.items[idx]) return;
-    state.items.splice(idx,1);
+    var st=S(); if(!st||!st.items[idx]) return;
+    st.items.splice(idx,1);
     pricingRender();
   };
   window.pricingReset=async function(){
-    if(!state) return;
+    var st=S(), g=curGroup(); if(!st||!g) return;
     if(!await uiConfirm('確定要重設為表定項目嗎？目前的數量與自訂項目將清除（僅此工程區）。')) return;
-    state.items=defaultItems();
+    st.items=defaultItemsForGroup(g);
     pricingRender();
   };
 
   function setTxt(id,txt){ var el=document.getElementById(id); if(el) el.textContent=txt; }
   function setVal(id,v){ var el=document.getElementById(id); if(el) el.value=v; }
 
+  // 柱子彙總（依「柱公式.xlsx / CBC」）
+  function pricingRecalcCol(st,h){
+    var kg=num(h.kg), cnt=num(h.cnt), ton=kg/1000;
+    setVal('pr-h-ton', fmt(ton)); setVal('pr-h-avg', cnt?fmt(kg/cnt):'');
+    var A=0, B=0, baseCol=0, curSec=null;
+    for(var i=0;i<st.items.length;i++){
+      var it=st.items[i];
+      if(it.cat){ curSec=it.cat; continue; }
+      var p=num(it.bg), q=num(it.qbg), amt=p*q;
+      setTxt('pr-amt-bg-'+i, fmt(amt));
+      var mhTxt;
+      if(it.floor) mhTxt=it.floor;
+      else if(it.mh!=null && it.mh!=='') mhTxt=mhFmt(num(it.mh));
+      else if(it.div) mhTxt=mhFmt(p/num(it.div));
+      else mhTxt=mhFmt(p*MH_PER_YUAN);
+      setTxt('pr-mh-bg-'+i, mhTxt);
+      if(curSec==='實作時算') B+=amt; else A+=amt;
+      if(it.base) baseCol+=amt;
+    }
+    var C=A+B;
+    var mgmt=(st.summary.mgmtRate===''||st.summary.mgmtRate==null)?0.1:num(st.summary.mgmtRate);
+    var D=C*mgmt;
+    var E=(C+D)*num(st.summary.inspRate);
+    var H=ton?(C+D+E+baseCol)/ton:0;
+    var supAdd=(st.summary.supAdd===''||st.summary.supAdd==null)?100:num(st.summary.supAdd);
+    setTxt('pr-c-a',fmt(A)); setTxt('pr-c-b',fmt(B)); setTxt('pr-c-c',fmt(C));
+    setTxt('pr-c-d',fmt(D)); setTxt('pr-c-e',fmt(E)); setTxt('pr-c-basecol',fmt(baseCol));
+    setTxt('pr-c-perton', ton?fmt(H):'—');
+    setTxt('pr-c-supplier', ton?fmt(H+supAdd):'—');
+    setTxt('pr-c-avgprice', ton?fmt(H+supAdd):'—');
+    persist();
+  }
+
   window.pricingRecalc=function(){
-    if(!state) return;
-    // 讀回 header / summary
-    state.header={bomDate:gv('pr-h-bomdate'),kgBg:gv('pr-h-kg-bg'),kgSb:gv('pr-h-kg-sb'),
-      cntBg:gv('pr-h-cnt-bg'),cntSb:gv('pr-h-cnt-sb'),spBg:gv('pr-h-sp-bg'),spSb:gv('pr-h-sp-sb')};
-    state.summary={admin:gv('pr-s-admin'),cdong:gv('pr-s-cdong'),neg:gv('pr-s-neg'),supplier:gv('pr-s-supplier')};
-    var h=state.header, bgTotal=0, sbTotal=0, mhTotal=0;
-    for(var i=0;i<state.items.length;i++){
-      var it=state.items[i]; if(it.cat) continue;
+    var st=S(), g=curGroup(); if(!st||!g) return;
+    var dual=g.dual, isBeam=g.cat==='beam', isCol=g.cat==='col';
+    // 讀回 header / util / summary
+    st.header = dual
+      ? {bomDate:gv('pr-h-bomdate'),kgBg:gv('pr-h-kg-bg'),kgSb:gv('pr-h-kg-sb'),cntBg:gv('pr-h-cnt-bg'),cntSb:gv('pr-h-cnt-sb'),spBg:gv('pr-h-sp-bg'),spSb:gv('pr-h-sp-sb')}
+      : {bomDate:gv('pr-h-bomdate'),kg:gv('pr-h-kg'),cnt:gv('pr-h-cnt'),sp:gv('pr-h-sp')};
+    if(isBeam && st.util){
+      if(g.hasG){ st.util.kgBg=gv('pr-u-kg-bg'); st.util.priceBg=gv('pr-u-price-bg'); }
+      if(g.hasB){ st.util.kgSb=gv('pr-u-kg-sb'); st.util.priceSb=gv('pr-u-price-sb'); }
+    }
+    st.summary = isCol
+      ? {mgmtRate:gv('pr-c-mgmt'),inspRate:gv('pr-c-insp'),supAdd:gv('pr-c-supadd')}
+      : {admin:gv('pr-s-admin'),cdong:gv('pr-s-cdong')};
+    var h=st.header;
+    if(isCol){ pricingRecalcCol(st,h); return; }
+    // 本區 S/P 數 → 自動填「S/P超過基本數量」的數量
+    for(var si=0;si<st.items.length;si++){
+      var sit=st.items[si]; if(sit.cat) continue;
+      if(String(sit.name||'').indexOf('S/P超過基本數量')===0){
+        if(dual){ sit.qbg=num(h.spBg); if(sit.sb!=null&&sit.sb!=='') sit.qsb=num(h.spSb); setVal('pr-qty-bg-'+si, sit.qbg); setVal('pr-qty-sb-'+si, sit.qsb); }
+        else { sit.qbg=num(h.sp); setVal('pr-qty-bg-'+si, sit.qbg); }
+      }
+    }
+    var bgTotal=0, sbTotal=0, mhTotal=0;
+    for(var i=0;i<st.items.length;i++){
+      var it=st.items[i]; if(it.cat) continue;
       var bgP=num(it.bg), bgQ=num(it.qbg), bgAmt=bgP*bgQ, bgMh=bgP*MH_PER_YUAN;
       setTxt('pr-mh-bg-'+i, mhFmt(bgMh));
       setTxt('pr-amt-bg-'+i, fmt(bgAmt));
       bgTotal+=bgAmt; mhTotal+=bgMh*bgQ;
-      var sbna=(it.sb===null||it.sb===undefined||it.sb==='');
-      if(!sbna){
-        var sbP=num(it.sb), sbQ=num(it.qsb), sbAmt=sbP*sbQ, sbMh=sbP*MH_PER_YUAN;
-        setTxt('pr-mh-sb-'+i, mhFmt(sbMh));
-        setTxt('pr-amt-sb-'+i, fmt(sbAmt));
-        sbTotal+=sbAmt; mhTotal+=sbMh*sbQ;
-      } else {
-        setTxt('pr-amt-sb-'+i, '0');
+      if(dual){
+        var sbna=(it.sb===null||it.sb===undefined||it.sb==='');
+        if(!sbna){
+          var sbP=num(it.sb), sbQ=num(it.qsb), sbAmt=sbP*sbQ, sbMh=sbP*MH_PER_YUAN;
+          setTxt('pr-mh-sb-'+i, mhFmt(sbMh));
+          setTxt('pr-amt-sb-'+i, fmt(sbAmt));
+          sbTotal+=sbAmt; mhTotal+=sbMh*sbQ;
+        } else { setTxt('pr-amt-sb-'+i, '0'); }
       }
     }
     // header 自動欄位
-    var tonBg=num(h.kgBg)/1000, tonSb=num(h.kgSb)/1000;
-    setVal('pr-h-ton-bg', fmt(tonBg)); setVal('pr-h-ton-sb', fmt(tonSb));
-    setVal('pr-h-avg-bg', num(h.cntBg)?fmt(num(h.kgBg)/num(h.cntBg)):'');
-    setVal('pr-h-avg-sb', num(h.cntSb)?fmt(num(h.kgSb)/num(h.cntSb)):'');
+    var totalTon, cntBg, cntSb;
+    if(dual){
+      var tonBg=num(h.kgBg)/1000, tonSb=num(h.kgSb)/1000;
+      cntBg=num(h.cntBg); cntSb=num(h.cntSb);
+      setVal('pr-h-ton-bg', fmt(tonBg)); setVal('pr-h-ton-sb', fmt(tonSb));
+      setVal('pr-h-avg-bg', cntBg?fmt(num(h.kgBg)/cntBg):''); setVal('pr-h-avg-sb', cntSb?fmt(num(h.kgSb)/cntSb):'');
+      totalTon=tonBg+tonSb;
+    } else {
+      var kg=num(h.kg); cntBg=num(h.cnt);
+      setVal('pr-h-ton', fmt(kg/1000)); setVal('pr-h-avg', cntBg?fmt(kg/cntBg):'');
+      totalTon=kg/1000;
+    }
+    // 水電（僅大小樑）
+    var utilAmt=0;
+    if(isBeam && st.util){
+      if(g.hasG){ var kgG=num(st.util.kgBg), tG=kgG/1000, pG=num(st.util.priceBg), aG=tG*pG; utilAmt+=aG; setVal('pr-u-t-bg',fmt(tG)); setVal('pr-u-amt-bg',fmt(aG)); }
+      if(g.hasB){ var kgB=num(st.util.kgSb), tB=kgB/1000, pB=num(st.util.priceSb), aB=tB*pB; utilAmt+=aB; setVal('pr-u-t-sb',fmt(tB)); setVal('pr-u-amt-sb',fmt(aB)); }
+    }
     // summary
+    var admin=num(st.summary.admin)||1.1;
+    var cdong=num(st.summary.cdong);   // 場地加價（元/噸）
     var total=bgTotal+sbTotal;
-    var admin=num(state.summary.admin)||1.1;
     var after=total*admin;
-    var totalTon=tonBg+tonSb;
-    setTxt('pr-s-bg-amt', fmt(bgTotal));
-    setTxt('pr-s-sb-amt', fmt(sbTotal));
-    setTxt('pr-s-total', fmt(total));
-    setTxt('pr-s-after', fmt(after));
-    setTxt('pr-s-ton', fmt(totalTon));
-    setTxt('pr-s-perton', totalTon?fmt(after/totalTon):'—');
-    setTxt('pr-s-mh', fmt(mhTotal));
-    setTxt('pr-s-bgper', num(h.cntBg)?fmt(bgTotal/num(h.cntBg)):'—');
-    setTxt('pr-s-sbper', num(h.cntSb)?fmt(sbTotal/num(h.cntSb)):'—');
+    if(dual){
+      var tonBg2=num(h.kgBg)/1000, tonSb2=num(h.kgSb)/1000;
+      var afterBg=bgTotal*admin, afterSb=sbTotal*admin;
+      var pertonBg=tonBg2?afterBg/tonBg2:0, pertonSb=tonSb2?afterSb/tonSb2:0;
+      var supBg=pertonBg+cdong, supSb=pertonSb+cdong;
+      var tsum=tonBg2+tonSb2, avgPrice=tsum?(supBg*tonBg2+supSb*tonSb2)/tsum:0;
+      setTxt('pr-s-amt-bg',fmt(bgTotal)); setTxt('pr-s-amt-sb',fmt(sbTotal));
+      setTxt('pr-s-after-bg',fmt(afterBg)); setTxt('pr-s-after-sb',fmt(afterSb));
+      setTxt('pr-s-ton-bg',fmt(tonBg2)); setTxt('pr-s-ton-sb',fmt(tonSb2));
+      setTxt('pr-s-perton-bg',tonBg2?fmt(pertonBg):'—'); setTxt('pr-s-perton-sb',tonSb2?fmt(pertonSb):'—');
+      setTxt('pr-s-supplier-bg',tonBg2?fmt(supBg):'—'); setTxt('pr-s-supplier-sb',tonSb2?fmt(supSb):'—');
+      setTxt('pr-s-per-bg',cntBg?fmt(bgTotal/cntBg):'—'); setTxt('pr-s-per-sb',cntSb?fmt(sbTotal/cntSb):'—');
+      setTxt('pr-s-total',fmt(total)); setTxt('pr-s-afterall',fmt(after));
+      setTxt('pr-s-util',fmt(utilAmt)); setTxt('pr-s-withutil',fmt(after+utilAmt));
+      setTxt('pr-s-tonall',fmt(totalTon)); setTxt('pr-s-mh',fmt(mhTotal));
+      setTxt('pr-s-avgprice',tsum?fmt(avgPrice):'—');
+    } else {
+      var perton=totalTon?after/totalTon:0, sup=perton+cdong;
+      setTxt('pr-s-total',fmt(total)); setTxt('pr-s-after',fmt(after));
+      if(isBeam){ setTxt('pr-s-util',fmt(utilAmt)); setTxt('pr-s-withutil',fmt(after+utilAmt)); }
+      setTxt('pr-s-ton',fmt(totalTon));
+      setTxt('pr-s-perton',totalTon?fmt(perton):'—');
+      setTxt('pr-s-supplier',totalTon?fmt(sup):'—');
+      setTxt('pr-s-mh',fmt(mhTotal));
+      setTxt('pr-s-bgper',cntBg?fmt(bgTotal/cntBg):'—');
+    }
     // 自動暫存
-    try{ if(state.zoneId) localStorage.setItem(storeKey(state.zoneId), JSON.stringify(state)); }catch(e){}
+    persist();
   };
 
   window.pricingSave=function(){
-    if(!state) return;
+    if(!S()) return;
     pricingRecalc();
     var el=document.getElementById('pr-saved');
     var t=new Date();
     if(el) el.textContent='✓ 已儲存 '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
   };
 
+  // 歷史水電單價：列出各工程區已定的水電單價供參考（彈跳視窗）
+  window.pricingUtilHistory=async function(){
+    var mask=document.createElement('div'); mask.id='confirm-mask';
+    var box=document.createElement('div'); box.className='confirm-box'; box.style.maxWidth='600px'; box.style.width='92%'; box.style.textAlign='left';
+    box.innerHTML='<div class="pr-card-title" style="margin-bottom:8px">歷史水電單價（元/t）</div><div id="pr-uh-body" class="empty-state">載入中…</div><div style="text-align:right;margin-top:12px"><button class="btn" id="pr-uh-close">關閉</button></div>';
+    mask.appendChild(box); (document.body||document.documentElement).appendChild(mask);
+    function close(){ mask.remove(); }
+    box.querySelector('#pr-uh-close').onclick=close;
+    mask.addEventListener('mousedown',function(e){ if(e.target===mask) close(); });
+    var body=box.querySelector('#pr-uh-body');
+    try{
+      var pr=await sbFetchAll('/rest/v1/projects?select=id,proj_num');
+      var pmap={}; (Array.isArray(pr.data)?pr.data:[]).forEach(function(p){ pmap[p.id]=p.proj_num; });
+      var zr=await sbFetchAll('/rest/v1/zones?select=zone_code,util_price,util_weight_kg,project_id&util_price=not.is.null&order=util_price.desc');
+      var rows=(Array.isArray(zr.data)?zr.data:[]).filter(function(z){ return z.util_price!=null; });
+      if(!rows.length){ body.innerHTML='<div class="empty-state">目前沒有已定水電單價的資料</div>'; return; }
+      var h='<div class="pr-tbl-wrap" style="max-height:52vh;overflow:auto"><table class="pr-tbl"><thead><tr><th>工程</th><th>工程區</th><th>水電重量(kg)</th><th>水電單價(元/t)</th></tr></thead><tbody>';
+      rows.forEach(function(z){ h+='<tr><td>'+esc(pmap[z.project_id]||z.project_id||'')+'</td><td>'+esc(z.zone_code||'')+'</td><td class="pr-amt">'+fmt(num(z.util_weight_kg))+'</td><td class="pr-amt">'+fmt(num(z.util_price))+'</td></tr>'; });
+      h+='</tbody></table></div>';
+      body.innerHTML=h;
+    }catch(e){ body.innerHTML='<div class="empty-state">載入失敗</div>'; }
+  };
+
   window.pricingExport=function(){
-    if(!state){ return; }
+    var st=S(), g=curGroup(); if(!st||!g){ return; }
     pricingRecalc();
     if(typeof XLSX==='undefined'){ alert('XLSX 未載入'); return; }
-    var projTxt=document.getElementById('pricing-proj').selectedOptions[0]?document.getElementById('pricing-proj').selectedOptions[0].text:'';
-    var zoneTxt=document.getElementById('pricing-zone').selectedOptions[0]?document.getElementById('pricing-zone').selectedOptions[0].text:'';
-    var h=state.header;
-    var aoa=[];
-    aoa.push(['計價單', projTxt, '工程區', zoneTxt]);
+    var dual=g.dual, isCol=g.cat==='col', isBeam=g.cat==='beam', h=st.header, aoa=[];
+    var lg=g.codeG||'大樑', ls=g.codeB||'小樑';
+    aoa.push(['計價單', PROJ?PROJ.txt:'', '工程區', g.label]);
     aoa.push([]);
-    aoa.push(['', '大樑', '小樑']);
-    aoa.push(['BOM下載日', h.bomDate||'', '']);
-    aoa.push(['公斤數', num(h.kgBg), num(h.kgSb)]);
-    aoa.push(['噸數', num(h.kgBg)/1000, num(h.kgSb)/1000]);
-    aoa.push(['支數', num(h.cntBg), num(h.cntSb)]);
-    aoa.push(['本區S/P數', num(h.spBg), num(h.spSb)]);
-    aoa.push(['平均單重(KG)', num(h.cntBg)?num(h.kgBg)/num(h.cntBg):'', num(h.cntSb)?num(h.kgSb)/num(h.cntSb):'']);
+    if(dual){
+      aoa.push(['', lg+'（大樑）', ls+'（小樑）']);
+      aoa.push(['BOM下載日', h.bomDate||'', '']);
+      aoa.push(['公斤數', num(h.kgBg), num(h.kgSb)]);
+      aoa.push(['噸數', num(h.kgBg)/1000, num(h.kgSb)/1000]);
+      aoa.push(['支數', num(h.cntBg), num(h.cntSb)]);
+      aoa.push(['本區S/P數', num(h.spBg), num(h.spSb)]);
+      aoa.push(['平均單重(KG)', num(h.cntBg)?num(h.kgBg)/num(h.cntBg):'', num(h.cntSb)?num(h.kgSb)/num(h.cntSb):'']);
+    } else {
+      aoa.push(['BOM下載日', h.bomDate||'']);
+      aoa.push(['公斤數', num(h.kg)]);
+      aoa.push(['噸數', num(h.kg)/1000]);
+      aoa.push(['支數', num(h.cnt)]);
+      aoa.push(['本區S/P數', num(h.sp)]);
+      aoa.push(['平均單重(KG)', num(h.cnt)?num(h.kg)/num(h.cnt):'']);
+    }
     aoa.push([]);
-    aoa.push(['項次','項目','大樑單價','大樑工時mh','大樑數量','大樑金額','小樑單價','小樑工時mh','小樑數量','小樑金額']);
+    aoa.push(dual
+      ? ['項次','項目',lg+' 單價',lg+' 工時mh',lg+' 數量',lg+' 金額',ls+' 單價',ls+' 工時mh',ls+' 數量',ls+' 金額']
+      : ['項次','項目','單價','工時mh','數量','金額']);
     var seq=0, bgTotal=0, sbTotal=0;
-    for(var i=0;i<state.items.length;i++){
-      var it=state.items[i];
+    for(var i=0;i<st.items.length;i++){
+      var it=st.items[i];
       if(it.cat){ aoa.push(['【'+it.cat+'】']); continue; }
       seq++;
       var bgP=num(it.bg),bgQ=num(it.qbg),bgAmt=bgP*bgQ; bgTotal+=bgAmt;
-      var sbna=(it.sb===null||it.sb===undefined||it.sb==='');
-      var sbP=sbna?'':num(it.sb), sbQ=sbna?'':num(it.qsb), sbAmt=sbna?'':num(it.sb)*num(it.qsb);
-      if(!sbna) sbTotal+=num(it.sb)*num(it.qsb);
-      aoa.push([seq,it.name||'',bgP,bgP*MH_PER_YUAN,bgQ,bgAmt,
-        sbna?'—':sbP, sbna?'—':sbP*MH_PER_YUAN, sbna?'—':sbQ, sbna?'—':sbAmt]);
+      if(dual){
+        var sbna=(it.sb===null||it.sb===undefined||it.sb==='');
+        var sbP=sbna?'':num(it.sb), sbQ=sbna?'':num(it.qsb), sbAmt=sbna?'':num(it.sb)*num(it.qsb);
+        if(!sbna) sbTotal+=num(it.sb)*num(it.qsb);
+        aoa.push([seq,it.name||'',bgP,bgP*MH_PER_YUAN,bgQ,bgAmt,
+          sbna?'—':sbP, sbna?'—':sbP*MH_PER_YUAN, sbna?'—':sbQ, sbna?'—':sbAmt]);
+      } else {
+        var mhOut = isCol
+          ? (it.floor ? it.floor : (it.mh!=null&&it.mh!==''?num(it.mh):(it.div?bgP/num(it.div):bgP*MH_PER_YUAN)))
+          : bgP*MH_PER_YUAN;
+        aoa.push([seq,it.name||'',bgP,mhOut,bgQ,bgAmt]);
+      }
     }
-    var total=bgTotal+sbTotal, admin=num(state.summary.admin)||1.1, after=total*admin;
-    var totalTon=(num(h.kgBg)+num(h.kgSb))/1000;
     aoa.push([]);
-    aoa.push(['大樑工時金額', bgTotal]);
-    aoa.push(['小樑工時金額', sbTotal]);
-    aoa.push(['工時金額合計', total]);
-    aoa.push(['管銷倍率', admin]);
-    aoa.push(['管銷後合計', after]);
-    aoa.push(['總噸數', totalTon]);
-    aoa.push(['每噸單價(元/噸)', totalTon?after/totalTon:'']);
-    aoa.push(['大樑平均一支金額(元/支)', num(h.cntBg)?bgTotal/num(h.cntBg):'']);
-    aoa.push(['小樑平均一支金額(元/支)', num(h.cntSb)?sbTotal/num(h.cntSb):'']);
-    aoa.push(['C棟場地調整加價', state.summary.cdong||'']);
-    aoa.push(['議價後元/噸', state.summary.neg||'']);
-    aoa.push(['協力商報價元/噸', state.summary.supplier||'']);
+    if(isCol){
+      var A=0,B=0,baseCol=0,curSec=null;
+      for(var j=0;j<st.items.length;j++){
+        var jt=st.items[j];
+        if(jt.cat){ curSec=jt.cat; continue; }
+        var jamt=num(jt.bg)*num(jt.qbg);
+        if(curSec==='實作時算') B+=jamt; else A+=jamt;
+        if(jt.base) baseCol+=jamt;
+      }
+      var C=A+B;
+      var mgmt=(st.summary.mgmtRate===''||st.summary.mgmtRate==null)?0.1:num(st.summary.mgmtRate);
+      var Dv=C*mgmt, Ev=(C+Dv)*num(st.summary.inspRate);
+      var tonC=num(h.kg)/1000, Hv=tonC?(C+Dv+Ev+baseCol)/tonC:'';
+      var supAdd=(st.summary.supAdd===''||st.summary.supAdd==null)?100:num(st.summary.supAdd);
+      aoa.push(['A 基本加工費用小計', A]);
+      aoa.push(['B 實作時算加工費用小計', B]);
+      aoa.push(['C 工時金額合計(A+B)', C]);
+      aoa.push(['管理費率', mgmt]);
+      aoa.push(['D 管理費(C×費率)', Dv]);
+      aoa.push(['查驗因素率', num(st.summary.inspRate)]);
+      aoa.push(['E 查驗因素((C+D)×查驗率)', Ev]);
+      aoa.push(['基本柱金額(0F~5F,計入每噸分子)', baseCol]);
+      aoa.push(['本區噸數', tonC]);
+      aoa.push(['H 每噸單價(元/噸)=(C+D+E+基本柱金額)/噸', Hv]);
+      aoa.push(['場地調整加價', supAdd]);
+      aoa.push(['協力商報價(元/噸)', tonC?Hv+supAdd:'']);
+      aoa.push(['平均單價(元/噸)', tonC?Hv+supAdd:'']);
+    } else {
+      var total=bgTotal+sbTotal, admin=num(st.summary.admin)||1.1, after=total*admin;
+      var totalTon = dual ? (num(h.kgBg)+num(h.kgSb))/1000 : num(h.kg)/1000;
+      if(dual){ aoa.push([lg+' 工時金額', bgTotal]); aoa.push([ls+' 工時金額', sbTotal]); }
+      aoa.push(['工時金額合計', total]);
+      aoa.push(['管銷倍率', admin]);
+      aoa.push(['管銷後合計', after]);
+      var utilAmt=0;
+      if(isBeam && st.util){
+        if(g.hasG){ var kgG=num(st.util.kgBg),tG=kgG/1000,pG=num(st.util.priceBg),aG=tG*pG; utilAmt+=aG;
+          aoa.push(['水電 '+lg+' 重量(kg)', kgG]); aoa.push(['水電 '+lg+' 重量(t)', tG]);
+          aoa.push(['水電 '+lg+' 單價(元/t)', pG]); aoa.push(['水電 '+lg+' 總價', aG]);
+        }
+        if(g.hasB){ var kgB=num(st.util.kgSb),tB=kgB/1000,pB=num(st.util.priceSb),aB=tB*pB; utilAmt+=aB;
+          aoa.push(['水電 '+ls+' 重量(kg)', kgB]); aoa.push(['水電 '+ls+' 重量(t)', tB]);
+          aoa.push(['水電 '+ls+' 單價(元/t)', pB]); aoa.push(['水電 '+ls+' 總價', aB]);
+        }
+        aoa.push(['水電總價合計', utilAmt]);
+        aoa.push(['含水電總價', after+utilAmt]);
+      }
+      var cdong=num(st.summary.cdong);
+      aoa.push(['總噸數', totalTon]);
+      aoa.push(['場地調整加價(元/噸)', cdong]);
+      if(dual){
+        var tBg=num(h.kgBg)/1000, tSb=num(h.kgSb)/1000;
+        var pBgv=tBg?(bgTotal*admin)/tBg:0, pSbv=tSb?(sbTotal*admin)/tSb:0;
+        var sBg=pBgv+cdong, sSb=pSbv+cdong, tsum=tBg+tSb;
+        aoa.push([lg+' 每噸單價(元/噸)', tBg?pBgv:'']);
+        aoa.push([ls+' 每噸單價(元/噸)', tSb?pSbv:'']);
+        aoa.push([lg+' 協力商報價(元/噸)', tBg?sBg:'']);
+        aoa.push([ls+' 協力商報價(元/噸)', tSb?sSb:'']);
+        aoa.push([lg+' 平均一支金額(元/支)', num(h.cntBg)?bgTotal/num(h.cntBg):'']);
+        aoa.push([ls+' 平均一支金額(元/支)', num(h.cntSb)?sbTotal/num(h.cntSb):'']);
+        aoa.push(['兩區平均單價(元/噸)', tsum?(sBg*tBg+sSb*tSb)/tsum:'']);
+      } else {
+        var pv=totalTon?after/totalTon:0;
+        aoa.push(['每噸單價(元/噸)', totalTon?pv:'']);
+        aoa.push(['協力商報價(元/噸)', totalTon?pv+cdong:'']);
+        aoa.push(['平均一支金額(元/支)', num(h.cnt)?bgTotal/num(h.cnt):'']);
+      }
+    }
     var ws=XLSX.utils.aoa_to_sheet(aoa);
     var wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '計價');
-    var fname='計價_'+(projTxt.split(' ')[0]||'工程')+'_'+(zoneTxt||'區')+'.xlsx';
+    var sheetName=String(g.label).replace(/[\\\/\?\*\[\]:]/g,'').slice(0,31)||CATS[CAT].label;
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    var fname='計價_'+((PROJ?PROJ.txt:'工程').split(' ')[0]||'工程')+'_'+String(g.label).replace(/[\\\/:*?"<>|]/g,'')+'.xlsx';
     XLSX.writeFile(wb, fname);
   };
 })();
