@@ -1777,7 +1777,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <div class="lf"><label>Email</label><input type="email" id="staff-email" placeholder="wang@company.com"/></div>
       <div class="lf"><label>電話</label><input type="text" id="staff-phone" placeholder="0912-345-678"/></div>
       <div class="lf"><label>到職日</label><input type="date" id="staff-hire"/></div>
-      <div class="lf"><label>離職日（空=在職）</label><input type="date" id="staff-resign"/></div>
+      <div class="lf"><label>離職日（空=在職）</label><input type="date" id="staff-resign" oninput="staffSyncStatusFromResign()"/></div>
       <div class="lf"><label>生日（西元）</label><input type="date" id="staff-birth"/></div>
       <div class="lf"><label>身分證字號</label><input type="text" id="staff-idno" placeholder="A123456789"/></div>
       <div class="lf"><label>狀態</label>
@@ -13564,6 +13564,7 @@ function openStaffModal(s=null) {
   document.getElementById('staff-birth').value=s?.birth_date||'';
   document.getElementById('staff-idno').value=s?.id_number||'';
   document.getElementById('staff-status').value=s?.status||'在職';
+  staffSyncStatusFromResign();   // 依離職日連動狀態
   pendingFaceDescriptor=null;
   const hasFace=!!(s&&s.face_descriptor&&s.face_descriptor.length);
   document.getElementById('staff-face-status').textContent=hasFace?'✅ 已建立人臉':'尚未建立';
@@ -13574,6 +13575,11 @@ function removeFace(){
   pendingFaceDescriptor='DELETE';
   document.getElementById('staff-face-status').textContent='🗑 已標記刪除，按「儲存」後生效';
   document.getElementById('btn-face-remove').style.display='none';
+}
+// 離職日 ↔ 狀態 連動：有離職日→離職、清空→在職
+function staffSyncStatusFromResign(){
+  const resign=document.getElementById('staff-resign').value;
+  document.getElementById('staff-status').value=resign?'離職':'在職';
 }
 function editStaff(id){openStaffModal(allStaff.find(s=>s.id===id));}
 async function saveStaff() {
@@ -13589,7 +13595,7 @@ async function saveStaff() {
     resign_date:resign,
     birth_date:document.getElementById('staff-birth').value||null,
     id_number:document.getElementById('staff-idno').value.trim(),
-    status:resign?'離職':(document.getElementById('staff-status').value||'在職')   // 有離職日 -> 離職
+    status:resign?'離職':'在職'   // 有離職日 -> 離職；無離職日 -> 在職
   };
   if(Array.isArray(pendingFaceDescriptor)) data.face_descriptor=pendingFaceDescriptor;
   else if(pendingFaceDescriptor==='DELETE') data.face_descriptor=null;
@@ -20816,20 +20822,28 @@ async function attendanceLoadMonth(){
   attRenderMonthly();
 }
 
-function attBuildRoster(){
+function attBuildRoster(rangeFirst){
   // 名單與「部門/職稱」一律來自公司名冊：部門＝名冊部門、職稱＝名冊職稱(role)
-  // 名冊修改後即時同步，不寫死。離職者若當月仍有資料則保留顯示。
+  // 名冊修改後即時同步，不寫死。離職者「離職當月」仍保留顯示，離職月之後不再出現。
   const list=[], seen=new Set();
   const staffArr=Array.isArray(allStaff)?allStaff:[];
+  const rng=attMonthRange();
+  // 檢視範圍起始日：週報傳入該週週一(可能跨月)，每日/月報則用月份第一天
+  const viewFirst=rangeFirst || (rng?rng.first:null);
+  const viewYM=viewFirst?viewFirst.slice(0,7):null;   // YYYY-MM
   staffArr.forEach(s=>{
     if(!s.name || s.status==='離職' || seen.has(s.name)) return;
     seen.add(s.name);
     list.push({ name:s.name, cat:staffDept(s.role,s.department), team:(s.role||'').trim() });
   });
   // 當月已有資料、但名冊沒有(離職或臨時)的人：用紀錄裡的 部門/職稱 顯示
+  // 離職者：以「檢視範圍起始月」比對離職月——起始月已晚於離職月才隱藏；
+  //   離職當月(或更早)仍整列保留。週報跨到離職月(如 7/28~8/3)也算碰到七月→保留，避免整列缺格。
   (Array.isArray(attMonthData)?attMonthData:[]).forEach(rec=>{
     if(seen.has(rec.staff_name)) return;
     seen.add(rec.staff_name);
+    const sm=staffArr.find(s=>s.name===rec.staff_name);
+    if(sm && sm.status==='離職' && sm.resign_date && viewYM && viewYM > sm.resign_date.slice(0,7)) return;
     list.push({ name:rec.staff_name, cat:staffDept(rec.team, rec.category), team:rec.team||'' });
   });
   // 手動「＋加入人員」(名冊以外)
@@ -21328,7 +21342,7 @@ async function attLoadWeek(){
   const d=new Date(first+'T00:00:00'); d.setDate(d.getDate()+6); const last=attLocalISO(d);
   const res=await sbFetchAll(`/rest/v1/att_report?select=*&work_date=gte.${first}&work_date=lte.${last}&order=work_date,staff_name`);
   attWeekData=Array.isArray(res.data)?res.data:[];
-  attBuildRoster();
+  attBuildRoster(first);   // 依「該週起始日」判定離職者去留(跨到離職月則整列保留)
   attRenderWeek(first,last);
 }
 function attRenderWeek(first,last){
