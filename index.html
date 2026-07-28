@@ -458,8 +458,24 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 /* BOM 工程列表:文字高對比(深色純白 / 淺色純黑,比照請款核對) */
 #page-bom{ --text:#ffffff; --text2:#ffffff; --text3:#ffffff; }
 [data-theme="light"] #page-bom{ --text:#000000; --text2:#000000; --text3:#000000; }
+/* 列表整列皆可進入工程；工程編號改為醒目的主要資訊。 */
+#page-bom .bom-project-row{cursor:pointer;outline:none}
+#page-bom .bom-project-row td{transition:background .15s,box-shadow .15s}
+#page-bom .bom-project-row:hover td,
+#page-bom .bom-project-row:focus-visible td{background:rgba(79,142,247,.10)}
+#page-bom .bom-project-row:hover td:first-child,
+#page-bom .bom-project-row:focus-visible td:first-child{box-shadow:inset 3px 0 0 var(--accent2)}
+#page-bom .bom-project-row:active td{background:rgba(79,142,247,.17)}
+#page-bom .bom-project-num{display:inline-flex;align-items:center;min-height:32px;padding:5px 10px;border-radius:8px;background:rgba(79,142,247,.13);border:1px solid rgba(79,142,247,.32);color:var(--accent2);font-family:var(--mono);font-size:15px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
+#page-bom .bom-project-name{font-weight:650;color:var(--text)}
+#page-bom .bom-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:2px;white-space:nowrap}
+#page-bom .bom-row-arrow{color:var(--text3);font-size:18px;margin-left:4px;transition:transform .15s,color .15s}
+#page-bom .bom-project-row:hover .bom-row-arrow,
+#page-bom .bom-project-row:focus-visible .bom-row-arrow{color:var(--accent2);transform:translateX(3px)}
 /* 銲材 81TN:整列上底色,81TN 粗體紅字 */
 #page-bom .data-table tr.bom-81tn td{background:rgba(255,69,58,.13)}
+#page-bom .data-table tr.bom-81tn:hover td,
+#page-bom .data-table tr.bom-81tn:focus-visible td{background:linear-gradient(rgba(79,142,247,.11),rgba(79,142,247,.11)),rgba(255,69,58,.13)}
 #page-bom .bom-card.bom-81tn{background:rgba(255,69,58,.10);border-color:rgba(255,69,58,.45)}
 .w81{color:var(--red);font-weight:800}
 .stat-delta{font-size:11px;margin-top:6px;display:flex;align-items:center;gap:4px}
@@ -1085,6 +1101,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .theme-toggle{background:none;border:1px solid var(--nav-border);border-radius:var(--rad);width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all .15s;color:var(--nav-text)}
 .theme-toggle:hover{border-color:var(--nav-green);color:var(--nav-green-text);background:var(--nav-hover)}
 .cell-selected{background:rgba(255,159,10,.10) !important;box-shadow:inset 0 0 0 1px rgba(255,159,10,.65)}
+.touch-cell-selecting,.touch-cell-selecting *{user-select:none!important;-webkit-user-select:none!important}
+.touch-cell-selecting{touch-action:none}
 #excel-selection-stats{position:fixed;right:18px;bottom:16px;z-index:9997;display:none;align-items:center;gap:14px;padding:8px 13px;background:rgba(22,27,38,.94);border:1px solid rgba(255,255,255,.16);border-radius:9px;box-shadow:0 6px 22px rgba(0,0,0,.28);backdrop-filter:blur(8px);font-family:var(--mono);font-size:12px;color:#d8dde8;pointer-events:none}
 #excel-selection-stats b{color:#fff;font-size:13px}#excel-selection-stats .sum{color:#7dd3c0}
 [data-theme="light"] #excel-selection-stats{background:rgba(255,255,255,.96);border-color:#cfd5df;color:#596273}[data-theme="light"] #excel-selection-stats b{color:#172033}[data-theme="light"] #excel-selection-stats .sum{color:#147d6c}
@@ -4197,6 +4215,19 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     .spx-table td.cell-selected{background:rgba(255,159,10,.22)!important;outline:1.5px solid var(--accent);outline-offset:-1px}
     .spx-table .btn-del-row{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:5px}
     .spx-table .btn-del-row:hover{color:var(--red)}
+    .spx-detail-btn{border:1px solid var(--accent2);background:rgba(10,132,255,.10);color:var(--accent2);border-radius:7px;padding:4px 10px;cursor:pointer;font:600 12px var(--mono);white-space:nowrap}
+    .spx-detail-btn:hover{background:rgba(10,132,255,.20)}
+    .pm-detail-backdrop{position:fixed;inset:0;z-index:12000;background:rgba(0,0,0,.58);display:flex;align-items:center;justify-content:center;padding:24px}
+    .pm-detail-modal{width:min(1120px,96vw);max-height:88vh;overflow:auto;background:var(--bg2);border:1px solid var(--border-hi);border-radius:14px;box-shadow:0 24px 80px rgba(0,0,0,.45)}
+    .pm-detail-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--bg2);border-bottom:1px solid var(--border)}
+    .pm-detail-title{font:700 16px var(--mono);color:var(--text)}
+    .pm-detail-meta{color:var(--text3);font:12px var(--mono)}
+    .pm-detail-close{margin-left:auto;border:0;background:none;color:var(--text2);font-size:20px;cursor:pointer;padding:2px 8px}
+    .pm-detail-table{width:100%;border-collapse:collapse;font:12px var(--mono)}
+    .pm-detail-table th,.pm-detail-table td{padding:9px 11px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+    .pm-detail-table th{color:var(--text2);background:var(--bg3);position:sticky;top:52px}
+    .pm-detail-table td{color:var(--text)}
+    .pm-detail-table .num{text-align:right}
     </style>
     <div class="page" id="page-prod">
       <div class="page-title">🏗️ SP鋼材狀態追蹤表</div>
@@ -4312,10 +4343,11 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <!-- ── 成品材領料 ── -->
       <div class="prod-view" id="prodview-product" style="display:none">
         <div class="prod-paste">
-          <div class="p-lbl">貼上成品材領料紀錄（欄序：<b>日期　工程編號　流水編號　事由　備註</b>）</div>
+          <div class="p-lbl">可貼上<b>領料通知單全文</b>自動剖析，或貼上成品材紀錄（欄序：<b>日期　工程編號　流水編號　事由　備註</b>）</div>
           <div class="prod-projrow"><label>工程編號</label><input type="text" id="prodProductProj" list="prodProjList" placeholder="工程編號欄留空時，套用此值"></div>
-          <textarea id="prodProductPaste" placeholder="2026/7/1	B822	NZ70C	5DG 剪力釘.磁罩	&#10;2026/7/6	B822	NZ70L	5DC 防爆拉桿.剪力釘.磁罩	"></textarea>
+          <textarea id="prodProductPaste" placeholder="貼上「通知單」全文，系統會辨識日期、倉庫別、工程編號、流水編號與品項明細；也可貼上既有的五欄資料。"></textarea>
           <div class="p-btns">
+            <button class="btn btn-primary" onclick="prodImportProductNotice()">剖析通知單並匯入</button>
             <button class="btn btn-primary" onclick="prodImportProduct(false)">匯入（附加）</button>
             <button class="btn" onclick="prodImportProduct(true)">清空後匯入</button>
             <span class="prod-count" id="prodProductMsg"></span>
@@ -4381,6 +4413,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div id="pdProduct" class="pd-list"></div>
         </div>
       </div>
+      <div id="pmDetailModal" style="display:none"></div>
     </div>
 
     <!-- DXF -->
@@ -11535,15 +11568,21 @@ function bomWeldHTML(p){ return bomIs81(p)?'<b class="w81">81TN</b>':(p.welding_
 // 公司上色:比照「請款核對」coStyle — 鎮山=青(accent3)、麗生=黃(yellow),粗體
 function bomCoHTML(co){ co=co||''; const s=co==='鎮山'?'color:var(--accent3);font-weight:700':co==='麗生'?'color:var(--yellow);font-weight:700':''; return s?`<span style="${s}">${co}</span>`:(co||'—'); }
 function bomRowHTML(p){
-  return `<tr class="${bomIs81(p)?'bom-81tn':''}">
-    <td><span class="proj-num-link" onclick="showProjectDetail(${p.id})">${p.proj_num||'—'}</span></td>
-    <td>${p.proj_name||'—'}</td><td>${p.client||'—'}</td><td>${bomWeldHTML(p)}</td>
+  return `<tr class="bom-project-row${bomIs81(p)?' bom-81tn':''}" tabindex="0" role="link"
+    aria-label="開啟工程 ${p.proj_num||''} ${p.proj_name||''}" title="點一下開啟工程詳情"
+    onclick="showProjectDetail(${p.id})"
+    onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();showProjectDetail(${p.id})}">
+    <td><span class="bom-project-num">${p.proj_num||'—'}</span></td>
+    <td><span class="bom-project-name">${p.proj_name||'—'}</span></td><td>${p.client||'—'}</td><td>${bomWeldHTML(p)}</td>
     <td>${p.proj_manager||'—'}</td><td>${p.qc_manager||'—'}</td>
     <td><span class="status-badge ${p.status}">${p.status}</span></td>
     <td>${bomCoHTML(p.company)}</td>
-    <td style="white-space:nowrap">
-      <button class="btn-icon edit" onclick="editBOM(${p.id})">✏️</button>
-      <button class="btn-icon del" onclick="deleteBOM(${p.id})">🗑</button>
+    <td>
+      <div class="bom-row-actions">
+        <button class="btn-icon edit" onclick="event.stopPropagation();editBOM(${p.id})" aria-label="編輯工程 ${p.proj_num||''}" title="編輯">✏️</button>
+        <button class="btn-icon del" onclick="event.stopPropagation();deleteBOM(${p.id})" aria-label="刪除工程 ${p.proj_num||''}" title="刪除">🗑</button>
+        <span class="bom-row-arrow" aria-hidden="true">›</span>
+      </div>
     </td>
   </tr>`;
 }
@@ -18789,6 +18828,53 @@ function tblInitSelection(table) {
   });
   document.addEventListener('mouseup', () => { tblSel.selecting = false; });
 
+  // 手機／平板也使用同一套 Excel 式矩形選取。
+  // touchmove 的 target 仍是起點，因此以 elementFromPoint 取得手指目前所在格。
+  let touchSelecting = false;
+  let touchId = null;
+  const findTouch = e => Array.from(e.changedTouches || e.touches || [])
+    .find(t => touchId == null || t.identifier === touchId);
+  table.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    const td = e.target.closest && e.target.closest('td');
+    if (!td || !table.contains(td)) return;
+    touchId = e.touches[0].identifier;
+    touchSelecting = true;
+    table.classList.add('touch-cell-selecting');
+    tblClearSel();
+    tblSel.table = table;
+    tblSel.anchor = cellRC(td);
+    tblSel.focus = tblSel.anchor;
+    tblSel.selecting = true;
+    tblApplySel();
+  }, { passive:true });
+  table.addEventListener('touchmove', e => {
+    if (!touchSelecting || tblSel.table !== table) return;
+    const touch = findTouch(e);
+    if (!touch) return;
+    const hit = document.elementFromPoint(touch.clientX, touch.clientY);
+    const td = hit && hit.closest ? hit.closest('td') : null;
+    if (!td || !table.contains(td)) return;
+    e.preventDefault();
+    const rc = cellRC(td);
+    if (rc.r !== tblSel.focus.r || rc.c !== tblSel.focus.c) {
+      tblSel.focus = rc;
+      tblApplySel();
+    }
+  }, { passive:false });
+  const endTouchSelection = e => {
+    if (!touchSelecting) return;
+    const ended = e.type === 'touchcancel' ||
+      Array.from(e.changedTouches || []).some(t => t.identifier === touchId);
+    if (!ended) return;
+    touchSelecting = false;
+    touchId = null;
+    tblSel.selecting = false;
+    table.classList.remove('touch-cell-selecting');
+  };
+  table.addEventListener('touchend', endTouchSelection, { passive:true });
+  table.addEventListener('touchcancel', endTouchSelection, { passive:true });
+
   // #5 床位/數量 等 <select>: 比照 Excel,單擊即可直接打開下拉選單(不再需要雙擊)。
   // 多格選取改用「拖曳一般欄位」或「Shift+方向鍵」即可,不必攔截下拉。
 }
@@ -18844,7 +18930,7 @@ document.addEventListener('copy', e => {
   e.clipboardData.setData('text/plain', clipText);
   window.__tblClip = clipText;   // 內部剪貼簿:供「下拉選單格」用鍵盤攔截貼上時的後備來源
   e.preventDefault();
-  setTimeout(() => { tblClearSel(); tblSel.anchor = null; tblSel.focus = null; }, 100);
+  // 保留來源框選；下一次點擊／拖曳目的範圍時才更新選取。
 });
 
 document.addEventListener('paste', e => {
@@ -19216,10 +19302,8 @@ function layoutMoveCell(input, dr, dc) {
 }
 
 // ── Excel 式 Delete / 單格複製貼上(明細輸入表)──
-// 瀏覽器的 copy/paste「事件」在 <select>(床位/數量/狀態) 與唯讀 input 上不會觸發,
-// 因此單格複製貼上改由 keydown 直接攔截 Ctrl+C / Ctrl+V 處理,並保留一份內部鏡像作為
-// 剪貼簿讀取權限被拒時的備援(表內互貼永遠可用)。
-let layoutClipMirror = '';
+// 複製貼上統一交由上方的原生 copy / paste 事件處理；
+// 不主動呼叫 Clipboard API，避免瀏覽器反覆詢問剪貼簿讀取權限。
 
 // 目前的選取矩形;沒有拖曳選取時,退回「作用中儲存格」當 1x1 矩形
 function layoutSelRectOrCell(table, active) {
@@ -19328,36 +19412,6 @@ async function layoutDeleteSelection(activeEl) {
   renderLayoutStats();
   if (removeKeys.size) layoutToast('已移除 ' + removeKeys.size + ' 列(可 Ctrl+Z 復原畫面,資料庫紀錄已刪除)');
 }
-
-// keydown 攔截 Ctrl/Cmd+C、Ctrl/Cmd+V(僅明細輸入表)
-document.addEventListener('keydown', e => {
-  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
-  const k = (e.key || '').toLowerCase();
-  if (k !== 'c' && k !== 'v') return;
-  const active = document.activeElement;
-  const table = active && active.closest ? active.closest('#layout-input-table') : null;
-  if (!table) return;
-  const isTextEditing = active.tagName === 'INPUT' && active.type === 'text' && !active.hasAttribute('readonly');
-  if (k === 'c') {
-    // 正在編輯文字且真的選了一段文字 → 讓瀏覽器複製那段文字
-    if (isTextEditing && active.selectionStart !== active.selectionEnd) return;
-    const text = layoutSerializeSel(table, active);
-    if (text == null) return;
-    e.preventDefault();
-    e.stopPropagation();
-    layoutClipMirror = text;
-    try { navigator.clipboard.writeText(text).catch(() => {}); } catch (_) {}
-    setTimeout(() => { tblClearSel(); tblSel.anchor = null; tblSel.focus = null; }, 100);
-  } else {
-    // 文字編輯中 → 原生 paste 事件會處理(維持既有流程,含從 Excel 貼入)
-    if (isTextEditing) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const doPaste = txt => { if (txt) layoutPasteFromText(txt, active); };
-    try { navigator.clipboard.readText().then(t => doPaste(t || layoutClipMirror)).catch(() => doPaste(layoutClipMirror)); }
-    catch (_) { doPaste(layoutClipMirror); }
-  }
-}, true);
 
 // 雙擊唯讀文字格 = 進入編輯(與 Enter 相同)
 document.addEventListener('dblclick', e => {
@@ -21186,11 +21240,9 @@ function attInitLeaveSelect(){
     s.dispatchEvent(new Event('input',{bubbles:true}));
     s.dispatchEvent(new Event('change',{bubbles:true}));
   }, {passive:false});
-  // Ctrl/Cmd + C / V：<select> 不是可編輯元素，瀏覽器不會對它觸發 copy/paste 事件，
-  //   所以在「請假類別」下拉上按 Ctrl+C/Ctrl+V 會失效（貼上後變空白）。這裡用鍵盤攔截，
-  //   以「合成剪貼簿事件」重用既有 copy / paste 邏輯：
-  //     複製 → 合成 copy 事件取回文字，寫入系統剪貼簿與內部剪貼簿；
-  //     貼上 → 取剪貼簿文字（優先系統剪貼簿，後備內部剪貼簿），合成 paste 事件套用。
+  // Ctrl/Cmd + C：下拉格保留專用複製處理。
+  // Ctrl/Cmd + V 不在 keydown 主動讀取剪貼簿，統一交由全域原生 paste 事件處理，
+  // 避免瀏覽器反覆詢問剪貼簿讀取權限。
   grid.addEventListener('keydown', ev=>{
     const s=leaveOf(ev.target); if(!s) return;
     if(!(ev.ctrlKey||ev.metaKey) || ev.altKey) return;
@@ -21209,24 +21261,6 @@ function attInitLeaveSelect(){
       const txt=dt.getData('text/plain');
       window.__tblClip=txt;
       if(navigator.clipboard && navigator.clipboard.writeText){ try{ navigator.clipboard.writeText(txt); }catch(_){} }
-    } else if(k==='v'){
-      ev.preventDefault();
-      // 貼上「—」(空值,代表沒有請假):既有 paste 防呆會擋掉空字串,故直接清空選取的請假類別格
-      const clearEmpty=()=>{
-        const sel=grid.querySelectorAll('td.cell-selected select[data-f="leave_type"]');
-        const targets=sel.length?Array.prototype.slice.call(sel):[s];
-        targets.forEach(inp=>{ inp.value=''; inp.dispatchEvent(new Event('input',{bubbles:true})); inp.dispatchEvent(new Event('change',{bubbles:true})); });
-        tblClearSel(); tblSel.anchor=null; tblSel.focus=null;
-      };
-      const fire=txt=>{
-        if(txt==null || txt===''){ clearEmpty(); return; }   // 空值 → 清空(即「—」)
-        const dt=new DataTransfer(); dt.setData('text/plain', txt);
-        document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
-      };
-      const fallback=()=>window.__tblClip||'';
-      if(navigator.clipboard && navigator.clipboard.readText){
-        navigator.clipboard.readText().then(t=>fire(t||fallback())).catch(()=>fire(fallback()));
-      } else { fire(fallback()); }
     }
   });
 }
@@ -27898,7 +27932,8 @@ function prodRenderDetail(){
     '<div class="pd-row"><span class="pdr-k">'+esc(p.serial||'—')+'</span>'+
       (p.pick_date?'<span class="pdr-s">'+esc(String(p.pick_date).slice(0,10))+'</span>':'')+
       '<span class="pdr-m">'+esc(p.reason||'')+'</span>'+
-      (p.remark?'<span class="pdr-s">'+esc(p.remark)+'</span>':'')+'</div>'
+      (pmPlainRemark(p.remark)?'<span class="pdr-s">'+esc(pmPlainRemark(p.remark))+'</span>':'')+
+      (pmMeta(p.remark)?.details?.length?'<button class="spx-detail-btn" onclick="pmOpenDetails('+p._key+')">查看細項</button>':'')+'</div>'
   ).join(''):'<div class="pd-empty">此工程區無成品材領用。</div>';
 }
 // 詳情頁「＋新增SP列」:直接建一列已帶入本工程區的資料列(略過空白輸入列機制)
@@ -28186,6 +28221,93 @@ function prodNum(x){ const n=parseFloat(String(x||'').replace(/,/g,'')); return 
 function prodPad(n){ n=String(n); return n.length<2?'0'+n:n; }
 function prodDate(s){ const m=String(s||'').match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/); return m?(m[1]+'-'+prodPad(m[2])+'-'+prodPad(m[3])):null; }
 
+// 成品材通知單的明細保存在既有 remark 欄尾端，避免舊資料庫尚未新增欄位時無法寫入。
+// 畫面與編輯器只顯示使用者備註；細項資料由專用按鈕開啟。
+const PM_META_TAG=' [[PMD1:';
+function pmPackRemark(remark,meta){
+  const plain=pmPlainRemark(remark);
+  if(!meta || !Array.isArray(meta.details) || !meta.details.length) return plain;
+  try{return plain+PM_META_TAG+encodeURIComponent(JSON.stringify(meta))+']]';}catch(e){return plain;}
+}
+function pmMeta(remark){
+  const s=String(remark||''), i=s.lastIndexOf(PM_META_TAG);
+  if(i<0 || !s.endsWith(']]')) return null;
+  try{return JSON.parse(decodeURIComponent(s.slice(i+PM_META_TAG.length,-2)));}catch(e){return null;}
+}
+function pmPlainRemark(remark){ const s=String(remark||''),i=s.lastIndexOf(PM_META_TAG); return i<0?s:s.slice(0,i); }
+function pmNormalizeSerial(s){
+  s=String(s||'').trim().toUpperCase();
+  // OCR 常把夾在數字間的 0 看成 O，例如 NZ71O-1。
+  return s.replace(/(?<=\d)O(?=\d|[-])/g,'0');
+}
+function pmReasonItem(name){
+  const s=String(name||'').replace(/[（(].*?[）)]/g,'').replace(/^標準型/,'').trim();
+  if(/防爆拉桿/.test(s)) return '防爆拉桿';
+  if(/竹節鋼筋/.test(s)) return '鋼筋';
+  if(/剪力釘/.test(s)) return '剪力釘';
+  if(/瓷罩|磁罩/.test(s)) return '瓷罩';
+  return s;
+}
+function pmReasonSummary(project,details){
+  const names=[...new Set(details.map(d=>pmReasonItem(d.item)).filter(Boolean))];
+  if(!names.length) return project;
+  if(names.length===1) return project+' '+names[0];
+  return project+' '+names.slice(0,-1).join('、')+'及'+names[names.length-1];
+}
+function prodParseProductNotices(text){
+  const src=String(text||'').replace(/\r/g,'');
+  // 每張通知單以日期/倉庫/批次/工程/副號/流水編號的固定表頭切開。
+  const header=/^\s*(\d{8})\s+([A-Z]\d{3})\s+(\d{4})\s+([A-Z]\d{3,})\s+([A-Z])\s+([A-Z0-9]+-\d+)\s*$/gmi;
+  const hits=[]; let m;
+  while((m=header.exec(src))) hits.push({at:m.index,end:header.lastIndex,date:m[1],warehouse:m[2],batch:m[3],project:m[4],sub:m[5],fullSerial:pmNormalizeSerial(m[6])});
+  return hits.map((h,idx)=>{
+    const block=src.slice(h.end,idx+1<hits.length?hits[idx+1].at:src.length);
+    const details=[];
+    block.split('\n').forEach(line=>{
+      // 從右側固定欄（材質、區域、數量、單位）定位，再依大段空白拆品名與規格。
+      // 規格尾端到材質之間有些通知單只有一格，不能假定一定是兩格。
+      const x=line.match(/^\s*([A-Z]-[A-Z0-9]+)\s+(.+?)\s+([A-Z0-9]+)\s{2,}([A-Z]{2,4})\s+([\d,.]+)\s+[A-Z]\s+/i);
+      if(!x) return;
+      const mid=x[2].trim().split(/\s{2,}/);
+      if(mid.length<2) return;
+      details.push({
+        full_serial:h.fullSerial, project:h.project, area:x[4].toUpperCase(),
+        item:mid.shift().trim().replace(/\s+/g,' '), spec:mid.join(' ').trim().replace(/\s+/g,' '),
+        qty:prodNum(x[5]), warehouse:h.warehouse, material:x[3], item_no:x[1]
+      });
+    });
+    return {
+      pick_date:prodDate(h.date.slice(0,4)+'-'+h.date.slice(4,6)+'-'+h.date.slice(6,8)),
+      proj_no:h.project, serial:h.fullSerial.split('-')[0],
+      reason:pmReasonSummary(h.project,details),
+      remark:pmPackRemark('',{warehouse:h.warehouse,batch:h.batch,sub:h.sub,full_serial:h.fullSerial,details})
+    };
+  }).filter(o=>pmMeta(o.remark)?.details?.length);
+}
+async function prodImportProductNotice(){
+  const ta=document.getElementById('prodProductPaste'),msg=document.getElementById('prodProductMsg');
+  const objs=prodParseProductNotices(ta.value);
+  if(!objs.length){msg.textContent='無法辨識通知單，請確認已貼上包含表頭與品項的全文';return;}
+  const detailCount=objs.reduce((n,o)=>n+(pmMeta(o.remark)?.details?.length||0),0);
+  msg.textContent='剖析完成，寫入中…';
+  const r=await prodInsert('product_material',objs,false);
+  if(!r.ok){msg.textContent=r.err;return;}
+  ta.value='';msg.textContent='已匯入 '+objs.length+' 張通知單／'+detailCount+' 筆細項';
+  await prodInit();
+}
+function pmOpenDetails(rowKey){
+  const row=prodProduct.find(r=>String(r._key)===String(rowKey));
+  const meta=row?pmMeta(row.remark):null, details=meta&&Array.isArray(meta.details)?meta.details:[];
+  if(!row||!details.length) return;
+  const modal=document.getElementById('pmDetailModal');
+  const rows=details.map(d=>'<tr><td>'+esc(d.full_serial||meta.full_serial||'')+'</td><td>'+esc(d.project||row.proj_no||'')+'</td><td>'+esc(d.area||'')+'</td><td>'+esc(d.item||'')+'</td><td>'+esc(d.spec||'')+'</td><td class="num">'+esc(d.qty==null?'':d.qty)+'</td><td>'+esc(d.warehouse||meta.warehouse||'')+'</td></tr>').join('');
+  modal.innerHTML='<div class="pm-detail-backdrop" onclick="if(event.target===this)pmCloseDetails()"><div class="pm-detail-modal">'+
+    '<div class="pm-detail-head"><div><div class="pm-detail-title">'+esc(row.proj_no||'')+' '+esc(row.reason||'')+'－細項</div><div class="pm-detail-meta">'+esc(String(row.pick_date||'').slice(0,10))+'　流水編號 '+esc(meta.full_serial||row.serial||'')+'　倉庫別 '+esc(meta.warehouse||'')+'　共 '+details.length+' 筆</div></div><button class="pm-detail-close" onclick="pmCloseDetails()">✕</button></div>'+
+    '<table class="pm-detail-table"><thead><tr><th>完整流水編號</th><th>工程編號</th><th>區域</th><th>品名</th><th>規格</th><th class="num">數量</th><th>倉庫別</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+  modal.style.display='';
+}
+function pmCloseDetails(){const modal=document.getElementById('pmDetailModal');if(modal){modal.style.display='none';modal.innerHTML='';}}
+
 async function prodInsert(table, objs, clearFirst){
   if(clearFirst){ const d=await sbFetch('/rest/v1/'+table+'?id=gt.0',{method:'DELETE'}); if(!d.ok){ return {ok:false,err:'清空失敗'}; } }
   // 分批 500 筆送出
@@ -28268,7 +28390,7 @@ const SPX={
     ]},
   product:{ tbl:'product_material', sort:(a,b)=>String(b.pick_date||'').localeCompare(String(a.pick_date||'')),
     cols:[
-      {k:'pick_date',h:'日期',date:true,noData:true,defFn:spxToday},{k:'proj_no',h:'工程編號'},{k:'serial',h:'流水編號'},{k:'reason',h:'事由',wide:true},{k:'remark',h:'備註',wide:true}
+      {k:'pick_date',h:'日期',date:true,noData:true,defFn:spxToday},{k:'proj_no',h:'工程編號'},{k:'serial',h:'流水編號'},{k:'reason',h:'事由',wide:true},{k:'remark',h:'備註',wide:true},{k:'_details',h:'細項',virtual:true,noData:true}
     ]}
 };
 // 工程區詳情頁的 SP 編輯格:與 track 同一張 sp_track / 同一份 prodTrack 陣列,只是另一個 DOM(spx-detail)+獨立篩選,並關掉最上方空白輸入列(改用「＋新增SP列」自動帶入工程區)
@@ -28285,7 +28407,7 @@ function prodSetArr(key,arr){ if(key==='track'||key==='detail')prodTrack=arr; el
 function spxComboStr(r,c){ return c.combo.map(f=>(r[f]==null?'':String(r[f])).trim()).filter(Boolean).join('-'); }
 function spxSetCombo(r,c,val){ const s=String(val==null?'':val).trim(), i=s.indexOf('-');
   if(i<0){ r[c.combo[0]]=s; r[c.combo[1]]=''; } else { r[c.combo[0]]=s.slice(0,i).trim(); r[c.combo[1]]=s.slice(i+1).trim(); } }
-function spxColStr(r,c){ if(c.combo) return spxComboStr(r,c); if(c.bool) return r[c.k]===true?'是':r[c.k]===false?'否':''; const v=r[c.k]; return v==null?'':String(v); }
+function spxColStr(r,c){ if(c.virtual) return ''; if(c.combo) return spxComboStr(r,c); if(c.bool) return r[c.k]===true?'是':r[c.k]===false?'否':''; const v=r[c.k]; return c.k==='remark'?pmPlainRemark(v):(v==null?'':String(v)); }
 function spxCoerce(c,v){ if(c.bool) return v===true?true:v===false?false:(v==='是'?true:v==='否'?false:null); if(c.num){ const n=parseFloat(String(v==null?'':v).replace(/,/g,'')); return isNaN(n)?null:n; } if(c.date) return prodDate(v); return v==null?'':String(v); }
 function spxToday(){ const d=new Date(), p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
 function spxBlankObj(cfg){ const o={}; cfg.cols.forEach(c=>{ o[c.k]= c.bool?null:(c.defFn?c.defFn():(c.def!=null?c.def:'')); }); o._key=++spxSeq; return o; }
@@ -28313,7 +28435,7 @@ async function spxFlush(key){
   s.busy=true; let saved=0;
   try{
     for(const row of dirty){
-      const payload={}; cfg.cols.forEach(c=>{ if(c.combo){ c.combo.forEach(f=>{ payload[f]=(row[f]==null?'':String(row[f])); }); } else payload[c.k]=spxCoerce(c,row[c.k]); });
+      const payload={}; cfg.cols.forEach(c=>{ if(c.virtual) return; if(c.combo){ c.combo.forEach(f=>{ payload[f]=(row[f]==null?'':String(row[f])); }); } else if(c.k==='remark'&&key==='product') payload[c.k]=pmPackRemark(pmPlainRemark(row[c.k]),pmMeta(row[c.k])); else payload[c.k]=spxCoerce(c,row[c.k]); });
       if(row.id){ const r=await sbFetch('/rest/v1/'+cfg.tbl+'?id=eq.'+row.id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)}); if(r.ok){row._dirty=false;saved++;} else if(r.status===401||r.status===403){ spxHint('需登入才能儲存',true); break; } }
       else { const r=await sbFetch('/rest/v1/'+cfg.tbl,{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)}); if(r.ok&&r.data&&r.data[0]){row.id=r.data[0].id;row._dirty=false;saved++;} else if(r.status===401||r.status===403){ spxHint('需登入才能儲存',true); break; } }
     }
@@ -28375,7 +28497,10 @@ function spxEqualizeWideCols(key){
 function spxRowHtml(key,i){ const cfg=SPX[key], arr=prodArr(key), r=arr[i], blank=spxRowIsBlank(cfg,r), RO=blank?'':' readonly';
   let h='<tr data-key="'+r._key+'"'+(blank?' class="lt-input-row"':'')+'>';
   cfg.cols.forEach(c=>{ const td=c.wide?'<td class="col-wide">':'<td>';
-    if(c.status){ const cur=r[c.k]||c.def||'-';
+    if(c.virtual){
+      const meta=key==='product'?pmMeta(r.remark):null, n=meta&&Array.isArray(meta.details)?meta.details.length:0;
+      h+=td+(n?'<button class="spx-detail-btn" onclick="pmOpenDetails('+r._key+')">查看 '+n+' 筆</button>':'—')+'</td>';
+    } else if(c.status){ const cur=r[c.k]||c.def||'-';
       const opts=c.sel.map(o=>'<option value="'+esc(o)+'"'+((cur===o)?' selected':'')+'>'+esc(o)+'</option>').join('');
       h+=td+'<select class="lt-edit-sel stcell-'+esc(cur)+'" onchange="this.className=\'lt-edit-sel stcell-\'+this.value;spxEdit(\''+key+'\','+i+',\''+c.k+'\',this.value)">'+opts+'</select></td>';
     } else if(c.sel){ const cur=spxColStr(r,c);
@@ -28389,7 +28514,7 @@ function spxRowHtml(key,i){ const cfg=SPX[key], arr=prodArr(key), r=arr[i], blan
   return h;
 }
 function spxEdit(key,i,field,val){ const r=prodArr(key)[i]; if(!r) return; const c=SPX[key].cols.find(x=>x.k===field); spxSnapshot(key); r[field]=c?spxCoerce(c,val):val; spxMarkDirty(key,i); if(key==='detail'&&typeof prodRenderDetailHeader==='function') prodRenderDetailHeader(); }
-function spxEditText(key,i,field,el){ const r=prodArr(key)[i]; if(!r) return; const c=SPX[key].cols.find(x=>x.k===field); spxSnapshot(key); if(c&&c.combo) spxSetCombo(r,c,el.value); else r[field]=el.value; spxMarkDirty(key,i); }
+function spxEditText(key,i,field,el){ const r=prodArr(key)[i]; if(!r) return; const c=SPX[key].cols.find(x=>x.k===field); spxSnapshot(key); if(c&&c.combo) spxSetCombo(r,c,el.value); else if(key==='product'&&field==='remark') r[field]=pmPackRemark(el.value,pmMeta(r[field])); else r[field]=el.value; spxMarkDirty(key,i); }
 function spxAddRow(key){ spxSnapshotNow(key); spxEnsureBlank(key); spxRender(key); }
 function spxDelRow(key,i){ const cfg=SPX[key], arr=prodArr(key), row=arr[i]; if(!row) return; spxSnapshotNow(key); if(row.id) sbFetch('/rest/v1/'+cfg.tbl+'?id=eq.'+row.id,{method:'DELETE'}); arr.splice(i,1); spxRender(key); spxAfterChange(key); }
 
