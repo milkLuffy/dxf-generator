@@ -28248,11 +28248,18 @@ function pmReasonItem(name){
   if(/瓷罩|磁罩/.test(s)) return '瓷罩';
   return s;
 }
-function pmReasonSummary(project,details){
-  const names=[...new Set(details.map(d=>pmReasonItem(d.item)).filter(Boolean))];
-  if(!names.length) return project;
-  if(names.length===1) return project+' '+names[0];
-  return project+' '+names.slice(0,-1).join('、')+'及'+names[names.length-1];
+function pmReasonSummary(details){
+  const areas=new Map();
+  details.forEach(d=>{
+    const area=String(d.area||'').trim(), item=pmReasonItem(d.item);
+    if(!area||!item) return;
+    if(!areas.has(area)) areas.set(area,[]);
+    if(!areas.get(area).includes(item)) areas.get(area).push(item);
+  });
+  return [...areas].map(([area,names])=>{
+    const items=names.length<=1?(names[0]||''):names.slice(0,-1).join('、')+'及'+names[names.length-1];
+    return area+(items?' '+items:'');
+  }).join('、');
 }
 function prodParseProductNotices(text){
   const src=String(text||'').replace(/\r/g,'');
@@ -28279,7 +28286,7 @@ function prodParseProductNotices(text){
     return {
       pick_date:prodDate(h.date.slice(0,4)+'-'+h.date.slice(4,6)+'-'+h.date.slice(6,8)),
       proj_no:h.project, serial:h.fullSerial.split('-')[0],
-      reason:pmReasonSummary(h.project,details),
+      reason:pmReasonSummary(details),
       remark:pmPackRemark('',{warehouse:h.warehouse,batch:h.batch,sub:h.sub,full_serial:h.fullSerial,details})
     };
   }).filter(o=>pmMeta(o.remark)?.details?.length);
