@@ -4228,6 +4228,10 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     .pm-detail-table th{color:var(--text2);background:var(--bg3);position:sticky;top:52px}
     .pm-detail-table td{color:var(--text)}
     .pm-detail-table .num{text-align:right}
+    .pm-summary{margin:18px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+    .pm-summary-title{padding:10px 12px;background:var(--bg3);color:var(--text);font:700 13px var(--mono);border-bottom:1px solid var(--border)}
+    .pm-summary .pm-detail-table th{position:static}
+    .pm-summary-total td{font-weight:700;background:rgba(10,132,255,.08);color:var(--accent2)}
     </style>
     <div class="page" id="page-prod">
       <div class="page-title">🏗️ SP鋼材狀態追蹤表</div>
@@ -18828,30 +18832,54 @@ function tblInitSelection(table) {
   });
   document.addEventListener('mouseup', () => { tblSel.selecting = false; });
 
-  // 手機／平板也使用同一套 Excel 式矩形選取。
+  // 手機／平板：一般滑動維持表格捲動；長按約 0.3 秒後才進入 Excel 式矩形選取。
   // touchmove 的 target 仍是起點，因此以 elementFromPoint 取得手指目前所在格。
   let touchSelecting = false;
   let touchId = null;
+  let touchTimer = null;
+  let touchStartX = 0, touchStartY = 0;
+  let touchStartTd = null;
+  let suppressTouchClickUntil = 0;
   const findTouch = e => Array.from(e.changedTouches || e.touches || [])
     .find(t => touchId == null || t.identifier === touchId);
+  const cancelTouchTimer = () => { if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; } };
   table.addEventListener('touchstart', e => {
     if (e.touches.length !== 1) return;
     const td = e.target.closest && e.target.closest('td');
     if (!td || !table.contains(td)) return;
-    touchId = e.touches[0].identifier;
-    touchSelecting = true;
-    table.classList.add('touch-cell-selecting');
-    tblClearSel();
-    tblSel.table = table;
-    tblSel.anchor = cellRC(td);
-    tblSel.focus = tblSel.anchor;
-    tblSel.selecting = true;
-    tblApplySel();
+    const touch = e.touches[0];
+    touchId = touch.identifier;
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchStartTd = td;
+    cancelTouchTimer();
+    touchTimer = setTimeout(() => {
+      touchTimer = null;
+      touchSelecting = true;
+      suppressTouchClickUntil = Date.now() + 700;
+      table.classList.add('touch-cell-selecting');
+      tblClearSel();
+      tblSel.table = table;
+      tblSel.anchor = cellRC(touchStartTd);
+      tblSel.focus = tblSel.anchor;
+      tblSel.selecting = true;
+      tblApplySel();
+      if (navigator.vibrate) { try { navigator.vibrate(20); } catch (_) {} }
+    }, 320);
   }, { passive:true });
   table.addEventListener('touchmove', e => {
-    if (!touchSelecting || tblSel.table !== table) return;
     const touch = findTouch(e);
     if (!touch) return;
+    // 長按成立前手指已開始移動＝使用者要捲動，取消框選並完全交還原生捲動。
+    if (!touchSelecting) {
+      if (Math.hypot(touch.clientX - touchStartX, touch.clientY - touchStartY) > 8) {
+        cancelTouchTimer();
+        touchId = null;
+        touchStartTd = null;
+      }
+      return;
+    }
+    if (tblSel.table !== table) return;
     const hit = document.elementFromPoint(touch.clientX, touch.clientY);
     const td = hit && hit.closest ? hit.closest('td') : null;
     if (!td || !table.contains(td)) return;
@@ -18863,17 +18891,22 @@ function tblInitSelection(table) {
     }
   }, { passive:false });
   const endTouchSelection = e => {
-    if (!touchSelecting) return;
+    cancelTouchTimer();
     const ended = e.type === 'touchcancel' ||
       Array.from(e.changedTouches || []).some(t => t.identifier === touchId);
-    if (!ended) return;
+    if (!ended && touchId != null) return;
     touchSelecting = false;
     touchId = null;
+    touchStartTd = null;
     tblSel.selecting = false;
     table.classList.remove('touch-cell-selecting');
   };
   table.addEventListener('touchend', endTouchSelection, { passive:true });
   table.addEventListener('touchcancel', endTouchSelection, { passive:true });
+  // 長按框選完成後阻止瀏覽器補送的 click，避免誤開下拉選單或觸發儲存格動作。
+  table.addEventListener('click', e => {
+    if (Date.now() < suppressTouchClickUntil) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
 
   // #5 床位/數量 等 <select>: 比照 Excel,單擊即可直接打開下拉選單(不再需要雙擊)。
   // 多格選取改用「拖曳一般欄位」或「Shift+方向鍵」即可,不必攔截下拉。
@@ -28307,10 +28340,30 @@ function pmOpenDetails(rowKey){
   const meta=row?pmMeta(row.remark):null, details=meta&&Array.isArray(meta.details)?meta.details:[];
   if(!row||!details.length) return;
   const modal=document.getElementById('pmDetailModal');
+  // 上方保留原始明細；下方另依「規格完全相同」產生統計，不改動原始數量。
+  const grouped=new Map();
+  details.forEach(d=>{
+    const key=String(d.spec||'').trim();
+    if(!grouped.has(key)) grouped.set(key,{spec:key,qty:0,serials:[],projects:[],areas:[],items:[],warehouses:[]});
+    const g=grouped.get(key);
+    g.qty+=(Number(d.qty)||0);
+    [
+      [g.serials,d.full_serial||meta.full_serial||''],
+      [g.projects,d.project||row.proj_no||''],
+      [g.areas,d.area||''],
+      [g.items,d.item||''],
+      [g.warehouses,d.warehouse||meta.warehouse||'']
+    ].forEach(([arr,val])=>{val=String(val||'').trim();if(val&&!arr.includes(val))arr.push(val);});
+  });
+  const summary=[...grouped.values()];
   const rows=details.map(d=>'<tr><td>'+esc(d.full_serial||meta.full_serial||'')+'</td><td>'+esc(d.project||row.proj_no||'')+'</td><td>'+esc(d.area||'')+'</td><td>'+esc(d.item||'')+'</td><td>'+esc(d.spec||'')+'</td><td class="num">'+esc(d.qty==null?'':d.qty)+'</td><td>'+esc(d.warehouse||meta.warehouse||'')+'</td></tr>').join('');
+  const sumRows=summary.map(g=>'<tr><td>'+esc(g.spec)+'</td><td class="num">'+details.filter(d=>String(d.spec||'').trim()===g.spec).length+'</td><td class="num">'+esc(g.qty)+'</td></tr>').join('');
+  const grandQty=summary.reduce((n,g)=>n+g.qty,0);
   modal.innerHTML='<div class="pm-detail-backdrop" onclick="if(event.target===this)pmCloseDetails()"><div class="pm-detail-modal">'+
     '<div class="pm-detail-head"><div><div class="pm-detail-title">'+esc(row.proj_no||'')+' '+esc(row.reason||'')+'－細項</div><div class="pm-detail-meta">'+esc(String(row.pick_date||'').slice(0,10))+'　流水編號 '+esc(meta.full_serial||row.serial||'')+'　倉庫別 '+esc(meta.warehouse||'')+'　共 '+details.length+' 筆</div></div><button class="pm-detail-close" onclick="pmCloseDetails()">✕</button></div>'+
-    '<table class="pm-detail-table"><thead><tr><th>完整流水編號</th><th>工程編號</th><th>區域</th><th>品名</th><th>規格</th><th class="num">數量</th><th>倉庫別</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+    '<table class="pm-detail-table"><thead><tr><th>完整流水編號</th><th>工程編號</th><th>區域</th><th>品名</th><th>規格</th><th class="num">原始數量</th><th>倉庫別</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<div class="pm-summary"><div class="pm-summary-title">同規格數量加總</div><table class="pm-detail-table"><thead><tr><th>規格</th><th class="num">原始筆數</th><th class="num">加總數量</th></tr></thead><tbody>'+sumRows+
+    '<tr class="pm-summary-total"><td>全部規格合計</td><td class="num">'+details.length+'</td><td class="num">'+esc(grandQty)+'</td></tr></tbody></table></div></div></div>';
   modal.style.display='';
 }
 function pmCloseDetails(){const modal=document.getElementById('pmDetailModal');if(modal){modal.style.display='none';modal.innerHTML='';}}
