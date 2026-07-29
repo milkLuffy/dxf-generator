@@ -1772,6 +1772,17 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <span style="font-size:11px;color:var(--text3)">依薪資自動帶入該級距;▲▼ 或鍵盤上下鍵按勞保投保薪資分級表跳動</span>
       </div>
       <div class="lf"><label>眷屬人數 (健保)</label><input type="number" id="emp-f-dep" value="0" min="0" step="1"/></div>
+      <div class="lf"><label>外勞類別 (加班費)</label>
+        <select id="emp-f-foreign">
+          <option value="">本國 (依現有加班公式)</option>
+          <option value="普通">普通外勞 (540/1200/1500/1900)</option>
+          <option value="特定">特定外勞 (650/1300/1600/2000)</option>
+        </select>
+      </div>
+      <div class="lf"><label>保障底薪 (含加班補足)</label><input type="number" id="emp-f-guarantee" placeholder="0=不保障 例 80000" min="0" step="1"/>
+        <span style="font-size:11px;color:var(--text3)">含加班費未達此金額時,差額補在「職務津貼」(外勞免填)</span>
+      </div>
+      <div class="lf"><label>固定職務津貼 (元/月)</label><input type="number" id="emp-f-joballow" placeholder="選填" min="0" step="1"/></div>
       <div class="lf"><label>匯款帳號</label><input type="text" id="emp-f-bank" placeholder="選填"/></div>
       <div class="lf full"><label>備註</label><input type="text" id="emp-f-note" placeholder="選填"/></div>
     </div>
@@ -3609,8 +3620,11 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <div class="toolbar" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
         <label style="font-size:12px;color:var(--text2)">計薪月份</label>
         <input type="month" id="pr-month" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--rad);font-family:var(--mono);color:var(--text);background:var(--bg3)"/>
+        <input type="file" id="pr-punch-file" accept=".xlsx" style="display:none" onchange="payrollLoadPunch(this)"/>
+        <button class="btn" onclick="document.getElementById('pr-punch-file').click()" title="上傳打卡記錄表(.xlsx),以真實打卡時間計算出勤/遲到/加班" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--accent2);background:transparent;color:var(--accent2);cursor:pointer">📎 上傳打卡xlsx</button>
         <button class="btn btn-primary" onclick="payrollCalc()" style="padding:7px 14px;border-radius:var(--rad);background:var(--accent2);border:1px solid var(--accent2);color:#fff;cursor:pointer">🧮 計算</button>
         <div style="flex:1"></div>
+        <span id="pr-punch-info" style="font-size:12px;color:var(--accent2)"></span>
         <span id="pr-count" style="font-size:12px;color:var(--text2)"></span>
         <button class="btn" onclick="payrollSaveDraft()" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">💾 儲存草稿</button>
         <button class="btn" onclick="payrollLock()" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">🔒 鎖定本月</button>
@@ -3632,10 +3646,12 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         </div>
       </div>
       <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:10px;line-height:1.7">
-        ※ 出勤來源為「出勤回報」att_report(work_hours/ot_hours/night_hours/leave_hours),此頁只讀不改。<br>
+        ※ 出勤來源:<b>已上傳打卡xlsx → 以真實打卡計算</b>(上班08:00~17:00、08:15後遲到、加班17:30起分兩段20:30/23:00);<b>未上傳 → 沿用「出勤回報」att_report</b>。<br>
+        ※ 外勞加班費依「員工薪資設定」的外勞類別(普通/特定)給固定金額;國定假日自動判斷(每年自動更新),星期日另計。<br>
+        ※ 設「保障底薪」者,含加班費未達該金額時自動補足,差額計入「職務津貼」(外勞免設)。<br>
         ※ 未在「員工薪資設定」設定薪別者不列入計算(見上方紅字提醒)。<br>
         ※ 雇主成本 = 勞保雇主 + 健保雇主 + 勞退6%(非員工扣款,供成本估算)。<br>
-        ※ 鎖定後該月薪資單標記 locked;要重算請先改回草稿(之後可加解鎖鈕)。
+        ※ 新增欄位需先於 Supabase 執行:<code>alter table employee_pay add column if not exists foreign_type text, add column if not exists guarantee_min numeric, add column if not exists job_allowance numeric; notify pgrst, 'reload schema';</code>
       </div>
     </div>
 
@@ -3691,6 +3707,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <label style="font-size:12px;color:var(--text3)">生效日</label>
           <input type="date" id="pcfg-eff" class="date-wk" data-wk="pcfg-eff-show" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text);font-family:var(--mono)"/>
           <span class="date-wk-show" id="pcfg-eff-show" style="font-size:12px;color:var(--text3)"></span>
+          <button class="btn" id="pcfg-policy-btn" onclick="pcfgApplyPolicy()" title="一鍵帶入最新年度官方費率、基本工資與投保薪資分級表(來源:勞保局/健保署公告)" style="padding:8px 12px;border:1px solid var(--accent2);border-radius:var(--rad);background:transparent;color:var(--accent2);cursor:pointer;font-weight:600">🔄 套用2026政策</button>
           <button class="btn-add-new" onclick="pcfgSave()">💾 儲存費率</button>
         </div>
       </div>
@@ -3720,6 +3737,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="pcfg-f"><label>二代健保 費率</label><input type="number" id="pcfg-h2nd-rate" step="0.0001"/></div>
           <div class="pcfg-f"><label>二代健保 門檻(投保額倍)</label><input type="number" id="pcfg-h2nd-thr" step="0.5"/></div>
           <div class="pcfg-f"><label>勞退 雇主提繳率</label><input type="number" id="pcfg-pension-rate" step="0.01"/></div>
+          <div class="pcfg-f"><label>職災保險 費率(雇主全額)</label><input type="number" id="pcfg-occ-rate" step="0.0001"/></div>
         </div>
       </div>
 
@@ -26477,10 +26495,12 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     return {
       office:meta('ot_office',{first2:1.34,rest:1.67,monthly_cap_hours:54}),
       field:meta('ot_field',{half_day:.5,full_day:1}),
+      foreign:meta('ot_foreign',{'普通':{tier1:540,tier2:1200,holiday:1500,sunday:1900},'特定':{tier1:650,tier2:1300,holiday:1600,sunday:2000}}),
       labor:{rate:val('labor_ins',.125),...meta('labor_ins',{emp:.2,employer:.7})},
       health:{rate:val('health_ins',.0517),...meta('health_ins',{emp:.3,employer:.6,dependent_cap:3})},
       h2nd:{rate:val('health_2nd',.0211),...meta('health_2nd',{threshold_ratio:4})},
       pension:{rate:val('pension',.06)},
+      occ:{rate:val('occ_ins',.00555)},
       leaveRate:meta('leave_rate',{'特休':0,'公假':0,'婚假':0,'喪假':0,'病假':.5,'事假':1,'產假':0,'補休':0,'曠職':1,'生理假':.5,'過年':0,'颱風':0}),
       grades:(meta('ins_grades',{grades:[]}).grades)||[]
     };
@@ -26501,16 +26521,35 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(num(att.night_hours)>0)pay+=d*cfg.field.half_day;
     return pay;
   }
+  // 外勞固定加班費(依員工類別給整段固定金額;判定順序:國定假日 > 星期日 > 平日加班分段;假日落在週日取較高者)
+  function foreignOtPay(emp,att,cfg){
+    const r=(cfg.foreign&&cfg.foreign[emp.foreign_type]); if(!r)return 0;
+    if(att.is_holiday&&att.weekday===0)return Math.max(num(r.holiday),num(r.sunday));
+    if(att.is_holiday)return num(r.holiday);
+    if(att.weekday===0)return num(r.sunday);
+    if(att.ot_tier===2)return num(r.tier2);
+    if(att.ot_tier===1)return num(r.tier1);
+    return 0;
+  }
   function calcPayslip(emp,monthAtt,cfg,period){
     monthAtt=monthAtt||[];
-    const worked=monthAtt.filter(a=>num(a.work_hours)>0),workDays=worked.length;
+    const worked=monthAtt.filter(a=>num(a.work_hours)>0);
+    const workDays=worked.reduce((s,a)=>s+(a.work_day!=null?num(a.work_day):1),0);
+    const halfDays=worked.reduce((s,a)=>s+(a.half_day?1:0),0);
     const workHours=monthAtt.reduce((s,a)=>s+num(a.work_hours),0);
     const base=emp.pay_type==='monthly'?num(emp.base_salary):num(emp.daily_wage)*workDays;
-    const otItems=monthAtt.map(a=>({date:a.work_date,pay:overtimePay(emp,a,cfg)}));
+    const isForeign=!!emp.foreign_type;
+    const otItems=monthAtt.map(a=>({date:a.work_date,pay:isForeign?foreignOtPay(emp,a,cfg):overtimePay(emp,a,cfg)}));
     const ot=otItems.reduce((s,x)=>s+x.pay,0);
     const leaveItems=monthAtt.filter(a=>num(a.leave_hours)>0).map(a=>{const rate=cfg.leaveRate[a.leave_type]!=null?cfg.leaveRate[a.leave_type]:1;return{date:a.work_date,type:a.leave_type,hours:num(a.leave_hours),deduct:hourlyBase(emp)*num(a.leave_hours)*rate};});
     const leaveDeduct=emp.pay_type==='monthly'?leaveItems.reduce((s,x)=>s+x.deduct,0):0;
-    const gross=base+ot-leaveDeduct;
+    const lateCount=monthAtt.reduce((s,a)=>s+(a.late?1:0),0);
+    // 職務津貼:固定津貼 + 保障底薪補足差額(含加班費未達 guarantee_min 時)
+    const jobBase=num(emp.job_allowance),gmin=num(emp.guarantee_min);
+    let guaranteeTopup=0;
+    if(gmin>0){const totalForGuarantee=base+ot+jobBase;if(totalForGuarantee<gmin)guaranteeTopup=gmin-totalForGuarantee;}
+    const jobAllowance=jobBase+guaranteeTopup;
+    const gross=base+ot+jobAllowance-leaveDeduct;
     const insBase=num(emp.insured_salary)>0?num(emp.insured_salary):roundToGrade(base,cfg.grades);
     let laborEmp=0,healthEmp=0,health2nd=0;const employer={};
     if(emp.insure_via==='company'){
@@ -26520,11 +26559,12 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       employer.labor=insBase*cfg.labor.rate*cfg.labor.employer;
       employer.health=insBase*cfg.health.rate*cfg.health.employer;
       employer.pension=insBase*cfg.pension.rate;
+      employer.occ=insBase*cfg.occ.rate;
     }
     const h2ndThreshold=insBase*(cfg.h2nd.threshold_ratio||4);
     if(ot>h2ndThreshold)health2nd=(ot-h2ndThreshold)*cfg.h2nd.rate;
     const net=gross-laborEmp-healthEmp-health2nd;
-    return {period,emp_id:emp.id,work_days:workDays,work_hours:workHours,ot_pay:round(ot),gross:round(gross),labor_ins_emp:round(laborEmp),health_ins_emp:round(healthEmp),health_2nd:round(health2nd),leave_deduct:round(leaveDeduct),net:round(net),employer_cost:{labor:round(employer.labor||0),health:round(employer.health||0),pension:round(employer.pension||0)},breakdown:{base:round(base),insBase,otItems,leaveItems}};
+    return {period,emp_id:emp.id,work_days:workDays,work_hours:workHours,ot_pay:round(ot),gross:round(gross),labor_ins_emp:round(laborEmp),health_ins_emp:round(healthEmp),health_2nd:round(health2nd),leave_deduct:round(leaveDeduct),net:round(net),employer_cost:{labor:round(employer.labor||0),health:round(employer.health||0),pension:round(employer.pension||0),occ:round(employer.occ||0)},breakdown:{base:round(base),insBase,otItems,leaveItems,job_allowance:round(jobAllowance),guarantee_topup:round(guaranteeTopup),late_count:lateCount,half_days:halfDays,is_foreign:isForeign}};
   }
   function monthsBetween(from,to){const a=new Date(from),b=new Date(to);let m=(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth());if(b.getDate()<a.getDate())m-=1;return Math.max(m,0);}
   function annualLeaveDays(hireDate,asOf){const m=monthsBetween(hireDate,asOf);if(m<6)return 0;if(m<12)return 3;const y=Math.floor(m/12);if(y===1)return 7;if(y===2)return 10;if(y<5)return 14;if(y<10)return 15;return Math.min(15+(y-9),30);}
@@ -26634,6 +26674,9 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     document.getElementById('emp-f-insure').value=pay.insure_via||'company';
     document.getElementById('emp-f-insured').value=pay.insured_salary!=null?pay.insured_salary:'';
     document.getElementById('emp-f-dep').value=pay.dependents!=null?pay.dependents:0;
+    document.getElementById('emp-f-foreign').value=pay.foreign_type||'';
+    document.getElementById('emp-f-guarantee').value=pay.guarantee_min!=null?pay.guarantee_min:'';
+    document.getElementById('emp-f-joballow').value=pay.job_allowance!=null?pay.job_allowance:'';
     document.getElementById('emp-f-bank').value=pay.bank_acct||'';
     document.getElementById('emp-f-note').value=pay.note||'';
     // 已存有投保薪資 → 尊重原值(視為已手動);未存 → 自動依薪資帶入
@@ -26688,6 +26731,9 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       insure_via: document.getElementById('emp-f-insure').value,
       insured_salary: num(document.getElementById('emp-f-insured').value)||null,
       dependents: parseInt(document.getElementById('emp-f-dep').value)||0,
+      foreign_type: cleanStr(document.getElementById('emp-f-foreign').value)||null,
+      guarantee_min: num(document.getElementById('emp-f-guarantee').value)||null,
+      job_allowance: num(document.getElementById('emp-f-joballow').value)||null,
       bank_acct: cleanStr(document.getElementById('emp-f-bank').value)||null,
       note: cleanStr(document.getElementById('emp-f-note').value)||null,
       updated_at: new Date().toISOString()
@@ -26720,6 +26766,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 <script>
 (function(){
   var prStaff=[], prPayMap={}, prAttByName={}, prCfg=null, prRun=null, prRows=[];
+  var prPunchByKey=null, prPunchMeta=null, prHolidays=null;   // 打卡資料(員編/姓名為 key)、國定假日集合
   function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
   function money(n){ n=num(n); return '$'+Math.round(n).toLocaleString('en-US'); }
   function pad2(n){ return (n<10?'0':'')+n; }
@@ -26728,6 +26775,107 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var last=new Date(y,m,0).getDate();
     return { first:period+'-01', last:period+'-'+pad2(last) };
   }
+  function toMin(t){ var p=String(t).split(':'); return (+p[0])*60+(+p[1]); }   // "HH:MM(:SS)" → 分鐘
+
+  // 解析打卡記錄表(.xlsx):回傳 {byKey(員編&姓名→日紀錄陣列), meta{period,count,names}}
+  // 日期表頭為垂直合併儲存格(sheet_to_json 讀不到),故改以「內容為打卡時間或 -」偵測日欄,
+  // 日序=日欄由左到右順序,星期由計薪月份推算。
+  function parsePunchXlsx(arrayBuffer, fallbackPeriod){
+    var wb=XLSX.read(arrayBuffer,{type:'array'});
+    var ws=wb.Sheets[wb.SheetNames[0]];
+    var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+    // 找表頭列(含 姓名/員編/部門)
+    var hr=-1,nameCol=-1,idCol=-1,deptCol=-1;
+    for(var i=0;i<rows.length && hr<0;i++){
+      var row=rows[i]||[], n=-1,id=-1,d=-1;
+      for(var c=0;c<row.length;c++){
+        var v=String(row[c]||'').trim();
+        if(v==='姓名')n=c; else if(v==='員編'||v==='員工編號')id=c; else if(v==='部門')d=c;
+      }
+      if(n>=0 && id>=0){ hr=i; nameCol=n; idCol=id; deptCol=d; }
+    }
+    if(hr<0) throw new Error('找不到表頭列(需含「姓名」「員編」)');
+    // 計薪月份 YYYY-MM(標題如 "2026-06-01~2026-06-30")
+    var period=fallbackPeriod||'';
+    var titleTxt=rows.slice(0,hr+1).map(function(r){return (r||[]).join(' ');}).join(' ');
+    var mPeriod=titleTxt.match(/(\d{4})[-\/年](\d{1,2})/);
+    if(mPeriod) period=mPeriod[1]+'-'+pad2(+mPeriod[2]);
+    if(!/^\d{4}-\d{2}$/.test(period)) throw new Error('無法判斷計薪月份');
+    var y=+period.slice(0,4), mo=+period.slice(5,7);
+    // 偵測日欄:資料列中該欄「-」或打卡時間出現 ≥3 次
+    var isTD=function(v){ v=String(v||'').trim(); return v==='-'||/\d{1,2}:\d{2}/.test(v); };
+    var maxC=0; rows.forEach(function(r){ if(r&&r.length>maxC)maxC=r.length; });
+    var dayCols=[];
+    for(var c2=0;c2<maxC;c2++){
+      if(c2===nameCol||c2===idCol||c2===deptCol) continue;
+      var cnt=0; for(var r1=hr+1;r1<rows.length;r1++){ if(isTD((rows[r1]||[])[c2])) cnt++; }
+      if(cnt>=3) dayCols.push(c2);
+    }
+    dayCols.sort(function(a,b){ return a-b; });
+    var byKey={}, names=[], OT_START=toMin('17:30'), LATE=toMin('08:15'), T1=toMin('20:30'), HALF=toMin('13:00');
+    for(var r2=hr+1;r2<rows.length;r2++){
+      var row2=rows[r2]||[];
+      var name=String(row2[nameCol]||'').trim(), empId=String(row2[idCol]||'').trim();
+      if(!name && !empId) continue;
+      if(/合計|總計|備註|說明/.test(name)) continue;
+      var days=[];
+      dayCols.forEach(function(col,idx){
+        var dd=idx+1, cell=String(row2[col]||'').trim();
+        if(!cell || cell==='-') return;
+        var times=cell.match(/\d{1,2}:\d{2}(?::\d{2})?/g); if(!times||!times.length) return;
+        var inMin=toMin(times[0]), outMin=toMin(times[times.length-1]);
+        var rndOut=Math.round(outMin/30)*30;
+        var isHalf=times.length>=2 && rndOut<=HALF;   // 上班到約 13:00 前下班 → 半天
+        var hasOt=times.length>=2 && outMin>OT_START;
+        var otMin=hasOt?Math.max(0,outMin-OT_START):0;
+        var tier=0; if(hasOt){ tier=(rndOut<=T1)?1:2; }
+        days.push({
+          work_date: period+'-'+pad2(dd), weekday: new Date(y,mo-1,dd).getDay(),
+          late: inMin>LATE, work_hours: isHalf?4:8, work_day: isHalf?0.5:1, half_day: isHalf,
+          ot_hours: +(otMin/60).toFixed(2), night_hours: tier===2?+(otMin/60).toFixed(2):0,
+          ot_tier: tier
+        });
+      });
+      if(name){ byKey[name]=days; names.push(name); }
+      if(empId){ byKey[empId]=days; }
+    }
+    return { byKey:byKey, meta:{ period:period, count:names.length, names:names, dayCount:dayCols.length } };
+  }
+
+  window.payrollLoadPunch=async function(input){
+    var file=input && input.files && input.files[0]; if(!file) return;
+    var mi=document.getElementById('pr-month');
+    var fallback=(mi&&mi.value)?mi.value:new Date().toISOString().slice(0,7);
+    try{
+      var buf=await file.arrayBuffer();
+      var res=parsePunchXlsx(buf, fallback);
+      prPunchByKey=res.byKey; prPunchMeta=res.meta;
+      if(res.meta.period){ if(mi) mi.value=res.meta.period; try{ localStorage.setItem('punch_'+res.meta.period, JSON.stringify(res)); }catch(e){} }
+      var info=document.getElementById('pr-punch-info');
+      if(info) info.textContent='📎 已載入打卡 '+res.meta.period+' · '+res.meta.count+' 人(按「計算」以打卡計薪)';
+    }catch(e){
+      console.warn('parse punch failed',e);
+      alert('打卡檔解析失敗:'+(e&&e.message?e.message:e));
+    }finally{ input.value=''; }
+  };
+
+  // 國定假日自動判斷(每年自動更新):台灣官方行事曆開放資料,快取於 localStorage
+  window.payrollLoadHolidays=async function(year){
+    var ck='tw_holidays_'+year;
+    try{ var c=localStorage.getItem(ck); if(c){ return new Set(JSON.parse(c)); } }catch(e){}
+    try{
+      var resp=await fetch('https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/'+year+'.json',{cache:'force-cache'});
+      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      var arr=await resp.json(), list=[];
+      arr.forEach(function(d){
+        if(d.isHoliday && d.description && String(d.description).trim()!==''){
+          var s=String(d.date); list.push(s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8));
+        }
+      });
+      try{ localStorage.setItem(ck, JSON.stringify(list)); }catch(e){}
+      return new Set(list);
+    }catch(e){ console.warn('holidays load failed',e); return null; }
+  };
 
   window.payrollInit=function(){
     var mi=document.getElementById('pr-month');
@@ -26762,6 +26910,14 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       prRun=(rr.ok&&Array.isArray(rr.data)&&rr.data[0])?rr.data[0]:null;
     }catch(e){ console.warn('payrollCalc load failed',e); body.innerHTML='<tr><td colspan="12" class="empty-state">載入失敗(請確認已執行 hr_payroll_migration.sql 且帳號有 payroll 權限)</td></tr>'; return; }
 
+    // 國定假日(外勞費率用),失敗回 null 則僅用星期日判斷
+    prHolidays=await window.payrollLoadHolidays(+period.slice(0,4));
+    // 若記憶體無打卡但本月 localStorage 有,還原(重整後仍可用)
+    if(!prPunchByKey || !Object.keys(prPunchByKey).length){
+      try{ var pc=localStorage.getItem('punch_'+period); if(pc){ var pj=JSON.parse(pc); prPunchByKey=pj.byKey; prPunchMeta=pj.meta; } }catch(e){}
+    }
+    var usePunch=!!(prPunchByKey && Object.keys(prPunchByKey).length);
+
     prStaff.sort(function(a,b){ return window.hrDeptRank(a.department)-window.hrDeptRank(b.department)
       || String(a.name||'').localeCompare(String(b.name||''),'zh-Hant'); });
     prRows=[]; var noset=[];
@@ -26771,13 +26927,23 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       if(!pay||!pay.pay_type){ if(s.status!=='離職') noset.push(s.name); return; }
       var emp={ id:s.id, emp_type:Payroll.empTypeFromDept(s.department), pay_type:pay.pay_type,
                 base_salary:pay.base_salary, daily_wage:pay.daily_wage, insure_via:pay.insure_via,
-                insured_salary:pay.insured_salary, dependents:pay.dependents };
-      var att=prAttByName[s.name]||[];
+                insured_salary:pay.insured_salary, dependents:pay.dependents,
+                foreign_type:pay.foreign_type||null, guarantee_min:pay.guarantee_min, job_allowance:pay.job_allowance };
+      var att;
+      if(usePunch){
+        var praw=prPunchByKey[s.id_number]||prPunchByKey[s.name]||[];   // 員編=身分證/居留證號,比對不到退回姓名
+        att=praw.map(function(a){ return Object.assign({}, a, { is_holiday: prHolidays?prHolidays.has(a.work_date):false }); });
+      } else {
+        att=prAttByName[s.name]||[];
+      }
       var ps=Payroll.calcPayslip(emp, att, prCfg, period);
-      ps._name=s.name; ps._type=(emp.emp_type==='office'?'辦公':'現場')+'/'+(pay.pay_type==='monthly'?'月':'日');
+      ps._name=s.name;
+      ps._type=(emp.foreign_type?('外勞'+emp.foreign_type):(emp.emp_type==='office'?'辦公':'現場'))+'/'+(pay.pay_type==='monthly'?'月':'日');
       prRows.push(ps);
     });
     payrollRender(noset, period);
+    var info=document.getElementById('pr-punch-info');
+    if(info) info.textContent = usePunch ? ('📎 打卡計薪 '+(prPunchMeta&&prPunchMeta.period||period)+(prHolidays?'':' · ⚠國定假日未載入,僅用星期日')) : '(未上傳打卡,使用出勤回報)';
   };
 
   function payrollRender(noset, period){
@@ -26785,7 +26951,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(!prRows.length){ body.innerHTML='<tr><td colspan="12" class="empty-state">此月無可計算的員工(請先在「員工薪資設定」設定薪別)</td></tr>'; foot.innerHTML=''; }
     else{
       body.innerHTML=prRows.map(function(p){
-        var ec=p.employer_cost||{}; var ecTot=num(ec.labor)+num(ec.health)+num(ec.pension);
+        var ec=p.employer_cost||{}; var ecTot=num(ec.labor)+num(ec.health)+num(ec.pension)+num(ec.occ);
         return '<tr>'
           +'<td><a href="#" onclick="payrollDetail(\''+p.emp_id+'\');return false" style="color:var(--accent2)" title="檢視/列印明細單">'+esc(p._name)+'</a></td><td>'+esc(p._type)+'</td>'
           +'<td style="text-align:center">'+p.work_days+'</td>'
@@ -26797,11 +26963,11 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
           +'<td>'+money(p.health_2nd)+'</td>'
           +'<td>'+money(p.leave_deduct)+'</td>'
           +'<td style="font-weight:600">'+money(p.net)+'</td>'
-          +'<td title="勞保'+money(ec.labor)+' 健保'+money(ec.health)+' 勞退'+money(ec.pension)+'">'+money(ecTot)+'</td>'
+          +'<td title="勞保'+money(ec.labor)+' 健保'+money(ec.health)+' 勞退'+money(ec.pension)+' 職災'+money(ec.occ)+'">'+money(ecTot)+'</td>'
           +'</tr>';
       }).join('');
       var sum=function(k){ return prRows.reduce(function(a,p){ return a+num(p[k]); },0); };
-      var ecSum=prRows.reduce(function(a,p){ var e=p.employer_cost||{}; return a+num(e.labor)+num(e.health)+num(e.pension); },0);
+      var ecSum=prRows.reduce(function(a,p){ var e=p.employer_cost||{}; return a+num(e.labor)+num(e.health)+num(e.pension)+num(e.occ); },0);
       foot.innerHTML='<tr style="font-weight:700;background:var(--bg3)">'
         +'<td colspan="4">合計 '+prRows.length+' 人</td>'
         +'<td>'+money(sum('ot_pay'))+'</td><td>'+money(sum('gross'))+'</td>'
@@ -26847,11 +27013,11 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   window.payrollExportCsv=function(){
     if(!prRows.length){ alert('尚未計算'); return; }
     var period=document.getElementById('pr-month').value;
-    var head=['姓名','類別','出勤天','底薪','加班費','應發','勞保','健保','二代健保','請假扣','實發','雇主成本'];
+    var head=['姓名','類別','出勤天','遲到次','底薪','加班費','職務津貼','應發','勞保','健保','二代健保','請假扣','實發','雇主成本'];
     var lines=[head.join(',')];
     prRows.forEach(function(p){
-      var ec=p.employer_cost||{}; var ecTot=num(ec.labor)+num(ec.health)+num(ec.pension);
-      lines.push([p._name,p._type,p.work_days,Math.round(num(p.breakdown&&p.breakdown.base)),p.ot_pay,p.gross,p.labor_ins_emp,p.health_ins_emp,p.health_2nd,p.leave_deduct,p.net,Math.round(ecTot)].join(','));
+      var ec=p.employer_cost||{}; var ecTot=num(ec.labor)+num(ec.health)+num(ec.pension)+num(ec.occ); var bd=p.breakdown||{};
+      lines.push([p._name,p._type,p.work_days,num(bd.late_count),Math.round(num(bd.base)),p.ot_pay,Math.round(num(bd.job_allowance)),p.gross,p.labor_ins_emp,p.health_ins_emp,p.health_2nd,p.leave_deduct,p.net,Math.round(ecTot)].join(','));
     });
     var blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
     var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='薪資_'+period+'.csv';
@@ -26889,9 +27055,11 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       +'<h3>薪資明細單</h3>'
       +'<div class="ps-sub">'+esc(p._name)+' · '+esc(p._type)+' · '+period+'</div>'
       +'<div class="ps-sec">給付</div><table>'
-      +'<tr><td>底薪('+p.work_days+'天 / '+num(p.work_hours)+'時)</td><td>'+m(bd.base)+'</td></tr>'
+      +'<tr><td>底薪('+p.work_days+'天 / '+num(p.work_hours)+'時'+(num(bd.half_days)?(' · 半天'+num(bd.half_days)+'次'):'')+(num(bd.late_count)?(' · 遲到'+num(bd.late_count)+'次'):'')+')</td><td>'+m(bd.base)+'</td></tr>'
       +otRows
-      +'<tr><td>加班費 小計</td><td>'+m(p.ot_pay)+'</td></tr></table>'
+      +'<tr><td>加班費 小計'+(bd.is_foreign?'(外勞固定)':'')+'</td><td>'+m(p.ot_pay)+'</td></tr>'
+      +(num(bd.job_allowance)?('<tr><td>職務津貼'+(num(bd.guarantee_topup)?('(含保障補足 '+m(bd.guarantee_topup)+')'):'')+'</td><td>'+m(bd.job_allowance)+'</td></tr>'):'')
+      +'</table>'
       +(lvRows?('<div class="ps-sec">請假扣款</div><table>'+lvRows+'<tr><td>小計</td><td>-'+m(p.leave_deduct)+'</td></tr></table>'):'')
       +'<table><tr><td><b>應發合計</b></td><td><b>'+m(p.gross)+'</b></td></tr></table>'
       +'<div class="ps-sec">代扣</div><table>'
@@ -26902,7 +27070,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       +'<div class="ps-sec">雇主負擔(參考,不從薪資扣)</div><table>'
       +'<tr><td>勞保雇主</td><td>'+m(ec.labor)+'</td></tr>'
       +'<tr><td>健保雇主</td><td>'+m(ec.health)+'</td></tr>'
-      +'<tr><td>勞退提繳</td><td>'+m(ec.pension)+'</td></tr></table>'
+      +'<tr><td>勞退提繳</td><td>'+m(ec.pension)+'</td></tr>'
+      +'<tr><td>職災保險</td><td>'+m(ec.occ)+'</td></tr></table>'
       +'<div class="ps-sub">投保薪資 '+m(bd.insBase)+'</div>';
     openModal('payslip-modal');
   };
@@ -26912,13 +27081,13 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(!prRows.length){ alert('尚未計算'); return; }
     var period=document.getElementById('pr-month').value;
     var byId={}; prStaff.forEach(function(s){ byId[s.id]=s; });
-    var head=['姓名','身分證字號','投保方式','投保薪資','勞保_員工','勞保_雇主','健保_員工','健保_雇主','勞退_雇主'];
+    var head=['姓名','身分證字號','投保方式','投保薪資','勞保_員工','勞保_雇主','健保_員工','健保_雇主','勞退_雇主','職災_雇主'];
     var lines=[head.join(',')];
     prRows.forEach(function(p){
       var s=byId[p.emp_id]||{}, pay=prPayMap[p.emp_id]||{}, ec=p.employer_cost||{};
       var iv={company:'公司',union:'公會',none:'未保'}[pay.insure_via]||'';
       lines.push([s.name||p._name, s.id_number||'', iv, Math.round(num(p.breakdown&&p.breakdown.insBase)),
-                  p.labor_ins_emp, Math.round(num(ec.labor)), p.health_ins_emp, Math.round(num(ec.health)), Math.round(num(ec.pension))].join(','));
+                  p.labor_ins_emp, Math.round(num(ec.labor)), p.health_ins_emp, Math.round(num(ec.health)), Math.round(num(ec.pension)), Math.round(num(ec.occ))].join(','));
     });
     csvDownload('投保申報_'+period+'.csv', lines);
   };
@@ -27515,6 +27684,30 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
                ['sick','病假',0.5],['personal','事假',1],['menstrual','生理假',0.5],
                ['maternity','產假',0],['comp','補休',0],['absent','曠職',1],
                ['newyear','過年',0],['typhoon','颱風',0]];
+
+  // ── 年度政策預設表 ───────────────────────────────────────────────
+  // 【未來維護】政策每年調整時,只要「複製最新一年物件、改數字」新增一個年度即可,
+  //  按鈕與 pcfgFill 皆會自動採用其中「最新的一年」,毋須改動任何邏輯。
+  //  資料來源:勞動部勞工保險局、衛福部中央健康保險署 公告(以官方最新公告為準)。
+  var POLICY_PRESETS={
+    2026:{   // 民國115年
+      min_wage_month:29500, min_wage_hour:196,
+      labor:{rate:0.125, emp:0.2, employer:0.7},
+      health:{rate:0.0517, emp:0.3, employer:0.6, dependent_cap:3},
+      h2nd:{rate:0.0211, threshold:4},
+      pension:{rate:0.06},
+      occ:{rate:0.00555},
+      grades:[29500,30300,31800,33300,34800,36300,38200,40100,42000,43900,45800]
+    }
+    // 2027:{ min_wage_month:?, min_wage_hour:?, labor:{rate:?,emp:?,employer:?},
+    //        health:{rate:?,emp:?,employer:?,dependent_cap:3}, h2nd:{rate:?,threshold:4},
+    //        pension:{rate:0.06}, grades:[...] }   ← 明年公告後解除註解、填數字即可
+  };
+  function pcfgLatestPolicyYear(){ return Math.max.apply(null, Object.keys(POLICY_PRESETS).map(Number)); }
+  function pcfgLatestPolicy(){ return POLICY_PRESETS[pcfgLatestPolicyYear()]; }
+  function pct(x){ return +(x*100).toFixed(4)+'%'; }
+  function pcfgUpdatePolicyBtn(){ var b=document.getElementById('pcfg-policy-btn'); if(b) b.textContent='🔄 套用'+pcfgLatestPolicyYear()+'政策'; }
+
   function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
   function val(id){ var e=document.getElementById(id); return e?e.value:''; }
   function setv(id,v){ var e=document.getElementById(id); if(e) e.value=(v==null?'':v); }
@@ -27523,6 +27716,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 
   window.pcfgInit=async function(){
     var hint=document.getElementById('pcfg-hint');
+    pcfgUpdatePolicyBtn();
     try{
       var r=await sbFetch('/rest/v1/payroll_config?select=eff_date,key,value,meta&order=eff_date.desc');
       if(!r.ok){ hint.textContent='讀取失敗(HTTP '+r.status+')'+((r.status===401||r.status===403)?' — 需 HR 權限':(r.status===404?' — 請先執行 hr_payroll_migration.sql':'')); return; }
@@ -27540,11 +27734,13 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     setv('pcfg-ot-first2', mv(of,'first2',1.34)); setv('pcfg-ot-rest', mv(of,'rest',1.67)); setv('pcfg-ot-cap', mv(of,'monthly_cap_hours',54));
     setv('pcfg-ot-half', mv(ff,'half_day',0.5)); setv('pcfg-ot-full', mv(ff,'full_day',1.0));
     var lm=(L.labor_ins&&L.labor_ins.meta)||{}, hm=(L.health_ins&&L.health_ins.meta)||{}, h2=(L.health_2nd&&L.health_2nd.meta)||{};
-    setv('pcfg-labor-rate', L.labor_ins?L.labor_ins.value:0.125); setv('pcfg-labor-emp', mv(lm,'emp',0.2)); setv('pcfg-labor-er', mv(lm,'employer',0.7));
-    setv('pcfg-health-rate', L.health_ins?L.health_ins.value:0.0517); setv('pcfg-health-emp', mv(hm,'emp',0.3)); setv('pcfg-health-er', mv(hm,'employer',0.6)); setv('pcfg-health-depcap', mv(hm,'dependent_cap',3));
-    setv('pcfg-h2nd-rate', L.health_2nd?L.health_2nd.value:0.0211); setv('pcfg-h2nd-thr', mv(h2,'threshold_ratio',4));
-    setv('pcfg-pension-rate', L.pension?L.pension.value:0.06);
-    setv('pcfg-minm', L.min_wage_month?L.min_wage_month.value:28590); setv('pcfg-minh', L.min_wage_hour?L.min_wage_hour.value:190);
+    var P=pcfgLatestPolicy();   // 資料庫尚無資料時,以「最新年度政策」為預設值(單一資料來源)
+    setv('pcfg-labor-rate', L.labor_ins?L.labor_ins.value:P.labor.rate); setv('pcfg-labor-emp', mv(lm,'emp',P.labor.emp)); setv('pcfg-labor-er', mv(lm,'employer',P.labor.employer));
+    setv('pcfg-health-rate', L.health_ins?L.health_ins.value:P.health.rate); setv('pcfg-health-emp', mv(hm,'emp',P.health.emp)); setv('pcfg-health-er', mv(hm,'employer',P.health.employer)); setv('pcfg-health-depcap', mv(hm,'dependent_cap',P.health.dependent_cap));
+    setv('pcfg-h2nd-rate', L.health_2nd?L.health_2nd.value:P.h2nd.rate); setv('pcfg-h2nd-thr', mv(h2,'threshold_ratio',P.h2nd.threshold));
+    setv('pcfg-pension-rate', L.pension?L.pension.value:P.pension.rate);
+    setv('pcfg-occ-rate', L.occ_ins?L.occ_ins.value:(P.occ?P.occ.rate:0.00555));
+    setv('pcfg-minm', L.min_wage_month?L.min_wage_month.value:P.min_wage_month); setv('pcfg-minh', L.min_wage_hour?L.min_wage_hour.value:P.min_wage_hour);
     var lr=(L.leave_rate&&L.leave_rate.meta)||{};
     PCFG_LR.forEach(function(p){   // p=[inputId後綴, 中文key, 預設]
       setv('pcfg-lr-'+p[0], mv(lr, p[1], p[2]));
@@ -27564,6 +27760,35 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   window.pcfgRemoveGrade=function(i){ pcfgGrades.splice(i,1); pcfgRenderGrades(); };
   window.pcfgSortGrades=function(){ pcfgGrades=Array.from(new Set(pcfgGrades.map(num).filter(function(x){return x>0;}))).sort(function(a,b){return a-b;}); pcfgRenderGrades(); };
 
+  // 一鍵套用「指定/最新」年度政策預設值(勞保局/健保署公告;僅政府法定項目,不動加班倍率與請假扣薪等公司自訂)
+  window.pcfgApplyPolicy=function(year){
+    year = Number(year) || pcfgLatestPolicyYear();
+    var P = POLICY_PRESETS[year];
+    if(!P){ alert('尚無 '+year+' 年政策預設值,請先於程式的 POLICY_PRESETS 新增該年度。'); return; }
+    var g=P.grades.slice();
+    if(!confirm('套用 '+year+' 年最新政策預設值?\n\n'
+      +'・基本工資 月 '+P.min_wage_month.toLocaleString()+' / 時 '+P.min_wage_hour+'\n'
+      +'・勞保費率 '+pct(P.labor.rate)+'(員工'+pct(P.labor.emp)+'・雇主'+pct(P.labor.employer)+')\n'
+      +'・健保費率 '+pct(P.health.rate)+'(員工'+pct(P.health.emp)+'・雇主'+pct(P.health.employer)+')\n'
+      +'・二代健保 '+pct(P.h2nd.rate)+'\n'
+      +'・勞退雇主提繳 '+pct(P.pension.rate)+'\n'
+      +'・職災保險 '+pct(P.occ?P.occ.rate:0.00555)+'(雇主全額)\n'
+      +'・投保薪資分級表 '+g.length+' 級('+g[0].toLocaleString()+'~'+g[g.length-1].toLocaleString()+')\n\n'
+      +'※ 會覆蓋上述表單欄位(不影響加班倍率/請假扣薪);確認後仍需按右上「儲存費率」才生效。')) return;
+    setv('pcfg-labor-rate',P.labor.rate); setv('pcfg-labor-emp',P.labor.emp); setv('pcfg-labor-er',P.labor.employer);
+    setv('pcfg-health-rate',P.health.rate); setv('pcfg-health-emp',P.health.emp); setv('pcfg-health-er',P.health.employer); setv('pcfg-health-depcap',P.health.dependent_cap);
+    setv('pcfg-h2nd-rate',P.h2nd.rate); setv('pcfg-h2nd-thr',P.h2nd.threshold);
+    setv('pcfg-pension-rate',P.pension.rate);
+    setv('pcfg-occ-rate',P.occ?P.occ.rate:0.00555);
+    setv('pcfg-minm',P.min_wage_month); setv('pcfg-minh',P.min_wage_hour);
+    pcfgGrades=g; pcfgRenderGrades();
+    setv('pcfg-eff',year+'-01-01');
+    if(typeof refreshDateWk==='function') refreshDateWk();
+    var h=document.getElementById('pcfg-hint');
+    if(h) h.textContent='已帶入 '+year+' 政策預設值(生效日 '+year+'-01-01) —— 請確認後按右上「💾 儲存費率」才會實際生效。';
+  };
+  window.pcfgApplyPolicy2026=function(){ return window.pcfgApplyPolicy(2026); };   // 舊名相容
+
   window.pcfgSave=async function(){
     var eff=val('pcfg-eff'); if(!eff){ alert('請選生效日'); return; }
     var grades=Array.from(new Set(pcfgGrades.map(num).filter(function(x){return x>0;}))).sort(function(a,b){return a-b;});
@@ -27575,6 +27800,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       {eff_date:eff, key:'health_ins', value:n('pcfg-health-rate'), meta:{emp:n('pcfg-health-emp'),employer:n('pcfg-health-er'),dependent_cap:n('pcfg-health-depcap')}},
       {eff_date:eff, key:'health_2nd', value:n('pcfg-h2nd-rate'), meta:{threshold_ratio:n('pcfg-h2nd-thr')}},
       {eff_date:eff, key:'pension', value:n('pcfg-pension-rate'), meta:{employer:n('pcfg-pension-rate')}},
+      {eff_date:eff, key:'occ_ins', value:n('pcfg-occ-rate'), meta:{employer:n('pcfg-occ-rate')}},
       {eff_date:eff, key:'min_wage_month', value:n('pcfg-minm'), meta:null},
       {eff_date:eff, key:'min_wage_hour', value:n('pcfg-minh'), meta:null},
       {eff_date:eff, key:'leave_rate', value:null, meta:(function(){ var o={}; PCFG_LR.forEach(function(p){ o[p[1]]=n('pcfg-lr-'+p[0]); }); return o; })()},
@@ -27585,6 +27811,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     alert('已儲存費率(生效日 '+eff+')');
     pcfgInit();
   };
+
+  pcfgUpdatePolicyBtn();   // 頁面載入時即把按鈕文字更新為最新年度(例:🔄 套用2026政策)
 })();
 </script>
 
