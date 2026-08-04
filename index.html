@@ -3824,6 +3824,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <button class="btn" onclick="payrollExportInsuranceCsv()" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">🏦 投保申報 CSV</button>
       </div>
       <div id="pr-warn" style="font-size:12px;color:var(--danger);margin-bottom:8px"></div>
+      <div id="pr-punchwarn" style="display:none;font-size:12px"></div>
       <div id="pr-meal-info" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
       <div style="display:flex;gap:6px;margin-bottom:8px">
         <button id="pr-tab-pay" class="btn" onclick="payrollTab('pay')" style="padding:7px 16px;border-radius:var(--rad);border:1px solid var(--accent2);background:var(--accent2);color:#fff;cursor:pointer">① 出勤‧給付</button>
@@ -3867,6 +3868,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         ※ <b>外勞</b>平日不打白天卡、17:00 後才打加班卡:一律不計遲到/早退,平日出勤視為整天;加班費依打卡下班時刻分段(17:30~20:30 / 17:30~23:00)與國定假日/星期日固定給付。<br>
         ※ <b>颱風假 / 特殊假</b>:按上方「🌀 颱風假」設定日期(可多天),當天<b>有打卡</b>的員工遲到/早退自動免扣、半天打卡<b>補足整天</b>(+0.5 計入出勤天);<b>當天沒上班(無打卡紀錄)者不補</b>。也可在各員「遲退扣/半天」欄逐一微調。<br>
         ※ <b>半天班</b>(下班 ≤13:00)會在「遲退扣/半天」欄以 <span style="color:var(--yellow)">⚠</span> 提醒,可點入判斷是否為颱風假/特殊假而免扣補足。<br>
+        ※ <b>缺下班卡</b>:某天只刷一次卡(漏刷下班)時,計算後會在上方 <span style="color:var(--yellow)">🕐 缺下班卡提醒</span> 區列出,當天不計加班;可直接輸入下班時間按「補登」自動重算(補登只存本機,重新上傳打卡檔會覆蓋)。<br>
         ※ <b>便當代墊</b>:自動加總「出勤回報」中<b>老闆列</b>每日登記的便當金額，但只支付並顯示於<b>鄭季豪</b>；加入實發但不併入應發薪資、餐補或投保薪資。<br>
         ※ <b>借支</b>:可在薪資表直接輸入員工當月預先借支金額，從實發扣除但不影響應發薪資與投保薪資；隨草稿/鎖定資料保存。<br>
         ※ <b>勞退</b>:雇主強制提繳 6%(列於「② 保費‧雇主成本」,不從薪資扣);員工可設「勞退自願提繳率 0~6%」(於員工薪資設定),依投保薪資×% 從實發扣,列於「勞退(自願)」欄與明細單代扣(外勞不適用)。<br>
@@ -9487,6 +9489,8 @@ function navTo(page) {
   }
   // 離開點工單前立即送出尚未完成的自動儲存，避免切頁太快漏存。
   if(page!=='labor' && document.getElementById('page-labor')?.classList.contains('active') && typeof window.laborFlushNow==='function') window.laborFlushNow();
+  // 離開線上進度表前同樣立即送出，避免切頁太快、200ms 自動儲存還沒觸發就漏存。
+  if(page!=='layout' && document.getElementById('page-layout')?.classList.contains('active') && typeof layoutFlushNow==='function') layoutFlushNow();
   setView({page});   // 記住目前頁面,重新整理後回到此頁
   closeNav(); // 手機版:選完自動收回側欄
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -15443,6 +15447,9 @@ function specLength(spec) {
 
 let layoutRefLoaded = false;   // 參考資料(每日產量鍵、BOM/元件/工程區)是否已載入;切走再回來沿用,不重抓
 async function layoutInit() {
+  // 重抓前先把尚未寫入的編輯送出並等它落地,否則下方 sbFetchAll 抓回的舊資料
+  // 會覆蓋掉「剛輸入、還沒進資料庫」的列 —— 這正是切頁再回來資料不見的主因。
+  try { await layoutFlushSettled(); } catch(e) {}
   layoutShippedLoaded = false;
   // 只載入「進行中(未出貨)」的列;已出貨歷史(可達上萬筆)改為點「已出貨」統計卡時才載入。
   // 一律要抓的:未出貨明細 + 已出貨計數。首次進頁才抓「重的參考資料」(每日產量全表鍵、元件全表)。
@@ -16539,6 +16546,27 @@ async function layoutFlushDirty() {
   }
   if (saved) { try { await syncBOMProjectStatusFromLayout(); } catch(e){} renderLayoutStats(); layoutSaveHint(); }
 }
+// 離開頁面／切走前立即送出尚未完成的自動儲存(比照點工單 laborFlushNow)。
+// 取消 200ms 防抖計時器,馬上寫入,避免切頁太快漏存。回傳 Promise 供需要等待者 await。
+function layoutFlushNow() {
+  clearTimeout(_layoutSaveTimer); _layoutSaveTimer = null;
+  return layoutFlushDirty();
+}
+// 等「尚未寫入的編輯」全部落地(含寫入中重跑)。給 layoutInit 重抓前呼叫,
+// 避免重抓的舊資料覆蓋掉剛輸入、還沒進資料庫的列。最多等 ~3 秒避免卡死。
+async function layoutFlushSettled() {
+  layoutFlushNow();
+  for (let n = 0; n < 60 && (_layoutSaving || layoutRows.some(r => r._dirty && (r.part_no || r.bed))); n++) {
+    await new Promise(res => setTimeout(res, 50));
+  }
+}
+// 分頁切到背景 / 關閉或重新整理時,把未存的資料送出(補齊點工單已有的兩道保險)。
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'hidden' && layoutRows.some(r => r._dirty && (r.part_no || r.bed))) layoutFlushNow();
+});
+window.addEventListener('pagehide', function() {
+  if (layoutRows.some(r => r._dirty && (r.part_no || r.bed))) layoutFlushNow();
+});
 function layoutSaveHint() {
   let el = document.getElementById('layout-save-hint');
   if (!el) {
@@ -27224,12 +27252,53 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   }
   function toMin(t){ var p=String(t).split(':'); return (+p[0])*60+(+p[1]); }   // "HH:MM(:SS)" → 分鐘
 
+  // 由一天的打卡時間陣列推導當日出勤紀錄(遲到/早退/半天/加班級距)。
+  // 解析與「手動補登」共用同一套規則,行為才一致。times=["HH:MM(:SS)", ...]。
+  function derivePunchDay(times, dd, period, y, mo){
+    if(!times || !times.length) return null;
+    var OT_START=toMin('17:30'), LATE=toMin('08:15'), T1=toMin('20:30'), HALF=toMin('13:00'), OFF=toMin('17:00'), EARLY_OK=toMin('16:45');
+    var single=times.length<2;   // 只有一筆打卡,無法判下班,視為全天不扣早退
+    var inMin=toMin(times[0]), outMin=toMin(times[times.length-1]);
+    var rndOut=Math.round(outMin/30)*30;
+    var isHalf=!single && outMin<=HALF;   // 下班 ≤13:00(午休界)→ 半天
+    // 早退:下班早於 16:45 才算(16:45~17:00 視同正常下班,不扣);提早時數以正常下班 17:00 計
+    var earlyHours=(!single && !isHalf && outMin<EARLY_OK) ? Math.round((OFF-outMin)/60*100)/100 : 0;
+    // 遲到扣時數:08:15~08:45=0.5h、08:46~09:00=1h、之後每15分+0.5h
+    var lateHours = inMin<LATE ? 0 : (inMin<=toMin('08:45') ? 0.5 : 1+0.5*Math.ceil(Math.max(0,inMin-toMin('09:00'))/15));
+    var hasOt=!single && outMin>OT_START;
+    var otMin=hasOt?Math.max(0,outMin-OT_START):0;
+    var tier=0; if(hasOt){ tier=(rndOut<=T1)?1:2; }
+    return {
+      work_date: period+'-'+pad2(dd), weekday: new Date(y,mo-1,dd).getDay(),
+      punch_in: times[0].slice(0,5), punch_out: single?'':times[times.length-1].slice(0,5),
+      late: inMin>=LATE, late_hours: lateHours, early_hours: earlyHours,
+      work_hours: isHalf?4:8, work_day: isHalf?0.5:1, half_day: isHalf,
+      ot_hours: +(otMin/60).toFixed(2), night_hours: tier===2?+(otMin/60).toFixed(2):0,
+      ot_tier: tier
+    };
+  }
+
   // 解析打卡記錄表(.xlsx):回傳 {byKey(員編&姓名→日紀錄陣列), meta{period,count,names}}
   // 日期表頭為垂直合併儲存格(sheet_to_json 讀不到),故改以「內容為打卡時間或 -」偵測日欄,
   // 日序=日欄由左到右順序,星期由計薪月份推算。
   function parsePunchXlsx(arrayBuffer, fallbackPeriod){
     var wb=XLSX.read(arrayBuffer,{type:'array'});
-    var ws=wb.Sheets[wb.SheetNames[0]];
+    // 選對工作表:新版匯出含「考勤匯總表/異常表/詳細表/打卡記錄表」多張,打卡表不一定在第一張。
+    // ① 優先取名稱含「打卡」的分頁(記/紀皆可);② 否則取「時間格(HH:MM)最多」的分頁;③ 再退回第一張。
+    var pickName=null;
+    for(var si=0;si<wb.SheetNames.length;si++){ if(/打卡/.test(wb.SheetNames[si])){ pickName=wb.SheetNames[si]; break; } }
+    if(!pickName){
+      var best=-1;
+      wb.SheetNames.forEach(function(nm){
+        var s=wb.Sheets[nm]; if(!s) return;
+        var rs=XLSX.utils.sheet_to_json(s,{header:1,raw:false,defval:''});
+        var hasHdr=rs.some(function(r){ var j=(r||[]).map(function(v){return String(v||'').trim();}); return j.indexOf('姓名')>=0 && (j.indexOf('員編')>=0||j.indexOf('員工編號')>=0); });
+        if(!hasHdr) return;
+        var cnt=0; rs.forEach(function(r){ (r||[]).forEach(function(v){ var m=String(v||'').match(/\d{1,2}:\d{2}/g); if(m) cnt+=m.length; }); });
+        if(cnt>best){ best=cnt; pickName=nm; }
+      });
+    }
+    var ws=wb.Sheets[pickName||wb.SheetNames[0]];
     var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
     // 找表頭列(含 姓名/員編/部門)
     var hr=-1,nameCol=-1,idCol=-1,deptCol=-1;
@@ -27259,7 +27328,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       if(cnt>=3) dayCols.push(c2);
     }
     dayCols.sort(function(a,b){ return a-b; });
-    var byKey={}, names=[], OT_START=toMin('17:30'), LATE=toMin('08:15'), T1=toMin('20:30'), HALF=toMin('13:00'), OFF=toMin('17:00'), EARLY_OK=toMin('16:45');
+    var byKey={}, names=[];
     for(var r2=hr+1;r2<rows.length;r2++){
       var row2=rows[r2]||[];
       var name=String(row2[nameCol]||'').trim(), empId=String(row2[idCol]||'').trim();
@@ -27267,28 +27336,11 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       if(/合計|總計|備註|說明/.test(name)) continue;
       var days=[];
       dayCols.forEach(function(col,idx){
-        var dd=idx+1, cell=String(row2[col]||'').trim();
+        var cell=String(row2[col]||'').trim();
         if(!cell || cell==='-') return;
         var times=cell.match(/\d{1,2}:\d{2}(?::\d{2})?/g); if(!times||!times.length) return;
-        var single=times.length<2;   // 只有一筆打卡,無法判下班,視為全天不扣早退
-        var inMin=toMin(times[0]), outMin=toMin(times[times.length-1]);
-        var rndOut=Math.round(outMin/30)*30;
-        var isHalf=!single && outMin<=HALF;   // 下班 ≤13:00(午休界)→ 半天
-        // 早退:下班早於 16:45 才算(16:45~17:00 視同正常下班,不扣);提早時數以正常下班 17:00 計
-        var earlyHours=(!single && !isHalf && outMin<EARLY_OK) ? Math.round((OFF-outMin)/60*100)/100 : 0;
-        // 遲到扣時數:08:15~08:45=0.5h、08:46~09:00=1h、之後每15分+0.5h
-        var lateHours = inMin<LATE ? 0 : (inMin<=toMin('08:45') ? 0.5 : 1+0.5*Math.ceil(Math.max(0,inMin-toMin('09:00'))/15));
-        var hasOt=!single && outMin>OT_START;
-        var otMin=hasOt?Math.max(0,outMin-OT_START):0;
-        var tier=0; if(hasOt){ tier=(rndOut<=T1)?1:2; }
-        days.push({
-          work_date: period+'-'+pad2(dd), weekday: new Date(y,mo-1,dd).getDay(),
-          punch_in: times[0].slice(0,5), punch_out: single?'':times[times.length-1].slice(0,5),
-          late: inMin>=LATE, late_hours: lateHours, early_hours: earlyHours,
-          work_hours: isHalf?4:8, work_day: isHalf?0.5:1, half_day: isHalf,
-          ot_hours: +(otMin/60).toFixed(2), night_hours: tier===2?+(otMin/60).toFixed(2):0,
-          ot_tier: tier
-        });
+        var d=derivePunchDay(times, idx+1, period, y, mo);
+        if(d) days.push(d);
       });
       if(name){ byKey[name]=days; names.push(name); }
       if(empId){ byKey[empId]=days; }
@@ -27425,7 +27477,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       }
       var att=buildEffectiveAtt(baseAtt, adj.att_waive||[]);   // 併入免扣(個人手動+全體颱風假)
       var ps=Payroll.calcPayslip(emp, att, prCfg, period);
-      ps._name=s.name;
+      ps._name=s.name; ps._idnum=s.id_number||'';   // 補登缺卡時比對 prPunchByKey 用(員編/身分證號)
       ps._dept=s.department; ps._role=s.role||''; ps._office=(window.deptClass(s.department)==='office');
       ps._type=(emp.foreign_type?('外勞'+emp.foreign_type):(emp.emp_type==='office'?'辦公':'現場'))+'/'+(pay.pay_type==='monthly'?'月':'日');
       ps._netCore=ps.net;   // 未含便當代墊返還與匯款費用的實發
@@ -27445,7 +27497,67 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(info) info.textContent = usePunch ? ('📎 打卡計薪 '+(prPunchMeta&&prPunchMeta.period||period)+(prHolidays?'':' · ⚠國定假日未載入,僅用星期日')) : '(未上傳打卡,使用出勤回報)';
   };
 
+  // ── 缺下班卡(單筆打卡)警示 + 網頁直接補登 ──
+  // 打卡表中某天只刷一次卡 → 無法配對下班時間,當天不計加班。列出並讓使用者就地補登下班時刻,
+  // 補下班後用 derivePunchDay 以同一套規則重新推導該日,存回本機並自動重算(重新上傳打卡檔會覆蓋)。
+  var prPunchWarnItems=[];
+  function payrollPunchWarnRender(){
+    var box=document.getElementById('pr-punchwarn'); if(!box) return;
+    var usePunch=!!(prPunchByKey && Object.keys(prPunchByKey).length);
+    prPunchWarnItems=[];
+    if(usePunch){
+      prRows.forEach(function(p){
+        (p._baseAtt||[]).forEach(function(a){
+          if(a.punch_in && !a.punch_out){   // 有上班卡、缺下班卡 → 單筆打卡
+            prPunchWarnItems.push({ name:p._name, idnum:p._idnum||'', date:a.work_date, weekday:a.weekday, punch_in:a.punch_in });
+          }
+        });
+      });
+    }
+    if(!prPunchWarnItems.length){ box.style.display='none'; box.innerHTML=''; return; }
+    var locked=!!(prRun && prRun.status==='locked'), dis=locked?' disabled':'';
+    var rows=prPunchWarnItems.map(function(it,i){
+      var wd=(it.weekday>=0&&it.weekday<=6)?('（'+WKN[it.weekday]+'）'):'';
+      return '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 0;border-top:1px dashed var(--border)">'
+        +'<span style="color:var(--text)">⚠ <b>'+esc(it.name)+'</b> · <span style="font-family:var(--mono)">'+esc(it.date)+wd+'</span> 只有一筆打卡(<b>'+esc(it.punch_in)+'</b>),缺下班卡 → 當天不計加班</span>'
+        +'<label style="font-size:12px;color:var(--text2)">上班</label><input id="pf-in-'+i+'" type="time" value="'+esc(it.punch_in)+'"'+dis+' style="padding:3px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text);font-family:var(--mono)">'
+        +'<label style="font-size:12px;color:var(--text2)">下班</label><input id="pf-out-'+i+'" type="time"'+dis+' style="padding:3px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text);font-family:var(--mono)">'
+        +'<button class="btn" onclick="payrollPunchFixIdx('+i+')"'+dis+' style="padding:4px 12px;border-radius:6px;border:1px solid var(--accent2);background:'+(locked?'var(--bg3)':'var(--accent2)')+';color:'+(locked?'var(--text3)':'#fff')+';cursor:'+(locked?'not-allowed':'pointer')+'">補登</button>'
+        +'</div>';
+    }).join('');
+    box.style.display='block';
+    box.innerHTML='<div style="background:rgba(229,168,0,.08);border:1px solid var(--yellow);border-radius:var(--rad);padding:10px 12px;margin-bottom:8px">'
+      +'<div style="font-weight:600;color:var(--yellow);margin-bottom:2px">🕐 缺下班卡提醒('+prPunchWarnItems.length+' 筆)'+(locked?' · 本月已鎖定,請先解鎖再補登':'')+'</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:2px">下列日期只刷了一次卡,系統無法配對下班時間,當天不計加班。補下班時間後會自動重算(補登只存本機,重新上傳打卡檔會覆蓋)。</div>'
+      +rows+'</div>';
+  }
+  window.payrollPunchFixIdx=function(i){
+    var it=prPunchWarnItems[i]; if(!it) return;
+    var inEl=document.getElementById('pf-in-'+i), outEl=document.getElementById('pf-out-'+i);
+    payrollPunchFix(it.idnum, it.name, it.date, inEl&&inEl.value, outEl&&outEl.value);
+  };
+  // 補登單日打卡:以上/下班時間重新推導該日,更新 prPunchByKey(員編與姓名可能各自為獨立陣列)並存回本機,再重算。
+  window.payrollPunchFix=function(key, name, date, inVal, outVal){
+    if(prRun && prRun.status==='locked'){ alert('本月已鎖定,請先「解鎖」再補登。'); return; }
+    inVal=String(inVal||'').trim(); outVal=String(outVal||'').trim();
+    if(!/^\d{1,2}:\d{2}/.test(inVal) || !/^\d{1,2}:\d{2}/.test(outVal)){ alert('請輸入正確的上班與下班時間(HH:MM)。'); return; }
+    if(toMin(outVal)<=toMin(inVal)){ alert('下班時間需晚於上班時間。'); return; }
+    var period=(prPunchMeta&&prPunchMeta.period) || (document.getElementById('pr-month')||{}).value || date.slice(0,7);
+    var y=+period.slice(0,4), mo=+period.slice(5,7), dd=+date.slice(8,10);
+    var day=derivePunchDay([inVal, outVal], dd, period, y, mo);
+    if(!day){ alert('補登失敗。'); return; }
+    var updated=false;
+    [key, name].forEach(function(k){
+      if(!k) return; var arr=prPunchByKey[k]; if(!Array.isArray(arr)) return;
+      for(var j=0;j<arr.length;j++){ if(arr[j].work_date===date){ arr[j]=day; updated=true; break; } }
+    });
+    if(!updated){ alert('找不到該日打卡資料,無法補登。'); return; }
+    try{ localStorage.setItem('punch_'+period, JSON.stringify({ byKey:prPunchByKey, meta:prPunchMeta })); }catch(e){}
+    payrollCalc();   // 重新計算並重繪(缺卡警示會同步移除該筆)
+  };
+
   function payrollRender(noset, period){
+    payrollPunchWarnRender();   // 缺下班卡警示 + 補登
     var officePayVisible=canViewOfficePay();
     var mask='<span title="辦公人員底薪/應發/實發僅主管或管理員可見" style="color:var(--text3)">***</span>';
     var bodyPay=document.getElementById('pr-body-pay'), footPay=document.getElementById('pr-foot-pay');
@@ -28156,6 +28268,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       if(a.half_day) st.push(a.waived?'<span style="color:#2f9e44">半天→颱風假補足整天</span>':'<span style="color:#e5a800">半天</span>');
       if(a.waived&&(num(a.late_hours)||num(a.early_hours))) st.push('<span style="color:#2f9e44">颱風假免扣</span>');
       if(a.leave_type&&num(a.leave_hours)) st.push(esc(a.leave_type)+num(a.leave_hours)+'h');
+      if(a.punch_in&&!a.punch_out) st.push('<span style="color:#e5a800">⚠缺下班卡</span>');   // 單筆打卡:當天不計加班,可在薪資頁上方警示區補登
       if(a.is_foreign&&!st.length&&(a.punch_in||a.punch_out)) st.push('<span style="color:#40c057">加班打卡</span>');
       if(!st.length) st.push('<span style="color:#40c057">正常</span>');
       var io=(a.punch_in||a.punch_out)?(esc(a.punch_in||'—')+' ~ '+esc(a.punch_out||'—')):'—';
