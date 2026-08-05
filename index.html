@@ -2725,6 +2725,28 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     #ds-viewer-part{white-space:nowrap}.ds-viewer-page-input{width:58px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px;text-align:center}
     @media(max-width:600px){#ds-viewer-head{height:92px;align-content:center;flex-wrap:wrap;padding:7px 9px}#ds-viewer-head .ds-viewer-info{width:100%}#ds-viewer-nav{width:100%;justify-content:space-between}#ds-frame,#ds-canvas-wrap{height:calc(100% - 92px)}.ds-viewer-page-input{width:48px}}
     @media(max-width:800px){#page-drawingsearch .ds-top{grid-template-columns:1fr}#page-drawingsearch .ds-card{padding:11px}.ds-code{font-size:16px}#page-drawingsearch .ds-map-row{grid-template-columns:58px minmax(0,1fr) auto}#page-drawingsearch .ds-map-detail{grid-column:2/4}#page-drawingsearch .ds-map-row .btn:last-child{grid-column:auto}#page-drawingsearch .ds-file-name{max-width:100%;flex:1 1 160px}#page-drawingsearch .ds-file-picker{flex:1 1 auto;justify-content:center}#page-drawingsearch .ds-files-head{align-items:stretch}#page-drawingsearch .ds-file-filter{width:100%}}
+    #page-drawingsearch .ds-search-card{margin-bottom:12px}
+    #page-drawingsearch .ds-upload-details{padding:0;overflow:hidden}
+    #page-drawingsearch .ds-upload-details>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;user-select:none}
+    #page-drawingsearch .ds-upload-details>summary::-webkit-details-marker{display:none}
+    #page-drawingsearch .ds-upload-details>summary::after{content:'\25be';color:var(--text3);font-size:15px;flex:0 0 auto;transition:transform .18s}
+    #page-drawingsearch .ds-upload-details[open]>summary::after{transform:rotate(180deg)}
+    #page-drawingsearch .ds-upload-details>summary:hover{background:color-mix(in srgb,var(--accent2) 6%,transparent)}
+    #page-drawingsearch .ds-upload-details>summary .ds-title{margin:0}
+    #page-drawingsearch .ds-upload-summary-text{min-width:0}
+    #page-drawingsearch .ds-upload-body{padding:0 14px 14px}
+    #page-drawingsearch .ds-results-count{font-size:12px;color:var(--text3);white-space:nowrap;margin-right:auto}
+    #page-drawingsearch .ds-item .ds-row{flex-wrap:wrap;justify-content:flex-end}
+    #page-drawingsearch .ds-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px;margin-top:10px}
+    #page-drawingsearch .ds-card-item{border:1px solid var(--border);border-radius:10px;padding:11px 12px;background:var(--bg3);cursor:pointer;display:flex;flex-direction:column;gap:4px;min-width:0;transition:border-color .15s,background .15s,transform .15s}
+    #page-drawingsearch .ds-card-item:hover{border-color:var(--accent2);background:color-mix(in srgb,var(--accent2) 8%,var(--bg3));transform:translateY(-1px)}
+    #page-drawingsearch .ds-card-item:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+    #page-drawingsearch .ds-card-item .ds-code{font-size:18px;overflow-wrap:anywhere}
+    #page-drawingsearch .ds-card-item .ds-meta{font-size:11px;overflow-wrap:anywhere}
+    #page-drawingsearch .ds-card-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;padding-top:8px;border-top:1px solid var(--border)}
+    #page-drawingsearch .ds-card-actions .ds-print-check{font-size:11px;gap:5px}
+    #page-drawingsearch .ds-card-actions .btn{padding:3px 13px}
+    @media(max-width:420px){#page-drawingsearch .ds-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
     </style>
     <div class="page" id="page-drawingsearch">
       <div class="page-title">圖面快搜</div>
@@ -2735,16 +2757,21 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <select id="ds-zone" class="filter-select" onchange="dsZoneChanged()"></select>
         <span id="ds-bom-status" class="ds-status" style="margin:0"></span>
       </div>
-      <div class="ds-top">
-        <section class="ds-card">
-          <div class="ds-title">搜尋構件編號</div>
-          <input id="ds-search" class="ds-input" autocomplete="off" placeholder="例如：B6B01" oninput="dsSearch()">
-          <div class="ds-status">只搜尋已由 BOM 白名單確認的構件編號，點結果會直接開啟該 PDF 頁面。</div>
-          <div id="ds-print-tray" class="ds-print-tray" hidden></div>
-          <div id="ds-results" class="ds-list"><div class="ds-empty">請先選擇工程與區域</div></div>
-        </section>
-        <section class="ds-card">
-          <div class="ds-title">加入整份 PDF</div>
+      <section class="ds-card ds-search-card">
+        <div class="ds-title">搜尋構件編號</div>
+        <input id="ds-search" class="ds-input" autocomplete="off" placeholder="打字即時篩選，例如：B6B01" oninput="dsSearch()">
+        <div class="ds-status">已列出本區所有可查閱構件（BOM 白名單）；在上方輸入即可即時篩選。手機請點「原始畫質」，可雙指縮放、超清晰。</div>
+        <div id="ds-print-tray" class="ds-print-tray" hidden></div>
+        <div id="ds-results" class="ds-list"><div class="ds-empty">請先選擇工程與區域</div></div>
+      </section>
+      <details class="ds-card ds-upload-details" id="ds-upload-panel">
+        <summary>
+          <div class="ds-upload-summary-text">
+            <div class="ds-title">加入整份 PDF</div>
+            <div class="ds-status" style="margin:2px 0 0">上傳新圖面、依 BOM 圖號自動預填頁碼（點此展開）</div>
+          </div>
+        </summary>
+        <div class="ds-upload-body">
           <div class="ds-row">
             <input id="ds-file" class="ds-file-native" type="file" accept="application/pdf,.pdf" onchange="dsFileSelected(this)">
             <label class="ds-file-picker" for="ds-file"><span class="ds-file-badge">PDF</span><span>選擇圖面檔案</span></label>
@@ -2754,8 +2781,8 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="ds-progress"><i id="ds-progress-bar"></i></div>
           <div id="ds-progress-text" class="ds-status">選擇 PDF 後，系統會依 BOM 圖號順序預填每一頁。只要預覽並修正封面、缺頁或重複圖號，再一次儲存即可。</div>
           <div id="ds-pending" class="ds-list"></div>
-        </section>
-      </div>
+        </div>
+      </details>
       <section class="ds-card">
         <div class="ds-files-head">
           <div><div class="ds-title">所有已上傳圖面</div><div id="ds-files-summary" class="ds-status" style="margin:0">載入中…</div></div>
@@ -2771,6 +2798,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
             <input id="ds-viewer-page" class="ds-viewer-page-input" type="number" min="1" value="1" onchange="dsViewerGo(this.value)" aria-label="圖面頁碼">
             <span id="ds-viewer-pages" class="ds-meta">/ 1</span>
             <button id="ds-viewer-next" class="btn" onclick="dsViewerPage(1)" disabled>下一頁</button>
+            <button id="ds-viewer-original" class="btn btn-gen" onclick="dsViewOriginalPage(dsViewerFileId, dsViewerPageNumber)" title="以原始畫質在新分頁開啟本頁，手機可雙指縮放">原始畫質</button>
             <button class="btn" onclick="dsCloseViewer()">關閉</button>
           </div>
         </div>
@@ -32293,10 +32321,16 @@ function dsSequenceFromPage(index) {
   dsRenderPending();
 }
 
+function dsOpenUploadPanel() {
+  const panel = dsEl('ds-upload-panel');
+  if (panel) panel.open = true;
+}
+
 async function dsFileSelected(input) {
   const file = input.files?.[0];
   if (!file) return;
   dsSetSelectedFileName(file.name);
+  dsOpenUploadPanel();
   dsPending = null; dsRenderPending(); dsEl('ds-save').disabled = true;
   if (!dsZoneId()) { alert('請先選擇進行中的工程與工程區。'); input.value = ''; dsSetSelectedFileName(); return; }
   if (!dsDrawingGroups.length) { alert('此工程區 BOM 沒有圖號，無法依序標記 PDF。'); input.value = ''; dsSetSelectedFileName(); return; }
@@ -32359,6 +32393,7 @@ async function dsPreviewPendingPage(pageNumber) {
   dsEl('ds-viewer-prev').disabled = true;
   dsEl('ds-viewer-next').disabled = true;
   dsEl('ds-canvas-wrap').hidden = true;
+  const pendingOriginalBtn = dsEl('ds-viewer-original'); if (pendingOriginalBtn) pendingOriginalBtn.hidden = true;
   dsEl('ds-frame').style.display = 'block';
   dsEl('ds-frame').src = dsObjectUrl + '#page=' + localPage + '&zoom=page-width';
   if (!dsEl('ds-viewer').open) dsEl('ds-viewer').showModal();
@@ -32386,6 +32421,7 @@ function dsEditFileMappings(id) {
   dsEl('ds-save').textContent = '儲存頁碼標記';
   dsEl('ds-save').disabled = !pageMap.some(Boolean);
   dsSetProgress(0, '正在編輯既有 PDF 的頁碼標記；儲存時不會重新上傳 PDF。');
+  dsOpenUploadPanel();
   dsEl('ds-pending')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -32628,7 +32664,6 @@ function dsSearch() {
   if (!dsZoneId()) { dsSearchResults = []; box.innerHTML = '<div class="ds-empty">請先選擇工程與工程區。</div>'; dsUpdatePrintControls(); return; }
   const rawQuery = dsEl('ds-search').value;
   const query = dsNorm(rawQuery);
-  if (!query) { dsSearchResults = []; box.innerHTML = '<div class="ds-empty">' + (dsActiveFileId ? '輸入構件編號搜尋已選圖面。' : '輸入構件編號即可搜尋。') + '</div>'; dsUpdatePrintControls(); return; }
   const filesById = new Map(dsFiles.map(file => [file.id, file]));
   const matchingBom = dsBom.filter(row => dsNorm(row.part_no).includes(query) && dsNorm(row.drawing_no));
   const results = [];
@@ -32647,19 +32682,25 @@ function dsSearch() {
   results.sort((a, b) => Number(dsNorm(b.part_no) === query) - Number(dsNorm(a.part_no) === query) || dsDrawingCollator.compare(a.part_no, b.part_no));
   if (!results.length) {
     dsSearchResults = [];
-    box.innerHTML = '<div class="ds-empty">找不到「' + dsEsc(rawQuery) + '」的已標記圖面。</div>';
+    box.innerHTML = '<div class="ds-empty">' + (query ? '找不到「' + dsEsc(rawQuery) + '」的已標記圖面。' : (dsActiveFileId ? '此圖面尚無已標記的構件。' : '本區尚無已標記圖面的構件。')) + '</div>';
     dsUpdatePrintControls();
     return;
   }
-  dsSearchResults = results.slice(0, 100);
-  const rowsHtml = dsSearchResults.map(row => {
+  const cap = 300;
+  const truncated = results.length > cap;
+  dsSearchResults = results.slice(0, cap);
+  const cardsHtml = dsSearchResults.map(row => {
     const file = filesById.get(row.file_id);
     const key = row.file_id + '|' + row.page_no;
-    return '<div class="ds-item"><label class="ds-print-check" title="加入多選列印"><input type="checkbox" data-ds-print-key="' + dsEsc(key) + '"' + (dsPrintQueue.has(key) ? ' checked' : '') + ' onchange="dsTogglePrint(\'' + key + '\',this.checked)"></label><div class="ds-item-main" style="flex:1"><div class="ds-code">' + dsEsc(row.part_no) + '</div><div class="ds-meta">圖號 ' + dsEsc(row.drawing_no) + ' · ' + dsEsc(file?.original_name || 'PDF') + ' · 第 ' + row.page_no + ' 頁</div></div><div class="ds-row">' +
-      '<button class="btn" onclick="dsPrintOne(\'' + key + '\')">單頁列印檔</button>' +
-      '<button class="btn btn-gen" onclick="dsOpenFile(\'' + row.file_id + '\',' + row.page_no + ')">前往</button></div></div>';
+    return '<div class="ds-card-item" role="button" tabindex="0" title="點卡片以原始畫質開啟（手機可雙指縮放）" onclick="dsResultCardOpen(event,\'' + row.file_id + '\',' + row.page_no + ')" onkeydown="dsResultCardKey(event,\'' + row.file_id + '\',' + row.page_no + ')">' +
+      '<div class="ds-code">' + dsEsc(row.part_no) + '</div>' +
+      '<div class="ds-meta">圖號 ' + dsEsc(row.drawing_no) + '</div>' +
+      '<div class="ds-meta">' + dsEsc(file?.original_name || 'PDF') + ' · 第 ' + row.page_no + ' 頁</div>' +
+      '<div class="ds-card-actions"><label class="ds-print-check" title="勾選以加入批次列印"><input type="checkbox" data-ds-print-key="' + dsEsc(key) + '"' + (dsPrintQueue.has(key) ? ' checked' : '') + ' onchange="dsTogglePrint(\'' + key + '\',this.checked)"><span>選取</span></label>' +
+      '<button class="btn" onclick="dsPrintOne(\'' + key + '\')">列印</button></div></div>';
   }).join('');
-  box.innerHTML = '<div class="ds-search-actions"><label class="ds-print-check"><input id="ds-print-all" type="checkbox" onchange="dsToggleAllPrint(this.checked)">全選本次搜尋結果</label><button id="ds-print-selected" class="btn btn-gen" onclick="dsPrintSelected()" disabled>下載列印檔（0）</button></div>' + rowsHtml;
+  const countText = (query ? '符合 ' : '本區共 ') + results.length + ' 筆' + (truncated ? '（僅顯示前 ' + cap + ' 筆，請輸入關鍵字縮小範圍）' : '');
+  box.innerHTML = '<div class="ds-search-actions"><span class="ds-results-count">' + countText + '</span><label class="ds-print-check"><input id="ds-print-all" type="checkbox" onchange="dsToggleAllPrint(this.checked)">全選</label><button id="ds-print-selected" class="btn btn-gen" onclick="dsPrintSelected()" disabled>下載列印檔（0）</button></div><div class="ds-cards">' + cardsHtml + '</div>';
   dsUpdatePrintControls();
 }
 
@@ -32783,6 +32824,43 @@ async function dsPrintPages(rows) {
   }
 }
 
+function dsResultCardOpen(event, fileId, pageNo) {
+  if (event.target.closest('button,label,input')) return;
+  dsViewOriginalPage(fileId, pageNo);
+}
+
+function dsResultCardKey(event, fileId, pageNo) {
+  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); dsViewOriginalPage(fileId, pageNo); }
+}
+
+async function dsViewOriginalPage(fileId, pageNo) {
+  // 先同步開空白分頁，避免非同步產檔後被瀏覽器彈窗攔截（iOS Safari 尤其嚴格）
+  const win = window.open('', '_blank');
+  if (win) { try { win.document.title = '載入原始畫質圖面…'; win.document.body.style.cssText = 'margin:0;font-family:system-ui,sans-serif'; win.document.body.innerHTML = '<p style="padding:24px;color:#555">正在準備原始畫質圖面，請稍候…</p>'; } catch (_) {} }
+  try {
+    const file = dsFiles.find(item => item.id === fileId) || dsAllFiles.find(item => item.id === fileId);
+    if (!file) throw new Error('找不到此 PDF 的儲存位置。');
+    const page = Math.max(1, Number(pageNo) || 1);
+    const part = dsPartsForFile(file).find(item => page >= item.page_start && page <= item.page_end);
+    if (!part) throw new Error('找不到第 ' + page + ' 頁的儲存分段。');
+    await scLoadLib('pdf-lib', 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js');
+    const response = await dsStorageDownload(part.storage_key);
+    if (!response.ok) throw new Error((await response.text()) || ('PDF 下載失敗：HTTP ' + response.status));
+    const source = await PDFLib.PDFDocument.load(await response.arrayBuffer(), { ignoreEncryption: true });
+    const output = await PDFLib.PDFDocument.create();
+    const copied = await output.copyPages(source, [page - part.page_start]);
+    output.addPage(copied[0]);
+    const bytes = await output.save({ useObjectStreams: true, addDefaultPage: false });
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    if (win && !win.closed) win.location.href = url; else window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (error) {
+    console.error(error);
+    if (win && !win.closed) { try { win.close(); } catch (_) {} }
+    alert('開啟原始畫質失敗：' + error.message);
+  }
+}
+
 async function dsReleaseViewerPdf() {
   if (dsViewerPrefetchTimer) { clearTimeout(dsViewerPrefetchTimer); dsViewerPrefetchTimer = 0; }
   if (dsViewerPrefetchTask) {
@@ -32812,6 +32890,7 @@ function dsViewerRenderMetrics(pdfPage) {
 
 function dsFinishViewerPage(file, requestedPage, totalPages) {
   dsViewerPageNumber = requestedPage;
+  const originalBtn = dsEl('ds-viewer-original'); if (originalBtn) originalBtn.hidden = false;
   dsEl('ds-viewer-title').textContent = file.original_name || 'PDF';
   dsEl('ds-viewer-part').textContent = '第 ' + requestedPage + ' / ' + totalPages + ' 頁';
   dsEl('ds-viewer-page').value = requestedPage;
