@@ -3659,8 +3659,11 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       #page-labor .lm-custom-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
       #page-labor .lm-custom-row .search-input{max-width:none}
       #page-labor .lm-photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
-      #page-labor .lm-photo{position:relative;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg3)}
-      #page-labor .lm-photo img{width:100%;height:110px;object-fit:contain;display:block}
+      #page-labor .lm-photo{position:relative;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg3);cursor:grab;transition:box-shadow .12s,transform .12s,border-color .12s}
+      #page-labor .lm-photo:active{cursor:grabbing}
+      #page-labor .lm-photo.dragging{opacity:.4}
+      #page-labor .lm-photo.drag-over{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2) inset}
+      #page-labor .lm-photo img{width:100%;height:110px;object-fit:contain;display:block;pointer-events:none}
       #page-labor .lm-photo .lm-photo-x{position:absolute;top:4px;right:4px;border:0;border-radius:50%;width:22px;height:22px;background:rgba(0,0,0,.55);color:#fff;cursor:pointer}
       #page-labor .lm-photo .lm-photo-n{position:absolute;top:4px;left:6px;font-size:11px;color:#fff;text-shadow:0 1px 2px #000}
       @media print{
@@ -3792,6 +3795,10 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
             <div class="lm-field" style="min-width:320px;flex:1"><label>照片說明(所有照片格統一顯示)</label><input class="search-input" id="lm-caption" placeholder="輸入照片說明"/></div>
           </div>
           <div id="lm-photo-grid" class="lm-photo-grid"></div>
+        </div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="lab-group-h" style="margin-top:0">④ 點工內容(產生後直接寫入「明細登錄」的點工內容欄)</div>
+          <input class="search-input" id="lm-content" placeholder="輸入點工內容(可空白)" style="width:100%;box-sizing:border-box;margin-top:4px"/>
         </div>
         <div style="display:flex;gap:10px;align-items:center">
           <button class="btn" style="background:var(--accent2);color:#fff;font-weight:700;padding:10px 22px" onclick="lmBuild()">⬇ 產生點工單 Word</button>
@@ -26605,8 +26612,10 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 
   // ── Excel 式鍵盤操作 ──
   var laborLastCell=null;   // 記住最後作用中的儲存格座標(供復原/重做還原焦點)
+  var laborEnterArmed=null; // 兩段式 Enter:已按第一下 Enter(確認資料)的輸入框;再按一下才跑下一列
   document.addEventListener('focusin', function(e){
     var td=e.target&&e.target.closest?e.target.closest('#labor-grid td'):null; if(!td) return;
+    if(laborEnterArmed && e.target!==laborEnterArmed) laborEnterArmed=null;  // 換格就重置,回到第一段
     var tr=td.closest('tr'), tb=tr.parentElement;
     laborLastCell={ r:Array.prototype.indexOf.call(tb.children,tr), c:Array.prototype.indexOf.call(tr.children,td) };
   });
@@ -26647,15 +26656,23 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var tb=tr.parentElement; var rows=Array.prototype.slice.call(tb.children);
     var ri=rows.indexOf(tr), ci=Array.prototype.slice.call(tr.children).indexOf(t.closest('td'));
     var k=e.key;
+    if(k!=='Enter') laborEnterArmed=null;   // 只要按了 Enter 以外的鍵(打字/方向鍵…),就重置回第一段
     if((e.ctrlKey||e.metaKey) && (k==='z'||k==='Z')){ e.preventDefault(); laborUndo(); return; }
     if((e.ctrlKey||e.metaKey) && ((k==='y'||k==='Y') || (e.shiftKey&&(k==='z'||k==='Z')))){ e.preventDefault(); laborRedoAct(); return; }
     if((e.ctrlKey||e.metaKey) && (k==='a'||k==='A')){ e.preventDefault(); laborSelectAll(); return; }
     if(e.shiftKey && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(k)>=0){ e.preventDefault(); laborExtendSel(t,k); return; }
     if(k==='Enter'){
       e.preventDefault();
-      t.dispatchEvent(new Event('change',{bubbles:true}));   // 先提交目前格(targeted sync,不會砍表)
-      if(ri>=rows.length-1) laborAddRow();                    // 最後一列才新增(會重繪並聚焦新列)
-      laborFocusCell(ri+1, ci);
+      t.dispatchEvent(new Event('change',{bubbles:true}));   // 一律先提交目前格(targeted sync,不會砍表)
+      if(laborEnterArmed===t){
+        // 第二下 Enter → 跑下一列(最後一列才新增)並移到同欄
+        laborEnterArmed=null;
+        if(ri>=rows.length-1) laborAddRow();
+        laborFocusCell(ri+1, ci);
+      }else{
+        // 第一下 Enter → 只確認資料寫入儲存格,焦點留在原格
+        laborEnterArmed=t;
+      }
       return;
     }
     if(k==='ArrowDown'){ e.preventDefault(); laborFocusCell(ri+1, ci); return; }
@@ -31523,8 +31540,19 @@ window.lmAddPhotos=function(inp){
 window.lmDelPhoto=function(i){lmPhotos.splice(i,1);lmRenderPhotos();};
 function lmRenderPhotos(){
   const el=document.getElementById('lm-photo-grid');if(!el)return;
-  el.innerHTML=lmPhotos.map((p,i)=>'<div class="lm-photo"><span class="lm-photo-n">'+(i+1)+'</span><img src="'+p.url+'"/><button class="lm-photo-x" onclick="lmDelPhoto('+i+')">✕</button></div>').join('');
+  el.innerHTML=lmPhotos.map((p,i)=>'<div class="lm-photo" draggable="true" data-i="'+i+'" ondragstart="lmPhotoDragStart(event,'+i+')" ondragover="lmPhotoDragOver(event,'+i+')" ondragleave="lmPhotoDragLeave(event)" ondrop="lmPhotoDrop(event,'+i+')" ondragend="lmPhotoDragEnd(event)"><span class="lm-photo-n">'+(i+1)+'</span><img src="'+p.url+'"/><button class="lm-photo-x" onclick="lmDelPhoto('+i+')" draggable="false">✕</button></div>').join('');
 }
+// 照片拖曳排序:按住照片拖到另一張的位置即可調整順序(Word 也照這個順序帶入)
+let lmPhotoDragFrom=null;
+window.lmPhotoDragStart=function(e,i){lmPhotoDragFrom=i;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',String(i));}catch(_){}
+  const el=e.currentTarget;if(el)setTimeout(()=>el.classList.add('dragging'),0);};
+window.lmPhotoDragOver=function(e,i){if(lmPhotoDragFrom===null)return;e.preventDefault();e.dataTransfer.dropEffect='move';
+  const el=e.currentTarget;if(el&&lmPhotoDragFrom!==i)el.classList.add('drag-over');};
+window.lmPhotoDragLeave=function(e){const el=e.currentTarget;if(el)el.classList.remove('drag-over');};
+window.lmPhotoDrop=function(e,i){e.preventDefault();const from=lmPhotoDragFrom;lmPhotoDragFrom=null;
+  if(from===null||from===i){lmRenderPhotos();return;}
+  const [m]=lmPhotos.splice(from,1);lmPhotos.splice(i,0,m);lmRenderPhotos();};
+window.lmPhotoDragEnd=function(e){lmPhotoDragFrom=null;lmRenderPhotos();};
 let lmBusy=false;   // 防連點:產生中不允許再按
 window.lmBuild=async function(){
   if(lmBusy)return;
@@ -31627,8 +31655,10 @@ window.lmBuild=async function(){
     const fname=docno+(sp?'(外勞)':'')+'.docx';
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;
     document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-    // 產生成功 → 自動登錄一筆到「明細登錄」(編號/工程/日期/工數/金額;SP=點工內容「00/00~00/00外勞支援」)
-    const reg=await lmRegister(proj,docno,document.getElementById('lm-date').value,hours,sp?(lmSpRange()+'外勞支援'):null);
+    // 產生成功 → 自動登錄一筆到「明細登錄」(編號/工程/日期/工數/金額;點工內容以④欄為主,SP 未填則預設「00/00~00/00外勞支援」)
+    const typedContent=(document.getElementById('lm-content')?.value||'').trim();
+    const regContent=typedContent||(sp?(lmSpRange()+'外勞支援'):null);
+    const reg=await lmRegister(proj,docno,document.getElementById('lm-date').value,hours,regContent);
     const st=document.getElementById('lm-status');
     if(st)st.textContent='✓ 已產生 '+fname+(reg?' ｜ 已自動登錄到明細登錄':' ｜ ⚠ 未登錄明細(需登入後重試)');
     lmResetForm();   // 清空所有輸入,準備下一張
@@ -31638,7 +31668,7 @@ window.lmBuild=async function(){
 // 產生後清空全部輸入(狀態列保留,方便核對剛產生的檔名)
 function lmResetForm(){
   lmDocnoAuto=true;
-  ['lm-proj','lm-projname','lm-docno','lm-refno','lm-caption'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['lm-proj','lm-projname','lm-docno','lm-refno','lm-caption','lm-content'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const d=document.getElementById('lm-date');if(d)d.value=lmFriday();
   const r=document.getElementById('lm-resp');if(r)r.value='製二課';
   lmTokens.forEach(t=>{t.checked=false;t.qty=1;});
