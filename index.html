@@ -1142,6 +1142,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .cf-th-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:9px;padding:0 2px;margin-left:3px;vertical-align:middle}
 .cf-th-btn:hover{color:var(--accent2)}
 .cf-th-btn.active{color:var(--accent2)}
+.btn-sm.btn-export.cf-toggle-on{background:var(--accent2);border-color:var(--accent2);color:#fff}
 .cf-th-del:hover{color:var(--danger)}
 .colfilter-dd{position:fixed;z-index:10000;background:var(--bg2);border:1px solid var(--border-hi);border-radius:var(--rad);box-shadow:0 8px 28px rgba(0,0,0,.5);width:230px;max-height:calc(100vh - 16px);font-family:var(--sans);overflow:hidden;display:flex;flex-direction:column}
 .cf-search{padding:10px}
@@ -2599,6 +2600,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="section-label" style="margin:0">構件總表</div>
         <div style="display:flex;gap:10px;align-items:center">
           <input class="search-input" id="comp-search" placeholder="搜尋構件總表..." oninput="compSearchInput(this.value)" style="width:200px"/>
+          <button class="btn-sm btn-export" id="comp-a201-blank-btn" type="button" onclick="compToggleA201Blank()" title="只顯示 A201 尚未上線(空白)的構件;再按一下恢復">篩選 A201 空白</button>
           <button class="btn-sm btn-export" type="button" onclick="clearCompFilters()">清除篩選</button>
           <div class="bom-result-actions" id="zone-comp-actions"></div>
         </div>
@@ -2617,6 +2619,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="bom-result-actions">
           <button class="btn-sm btn-export" onclick="beamAddRow()">＋ 新增列</button>
           <button class="btn-sm btn-export" onclick="beamAddCol()">＋ 新增欄位</button>
+          <button class="btn-sm btn-export" onclick="clearColFilters('beam')">清除篩選</button>
           <span id="beam-saved" style="font-family:var(--mono);font-size:12px;color:var(--text3);align-self:center">自動儲存</span>
           <button class="btn-sm btn-export" onclick="beamExportExcel()">⬇ 匯出 Excel</button>
         </div>
@@ -2651,6 +2654,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
               <button class="btn-sm btn-export" onclick="layoutUndo()" title="復原 (Ctrl+Z)">↶ 復原</button>
               <button class="btn-sm btn-export" onclick="layoutRedo()" title="重做 (Ctrl+Y)">↷ 重做</button>
               <button class="btn-sm btn-export" onclick="layoutAddRow()">＋ 新增列</button>
+              <button class="btn-sm btn-export" onclick="clearColFilters('layout')">清除篩選</button>
               <button class="btn-sm btn-export" id="layout-ship-btn" onclick="toggleShipMode()">🚚 選擇出貨構件</button>
               <button class="btn-sm btn-export" onclick="layoutBatchImport()">📥 批次輸入</button>
               <button class="btn-sm btn-export" onclick="layoutExportExcel()">⬇ 匯出 Excel</button>
@@ -3364,6 +3368,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
             <button class="ov-neg-btn" id="ov-neg-labor" onclick="outputSetNegFilter('labor')">點工計價</button>
           </div>
           <button class="filter-select" id="ov-edit-toggle" onclick="outputToggleEdit()">✏️ 編輯</button>
+          <button class="filter-select" onclick="clearColFilters('ovprice')">清除篩選</button>
           <span id="output-saved" style="font-family:var(--mono);font-size:12px;color:var(--text3);margin-left:12px"></span>
         </div>
         <div class="card" style="padding:0;overflow:hidden">
@@ -3603,6 +3608,9 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       #page-labor .labor-project-card.completed{opacity:.66;border-style:dashed}
       #page-labor .labor-project-code-row{display:flex;align-items:center;gap:6px}
       #page-labor .labor-support-tag{display:inline-flex;align-items:center;padding:2px 6px;border-radius:999px;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.38);color:var(--yellow);font-size:9px;font-weight:700;white-space:nowrap}
+      .lab-sup-item{display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;font-family:var(--mono);font-size:13px;color:var(--text);border-radius:6px}
+      .lab-sup-item:hover{background:var(--bg3)}
+      .lab-sup-item input{width:15px;height:15px;flex:none;accent-color:var(--accent2);cursor:pointer}
       #page-labor .labor-project-code{font-size:16px;font-weight:750;margin-bottom:6px}
       #page-labor .labor-project-meta{font-family:var(--mono);font-size:10px;line-height:1.55;color:var(--text3)}
       #page-labor .labor-project-meta b{color:var(--danger);font-weight:650}
@@ -3667,12 +3675,24 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       #page-labor .lm-photo .lm-photo-x{position:absolute;top:4px;right:4px;border:0;border-radius:50%;width:22px;height:22px;background:rgba(0,0,0,.55);color:#fff;cursor:pointer}
       #page-labor .lm-photo .lm-photo-n{position:absolute;top:4px;left:6px;font-size:11px;color:#fff;text-shadow:0 1px 2px #000}
       @media print{
+        /* 具名頁面:只有未請款列印(body.labor-ub-printing)套直式,不影響全站預設的橫式 @page(床位配置圖等) */
+        @page laborUb{ size:A4 portrait; margin:8mm; }
+        body.labor-ub-printing{ page:laborUb; }
         body.labor-ub-printing *{visibility:hidden!important}
         body.labor-ub-printing #labor-unbilled-panel,body.labor-ub-printing #labor-unbilled-panel *{visibility:visible!important}
-        body.labor-ub-printing #labor-unbilled-panel{position:absolute;left:0;top:0;width:100%;background:#fff;color:#000;padding:8mm}
+        body.labor-ub-printing #labor-unbilled-panel{page:laborUb;position:absolute;left:0;top:0;width:100%;background:#fff;color:#000;padding:0}
         body.labor-ub-printing #labor-unbilled-panel .ovr-toolbar{display:none!important}
         body.labor-ub-printing #labor-unbilled-panel .card{box-shadow:none;border-color:#999}
         body.labor-ub-printing #labor-unbilled-panel .lab-tbl,body.labor-ub-printing #labor-unbilled-panel td,body.labor-ub-printing #labor-unbilled-panel th{color:#000!important;border-color:#aaa!important}
+        /* 列印時單欄由上往下排(螢幕是兩欄),分頁才乾淨 */
+        body.labor-ub-printing #labor-unbilled-panel .labor-ub-groups{display:block!important}
+        /* 每個工程(群組)整塊不被切斷 → TOTAL 一定跟著表格在同一頁;放不下就整塊移到下一頁 */
+        body.labor-ub-printing #labor-unbilled-panel .labor-ub-group-card{break-inside:avoid;page-break-inside:avoid;margin:0 0 6mm}
+        body.labor-ub-printing #labor-unbilled-panel .labor-ub-report>.card.lab-total{break-inside:avoid;page-break-inside:avoid;break-after:avoid;page-break-after:avoid}
+        /* 依主辦檢視:每個工程的小表格與其小標題不拆開、TOTAL 列不被切 */
+        body.labor-ub-printing #labor-unbilled-panel .labor-ub-report .card{break-inside:avoid;page-break-inside:avoid}
+        body.labor-ub-printing #labor-unbilled-panel .lab-proj-h{break-after:avoid;page-break-after:avoid}
+        body.labor-ub-printing #labor-unbilled-panel .lab-tbl tr{break-inside:avoid;page-break-inside:avoid}
       }
     </style>
     <div class="page" id="page-labor">
@@ -3701,6 +3721,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <button class="btn" onclick="laborUndo()" title="復原 (Ctrl+Z)">↶ 復原</button>
           <button class="btn" onclick="laborRedoAct()" title="重作 (Ctrl+Y)">↷ 重作</button>
           <button class="btn" id="labor-add-btn" onclick="laborAddRow()">＋ 新增一列</button>
+          <button class="btn" onclick="clearColFilters('labordetail')">清除篩選</button>
         </div>
         <div class="card" style="padding:0;overflow:auto"><div id="labor-table"><div class="empty-state">載入中...</div></div></div>
         <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:10px;line-height:1.7">
@@ -3727,6 +3748,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <div id="labor-retention-panel" style="display:none">
         <div class="ovr-toolbar">
           <button class="btn" onclick="laborRenderRetention()">🔄 重新整理</button>
+          <button class="btn" onclick="clearColFilters('laborret')">清除篩選</button>
           <span class="ovr-wd">保留款一覽（填「核銷請款日 + 核銷金額」即完成核銷,記得按右上「儲存全部」）</span>
         </div>
         <div id="labor-ret-content"><div class="empty-state">載入中...</div></div>
@@ -3797,7 +3819,16 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div id="lm-photo-grid" class="lm-photo-grid"></div>
         </div>
         <div class="card" style="margin-bottom:14px">
-          <div class="lab-group-h" style="margin-top:0">④ 點工內容(產生後直接寫入「明細登錄」的點工內容欄)</div>
+          <div class="lab-group-h" style="margin-top:0;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span>④ 點工內容(產生後直接寫入「明細登錄」的點工內容欄)</span>
+            <label style="margin-left:auto;display:flex;align-items:center;gap:6px;white-space:nowrap">權責單位(填入明細):
+              <select class="filter-select" id="lm-detail-resp" style="padding:5px 8px;min-width:120px">
+                <option value="">請選擇</option>
+                <option value="工程範圍">工程範圍</option><option value="業主設變">業主設變</option><option value="繪圖變更">繪圖變更</option>
+                <option value="工地需求">工地需求</option><option value="管料課">管料課</option><option value="S/P">S/P</option><option value="加工機">加工機</option>
+              </select>
+            </label>
+          </div>
           <input class="search-input" id="lm-content" placeholder="輸入點工內容(可空白)" style="width:100%;box-sizing:border-box;margin-top:4px"/>
         </div>
         <div style="display:flex;gap:10px;align-items:center">
@@ -4614,6 +4645,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <button class="btn" onclick="spxUndo('track')" title="復原 (Ctrl+Z)">↶ 復原</button>
           <button class="btn" onclick="spxRedoAct('track')" title="重做 (Ctrl+Y)">↷ 重做</button>
           <button class="btn" onclick="spxAddRow('track')">＋ 新增一列</button>
+          <button class="btn" onclick="clearColFilters('track')">清除篩選</button>
           <input type="text" id="spxSearch-track" placeholder="全欄搜尋…" oninput="spxSearchInput('track')">
           <div style="flex:1"></div>
           <span class="prod-count" id="spxCount-track"></span>
@@ -4644,6 +4676,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <button class="btn" onclick="spxUndo('reserved')" title="復原 (Ctrl+Z)">↶ 復原</button>
           <button class="btn" onclick="spxRedoAct('reserved')" title="重做 (Ctrl+Y)">↷ 重做</button>
           <button class="btn" onclick="spxAddRow('reserved')">＋ 新增一列</button>
+          <button class="btn" onclick="clearColFilters('reserved')">清除篩選</button>
           <input type="text" id="spxSearch-reserved" placeholder="全欄搜尋…" oninput="spxSearchInput('reserved')">
           <div style="flex:1"></div>
           <span class="prod-count" id="spxCount-reserved"></span>
@@ -4674,6 +4707,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <button class="btn" onclick="spxUndo('product')" title="復原 (Ctrl+Z)">↶ 復原</button>
           <button class="btn" onclick="spxRedoAct('product')" title="重做 (Ctrl+Y)">↷ 重做</button>
           <button class="btn" onclick="spxAddRow('product')">＋ 新增一列</button>
+          <button class="btn" onclick="clearColFilters('product')">清除篩選</button>
           <input type="text" id="spxSearch-product" placeholder="全欄搜尋…" oninput="spxSearchInput('product')">
           <div style="flex:1"></div>
           <span class="prod-count" id="spxCount-product"></span>
@@ -5094,6 +5128,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
             </div>
             <div style="display:flex;gap:8px">
               <button class="btn-sm btn-export" onclick="hwToggleAddItem()">＋ 新增品項</button>
+              <button class="btn-sm btn-export" onclick="hwClearFilters('stock')">清除篩選</button>
               <button class="btn-sm btn-export" onclick="hwExportStock()">⬇ 匯出 Excel</button>
             </div>
           </div>
@@ -5129,7 +5164,10 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="hw-tblbox">
           <div class="layout-toolbar">
             <span class="layout-hint">新增進貨會自動增加該品項庫存;品名不存在時會自動建立新品項。</span>
-            <button class="btn-sm btn-export" onclick="hwExportPurchase()">⬇ 匯出 Excel</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn-sm btn-export" onclick="hwClearFilters('purchase')">清除篩選</button>
+              <button class="btn-sm btn-export" onclick="hwExportPurchase()">⬇ 匯出 Excel</button>
+            </div>
           </div>
           <div class="layout-table-wrap">
             <table class="layout-table" id="hw-purchase-table" onkeydown="tableArrowNav(event)">
@@ -5159,6 +5197,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
               <input id="hw-ppe-month" type="month" class="search-input" style="width:145px"/>
               <button class="btn-sm" onclick="hwPpeOpenNames()">姓名對照</button>
               <button class="btn-sm btn-export" onclick="hwExportPPE()">防護用具匯出</button>
+              <button class="btn-sm btn-export" onclick="hwClearFilters('usage')">清除篩選</button>
               <button class="btn-sm btn-export" onclick="hwExportUsage()">⬇ 匯出 Excel</button>
             </div>
           </div>
@@ -5186,7 +5225,10 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="hw-tblbox">
           <div class="layout-toolbar">
             <span class="layout-hint">登記後會把該品項庫存直接修正為「實際盤點數量」,並記錄與系統數量的差異。</span>
-            <button class="btn-sm btn-export" onclick="hwExportStocktake()">⬇ 匯出 Excel</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn-sm btn-export" onclick="hwClearFilters('count')">清除篩選</button>
+              <button class="btn-sm btn-export" onclick="hwExportStocktake()">⬇ 匯出 Excel</button>
+            </div>
           </div>
           <div class="layout-table-wrap">
             <table class="layout-table" id="hw-count-table" onkeydown="tableArrowNav(event)">
@@ -5202,6 +5244,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="hw-form">
             <input id="hw-nv-name" class="search-input" placeholder="新增廠商名稱" style="width:260px"/>
             <button class="btn-sm btn-gen" onclick="hwAddVendor()" style="flex:0 0 auto">新增廠商</button>
+            <button class="btn-sm btn-export" onclick="hwClearFilters('party')" style="flex:0 0 auto">清除篩選</button>
           </div>
           <div class="hw-tblbox">
           <div class="layout-table-wrap" style="max-height:60vh">
@@ -5227,7 +5270,10 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="hw-tblbox">
           <div class="layout-toolbar">
             <span class="layout-hint">設備資產清單(鎮山 / 長榮)。</span>
-            <button class="btn-sm btn-export" onclick="hwExportEquip()">⬇ 匯出 Excel</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn-sm btn-export" onclick="hwClearFilters('equip')">清除篩選</button>
+              <button class="btn-sm btn-export" onclick="hwExportEquip()">⬇ 匯出 Excel</button>
+            </div>
           </div>
           <div class="layout-table-wrap">
             <table class="layout-table" id="hw-equip-table" onkeydown="tableArrowNav(event)">
@@ -5255,6 +5301,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <button class="btn-sm" style="flex:none" onclick="GridXL.undo('ded')" title="復原 (Ctrl+Z)">↶ 復原</button>
           <button class="btn-sm" style="flex:none" onclick="GridXL.redo('ded')" title="重做 (Ctrl+Y)">↷ 重做</button>
           <button class="btn-sm btn-gen" style="flex:none" onclick="GridXL.addRow('ded')">＋ 新增列</button>
+          <button class="btn-sm" style="flex:none" onclick="clearColFilters('ded')">清除篩選</button>
           <input id="gxSearch-ded" class="search-input" placeholder="搜尋編號、工程區、事由…" oninput="GridXL.search('ded')"/>
           <span class="section-label" id="gxCount-ded" style="flex:none"></span>
           <span style="flex:1"></span><button class="btn-sm btn-export" style="flex:none" onclick="deductionsExport()">⬇ 匯出 Excel</button>
@@ -9781,7 +9828,7 @@ function hwInitColFilters(){
       if(!def) return;
       const th=ths[ci]; if(!th||th.querySelector('.hw-fbtn')) return;
       const b=document.createElement('span');
-      b.className='hw-fbtn'; b.textContent='▾'; b.title='篩選';
+      b.className='hw-fbtn'; b.textContent='▼'; b.title='篩選';
       b.dataset.tab=tab; b.dataset.ci=ci;
       b.onclick=(e)=>{ e.stopPropagation(); e.preventDefault(); hwOpenFilter(tab,ci,b); };
       b.onmousedown=(e)=>e.stopPropagation();
@@ -9796,10 +9843,12 @@ function hwUpdateFilterIcons(tab){
     const ci=b.dataset.ci, f=hwColFilter[tab];
     const on=f&&f[ci]&&f[ci].size;
     b.classList.toggle('active',!!on);
-    b.textContent=on?'▼':'▾';
+    b.textContent='▼';
   });
 }
 function hwCloseFilter(){ const d=document.getElementById('hw-fdrop'); if(d)d.remove(); document.removeEventListener('mousedown',hwFilterOutside,true); }
+// 清除某個五金分頁的所有表頭欄位篩選,供工具列「清除篩選」按鈕使用
+function hwClearFilters(tab){ if(!hwColFilter[tab])return; hwColFilter[tab]={}; hwCloseFilter(); hwRender(); }
 function hwFilterOutside(e){ const d=document.getElementById('hw-fdrop'); if(d&&!d.contains(e.target)) hwCloseFilter(); }
 function hwOpenFilter(tab,ci,anchor){
   const existing=document.getElementById('hw-fdrop');
@@ -12892,6 +12941,27 @@ function clearCompFilters() {
   pagerReset('comp');
   renderCompTable();
 }
+// Task 4:「篩選A201空白」按鈕 —— A201 欄的顯示值為空(尚未上線)才顯示;再按一下(或按「清除篩選」)即恢復。
+// A201 為自動帶入欄,欄位 key 為 'ext:A201',空白顯示值即空字串。
+function compA201BlankActive() {
+  const f = colFilterState.comp && colFilterState.comp['ext:A201'];
+  return !!(f && f.size === 1 && f.has(''));
+}
+function compSyncA201Btn() {
+  const b = document.getElementById('comp-a201-blank-btn');
+  if (!b) return;
+  const on = compA201BlankActive();
+  b.classList.toggle('cf-toggle-on', on);
+  b.textContent = on ? 'A201空白（篩選中）✓' : '篩選 A201 空白';
+}
+function compToggleA201Blank() {
+  if (!colFilterState.comp) colFilterState.comp = {};
+  if (compA201BlankActive()) delete colFilterState.comp['ext:A201'];
+  else colFilterState.comp['ext:A201'] = new Set(['']);
+  closeColFilter();
+  pagerReset('comp');
+  renderCompTable();
+}
 
 // 批次覆寫本工程區所有 component_ext (一次 DELETE + POST),供全選/全部移回用
 async function persistAllExt() {
@@ -12929,6 +12999,7 @@ async function includeAll(checked) {
 }
 function renderCompTable() {
   const el = document.getElementById('zone-components');
+  compSyncA201Btn();
   if (!zoneComponents.length) { el.innerHTML = '<div class="empty-state">此工程區尚無構件資料</div>'; renderExcludedTable([]); return; }
   const extCols = COMP_EXT_COLS.concat(zoneCompCustomCols);
   const cols = [
@@ -19258,13 +19329,8 @@ function cfSelectAll(state) {
   dd.querySelector('#cf-count').textContent = '已選 '+working.size+' / '+activeFilterDropdown.distinct.length;
 }
 
-function cfApply() {
-  if (!activeFilterDropdown) return;
-  const { tableKey, colKey, distinct, working } = activeFilterDropdown;
-  // if all distinct values selected -> no filter (null)
-  const allSelected = working.size === distinct.length;
-  setColFilter(tableKey, colKey, allSelected ? null : new Set(working));
-  closeColFilter();
+// 依 tableKey 重新繪製套用篩選後的表格(cfApply 與「清除篩選」共用同一套派發)
+function rerenderFilteredTable(tableKey) {
   if (tableKey === 'comp') renderCompTable();
   else if (tableKey === 'beam') renderBeamTable();
   else if (tableKey === 'layout') renderLayoutInput();
@@ -19274,6 +19340,25 @@ function cfApply() {
   else if (tableKey === 'laborret' && typeof window.laborRenderRetention === 'function') window.laborRenderRetention();
   else if ((tableKey === 'track' || tableKey === 'reserved' || tableKey === 'product') && typeof spxRender === 'function') spxRender(tableKey);
   else if (window.GridXL && window.GridXL._cfg[tableKey]) window.GridXL.render(tableKey);
+}
+
+// 清除某張表的所有欄位篩選(表頭 ▼),供各表工具列「清除篩選」按鈕共用
+function clearColFilters(tableKey) {
+  colFilterState[tableKey] = {};
+  closeColFilter();
+  if (typeof pagerReset === 'function' && tableKey === 'comp') pagerReset('comp');
+  rerenderFilteredTable(tableKey);
+}
+window.clearColFilters = clearColFilters;
+
+function cfApply() {
+  if (!activeFilterDropdown) return;
+  const { tableKey, colKey, distinct, working } = activeFilterDropdown;
+  // if all distinct values selected -> no filter (null)
+  const allSelected = working.size === distinct.length;
+  setColFilter(tableKey, colKey, allSelected ? null : new Set(working));
+  closeColFilter();
+  rerenderFilteredTable(tableKey);
 }
 function closeColFilter() {
   if (activeFilterDropdown) { activeFilterDropdown.dd.remove(); activeFilterDropdown = null; }
@@ -19544,7 +19629,7 @@ document.addEventListener('copy', e => {
 document.addEventListener('paste', e => {
   const active = document.activeElement;
   const activeTd = active && active.closest ? active.closest('td') : null;
-  const activeTable = activeTd ? activeTd.closest('.layout-table, .att-grid, .lab-tbl') : null;
+  const activeTable = activeTd ? activeTd.closest('.layout-table, .att-grid, .lab-tbl, #ov-price-table') : null;
   // 先抓「目前選取的矩形範圍」(可能是多格),供「單格內容貼到多格」使用。
   let selRect = null;
   if (activeTable) {
@@ -24491,12 +24576,15 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       var act=colFilterActive('ovprice',key)?' active':'';
       return '<th>'+label+'<button class="cf-th-btn'+act+'" onclick=\'openColFilter(event,"ovprice","'+key+'",'+vals+')\'>▼</button></th>';
     }
-    sheet.innerHTML='<div class="table-scroll"><table class="data-table ov-tbl"><thead><tr>'+
+    sheet.innerHTML='<div class="table-scroll"><table id="ov-price-table" class="data-table ov-tbl" onkeydown="tableArrowNav(event)"><thead><tr>'+
       thf('工程編號','proj_num')+thf('工程區','zone_code')+thf('加工代號','proc_code')+thf('副號','sub_code')+
       '<th class="num">單價</th>'+thf('水電加工代號','util_proc_code')+'<th class="num">水電單價</th><th class="num">水電重量(t)</th><th class="num">水電重量(kg)</th>'+
       '</tr></thead><tbody>'+body+'</tbody></table></div>';
     var _new=sheet.querySelector('.table-scroll');
     if(_new){ _new.scrollTop=_sTop; _new.scrollLeft=_sLeft; }
+    // Task 3:讓「單價」表比照其他表格具備 Excel 操作(方向鍵漫遊、拖曳多選、複製、貼上補值)
+    var _ovt=document.getElementById('ov-price-table');
+    if(_ovt && typeof tblInitSelection==='function') tblInitSelection(_ovt);
   };
   // S/P 剖析完成核對後，資料庫 zones 已更新；若產值頁曾載入過，也同步更新畫面中的快取列。
   window.outputSyncUtilWeight=function(zoneId,kg){
@@ -26363,7 +26451,31 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   var laborTab='detail';
   var laborProject='__cards__'; // __cards__=工程入口、__all__=全部工程、其餘=指定工程
   var laborShowCompleted=false;
+  // 外勞支援工程:可標記「多個」工程;主存 app_config(跨電腦/帳號共用),localStorage 僅作離線快取。
+  var LABOR_SUPPORT_KEY='labor_support_projects';
   var laborSupportProjects=(function(){try{return new Set(JSON.parse(localStorage.getItem('laborSupportProjects')||'[]'));}catch(e){return new Set();}})();
+  function laborSupportCache(){ try{localStorage.setItem('laborSupportProjects',JSON.stringify(Array.from(laborSupportProjects)));}catch(e){} }
+  // 從雲端(app_config)載入共用設定;有資料列就以雲端為準(含空陣列=別台已清空)。無此列則沿用本機快取。
+  async function laborLoadSupport(){
+    try{
+      var r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+encodeURIComponent(LABOR_SUPPORT_KEY));
+      var row=r&&r.ok&&Array.isArray(r.data)?r.data[0]:null;
+      if(row){
+        var arr=[]; try{ arr=JSON.parse(row.value)||[]; }catch(e){ arr=[]; }
+        laborSupportProjects=new Set(Array.isArray(arr)?arr.map(function(x){return String(x).trim();}).filter(Boolean):[]);
+        laborSupportCache();
+      }
+    }catch(e){ console.warn('laborLoadSupport',e); }
+  }
+  // 寫回雲端 + 本機快取;雲端失敗時仍保住本機並提示。
+  async function laborSaveSupport(){
+    laborSupportCache();
+    try{
+      var r=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:LABOR_SUPPORT_KEY,value:JSON.stringify(Array.from(laborSupportProjects))})});
+      if(!r||!r.ok){ alert('外勞支援設定已存到本機,但雲端同步失敗(其他電腦可能看不到);請確認目前帳號有設定權限。'); return false; }
+      return true;
+    }catch(e){ console.warn('laborSaveSupport',e); alert('外勞支援設定已存到本機,但雲端同步失敗(其他電腦可能看不到)。'); return false; }
+  }
   var laborAutoTimer=null;
   var laborSaving=false,laborSaveQueued=false;
   var laborHist=[], laborRedoStack=[];
@@ -26463,19 +26575,52 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   window.laborToggleCompleted=function(){laborShowCompleted=!laborShowCompleted;laborRenderProjects();};
   window.laborOpenSupportPicker=function(){
     var old=document.getElementById('labor-support-picker');if(old)old.remove();
-    var current=Array.from(laborSupportProjects)[0]||'',opts=laborProjectCodes().map(function(p){return '<option value="'+escAttr(p)+'" '+(p===current?'selected':'')+'>'+esc(p)+'</option>';}).join('');
+    var codes=laborProjectCodes();
+    var listHtml=codes.length
+      ? codes.map(function(p){ return '<label class="lab-sup-item"><input type="checkbox" value="'+escAttr(p)+'"'+(laborSupportProjects.has(p)?' checked':'')+'><span>'+esc(p)+'</span></label>'; }).join('')
+      : '<div style="padding:12px;color:var(--text3)">目前沒有工程可選</div>';
     var ov=document.createElement('div');ov.id='labor-support-picker';ov.className='modal-overlay show';
-    ov.innerHTML='<div class="modal" style="max-width:420px"><div class="modal-title">設定外勞支援工程</div><div class="lf"><label>選擇工程</label><select id="labor-support-select" class="filter-select" style="width:100%;padding:9px"><option value="">— 請選擇工程 —</option>'+opts+'</select></div><div style="font-size:12px;color:var(--text3)">確定後會取代原本標記的工程，並固定顯示在未完成工程中。</div><div class="modal-actions"><button class="btn-modal-cancel" onclick="document.getElementById(\'labor-support-picker\').remove()">取消</button>'+(current?'<button class="btn-modal-cancel" style="color:var(--danger)" onclick="laborClearSupport()">取消標記</button>':'')+'<button class="btn-modal-ok" onclick="laborConfirmSupport()">確定</button></div></div>';
+    ov.innerHTML='<div class="modal" style="max-width:460px">'+
+      '<div class="modal-title">設定外勞支援工程（可複選）</div>'+
+      '<div class="lf"><label>勾選要標記為「外勞支援」的工程</label>'+
+        '<input type="text" id="labor-support-search" class="filter-select" style="width:100%;padding:8px;margin-bottom:8px" placeholder="搜尋工程…" oninput="laborSupportFilter(this.value)">'+
+        '<div id="labor-support-list" style="max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:4px">'+listHtml+'</div>'+
+      '</div>'+
+      '<div style="font-size:12px;color:var(--text3)">可同時標記多個;勾選的工程會固定顯示在未完成工程中，並跨電腦／帳號共用。</div>'+
+      '<div class="modal-actions">'+
+        '<button class="btn-modal-cancel" onclick="document.getElementById(\'labor-support-picker\').remove()">取消</button>'+
+        '<button class="btn-modal-cancel" onclick="laborSupportUncheckAll()">全部取消勾選</button>'+
+        '<button class="btn-modal-ok" onclick="laborConfirmSupport()">確定</button>'+
+      '</div></div>';
     document.body.appendChild(ov);
   };
-  window.laborConfirmSupport=function(){
-    var sel=document.getElementById('labor-support-select'),project=String(sel&&sel.value||'').trim();if(!project){alert('請先選擇工程');return;}
-    laborSupportProjects=new Set([project]);try{localStorage.setItem('laborSupportProjects',JSON.stringify([project]));}catch(e){}
-    document.getElementById('labor-support-picker')?.remove();laborRenderProjects();
+  window.laborSupportFilter=function(q){
+    q=String(q||'').trim().toLowerCase();
+    var list=document.getElementById('labor-support-list');if(!list)return;
+    Array.prototype.forEach.call(list.querySelectorAll('.lab-sup-item'),function(l){
+      var t=(l.querySelector('span').textContent||'').toLowerCase();
+      l.style.display=(!q||t.indexOf(q)>=0)?'':'none';
+    });
   };
+  window.laborSupportUncheckAll=function(){
+    var list=document.getElementById('labor-support-list');if(!list)return;
+    Array.prototype.forEach.call(list.querySelectorAll('input[type=checkbox]'),function(cb){cb.checked=false;});
+  };
+  window.laborConfirmSupport=async function(){
+    var list=document.getElementById('labor-support-list');
+    var next=new Set();
+    if(list) Array.prototype.forEach.call(list.querySelectorAll('input[type=checkbox]'),function(cb){ if(cb.checked){ var v=String(cb.value||'').trim(); if(v) next.add(v); } });
+    laborSupportProjects=next;
+    document.getElementById('labor-support-picker')?.remove();
+    laborRenderProjects();
+    await laborSaveSupport();
+  };
+  // 保留舊 API 名稱:現在＝全部清空並存回雲端
   window.laborClearSupport=function(){
-    laborSupportProjects.clear();try{localStorage.setItem('laborSupportProjects','[]');}catch(e){}
-    document.getElementById('labor-support-picker')?.remove();laborRenderProjects();
+    laborSupportProjects=new Set();
+    document.getElementById('labor-support-picker')?.remove();
+    laborRenderProjects();
+    laborSaveSupport();
   };
 
   window.laborSwitchTab=function(t){
@@ -26507,6 +26652,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       laborRows.forEach(function(r){ if(!has(r.manager) && has(r.proj_num)){ var m=managerOf(r.proj_num); if(m){ r.manager=m; r._dirty=true; } } });
       laborRows.sort(function(a,b){ return String(a.proj_num||'').localeCompare(String(b.proj_num||''),undefined,{numeric:true}) || (num(a.seq)-num(b.seq)); });
     }catch(e){ console.warn('laborInit failed',e); if(tbl) tbl.innerHTML='<div class="empty-state">載入失敗</div>'; return; }
+    await laborLoadSupport();   // 由雲端(app_config)載入共用的外勞支援標記,再進行首次渲染
     laborFillProjList();
     laborSwitchTab(laborTab);
   };
@@ -26830,7 +26976,9 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var groups={};
     rows.forEach(function(r){
       var mg=(r.manager||'(未指定主辦)'); var pj=(r.proj_num||'(未指定工程)');
-      var primary=laborUbGroup==='manager'?mg:pj, secondary=laborUbGroup==='manager'?pj:mg;
+      // 依主辦:主辦 → 工程 → 明細;依工程:只用工程分類(單一桶,不再依主辦細分,避免太雜亂)
+      var primary=laborUbGroup==='manager'?mg:pj;
+      var secondary=laborUbGroup==='manager'?pj:'__all__';
       (groups[primary]||(groups[primary]={}));
       (groups[primary][secondary]||(groups[primary][secondary]=[])).push(r);
     });
@@ -26854,7 +27002,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         });
         body+='<tr style="font-weight:700;background:var(--bg2)"><td style="color:var(--danger)">Total</td><td></td>'
             +'<td class="num" style="color:var(--danger)">'+ntd(sc)+'</td><td class="num" style="color:var(--danger)">'+ntd(sa)+'</td><td></td><td></td></tr>';
-        html+='<div class="lab-proj-h">▸ '+(laborUbGroup==='manager'?'工程：':'主辦：')+esc(secondary)+'</div>'
+        html+=(laborUbGroup==='manager'?'<div class="lab-proj-h">▸ 工程：'+esc(secondary)+'</div>':'')
           +'<div class="card" style="padding:0;overflow:auto"><table class="lab-tbl"><thead><tr>'
           +'<th>編號</th><th>日期</th><th class="num">工數</th><th class="num">金額</th><th>點工內容</th><th>權責單位</th>'
           +'</tr></thead><tbody>'+body+'</tbody></table></div>';
@@ -30684,10 +30832,12 @@ function spxPasteGrid(key,cells2d,anchor){ const cfg=SPX[key], arr=prodArr(key);
     const isArrow = ARROWS.indexOf(e.key)>=0, isEnter = e.key==='Enter';
     if(!isArrow && !isEnter) return;
     const ae = document.activeElement;                                  // 焦點已在輸入元件 → 交給既有處理器
-    if(ae && (ae.tagName==='INPUT'||ae.tagName==='SELECT'||ae.tagName==='TEXTAREA')) return;
+    if(ae && (ae.tagName==='INPUT'||ae.tagName==='SELECT'||ae.tagName==='TEXTAREA'||ae.isContentEditable)) return;
     const table = tblSel.table;
-    if(!table || !table.isConnected || !table.matches || !table.matches(DATA_TABLE_SEL)) return;
-    if(!tblSel.focus) return;
+    if(!table || !table.isConnected || !tblSel.focus) return;
+    // 全站通用:只要該表目前有選取中的儲存格(代表它已接上選取系統),就接手方向鍵漫遊,
+    // 不再限定 DATA_TABLE_SEL 白名單 —— 這樣連 .ov-tbl(產值單價)等其他資料表也能漫遊不能輸入的純文字格。
+    if(!(table.matches && table.matches(DATA_TABLE_SEL)) && !table.querySelector('td.cell-selected')) return;
     const body = table.querySelector('tbody'); if(!body) return;
     const rows = Array.from(body.children); if(!rows.length) return;
     const cur = tblSel.focus;
@@ -31276,6 +31426,39 @@ const LM_BILL_RATE=2750, LM_WORK_RATE=2100;
 let lmReady=false,lmProjMap={},lmOrders=[],lmTokens=[],lmCustoms=[],lmCustomSeq=0,lmPhotos=[];
 function lmMoney(n){return (Math.round(n*100)/100).toLocaleString('en-US',{maximumFractionDigits:2});}
 function lmRocDate(iso){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||'');return m?{y:String(+m[1]-1911),m:m[2],d:m[3]}:null;}
+// 工程名稱與其他欄位共用同一段落。名稱偏長時壓縮空白、欄距並只縮小名稱字級，避免整行換行。
+function lmFitProjectName(xml,rawName){
+  let name=String(rawName||'').trim().replace(/[\t\r\n]+/g,' ').replace(/ {2,}/g,' ');
+  const visual=s=>Array.from(s).reduce((n,ch)=>n+(ch.charCodeAt(0)>255?1:.55),0);
+  let units=visual(name);
+  if(units>14){name=name.replace(/[\s\u3000]+/g,'');units=visual(name);}
+  const size=units>28?16:units>24?18:units>19?20:units>14?22:24;
+  const marker='[[PROJNAME]]',pos=xml.indexOf(marker);
+  if(pos<0)return {xml,name};
+  const runStart=Math.max(xml.lastIndexOf('<w:r ',pos),xml.lastIndexOf('<w:r>',pos));
+  const runEnd=xml.indexOf('</w:r>',pos);
+  if(runStart>=0&&runEnd>pos){
+    let run=xml.slice(runStart,runEnd+6);
+    const sizing='<w:sz w:val="'+size+'"/><w:szCs w:val="'+size+'"/>';
+    run=run.replace(/<w:sz(?:Cs)?\b[^>]*\/>/g,'').replace('</w:rPr>',sizing+'</w:rPr>');
+    xml=xml.slice(0,runStart)+run+xml.slice(runEnd+6);
+  }
+  const pPos=xml.indexOf(marker),pStart=xml.lastIndexOf('<w:p ',pPos),pEnd=xml.indexOf('</w:p>',pPos);
+  if(pStart>=0&&pEnd>pPos){
+    let para=xml.slice(pStart,pEnd+6);
+    // 第一頁可用寬度 14572 twip；以右定位點固定右側整組欄位，不再用空白推位置。
+    const rightTab='<w:tab w:val="right" w:pos="14572"/>';
+    if(!para.includes(rightTab)){
+      para=para.includes('<w:tabs>')?para.replace('</w:tabs>',rightTab+'</w:tabs>'):para.replace('<w:pPr>','<w:pPr><w:tabs>'+rightTab+'</w:tabs>');
+    }
+    para=para.replace('<w:t xml:space="preserve">        </w:t>','<w:tab/>');
+    if(units>14){
+      para=para.replace('<w:t xml:space="preserve">     </w:t>','<w:t xml:space="preserve">  </w:t>');
+    }
+    xml=xml.slice(0,pStart)+para+xml.slice(pEnd+6);
+  }
+  return {xml,name};
+}
 // 結算週五:未到週五→本週五;週五當天→今天;週六日→下週五
 function lmFriday(){const d=new Date();d.setDate(d.getDate()+((5-d.getDay())+7)%7);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
 // 點工單專用選項對照表(2026/7 使用者指定):ui=畫面顯示、word=帶入 Word 的文字、
@@ -31554,6 +31737,43 @@ window.lmPhotoDrop=function(e,i){e.preventDefault();const from=lmPhotoDragFrom;l
   const [m]=lmPhotos.splice(from,1);lmPhotos.splice(i,0,m);lmRenderPhotos();};
 window.lmPhotoDragEnd=function(e){lmPhotoDragFrom=null;lmRenderPhotos();};
 let lmBusy=false;   // 防連點:產生中不允許再按
+// 照片表結構:6 列 = 3 組(每組=影像列+說明列),每列 2 格 → 每頁 6 張。
+// 奇數張時仍保留右側儲存格的完整寬度，只隱藏內容與外框。
+// Word 因而不會把最後一列重新排成單欄，左格可與上方左格精準對齊。
+function lmHideLastCell(rowXml){
+  const cellRe=/<w:tc>[\s\S]*?<\/w:tc>/g,cells=[];let m;
+  while((m=cellRe.exec(rowXml)))cells.push({s:m.index,e:m.index+m[0].length,xml:m[0]});
+  if(cells.length<2)return rowXml;
+  const left=cells[cells.length-2],right=cells[cells.length-1];
+  const setBorders=(cell,borders)=>{
+    const clean=cell.replace(/<w:tcBorders>[\s\S]*?<\/w:tcBorders>/g,'');
+    if(/<w:tcPr>/.test(clean))return clean.replace('</w:tcPr>',borders+'</w:tcPr>');
+    return clean.replace('<w:tc>','<w:tc><w:tcPr>'+borders+'</w:tcPr>');
+  };
+  let leftXml=setBorders(left.xml,'<w:tcBorders><w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/></w:tcBorders>');
+  let rightXml=setBorders(right.xml,'<w:tcBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/></w:tcBorders>');
+  rightXml=rightXml.replace(/(<\/w:tcPr>)[\s\S]*?<\/w:tc>/,'$1<w:p/></w:tc>');
+  return rowXml.slice(0,left.s)+leftXml+rowXml.slice(left.e,right.s)+rightXml+rowXml.slice(right.e);
+}
+// 把一張 6 格照片表裁到只留 keep 張:整組空的直接拿掉;奇數時隱藏最後一組右格。
+function lmTrimPhotoTable(tblXml, keep){
+  if(keep>=6) return tblXml;
+  const rowRe=/<w:tr[\s>][\s\S]*?<\/w:tr>/g; const rows=[]; let m;
+  while((m=rowRe.exec(tblXml))) rows.push({s:m.index,e:m.index+m[0].length,xml:m[0]});
+  if(rows.length<6) return tblXml;                 // 結構非預期 → 原樣不動
+  const prefix=tblXml.slice(0,rows[0].s), suffix=tblXml.slice(rows[5].e);
+  const pairsNeeded=Math.max(1,Math.ceil(keep/2)), oddLast=(keep%2)===1;
+  let out=prefix;
+  for(let p=0;p<pairsNeeded;p++){
+    let imgRow=rows[p*2].xml, capRow=rows[p*2+1].xml;
+    if(oddLast && p===pairsNeeded-1){
+      imgRow=lmHideLastCell(imgRow);
+      capRow=lmHideLastCell(capRow);
+    }
+    out+=imgRow+capRow;
+  }
+  return out+suffix;
+}
 window.lmBuild=async function(){
   if(lmBusy)return;
   lmBusy=true;
@@ -31569,7 +31789,7 @@ window.lmBuild=async function(){
       alert('點工單編號 '+docno+' 已存在於明細登錄,請改用其他編號(自動接續編號為 '+lmNextDocno(proj)+')');return;
     }
     if(!docno){alert('請先選擇工程編號(點工單編號會自動接續產生)');return;}
-    const name=(document.getElementById('lm-projname').value||'').trim();
+    let name=(document.getElementById('lm-projname').value||'').trim();
     const resp=document.getElementById('lm-resp').value||'製二課';
     const refno=(document.getElementById('lm-refno').value||'').trim();
     const roc=lmRocDate(document.getElementById('lm-date').value)||lmRocDate(lmFriday());
@@ -31592,20 +31812,25 @@ window.lmBuild=async function(){
       const sect=xml.slice(iS,sEnd);
       xml=xml.slice(0,pStart)+sect+xml.slice(xml.indexOf('</w:body>'));
     }
-    // 照片>6張:複製照片表格(純表格,不含標題/工程編號/名稱/日期),每 6 張一頁
+    // 照片:純表格複製,每 6 張一頁;最後一頁不足 6 張時,多餘的格子不畫出來(移除空的整組,奇數再去右格)。
     const photoPages=Math.max(1,Math.ceil(phs.length/6));
-    if(photoPages>1){
+    {
       const pi=xml.indexOf('[[PHOTO1]]');
-      const tStart=xml.lastIndexOf('<w:tbl>',pi);
-      const tEnd=xml.indexOf('</w:tbl>',xml.indexOf('[[CAP6]]'))+'</w:tbl>'.length;
-      const tbl=xml.slice(tStart,tEnd);
-      let extra='';
-      for(let k=1;k<photoPages;k++){
-        let c=tbl;
-        for(let n=6;n>=1;n--)c=c.split('[[PHOTO'+n+']]').join('[[PHOTO'+(n+6*k)+']]').split('[[CAP'+n+']]').join('[[CAP'+(n+6*k)+']]');
-        extra+='<w:p/>'+c;   // 相鄰兩個 w:tbl 會被 Word 合併,中間必須隔一個空段落
+      if(pi>=0){
+        const tStart=xml.lastIndexOf('<w:tbl>',pi);
+        const tEnd=xml.indexOf('</w:tbl>',xml.indexOf('[[CAP6]]'))+'</w:tbl>'.length;
+        const baseTbl=xml.slice(tStart,tEnd);
+        let allTables='';
+        for(let k=0;k<photoPages;k++){
+          const onPage=Math.min(6, phs.length-k*6);           // 本頁照片張數(僅最後一頁可能不足 6)
+          const keep=(k===photoPages-1 && onPage>0)?onPage:6;  // 沒有照片時維持整張表(不改原行為)
+          let c=baseTbl;
+          for(let n=6;n>=1;n--)c=c.split('[[PHOTO'+n+']]').join('[[PHOTO'+(n+6*k)+']]').split('[[CAP'+n+']]').join('[[CAP'+(n+6*k)+']]');
+          c=lmTrimPhotoTable(c,keep);
+          allTables+=(k>0?'<w:p/>':'')+c;   // 相鄰兩個 w:tbl 會被 Word 合併,中間必須隔一個空段落
+        }
+        xml=xml.slice(0,tStart)+allTables+xml.slice(tEnd);
       }
-      xml=xml.slice(0,tEnd)+extra+xml.slice(tEnd);
     }
     // 依「估算視覺行數」移除等量空白段落(欄寬約 15.5 全形字,長項目會折行),
     // 讓「點工工數」維持在欄底、版面不擠出第三頁
@@ -31629,6 +31854,7 @@ window.lmBuild=async function(){
         xml=xml.slice(0,i1)+seg+xml.slice(i2);
       }else{topLines=topLines.concat(botLines);botLines=[];}
     }
+    const fittedName=lmFitProjectName(xml,name);xml=fittedName.xml;name=fittedName.name;
     const rep={RY:roc.y,RM:roc.m,RD:roc.d,DOCNO:docno,PROJNO:proj,PROJNAME:name,RESP:resp,
       CBFIX:(sp?'□':(refno?'■':'□')),CBSELF:(sp?'□':(refno?'□':'■')),REFNO:sp?'':refno,HRS:hours,HRS2:hours,
       PROJNO2:proj,PROJNAME2:name,DATE2:roc.y+'.'+roc.m+'.'+roc.d};
@@ -31655,10 +31881,11 @@ window.lmBuild=async function(){
     const fname=docno+(sp?'(外勞)':'')+'.docx';
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;
     document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-    // 產生成功 → 自動登錄一筆到「明細登錄」(編號/工程/日期/工數/金額;點工內容以④欄為主,SP 未填則預設「00/00~00/00外勞支援」)
+    // 產生成功 → 自動登錄一筆到「明細登錄」(含④區的點工內容與權責單位;SP 未填內容則帶期間+外勞支援)
     const typedContent=(document.getElementById('lm-content')?.value||'').trim();
+    const detailResp=(document.getElementById('lm-detail-resp')?.value||'').trim();
     const regContent=typedContent||(sp?(lmSpRange()+'外勞支援'):null);
-    const reg=await lmRegister(proj,docno,document.getElementById('lm-date').value,hours,regContent);
+    const reg=await lmRegister(proj,docno,document.getElementById('lm-date').value,hours,regContent,detailResp);
     const st=document.getElementById('lm-status');
     if(st)st.textContent='✓ 已產生 '+fname+(reg?' ｜ 已自動登錄到明細登錄':' ｜ ⚠ 未登錄明細(需登入後重試)');
     lmResetForm();   // 清空所有輸入,準備下一張
@@ -31669,6 +31896,7 @@ window.lmBuild=async function(){
 function lmResetForm(){
   lmDocnoAuto=true;
   ['lm-proj','lm-projname','lm-docno','lm-refno','lm-caption','lm-content'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const detailResp=document.getElementById('lm-detail-resp');if(detailResp)detailResp.value='';
   const d=document.getElementById('lm-date');if(d)d.value=lmFriday();
   const r=document.getElementById('lm-resp');if(r)r.value='製二課';
   lmTokens.forEach(t=>{t.checked=false;t.qty=1;});
@@ -31679,15 +31907,16 @@ function lmResetForm(){
   const mo=document.getElementById('lm-sp-month');if(mo)mo.value=lmPrevMonth();
   lmRenderRates();lmRenderCustoms();lmRenderPhotos();lmRefresh();
 }
-// 自動登錄明細:編號=docno、工程=proj、日期=製表日期、工數=點工工數、金額=工數×2100
-async function lmRegister(proj,docno,dateIso,hours,content){
+// 自動登錄明細:含編號、工程、日期、工數、金額、點工內容與權責單位
+async function lmRegister(proj,docno,dateIso,hours,content,respUnit){
   try{
     const m=/-B0*(\d+)\s*$/i.exec(docno),h=parseFloat(hours);
     const payload={proj_num:proj,seq:m?parseInt(m[1],10):null,doc_no:docno,
       work_date:dateIso||null,
       work_count:isFinite(h)&&h>0?h:null,
       amount:isFinite(h)&&h>0?Math.round(h*LM_WORK_RATE*100)/100:null,
-      content:content||null};
+      content:content||null,
+      resp_unit:respUnit||null};
     // 同號防呆:DB 已有這個編號就不再插入(避免明細登錄出現兩筆)
     const dup=await sbFetch('/rest/v1/labor_orders?doc_no=eq.'+encodeURIComponent(docno)+'&select=id&limit=1');
     if(dup.ok&&Array.isArray(dup.data)&&dup.data.length)return true;
