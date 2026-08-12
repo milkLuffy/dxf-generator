@@ -2801,7 +2801,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <div class="ma-intro ma-no-print">
         <div>
           <div class="ma-intro-title">構件零件、帷幕與水電，一次整理</div>
-          <p>貼入 MDB0R070 多階資料後，系統會以單星號辨識構件、保留雙星號第一層零件、忽略三星號拆解列，再依最右側代碼將 Q 分為帷幕、H 分為水電。PDF 圖面只在本機瀏覽器內處理。</p>
+          <p>貼入 MDB0R070 多階資料後，系統會以單星號辨識構件、保留雙星號第一層零件、忽略三星號拆解列，再依最右側代碼將 Q 分為帷幕、H 分為水電，並產生可搭配 PDF 或 CAD 圖面的 Word 匯出 Prompt。</p>
         </div>
         <div class="ma-local-badge">🔒 本機處理，不上傳</div>
       </div>
@@ -2837,7 +2837,6 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <button class="ma-tab active" data-ma-tab="parts" onclick="maSwitchTab('parts')">第一層零件表 <span class="ma-tab-count" id="ma-tab-parts-count">0 支構件</span></button>
           <button class="ma-tab" data-ma-tab="curtain" onclick="maSwitchTab('curtain')">帷幕明細 Q <span class="ma-tab-count" id="ma-tab-curtain-count">0 支構件</span></button>
           <button class="ma-tab" data-ma-tab="mep" onclick="maSwitchTab('mep')">水電明細 H <span class="ma-tab-count" id="ma-tab-mep-count">0 支構件</span></button>
-          <button class="ma-tab" data-ma-tab="drawings" onclick="maSwitchTab('drawings')">帷幕圖面整合</button>
           <button class="ma-tab" data-ma-tab="wordprompt" onclick="maSwitchTab('wordprompt')">帷幕／水電 Word Prompt</button>
         </div>
 
@@ -2907,7 +2906,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
               <div class="ma-prompt-head">
                 <div>
                   <div class="ma-prompt-title">帷幕 Word 匯出 Prompt</div>
-                  <div class="ma-prompt-note">只處理 Q 帷幕 PDF。Q 編號組合相同的多支構件會合併成同一頁，頁首列出全部構件編號。</div>
+                  <div class="ma-prompt-note">只處理 Q 帷幕圖面；可提供 PDF、DWG 或 DXF，且只需其中一種。Q 編號組合相同的多支構件會合併成同一頁。</div>
                 </div>
                 <div class="ma-detail-actions">
                   <button class="btn btn-gen" onclick="maCopyWordPrompt('Q')">複製帷幕 Prompt</button>
@@ -2921,7 +2920,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
               <div class="ma-prompt-head">
                 <div>
                   <div class="ma-prompt-title">水電 Word 匯出 Prompt</div>
-                  <div class="ma-prompt-note">只處理 H 水電 PDF。H 編號組合相同的多支構件會合併成同一頁，頁首列出全部構件編號。</div>
+                  <div class="ma-prompt-note">只處理 H 水電圖面；可提供 PDF、DWG 或 DXF，且只需其中一種。H 編號組合相同的多支構件會合併成同一頁。</div>
                 </div>
                 <div class="ma-detail-actions">
                   <button class="btn btn-gen" onclick="maCopyWordPrompt('H')">複製水電 Prompt</button>
@@ -2934,32 +2933,6 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           </div>
         </div>
 
-        <div class="ma-tab-pane" id="ma-pane-drawings">
-          <div class="ma-panel ma-no-print">
-            <div class="ma-panel-head">
-              <div>
-                <div class="ma-panel-title">② 上傳帷幕 PDF，自動尋圖並截圖</div>
-                <div class="ma-panel-note">選擇構件後上傳 PDF，系統會逐頁讀取左右圖框的標題欄，經高解析黑白化與代碼容錯比對後，直接產生同頁截圖。</div>
-              </div>
-            </div>
-            <div class="ma-pdf-grid">
-              <div class="ma-pdf-controls">
-                <label class="ma-file-btn">📎 選擇帷幕 PDF<input id="ma-pdf-file" type="file" accept="application/pdf,.pdf" onchange="maLoadPdf(this)"/></label>
-                <div class="ma-field"><label>構件編號</label><select id="ma-component-select" onchange="maSelectComponent()"><option value="">請先分析多階資料</option></select></div>
-                <button class="btn btn-gen" onclick="maAutoScanPdf(true)" id="ma-scan-btn" disabled>🔎 重新自動尋圖並截圖</button>
-                <button class="btn btn-gen" onclick="maBuildDrawingSheet()" id="ma-build-sheet-btn" disabled>▶ 重新產生同頁截圖</button>
-                <button class="btn btn-add-row" onclick="maDownloadSheetPng()" id="ma-download-png-btn" disabled>⬇ 下載 PNG</button>
-                <button class="btn btn-add-row" onclick="maPrintSheet()" id="ma-print-btn" disabled>🖨 列印／另存 PDF</button>
-                <div class="ma-progress"><span id="ma-progress-bar"></span></div>
-                <div class="ma-status" id="ma-pdf-status">尚未選擇 PDF</div>
-              </div>
-              <div>
-                <div class="ma-table-wrap"><table class="ma-table ma-map-table"><thead><tr><th>帷幕編號</th><th>自動找到頁面</th><th>圖框</th><th>辨識狀態</th></tr></thead><tbody id="ma-map-body"><tr><td colspan="4" class="ma-empty">請先選擇構件</td></tr></tbody></table></div>
-              </div>
-            </div>
-          </div>
-          <div id="ma-sheet-output"></div>
-        </div>
       </div>
     </div>
 
@@ -34126,7 +34099,6 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     maRenderCategory('Q','ma-curtain-result','帷幕');
     maRenderCategory('H','ma-mep-result','水電');
     maUpdateWordPrompt();
-    maFillComponentSelect();
     window.maSwitchTab('parts');
   };
 
@@ -34299,7 +34271,16 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   function maBuildWordPrompt(code){
     var label=code==='Q'?'帷幕':'水電',codeLabel=code==='Q'?'Q':'H',lines=maPromptCategoryLines(code,label);
     return [
-      '請使用我隨附的「多階資料剖析結果」、'+label+' PDF 與參考排版圖片，製作一份只包含'+label+'圖面的可編輯 Word（.docx）。這次不要處理'+(code==='Q'?'水電 H':'帷幕 Q')+'資料。',
+      '請使用我隨附的「多階資料剖析結果」、'+label+'圖面檔案與參考排版圖片，製作一份只包含'+label+'圖面的可編輯 Word（.docx）。圖面檔案可能是 PDF、DWG 或 DXF，且不保證同時提供；只要提供其中一種，就必須完成相同的圖面比對、擷取、排版與 Word 輸出。這次不要處理'+(code==='Q'?'水電 H':'帷幕 Q')+'資料。',
+      '',
+      '【輸入檔案與處理模式】',
+      '1. 先辨識實際收到的圖面格式，再選擇對應流程；不得因為只有 PDF 或只有 CAD 而要求補交另一種格式。',
+      '2. 若提供 PDF：逐頁檢查圖框標題與圖面內容。文字型或向量 PDF 優先直接讀取；掃描 PDF 可使用 OCR 輔助，但最終配對仍須以實際圖面視覺核對。',
+      '3. 若提供 DWG 或 DXF：先檢查 Model、Layout、圖層、圖塊、文字、尺寸、外部參照及出圖範圍，再依圖框或 Layout 逐張尋找目標編號。可先轉成向量 PDF 或高解析影像後再擷取，但不得降低原始可讀性。',
+      '4. CAD 擷取時應關閉與目標無關且會遮擋內容的輔助圖層，但不得隱藏尺寸、標註、材料、規格、數量、剖面或辨識圖面所需資訊。',
+      '5. 若同時提供 PDF 與 CAD：以 CAD 的文字、尺寸、圖層及幾何資訊協助精確判讀，並以 PDF 核對正式出圖版面；兩者不一致時列入「待確認清單」，不得自行選定答案。',
+      '6. 若 CAD 缺少字型、Xref、CTB／STB、Layout、圖片附件或其他必要資源，必須列出缺漏及可能影響；仍應完成可可靠判讀的部分，不得自行補字、猜測尺寸或假設圖層內容。',
+      '7. 無論輸入格式為何，最終 Word 的章節、分組、標題、圖片配置、摘要欄位、解析度及驗收標準必須一致。',
       '',
       '【最重要的合併規則】',
       '1. 先比較每支構件所屬的全部 '+codeLabel+' 編號。若多支構件的 '+codeLabel+' 編號組合完全相同，只製作一組圖面、放在同一頁，不要為每支構件重複放相同圖片。',
@@ -34308,10 +34289,10 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       '4. 只要 '+codeLabel+' 編號組合有任何一個不同，就必須分成不同頁組，不可合併。',
       '',
       '【圖面尋找與截取】',
-      '1. 以本 Prompt 後面的分組清單為唯一對應依據，到附件 PDF 中逐張找出相同的 '+codeLabel+' 編號。',
-      '2. 必須直接查看圖框標題及圖面內容進行視覺核對，不可只依賴 OCR；即使 OCR 找不到也要逐頁檢查。',
-      '3. 若同一 PDF 頁面有左右兩張圖，只截取與目標編號相符的圖框。',
-      '4. 截圖必須包含完整圖框內容，不可裁掉零件編號、規格、材質、數量、尺寸或剖面。',
+      '1. 以本 Prompt 後面的分組清單為唯一對應依據，到附件 PDF 或 CAD 中逐張找出相同的 '+codeLabel+' 編號。',
+      '2. 必須直接查看圖框標題及圖面內容進行視覺核對，不可只依賴 OCR、檔名或圖層名稱；即使自動辨識找不到也要逐頁或逐 Layout 檢查。',
+      '3. 若同一 PDF 頁面、CAD Layout 或 Model 空間有多張圖，只截取與目標編號相符的完整圖框。',
+      '4. 截圖必須包含完整圖框內容，不可裁掉零件編號、規格、材質、數量、尺寸或剖面；優先由向量來源高倍率渲染。若來源是掃描檔，使用原始檔可支持的最高有效解析度，不得以單純放大冒充細節提升。',
       '5. 不得自行猜測配對。無法確認的項目列入文件最後的「待確認清單」。',
       '',
       '【Word 排版規格】',
@@ -34323,7 +34304,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
         ? '5. 水電圖面每頁最多兩張圖並排；同一組超過兩張時換到下一頁，並重複全部構件編號與圖號。'
         : '5. 帷幕圖面每頁最多三張圖並排；同一組超過三張時換到下一頁，並重複全部構件編號與圖號。',
       '6. 圖片不得變形、模糊或只放縮圖，以能閱讀尺寸及文字為優先。',
-      '7. 文件最後加入摘要表：分組、全部構件編號、構件／圖號對照、'+codeLabel+' 編號、來源 PDF 頁碼、配對狀態。摘要表所在頁也必須是 A3 橫向。',
+      '7. 文件最後加入摘要表：分組、全部構件編號、構件／圖號對照、'+codeLabel+' 編號、來源檔名、PDF 頁碼或 CAD Layout／圖框位置、輸入格式、配對狀態。摘要表所在頁也必須是 A3 橫向。',
       '8. 完成後實際開啟 Word，逐一檢查所有分節的紙張尺寸均為 A3（420 × 297 mm）橫向，並確認沒有裁切、重疊、空白頁或圖片失真，再交付 .docx。只要任何一頁不是 A3，就不得交付。',
       '',
       '【Word 檔案可開啟驗收—強制要求】',
@@ -34359,13 +34340,6 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     code=code==='H'?'H':'Q';var label=code==='Q'?'帷幕':'水電',text=maBuildWordPrompt(code),blob=new Blob([text],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');
     a.href=URL.createObjectURL(blob);a.download='多階資料_'+label+'_圖片匯出Word_Prompt.txt';a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
   };
-  function maFillComponentSelect(){
-    var select=document.getElementById('ma-component-select');
-    var withQ=maComponents.filter(function(c){return c.items.some(function(i){return i.code==='Q';});});
-    select.innerHTML='<option value="">— 選擇含帷幕資料的構件 —</option>'+withQ.map(function(c){return '<option value="'+maEsc(c.componentNo)+'">'+maEsc(c.componentNo)+'　圖號 '+maEsc(c.drawingNo)+'　('+c.items.filter(function(i){return i.code==='Q';}).length+' 張)</option>';}).join('');
-    if(withQ.length){select.value=withQ[0].componentNo;window.maSelectComponent();}
-  }
-
   window.maSwitchTab=function(name){
     document.querySelectorAll('[data-ma-tab]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-ma-tab')===name);});
     document.querySelectorAll('.ma-tab-pane').forEach(function(p){p.classList.remove('active');});
