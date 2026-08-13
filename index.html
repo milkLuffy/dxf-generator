@@ -3498,21 +3498,25 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         #output-billing-panel .legacy-unpaid-input{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.55)}
         /* ═══ 請款三頁(請款核對/未請款/請款紀錄)統一可讀性 ═══ */
         /* 高對比文字:深色純白、淺色純黑 */
-        #output-billing-panel .ov-tbl,#output-unbilled-panel .ov-tbl,#output-archive-panel .ov-tbl{--bfg:#fff}
+        #output-billing-panel .ov-tbl,#output-unbilled-panel .ov-tbl,#output-archive-panel .ov-tbl,#output-yearly-panel .ov-tbl{--bfg:#fff}
         [data-theme="light"] #output-billing-panel .ov-tbl,
         [data-theme="light"] #output-unbilled-panel .ov-tbl,
-        [data-theme="light"] #output-archive-panel .ov-tbl{--bfg:#000}
+        [data-theme="light"] #output-archive-panel .ov-tbl,
+        [data-theme="light"] #output-yearly-panel .ov-tbl{--bfg:#000}
         #output-billing-panel .ov-tbl td,#output-billing-panel .ov-tbl th,
         #output-unbilled-panel .ov-tbl td,#output-unbilled-panel .ov-tbl th,
         #output-archive-panel .ov-tbl td,#output-archive-panel .ov-tbl th,
+        #output-yearly-panel .ov-tbl td,#output-yearly-panel .ov-tbl th,
         #output-billing-panel .ov-tbl td input{color:var(--bfg)}
         /* 文字一律置中;金額/噸數(.num)靠右 */
         #output-billing-panel .ov-tbl th,#output-billing-panel .ov-tbl td,
         #output-unbilled-panel .ov-tbl th,#output-unbilled-panel .ov-tbl td,
-        #output-archive-panel .ov-tbl th,#output-archive-panel .ov-tbl td{text-align:center}
+        #output-archive-panel .ov-tbl th,#output-archive-panel .ov-tbl td,
+        #output-yearly-panel .ov-tbl th,#output-yearly-panel .ov-tbl td{text-align:center}
         #output-billing-panel .ov-tbl th.num,#output-billing-panel .ov-tbl td.num,
         #output-unbilled-panel .ov-tbl th.num,#output-unbilled-panel .ov-tbl td.num,
-        #output-archive-panel .ov-tbl th.num,#output-archive-panel .ov-tbl td.num{text-align:right}
+        #output-archive-panel .ov-tbl th.num,#output-archive-panel .ov-tbl td.num,
+        #output-yearly-panel .ov-tbl th.num,#output-yearly-panel .ov-tbl td.num{text-align:right}
         #output-billing-panel .ov-tbl input.ov-in-l{text-align:center}
         #output-billing-panel .ov-tbl input.ov-in-l.num{text-align:right}
         /* 請款核對試算表操作：拖曳/Shift 多選，方向鍵移動，整塊複製貼上與刪除 */
@@ -3579,6 +3583,16 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         .bl-scard .big{font-size:15px;font-weight:700;color:var(--text)}
         .bl-scard .big.ov-red{color:var(--red)}
         .bl-scard .big.ov-grn{color:var(--accent)}
+        .yr-kpis{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;margin-bottom:14px}
+        .yr-kpi{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:14px 16px}
+        .yr-kpi .lbl{display:block;font-size:12px;color:var(--text3);margin-bottom:5px}
+        .yr-kpi .big{font-family:var(--mono);font-size:21px;font-weight:800;color:var(--text)}
+        .yr-kpi.zs .big{color:var(--accent3)}.yr-kpi.ls .big{color:var(--yellow)}
+        .yr-kpi .limit{display:block;margin-top:7px;font-family:var(--mono);font-size:11px;color:var(--text3)}
+        .yr-kpi.near{border-color:var(--yellow)}.yr-kpi.over{border-color:var(--danger);background:rgba(217,83,79,.09)}
+        .yr-kpi.over .limit{color:var(--danger);font-weight:700}
+        .yr-total-row td{font-weight:800;background:var(--bg3);border-top:2px solid var(--border)}
+        @media(max-width:760px){.yr-kpis{grid-template-columns:1fr}}
         .ub-group-h{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent2);margin:18px 0 8px}
         .ub-report-months{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,280px));gap:8px;width:fit-content;max-width:100%;margin:10px 0 14px}
         .ub-report-month{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);padding:8px 10px;font-family:var(--mono)}
@@ -3648,6 +3662,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <button class="layout-tab"        id="otab-unbilled" onclick="outputSwitchTab('unbilled')">未請款</button>
         <button class="layout-tab"        id="otab-unbilled-report" onclick="outputSwitchTab('unbilled-report')">未請款(回報)</button>
         <button class="layout-tab"        id="otab-archive"  onclick="outputSwitchTab('archive')">請款紀錄</button>
+        <button class="layout-tab"        id="otab-yearly"   onclick="outputSwitchTab('yearly')">年總覽金額</button>
       </div>
       <div id="output-price-panel">
         <div class="search-bar">
@@ -3862,6 +3877,17 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <input class="search-input" id="ar-search" style="max-width:300px" placeholder="搜尋項目／工程／工程區／代號／副號／公司" oninput="outputSearchLater('archive')"/>
         </div>
         <div id="ar-content"><div class="empty-state">載入中...</div></div>
+      </div>
+
+      <!-- 年總覽金額（僅彙總封存請款資料；唯讀） -->
+      <div id="output-yearly-panel" style="display:none">
+        <div class="ovr-toolbar">
+          <span class="ovr-wd">年總覽金額</span>
+          <select class="filter-select" id="yr-year" onchange="yrRender(this.value)"></select>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">依實際請款日期彙總 · 唯讀 · 鎮山新竹年度額度 NT$18,000,000 · 麗生年度額度 NT$30,000,000</span>
+          <button class="btn" style="margin-left:auto" onclick="yrRender()">🔄 重新整理</button>
+        </div>
+        <div id="yr-content"><div class="empty-state">載入中...</div></div>
       </div>
     </div>
 
@@ -4215,7 +4241,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
             <thead><tr>
               <th>姓名</th><th>類別</th><th>出勤天</th><th>底薪</th><th>職務津貼</th>
               <th title="加班 17:30~20:30(天，含國定假日17:30後)">17:30~<br>20:30</th><th title="加班 17:30~23:00(天，含國定假日17:30後)">17:30~<br>23:00</th><th title="國定假日出勤(天)">國定<br>假日</th><th title="星期日出勤(天)">星期<br>日</th>
-              <th>加班費</th><th>假日加給</th><th>餐補</th><th title="由出勤回報中的老闆便當金額自動加總，支付給鄭季豪；不併入薪資應發">便當<br>代墊</th>
+              <th>加班費</th><th>假日加班費</th><th>餐補</th><th title="由出勤回報中的老闆便當金額自動加總，支付給鄭季豪；不併入薪資應發">便當<br>代墊</th>
               <th>遲退扣<br>/半天</th><th>請假扣</th><th>借支</th><th>匯費</th><th>應發</th><th>實發</th><th>明細</th>
             </tr></thead>
             <tbody id="pr-body-pay"><tr><td colspan="20" class="empty-state">選擇月份後按「計算」</td></tr></tbody>
@@ -4239,18 +4265,18 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:10px;line-height:1.7">
         ※ 出勤來源:<b>已上傳打卡xlsx → 以真實打卡計算</b>;<b>未上傳 → 沿用「出勤回報」att_report</b>。上班 08:00~17:00(午休12:00~13:00)。<br>
         ※ <b>遲到</b>(08:15起,含08:15):08:15~08:45 扣0.5h、08:46~09:00 扣1h,之後每15分再+0.5h。<b>早退</b>(下班早於16:45才算,16:45~17:00視同正常):(17:00−打卡下班)×時薪;下班 ≤13:00 算半天。加班 17:30 起。遲到/早退扣款日薪、月薪皆扣(僅打卡計薪能判時刻)。<b>出勤天數＝實際出勤天數−未免扣的遲到/早退時數÷8</b>；勾選免扣後會補回出勤天數。<b>辦公室人員於周六、星期日、國定假日可早退且不扣款</b>；<b>「早退免計」</b>員工(主管等,於員工薪資設定)平日早退也不扣、遲到仍照計。<br>
-        ※ 外勞國定假日整天給付(至17:00)列入「假日加給」;17:00後另依外勞類別的平日加班級距計入「加班費」。國定假日自動判斷(每年自動更新),星期日另計。<br>
+        ※ <b>週六、星期日及國定假日不採固定加給</b>：週六依休息日倍率計算；星期日及國定假日於 8 小時內加發一日工資，超過 8 小時再依法定延長工時倍率計算。國定假日自動判斷(每年自動更新)。<br>
         ※ 設「保障底薪」者,含加班費未達該金額時自動補足,差額計入「職務津貼」(外勞免設)。<br>
         ※ 未在「員工薪資設定」設定薪別者不列入計算(見上方紅字提醒)。<br>
         ※ 雇主成本 = 勞保雇主 + 健保雇主 + 勞退6% + 職災(非員工扣款,供成本估算),見「② 保費‧雇主成本」分頁。<br>
-        ※ <b>外勞</b>平日不打白天卡、17:00 後才打加班卡:一律不計遲到/早退,平日出勤視為整天;加班費依打卡下班時刻分段(17:30~20:30 / 17:30~23:00)與國定假日/星期日固定給付。<br>
+        ※ <b>外勞</b>平日不打白天卡、17:00 後才打加班卡:一律不計遲到/早退,平日出勤視為整天;平日加班依打卡下班時刻分段，週六、星期日及國定假日改依法定倍率計算。<br>
         ※ <b>颱風假 / 特殊假</b>:按上方「🌀 颱風假」設定日期(可多天),當天<b>有打卡</b>的員工遲到/早退自動免扣、半天打卡<b>補足整天</b>(+0.5 計入出勤天);<b>當天沒上班(無打卡紀錄)者不補</b>。也可在各員「遲退扣/半天」欄逐一微調。<br>
         ※ <b>半天班</b>(下班 ≤13:00)會在「遲退扣/半天」欄以 <span style="color:var(--yellow)">⚠</span> 提醒,可點入判斷是否為颱風假/特殊假而免扣補足。<br>
         ※ <b>打卡缺漏</b>:某天只刷一次卡時,計算後會在上方 <span style="color:var(--yellow)">🕐 打卡缺漏提醒</span> 區列出,並依打卡時間判定為上班或下班(上午=上班缺下班、下午=下班缺上班;<b>長榮外勞</b>晚上那筆視為加班上班、缺加班下班);補齊另一筆時間按「補登」自動重算(補登只存本機,重新上傳打卡檔會覆蓋)。<br>
         ※ <b>便當代墊</b>:自動加總「出勤回報」中<b>老闆列</b>每日登記的便當金額，但只支付並顯示於<b>鄭季豪</b>；加入實發但不併入應發薪資、餐補或投保薪資。<br>
         ※ <b>借支</b>:可在薪資表直接輸入員工當月預先借支金額，從實發扣除但不影響應發薪資與投保薪資；隨草稿/鎖定資料保存。<br>
         ※ <b>勞退</b>:雇主強制提繳 6%(列於「② 保費‧雇主成本」,不從薪資扣);員工可設「勞退自願提繳率 0~6%」(於員工薪資設定),依投保薪資×% 從實發扣,列於「勞退(自願)」欄與明細單代扣(外勞不適用)。<br>
-        ※ 本次新增功能(假日加給/便當補餐/匯費/退休/遲到早退扣款/勞退自願提繳)需先於 Supabase 執行 <code>payroll_extras_migration.sql</code>;勞退自願提繳需新增欄位 <code>employee_pay.pension_vol_rate</code>(見下方 SQL)。
+        ※ 本次新增功能(假日加班費/便當補餐/匯費/退休/遲到早退扣款/勞退自願提繳)需先於 Supabase 執行 <code>payroll_extras_migration.sql</code>;勞退自願提繳需新增欄位 <code>employee_pay.pension_vol_rate</code>(見下方 SQL)。
       </div>
     </div>
 
@@ -4320,7 +4346,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="pcfg-f"><label>辦公 月加班上限(時)</label><input type="number" id="pcfg-ot-cap" step="1"/></div>
           <div class="pcfg-f"><label>現場 17:30~20:30(日薪比)</label><input type="number" id="pcfg-ot-half" step="0.1"/></div>
           <div class="pcfg-f"><label>現場 ~23:00(日薪比)</label><input type="number" id="pcfg-ot-full" step="0.1"/></div>
-          <div class="pcfg-f"><label>辦公 假日出勤加給(元/天)</label><input type="number" id="pcfg-office-holiday" step="1"/></div>
+          <div class="pcfg-f"><label>假日加班費</label><input type="text" value="依法定倍率自動計算" disabled/></div>
           <div class="pcfg-f"><label>便當補餐(元/天)</label><input type="number" id="pcfg-meal-subsidy" step="1"/></div>
         </div>
       </div>
@@ -4360,9 +4386,9 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="pcfg-f"><label>公假</label><input type="number" id="pcfg-lr-official" step="0.1"/></div>
           <div class="pcfg-f"><label>婚假</label><input type="number" id="pcfg-lr-marriage" step="0.1"/></div>
           <div class="pcfg-f"><label>喪假</label><input type="number" id="pcfg-lr-funeral" step="0.1"/></div>
-          <div class="pcfg-f"><label>病假</label><input type="number" id="pcfg-lr-sick" step="0.1"/></div>
+          <div class="pcfg-f"><label>病假（法定半薪）</label><input type="number" id="pcfg-lr-sick" step="0.1" value="0.5" disabled/></div>
           <div class="pcfg-f"><label>事假</label><input type="number" id="pcfg-lr-personal" step="0.1"/></div>
-          <div class="pcfg-f"><label>生理假</label><input type="number" id="pcfg-lr-menstrual" step="0.1"/></div>
+          <div class="pcfg-f"><label>生理假（法定半薪）</label><input type="number" id="pcfg-lr-menstrual" step="0.1" value="0.5" disabled/></div>
           <div class="pcfg-f"><label>產假</label><input type="number" id="pcfg-lr-maternity" step="0.1"/></div>
           <div class="pcfg-f"><label>補休</label><input type="number" id="pcfg-lr-comp" step="0.1"/></div>
           <div class="pcfg-f"><label>曠職</label><input type="number" id="pcfg-lr-absent" step="0.1"/></div>
@@ -5625,7 +5651,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       <div class="page-header"><div><div class="page-title">修改構件</div><div class="page-subtitle">修改構件總表與區間回報</div></div></div>
       <div class="layout-tabs"><button class="layout-tab active" id="mp-tabbtn-list" onclick="modpartsTab('list')">總表登記</button><button class="layout-tab" id="mp-tabbtn-report" onclick="modpartsTab('report')">區間回報</button></div>
       <div id="mp-tab-list">
-        <div class="card" style="margin-bottom:14px"><div class="layout-toolbar"><input id="mp-search" class="search-input" placeholder="搜尋 CP、構件、工程…" oninput="modpartsRender()"/><span style="flex:1"></span><button class="btn-sm btn-gen" style="flex:none" onclick="modpartsAdd()">＋ 新增</button><button class="btn-sm btn-export" onclick="modpartsExport(false)">⬇ 匯出 Excel</button></div><div class="section-label" style="margin-top:8px">輸入「構件編號＋工程編號」後，工程區、單重與圖號會由 BOM 自動帶入。表格支援完整 Excel 式操作並自動儲存。</div></div>
+        <div class="card" style="margin-bottom:14px"><div class="layout-toolbar"><input id="mp-search" class="search-input" placeholder="搜尋 CP、構件、工程…" oninput="modpartsRender()"/><span style="flex:1"></span><button class="btn-sm btn-export" id="mp-undo-btn" onclick="modpartsUndo()" title="回復 (Ctrl+Z)" disabled>↶ 回復</button><button class="btn-sm btn-export" id="mp-redo-btn" onclick="modpartsRedo()" title="重做 (Ctrl+Y)" disabled>↷ 重做</button><button class="btn-sm btn-gen" style="flex:none" onclick="modpartsAdd()">＋ 新增</button><button class="btn-sm btn-export" onclick="modpartsExport(false)">⬇ 匯出 Excel</button></div><div class="section-label" style="margin-top:8px">輸入「構件編號＋工程編號」後，工程區、單重與圖號會由 BOM 自動帶入。支援 Ctrl/Cmd+Z 回復、Ctrl/Cmd+Y 重做，修改後自動儲存。</div></div>
         <div class="layout-table-wrap"><table class="layout-table" id="mp-grid" onkeydown="modpartsKey(event)"><thead><tr><th>CP編號</th><th>構件編號</th><th>工程編號</th><th>工程區</th><th class="num">數量</th><th class="num">單重(kg)</th><th>圖號</th><th>上線日期</th><th>出貨日期</th><th>操作</th></tr></thead><tbody id="mp-body"></tbody><tfoot id="mp-foot"></tfoot></table></div>
       </div>
       <div id="mp-tab-report" style="display:none">
@@ -11487,6 +11513,7 @@ async function dashLoadAgenda(){
     const ics=await res.text();
     dashAgendaRows=dashParseAppleCalendar(ics,dashAgendaToday(),window.ICAL,2);
     dashUpdateWeeklyDuty(dashFindWeeklyDuty(ics,dashAgendaToday(),window.ICAL),false);
+    saturdayDutyReminderFromCalendar(ics,dashAgendaToday(),window.ICAL);
     dashAgendaDbAvailable=false;
     dashAgendaUsingApple=true;
     const add=document.getElementById('dash-agenda-add'); if(add) add.style.display='none';
@@ -11524,6 +11551,24 @@ function dashFindWeeklyDuty(ics,today,ICAL){
   const saturday=dashWeeklySaturday(today);
   const saturdayEvents=dashParseAppleCalendar(ics,saturday,ICAL,1);
   return [...new Set(saturdayEvents.map(e=>String(e.title||'').trim()).filter(Boolean))];
+}
+
+// 週五讀取公司行事曆時，比對登入者姓名；若隔天輪值，加入通知中心並在已授權時送桌面通知。
+let saturdayDutyNotifications=[];
+function saturdayDutyReminderFromCalendar(ics,today,ICAL){
+  saturdayDutyNotifications=[];
+  if(isGuest||!currentUser||!ICAL)return;
+  const d=new Date(today+'T12:00:00');if(d.getDay()!==5){updateNotifBadge();return;}
+  d.setDate(d.getDate()+1);
+  const tomorrow=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const names=dashFindWeeklyDuty(ics,today,ICAL),name=String(currentUser.name||'').trim(),matchKey=name.length>=2?name.slice(-2):name;
+  if(!matchKey||!names.some(x=>String(x).includes(matchKey))){updateNotifBadge();return;}
+  const item=notifItem('saturday-duty:'+String(currentUser.id||name)+':'+tomorrow,'🗓️ 明天（'+tomorrow+'）輪到您週六值班，請記得準時到班。');
+  saturdayDutyNotifications=[item];updateNotifBadge();
+  if(typeof Notification!=='undefined'&&Notification.permission==='granted'){
+    const sentKey='zs_duty_push_sent:'+item.key;
+    try{if(localStorage.getItem(sentKey)!=='1'){new Notification('明日週六值班提醒',{body:'明天輪到您值班，請記得準時到班。',tag:item.key});localStorage.setItem(sentKey,'1');}}catch(e){}
+  }
 }
 
 function dashUpdateWeeklyDuty(names,failed){
@@ -14175,7 +14220,14 @@ function manualNotificationOccurrence(n){
 function manualNotificationActive(n){return manualNotificationOccurrence(n)!==null;}
 function manualNotificationItems(){return manualNotifications.map(n=>({n,occ:manualNotificationOccurrence(n)})).filter(x=>x.occ!==null).map(x=>notifItem('manual:'+(x.n.id||x.n.created_at||x.n.title)+':'+x.occ,(x.n.priority==='緊急'?'🚨 ':x.n.priority==='重要'?'❗ ':'🔔 ')+(x.n.title||'通知')+(x.n.message?' — '+x.n.message:'')));}
 function announcementNotificationItems(){return (allAnnouncements||[]).filter(a=>a.notify_in_app!==false&&announcementIsActive(a)).map(a=>notifItem('announcement:'+(a.id||a.created_at||a.title),(a.priority==='緊急'?'🚨 ':a.priority==='重要'?'❗ ':'📢 ')+(a.title||'公司公告')));}
-function notifItems(){return staffBirthdaysToday().concat(staffAnnivSoon(),manualNotificationItems(),announcementNotificationItems());}
+function notifItems(){return staffBirthdaysToday().concat(staffAnnivSoon(),saturdayDutyNotifications,manualNotificationItems(),announcementNotificationItems());}
+async function enableDesktopNotifications(){
+  if(typeof Notification==='undefined'){alert('此瀏覽器不支援桌面通知。');return;}
+  const p=await Notification.requestPermission();
+  if(p==='granted')alert('桌面通知已啟用。週五若隔天輪到您值班，會收到提醒。');
+  else if(p==='denied')alert('桌面通知已被封鎖，請到瀏覽器網站權限中重新開啟。');
+  const panel=document.getElementById('notif-panel');if(panel&&panel.style.display==='block'){panel.style.display='none';toggleNotifPanel();}
+}
 function updateNotifBadge(skipPopup){
   const b=document.getElementById('notif-badge');
   if(!b) return;
@@ -14218,7 +14270,7 @@ async function toggleNotifPanel(){
   if(p.style.display==='block'){ p.style.display='none'; return; }
   if(!Array.isArray(allStaff) || !allStaff.length){ try{ await loadStaff(); }catch(e){} }
   const items=notifItems();
-  let html='<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between"><span>🔔 通知</span>'+(!isGuest&&pagePerm('notify')!=='hide'?'<button onclick="openNotificationSettings()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer">⚙ 通知管理</button>':'')+'</div>';
+  let html='<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between"><span>🔔 通知</span><span>'+(typeof Notification!=='undefined'&&Notification.permission==='default'?'<button onclick="enableDesktopNotifications()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer;margin-right:5px">啟用桌面通知</button>':'')+(!isGuest&&pagePerm('notify')!=='hide'?'<button onclick="openNotificationSettings()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer">⚙ 通知管理</button>':'')+'</span></div>';
   html+= items.length
     ? items.map(t=>'<div style="padding:11px 12px;font-size:13px;color:var(--text);border-bottom:1px solid var(--border)">'+notifEsc(t.text)+'</div>').join('')
     : '<div style="padding:18px 12px;font-size:13px;color:var(--text3);text-align:center">目前沒有通知</div>';
@@ -22054,7 +22106,7 @@ function clearAll() {
    設計：以單一 attendance 資料表記錄「一天一人一筆」，
    不再每月新建工作表；日報/回報/ESG年資統計全部即時計算。
    ============================================================ */
-const ATT_LEAVE = ['','特休','事假','病假','喪假','公假','婚假','產假','曠職','補休','過年','颱風'];
+const ATT_LEAVE = ['','特休','事假','病假','生理假','喪假','公假','婚假','產假','曠職','補休','過年','颱風'];
 const ATT_CATORD = {'辦公人員':0,'本工':1,'自有外勞':2,'長榮外勞':3};
 const ATT_WK = ['日','一','二','三','四','五','六'];
 let attRoster = [];
@@ -24771,7 +24823,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   };
 
   window.outputSwitchTab=function(t){
-    ['price','report','billing','unbilled','unbilled-report','archive'].forEach(function(x){
+    ['price','report','billing','unbilled','unbilled-report','archive','yearly'].forEach(function(x){
       var b=document.getElementById('otab-'+x); if(b) b.classList.toggle('active', x===t);
       var p=document.getElementById('output-'+x+'-panel'); if(p) p.style.display=(x===t)?'':'none';
     });
@@ -24782,6 +24834,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(t==='unbilled' && typeof window.ubInit==='function')  window.ubInit();
     if(t==='unbilled-report' && typeof window.ubInit==='function') window.ubInit();
     if(t==='archive'  && typeof window.arInit==='function')  window.arInit();
+    if(t==='yearly'   && typeof window.yrInit==='function')  window.yrInit();
   };
 
   window.outputInit=async function(){
@@ -26768,6 +26821,48 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     el.innerHTML=html;
   };
 
+  // ── 年總覽金額：依實際請款日期按自然年／月彙總；全頁唯讀 ──
+  var YR_MIN_YEAR=2024;
+  var YR_LIMITS={zs:18000000,ls:30000000};
+  function yrLimitText(amount,limit){
+    var diff=limit-amount;
+    return diff>=0?'距年度上限尚餘 '+ntd(diff):'已超過年度上限 '+ntd(-diff);
+  }
+  function yrKpi(label,amount,cls,limit,limitNote){
+    var withLimit=limit!=null;
+    var state=withLimit?(amount>limit?' over':amount>=limit*.9?' near':''):'';
+    return '<div class="yr-kpi '+(cls||'')+state+'"><span class="lbl">'+label+'</span><span class="big">'+ntd(amount)+'</span>'
+      +(withLimit?'<span class="limit">'+yrLimitText(amount,limit)+(limitNote?'<br>'+limitNote:'')+'</span>':'<span class="limit">鎮山＋麗生＋未分類</span>')+'</div>';
+  }
+  window.yrInit=function(){ yrRender(); };
+  window.yrRender=async function(requestedYear){
+    var el=document.getElementById('yr-content'), sel=document.getElementById('yr-year'); if(!el||!sel) return;
+    el.innerHTML='<div class="empty-state">載入中...</div>';
+    var arr;
+    if(blDemo) arr=blDemoArc.slice();
+    else { var res=await sbFetchAll('/rest/v1/billing_archive?select=*'); arr=Array.isArray(res.data)?res.data:[]; }
+    var currentYear=String(Math.max(YR_MIN_YEAR,new Date().getFullYear())), years={}; years[currentYear]=1;
+    arr.forEach(function(r){ var d=String(r.bill_date||r.archived_at||''); if(/^\d{4}/.test(d)&&+d.slice(0,4)>=YR_MIN_YEAR) years[d.slice(0,4)]=1; });
+    var year=String(requestedYear||sel.value||currentYear);
+    if(+year<YR_MIN_YEAR) year=currentYear;
+    if(!years[year]) years[year]=1;
+    sel.innerHTML=Object.keys(years).sort(function(a,b){return b-a;}).map(function(y){return '<option value="'+y+'"'+(y===year?' selected':'')+'>'+y+' 年</option>';}).join('');
+    var months=[]; for(var i=0;i<12;i++) months.push({total:0,zs:0,ls:0,other:0,count:0});
+    arr.forEach(function(r){
+      var d=String(r.bill_date||r.archived_at||''); if(d.slice(0,4)!==year) return;
+      var mi=+d.slice(5,7)-1; if(mi<0||mi>11) return;
+      var amt=billNum(r.bill_price)+billNum(r.util_bill_price), m=months[mi];
+      m.total+=amt; m.count++;
+      if(r.company==='鎮山') m.zs+=amt; else if(r.company==='麗生') m.ls+=amt; else m.other+=amt;
+    });
+    var totals=months.reduce(function(a,m){a.total+=m.total;a.zs+=m.zs;a.ls+=m.ls;a.other+=m.other;a.count+=m.count;return a;},{total:0,zs:0,ls:0,other:0,count:0});
+    var body=months.map(function(m,idx){return '<tr><td>'+(idx+1)+' 月</td><td class="num">'+ntd(m.zs)+'</td><td class="num">'+ntd(m.ls)+'</td><td class="num">'+ntd(m.total)+'</td><td class="num">'+m.count.toLocaleString('en-US')+'</td></tr>';}).join('');
+    body+='<tr class="yr-total-row"><td>全年合計</td><td class="num">'+ntd(totals.zs)+'</td><td class="num">'+ntd(totals.ls)+'</td><td class="num">'+ntd(totals.total)+'</td><td class="num">'+totals.count.toLocaleString('en-US')+'</td></tr>';
+    var unclassified=totals.other?'<div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--yellow)">注意：另有未分類公司金額 '+ntd(totals.other)+'，已計入「總金額」，未計入鎮山或麗生。</div>':'';
+    el.innerHTML='<div class="yr-kpis">'+yrKpi('總金額',totals.total,'',null,'')+yrKpi('鎮山總金額',totals.zs,'zs',YR_LIMITS.zs,'原年度上限 NT$30,000,000－新營廠預估 NT$12,000,000')+yrKpi('麗生總金額',totals.ls,'ls',YR_LIMITS.ls,'年度上限 NT$30,000,000')+'</div>'
+      +'<div class="card" style="padding:0;overflow:auto"><table class="data-table ov-tbl"><thead><tr><th>月份</th><th class="num">鎮山請款金額</th><th class="num">麗生請款金額</th><th class="num">每月總金額</th><th class="num">封存筆數</th></tr></thead><tbody>'+body+'</tbody></table></div>'+unclassified;
+  };
+
   // 刪除單筆封存紀錄
   window.arDelete=async function(id, btn){
     if(!await uiConfirm('確定刪除這筆封存紀錄?此動作無法復原。')) return;
@@ -27568,7 +27663,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     const healthMeta=meta('health_ins',{});
     const P=policyFor(period);
     return {
-      office:meta('ot_office',{first2:1.34,rest:1.67,monthly_cap_hours:54,holiday_daily:1000}),
+      office:meta('ot_office',{first2:1.34,rest:1.67,monthly_cap_hours:54}),
       field:meta('ot_field',{half_day:.5,full_day:1}),
       foreign:meta('ot_foreign',{'普通':{tier1:540,tier2:1200,holiday:1500,sunday:1900},'特定':{tier1:650,tier2:1300,holiday:1600,sunday:2000}}),
       labor:P?{...P.labor}:{rate:val('labor_ins',.125),emp:.2,employer:.7,...laborMeta},
@@ -27579,7 +27674,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       occ:{rate:P?P.occ.rate:val('occ_ins',.00555)},
       foreignOcc:{rate:P?P.foreignOcc.rate:val('foreign_occ_ins',.00553)},
       meal:meta('meal',{subsidy:75}),
-      leaveRate:meta('leave_rate',{'特休':0,'公假':0,'婚假':0,'喪假':0,'病假':.5,'事假':1,'產假':0,'補休':0,'曠職':1,'生理假':.5,'過年':0,'颱風':0}),
+      leaveRate:(()=>{const r=meta('leave_rate',{'特休':0,'公假':0,'婚假':0,'喪假':0,'病假':.5,'事假':1,'產假':0,'補休':0,'曠職':1,'生理假':.5,'過年':0,'颱風':0});return {...r,'病假':.5,'生理假':.5};})(),
       grades:P?P.grades.slice():((meta('ins_grades',{grades:[]}).grades)||[])
     };
   }
@@ -27610,8 +27705,26 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(tier===1)return d*cfg.field.half_day*localTier1Qty(att);
     return 0;
   }
-  // 外勞加班費:國定假日整天給付另列「假日加給」,17:00 後仍依平日加班級距另計;
-  // 星期日維持固定給付。國定假日落在星期日時,整天給付於下方 holidayPay 取較高者。
+  // 休息日／例假／國定假日不使用公司固定加給，統一按法定倍率計算。
+  // 週六視為休息日：前 2 小時 4/3、其後至 8 小時 5/3、超過 8 小時 8/3。
+  // 星期日與國定假日：8 小時內加發一日工資；超過 8 小時依平日延長工時倍率加給。
+  function statutoryHolidayPay(emp,att){
+    const wd=att.weekday!=null?att.weekday:(att.work_date?new Date(att.work_date).getDay():-1);
+    const hours=Math.max(0,num(att.work_hours)+num(att.ot_hours));
+    if(!hours)return 0;
+    const h=hourlyBase(emp);
+    if(!att.is_holiday&&wd===6){
+      const first2=Math.min(hours,2), next6=Math.min(Math.max(hours-2,0),6), over8=Math.max(hours-8,0);
+      return h*(first2*4/3+next6*5/3+over8*8/3);
+    }
+    if(att.is_holiday||wd===0){
+      const within8=Math.min(hours,8), over8=Math.max(hours-8,0);
+      const overFirst2=Math.min(over8,2), overRest=Math.max(over8-2,0);
+      return h*(within8+overFirst2*4/3+overRest*5/3);
+    }
+    return 0;
+  }
+  // 外勞平日加班仍沿用既有級距；週六、星期日與國定假日改由 statutoryHolidayPay 統一計算。
   function foreignOtTier(att){
     let tier=num(att.ot_tier);
     // 國定假日正常給付只到 17:00；打卡下班超過 17:00 即另算外勞加班級距。
@@ -27649,7 +27762,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     const workHours=monthAtt.reduce((s,a)=>s+hourVal(a),0);
     // 底薪仍以實際出勤天數計算，遲到/早退於 attendDeduct 扣一次，避免重複扣薪。
     const base=emp.pay_type==='monthly'?num(emp.base_salary):num(emp.daily_wage)*rawWorkDays;
-    const otItems=monthAtt.map(a=>({date:a.work_date,pay:isForeign?foreignOtPay(emp,a,cfg):overtimePay(emp,a,cfg)}));
+    const otItems=monthAtt.map(a=>{const wd=a.weekday!=null?a.weekday:(a.work_date?new Date(a.work_date).getDay():-1);const isSpecial=!!a.is_holiday||wd===0||wd===6;return{date:a.work_date,pay:isSpecial?0:(isForeign?foreignOtPay(emp,a,cfg):overtimePay(emp,a,cfg))};});
     const ot=otItems.reduce((s,x)=>s+x.pay,0);
     // 加班明細數量:17:30~20:30(tier1)、17:30~23:00(tier2)、國定假日、星期日。
     // 外勞國定假日可同時計入「國定假日」及 17:30 後的普通加班級距，但加班費只計算一次。
@@ -27695,24 +27808,14 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     let guaranteeTopup=0;
     if(gmin>0){const totalForGuarantee=base+ot+jobBase;if(totalForGuarantee<gmin)guaranteeTopup=gmin-totalForGuarantee;}
     const jobAllowance=jobBase+guaranteeTopup;
-    // 假日出勤固定加給:
-    // 辦公人員為週六(休息日)或國定假日固定金額;
-    // 外勞國定假日整天給付算到 17:00,17:00 後的加班費已由 foreignOtPay 另計。
+    // 假日加班費：所有員工均依日期性質與實際工時套用法定倍率，不再採固定金額。
     let holidayDays=0,holidayPay=0;
-    if(emp.emp_type==='office'){
-      const hd=(cfg.office&&cfg.office.holiday_daily!=null)?num(cfg.office.holiday_daily):1000;
-      holidayDays=worked.reduce((s,a)=>{const wd=a.weekday!=null?a.weekday:(a.work_date?new Date(a.work_date).getDay():-1);const isHol=!!a.is_holiday||wd===6;return s+(isHol?(a.work_day!=null?num(a.work_day):1):0);},0);
-      holidayPay=holidayDays*hd;
-    }else if(isForeign){
-      const r=(cfg.foreign&&cfg.foreign[emp.foreign_type])||{};
-      worked.forEach(a=>{
-        if(!a.is_holiday)return;
-        const wd=a.weekday!=null?a.weekday:(a.work_date?new Date(a.work_date).getDay():-1);
-        const day=(a.work_day!=null?num(a.work_day):1);
-        holidayDays+=day;
-        holidayPay+=day*(wd===0?Math.max(num(r.holiday),num(r.sunday)):num(r.holiday));
-      });
-    }
+    monthAtt.forEach(a=>{
+      const wd=a.weekday!=null?a.weekday:(a.work_date?new Date(a.work_date).getDay():-1);
+      if(!(a.is_holiday||wd===0||wd===6)||(num(a.work_hours)<=0&&num(a.ot_hours)<=0))return;
+      holidayDays+=(a.work_day!=null?num(a.work_day):1);
+      holidayPay+=statutoryHolidayPay(emp,a);
+    });
     // 便當/補餐:出勤一天一便當;不訂便當者補現金(非課稅伙食費,不併投保薪資)。預設:辦公不訂、其餘訂。
     // 鄭季豪固定為「不訂便當、照出勤天數領餐補」，另有便當代墊返還；兩者不可互相取代。
     const bentoAdvanceRecipient=!!emp.boss_bento_advance_only;
@@ -29005,7 +29108,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(!prRows.length){ alert('尚未計算'); return; }
     var period=document.getElementById('pr-month').value;
     var officePayVisible=canViewOfficePay();
-    var head=['姓名','類別','出勤天','遲到次','底薪','加班17:30~20:30(天)','加班17:30~23:00(天)','國定假日(天)','星期日(天)','加班費','職務津貼','假日加給','便當數','補餐費','便當代墊','應發','勞保','健保','二代健保','勞退自願提繳','遲到時數','早退時數','遲退扣','請假扣','借支','匯款費用','實發','雇主成本','退休'];
+    var head=['姓名','類別','出勤天','遲到次','底薪','加班17:30~20:30(天)','加班17:30~23:00(天)','國定假日(天)','星期日(天)','加班費','職務津貼','假日加班費','便當數','補餐費','便當代墊','應發','勞保','健保','二代健保','勞退自願提繳','遲到時數','早退時數','遲退扣','請假扣','借支','匯款費用','實發','雇主成本','退休'];
     var lines=[head.join(',')];
     prRows.forEach(function(p){
       var ec=p.employer_cost||{}; var ecTot=num(ec.labor)+num(ec.health)+num(ec.pension)+num(ec.occ)+num(ec.dormRent); var bd=p.breakdown||{};
@@ -29084,7 +29187,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       +otRows
       +'<tr><td>加班費 小計'+(bd.is_foreign?'(外勞固定)':'')+'</td><td>'+m(p.ot_pay)+'</td></tr>'
       +otCatRows
-      +(num(bd.holiday_pay)?('<tr><td>假日出勤加給('+num(bd.holiday_days)+'天)</td><td>'+m(bd.holiday_pay)+'</td></tr>'):'')
+      +(num(bd.holiday_pay)?('<tr><td>假日加班費('+num(bd.holiday_days)+'天)</td><td>'+m(bd.holiday_pay)+'</td></tr>'):'')
       +(num(bd.job_allowance)?('<tr><td>職務津貼'+(num(bd.guarantee_topup)?('(含保障補足 '+m(bd.guarantee_topup)+')'):'')+'</td><td>'+m(bd.job_allowance)+'</td></tr>'):'')
       +(num(bd.meal_subsidy)?('<tr><td>伙食津貼補助(不訂便當 '+num(bd.meal_days!=null?bd.meal_days:rawDays)+'天,免稅)</td><td>'+m(bd.meal_subsidy)+'</td></tr>'):'')
       +'</table>'
@@ -29501,7 +29604,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 
   function myPageFillLeaveTypes(){
     var sel=document.getElementById('mypage-leave-type'); if(!sel) return;
-    var list=(typeof ATT_LEAVE!=='undefined'&&Array.isArray(ATT_LEAVE))?ATT_LEAVE:['','特休','事假','病假','喪假','公假','婚假','產假','曠職','補休','過年','颱風'];
+    var list=(typeof ATT_LEAVE!=='undefined'&&Array.isArray(ATT_LEAVE))?ATT_LEAVE:['','特休','事假','病假','生理假','喪假','公假','婚假','產假','曠職','補休','過年','颱風'];
     var keep=sel.value;
     sel.innerHTML='<option value="">全部假別</option>'+list.filter(function(t){ return !!t; })
       .map(function(t){ return '<option value="'+esc(t)+'">'+esc(t)+'</option>'; }).join('');
@@ -29882,7 +29985,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var of=(L.ot_office&&L.ot_office.meta)||{}, ff=(L.ot_field&&L.ot_field.meta)||{}, ml=(L.meal&&L.meal.meta)||{};
     setv('pcfg-ot-first2', mv(of,'first2',1.34)); setv('pcfg-ot-rest', mv(of,'rest',1.67)); setv('pcfg-ot-cap', mv(of,'monthly_cap_hours',54));
     setv('pcfg-ot-half', mv(ff,'half_day',0.5)); setv('pcfg-ot-full', mv(ff,'full_day',1.0));
-    setv('pcfg-office-holiday', mv(of,'holiday_daily',1000)); setv('pcfg-meal-subsidy', mv(ml,'subsidy',75));
+    setv('pcfg-meal-subsidy', mv(ml,'subsidy',75));
     var P=pcfgLatestPolicy();   // 資料庫尚無資料時,以「最新年度政策」為預設值(單一資料來源)
     setv('pcfg-labor-rate',P.labor.rate); setv('pcfg-employment-rate',P.employment.rate); setv('pcfg-labor-emp',P.labor.emp); setv('pcfg-labor-er',P.labor.employer);
     setv('pcfg-health-rate',P.health.rate); setv('pcfg-health-emp',P.health.emp); setv('pcfg-health-er',P.health.employer); setv('pcfg-health-depcap',P.health.dependent_cap); setv('pcfg-health-avgdep',P.health.avg_dependents);
@@ -29894,6 +29997,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     PCFG_LR.forEach(function(p){   // p=[inputId後綴, 中文key, 預設]
       setv('pcfg-lr-'+p[0], mv(lr, p[1], p[2]));
     });
+    // 病假及生理假依法定半薪計算，不受舊版自訂費率影響。
+    setv('pcfg-lr-sick',0.5); setv('pcfg-lr-menstrual',0.5);
     pcfgGrades=P.grades.slice();
     pcfgRenderGrades();
   }
@@ -29944,7 +30049,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var grades=Array.from(new Set(pcfgGrades.map(num).filter(function(x){return x>0;}))).sort(function(a,b){return a-b;});
     var n=function(id){ return num(val(id)); };
     var rows=[
-      {eff_date:eff, key:'ot_office', value:null, meta:{first2:n('pcfg-ot-first2'),rest:n('pcfg-ot-rest'),monthly_cap_hours:n('pcfg-ot-cap'),holiday_daily:n('pcfg-office-holiday')}},
+      {eff_date:eff, key:'ot_office', value:null, meta:{first2:n('pcfg-ot-first2'),rest:n('pcfg-ot-rest'),monthly_cap_hours:n('pcfg-ot-cap')}},
       {eff_date:eff, key:'ot_field', value:null, meta:{half_day:n('pcfg-ot-half'),full_day:n('pcfg-ot-full')}},
       {eff_date:eff, key:'meal', value:null, meta:{subsidy:n('pcfg-meal-subsidy')}},
       {eff_date:eff, key:'labor_ins', value:n('pcfg-labor-rate'), meta:{emp:n('pcfg-labor-emp'),employer:n('pcfg-labor-er')}},
@@ -32273,18 +32378,45 @@ async function lmRegister(proj,docno,dateIso,hours,content,respUnit){
 
 const MP_KEYS=['cp_no','part_no','proj_num','zone_code','qty','unit_weight','drawing_no','online_date','ship_date'];
 let mpRows=[],mpLocal=false,mpReady=false,mpBom=[];const mpStore='zs_modified_components_v1';
+let mpUndoStack=[],mpRedoStack=[],mpHistoryBusy=false;
+const mpDraftStore='zs_modified_components_pending_v1';let mpKeysBound=false,mpSaveChains={};
+function modpartsDrafts(){try{return JSON.parse(localStorage.getItem(mpDraftStore)||'{}')||{};}catch(e){return{};}}
+function modpartsSetDraft(r){if(mpLocal||r.id==null)return;const d=modpartsDrafts();d[String(r.id)]=modpartsPayload(r,false);localStorage.setItem(mpDraftStore,JSON.stringify(d));}
+function modpartsClearDraft(r,payload){if(mpLocal||r.id==null)return;const d=modpartsDrafts(),k=String(r.id);if(JSON.stringify(d[k])===JSON.stringify(payload)){delete d[k];localStorage.setItem(mpDraftStore,JSON.stringify(d));}}
+function modpartsSnapshot(){return JSON.stringify(mpRows);}
+function modpartsHistoryButtons(){const u=document.getElementById('mp-undo-btn'),r=document.getElementById('mp-redo-btn');if(u)u.disabled=mpHistoryBusy||!mpUndoStack.length;if(r)r.disabled=mpHistoryBusy||!mpRedoStack.length;}
+function modpartsPushUndo(){mpUndoStack.push(modpartsSnapshot());if(mpUndoStack.length>50)mpUndoStack.shift();mpRedoStack=[];modpartsHistoryButtons();}
+function modpartsPayload(r,withId){const b={};MP_KEYS.forEach(k=>{let v=r[k];if((k==='online_date'||k==='ship_date')&&v==='')v=null;b[k]=v??null;});if(withId&&r.id!=null)b.id=r.id;return b;}
+async function modpartsRestore(snapshot){
+  const next=JSON.parse(snapshot),oldById=new Map(mpRows.filter(r=>r.id!=null).map(r=>[String(r.id),r])),nextIds=new Set(next.filter(r=>r.id!=null).map(r=>String(r.id)));
+  clearTimeout(mpSaveTimer);
+  if(!mpLocal){
+    const jobs=[];
+    for(const r of mpRows)if(r.id!=null&&!nextIds.has(String(r.id)))jobs.push(sbFetch('/rest/v1/modified_components?id=eq.'+encodeURIComponent(r.id),{method:'DELETE'}));
+    for(const r of next){
+      const old=r.id!=null?oldById.get(String(r.id)):null;
+      if(old){if(JSON.stringify(modpartsPayload(old,false))!==JSON.stringify(modpartsPayload(r,false)))jobs.push(sbFetch('/rest/v1/modified_components?id=eq.'+encodeURIComponent(r.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(modpartsPayload(r,false))}));}
+      else jobs.push(sbFetch('/rest/v1/modified_components',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(modpartsPayload(r,true))}));
+    }
+    await Promise.all(jobs);
+  }
+  mpRows=next;if(mpLocal)xLocalWrite(mpStore,mpRows);modpartsRender();
+}
+async function modpartsUndo(){if(mpHistoryBusy||!mpUndoStack.length)return;mpHistoryBusy=true;mpRedoStack.push(modpartsSnapshot());modpartsHistoryButtons();try{await modpartsRestore(mpUndoStack.pop());}finally{mpHistoryBusy=false;modpartsHistoryButtons();}}
+async function modpartsRedo(){if(mpHistoryBusy||!mpRedoStack.length)return;mpHistoryBusy=true;mpUndoStack.push(modpartsSnapshot());modpartsHistoryButtons();try{await modpartsRestore(mpRedoStack.pop());}finally{mpHistoryBusy=false;modpartsHistoryButtons();}}
 async function modpartsInit(){
-  if(!mpReady){const [r,pr,zr,cr]=await Promise.all([sbFetchAll('/rest/v1/modified_components?select=*&order=online_date.desc,created_at.desc'),sbFetchAll('/rest/v1/projects?select=id,proj_num'),sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code'),sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,drawing_no')]);mpLocal=!!(r&&r.ok===false);mpRows=mpLocal?xLocalRead(mpStore):(Array.isArray(r.data)?r.data:[]);const pn={};(pr.data||[]).forEach(x=>pn[x.id]=x.proj_num);const zn={};(zr.data||[]).forEach(x=>zn[x.id]={proj_num:pn[x.project_id]||'',zone_code:x.zone_code||''});mpBom=(cr.data||[]).map(c=>({...c,...(zn[c.zone_id]||{})}));mpReady=true;modpartsDefaultPeriod();}
+  if(!mpReady){const [r,pr,zr,cr]=await Promise.all([sbFetchAll('/rest/v1/modified_components?select=*&order=online_date.desc,created_at.desc'),sbFetchAll('/rest/v1/projects?select=id,proj_num'),sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code'),sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,drawing_no')]);mpLocal=!!(r&&r.ok===false);mpRows=mpLocal?xLocalRead(mpStore):(Array.isArray(r.data)?r.data:[]);const drafts=mpLocal?{}:modpartsDrafts();mpRows.forEach(x=>{if(drafts[String(x.id)])Object.assign(x,drafts[String(x.id)]);});const pn={};(pr.data||[]).forEach(x=>pn[x.id]=x.proj_num);const zn={};(zr.data||[]).forEach(x=>zn[x.id]={proj_num:pn[x.project_id]||'',zone_code:x.zone_code||''});mpBom=(cr.data||[]).map(c=>({...c,...(zn[c.zone_id]||{})}));mpUndoStack=[];mpRedoStack=[];mpReady=true;modpartsDefaultPeriod();mpRows.forEach((x,i)=>{if(drafts[String(x.id)])modpartsSave(i);});}
+  if(!mpKeysBound){document.addEventListener('keydown',e=>{if(!document.getElementById('page-modparts')?.classList.contains('active'))return;if((e.ctrlKey||e.metaKey)&&!e.altKey){const k=e.key.toLowerCase();if(k==='z'){e.preventDefault();e.shiftKey?modpartsRedo():modpartsUndo();}else if(k==='y'){e.preventDefault();modpartsRedo();}}});mpKeysBound=true;}
   modpartsRender();
 }
 function modpartsTab(t){document.getElementById('mp-tab-list').style.display=t==='list'?'':'none';document.getElementById('mp-tab-report').style.display=t==='report'?'':'none';document.getElementById('mp-tabbtn-list').classList.toggle('active',t==='list');document.getElementById('mp-tabbtn-report').classList.toggle('active',t==='report');if(t==='report')modpartsReport();}
-function modpartsRender(){const q=(document.getElementById('mp-search')?.value||'').toLowerCase(),rows=mpRows.filter(r=>!q||MP_KEYS.some(k=>String(r[k]||'').toLowerCase().includes(q)));document.getElementById('mp-body').innerHTML=rows.map(r=>{const i=mpRows.indexOf(r),oc=k=>`modpartsChange(${i},'${k}',this.value)`;return '<tr>'+MP_KEYS.map(k=>'<td>'+xCell(k.includes('date')?'date':(['qty','unit_weight'].includes(k)?'number':''),r[k]??'',oc(k),['zone_code','unit_weight','drawing_no'].includes(k))+'</td>').join('')+'<td><button class="btn-sm btn-danger" onclick="modpartsDelete('+i+')">刪除</button></td></tr>';}).join('')||'<tr><td colspan="10" class="empty-state">尚無修改構件資料</td></tr>';const qty=rows.reduce((s,r)=>s+xNum(r.qty),0),w=rows.reduce((s,r)=>s+xNum(r.qty)*xNum(r.unit_weight),0);document.getElementById('mp-foot').innerHTML='<tr><td colspan="4"><b>合計 '+rows.length+' 筆</b></td><td class="num"><b>'+qty+'</b></td><td class="num"><b>'+w.toFixed(2)+'</b></td><td colspan="4"></td></tr>';tblInitSelection(document.getElementById('mp-grid'));}
-async function modpartsAdd(){const r={cp_no:'',part_no:'',proj_num:'',zone_code:'',qty:1,unit_weight:null,drawing_no:'',online_date:xToday(),ship_date:null};if(mpLocal){r.id='local-'+Date.now();mpRows.unshift(r);xLocalWrite(mpStore,mpRows);}else{const z=await sbFetch('/rest/v1/modified_components',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(r)});if(!z.ok){alert('新增失敗('+(z.status||'?')+')：'+((z.data&&(z.data.message||z.data.hint))||'請確認已在 Supabase 執行 deductions_modparts_migration.sql'));return;}mpRows.unshift(Array.isArray(z.data)?z.data[0]:z.data);}modpartsRender();}
+function modpartsRender(){const q=(document.getElementById('mp-search')?.value||'').toLowerCase(),rows=mpRows.filter(r=>!q||MP_KEYS.some(k=>String(r[k]||'').toLowerCase().includes(q)));document.getElementById('mp-body').innerHTML=rows.map(r=>{const i=mpRows.indexOf(r),oc=k=>`modpartsChange(${i},'${k}',this.value)`;return '<tr>'+MP_KEYS.map(k=>'<td>'+xCell(k.includes('date')?'date':(['qty','unit_weight'].includes(k)?'number':''),r[k]??'',oc(k),['zone_code','unit_weight','drawing_no'].includes(k))+'</td>').join('')+'<td><button class="btn-sm btn-danger" onclick="modpartsDelete('+i+')">刪除</button></td></tr>';}).join('')||'<tr><td colspan="10" class="empty-state">尚無修改構件資料</td></tr>';const qty=rows.reduce((s,r)=>s+xNum(r.qty),0),w=rows.reduce((s,r)=>s+xNum(r.qty)*xNum(r.unit_weight),0);document.getElementById('mp-foot').innerHTML='<tr><td colspan="4"><b>合計 '+rows.length+' 筆</b></td><td class="num"><b>'+qty+'</b></td><td class="num"><b>'+w.toFixed(2)+'</b></td><td colspan="4"></td></tr>';tblInitSelection(document.getElementById('mp-grid'));modpartsHistoryButtons();}
+async function modpartsAdd(){const before=modpartsSnapshot(),r={cp_no:'',part_no:'',proj_num:'',zone_code:'',qty:1,unit_weight:null,drawing_no:'',online_date:xToday(),ship_date:null};if(mpLocal){r.id='local-'+Date.now();mpRows.unshift(r);xLocalWrite(mpStore,mpRows);}else{const z=await sbFetch('/rest/v1/modified_components',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(r)});if(!z.ok){alert('新增失敗('+(z.status||'?')+')：'+((z.data&&(z.data.message||z.data.hint))||'請確認已在 Supabase 執行 deductions_modparts_migration.sql'));return;}mpRows.unshift(Array.isArray(z.data)?z.data[0]:z.data);}mpUndoStack.push(before);if(mpUndoStack.length>50)mpUndoStack.shift();mpRedoStack=[];modpartsRender();}
 let mpSaveTimer;
-function modpartsChange(i,k,v){const r=mpRows[i];if(!r)return;r[k]=['qty','unit_weight'].includes(k)?(v===''?null:Number(v)):v;if(k==='part_no'||k==='proj_num')modpartsBomFill(r);clearTimeout(mpSaveTimer);mpSaveTimer=setTimeout(()=>modpartsSave(i),350);modpartsRender();}
+function modpartsChange(i,k,v){const r=mpRows[i];if(!r)return;const nv=['qty','unit_weight'].includes(k)?(v===''?null:Number(v)):v;if(r[k]===nv)return;modpartsPushUndo();r[k]=nv;if(k==='part_no'||k==='proj_num')modpartsBomFill(r);modpartsSetDraft(r);modpartsSave(i);modpartsRender();}
 function modpartsBomFill(r){if(!r.part_no||!r.proj_num)return;const c=mpBom.find(x=>String(x.part_no).trim().toUpperCase()===String(r.part_no).trim().toUpperCase()&&String(x.proj_num).trim().toUpperCase()===String(r.proj_num).trim().toUpperCase());if(c){r.zone_code=c.zone_code||'';r.unit_weight=c.net_weight??null;r.drawing_no=c.drawing_no||'';}}
-async function modpartsSave(i){const r=mpRows[i];if(!r)return;if(mpLocal){xLocalWrite(mpStore,mpRows);return;}const b={};MP_KEYS.forEach(k=>{let v=r[k];if((k==='online_date'||k==='ship_date')&&v==='')v=null;b[k]=v??null;});await sbFetch('/rest/v1/modified_components?id=eq.'+encodeURIComponent(r.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(b)});}
-async function modpartsDelete(i){const r=mpRows[i];if(!r||!await uiConfirm('確定刪除此筆修改構件？'))return;if(!mpLocal)await sbFetch('/rest/v1/modified_components?id=eq.'+encodeURIComponent(r.id),{method:'DELETE'});mpRows.splice(i,1);if(mpLocal)xLocalWrite(mpStore,mpRows);modpartsRender();}
+async function modpartsSave(i){const r=mpRows[i];if(!r)return;if(mpLocal){xLocalWrite(mpStore,mpRows);return;}const b=modpartsPayload(r,false),key=String(r.id),prev=mpSaveChains[key]||Promise.resolve();const job=prev.catch(()=>{}).then(()=>sbFetch('/rest/v1/modified_components?id=eq.'+encodeURIComponent(r.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(b)})).then(z=>{if(z&&z.ok)modpartsClearDraft(r,b);});const chain=job.finally(()=>{if(mpSaveChains[key]===chain)delete mpSaveChains[key];});mpSaveChains[key]=chain;await job;}
+async function modpartsDelete(i){const r=mpRows[i];if(!r||!await uiConfirm('確定刪除此筆修改構件？'))return;modpartsPushUndo();if(!mpLocal)await sbFetch('/rest/v1/modified_components?id=eq.'+encodeURIComponent(r.id),{method:'DELETE'});mpRows.splice(i,1);if(mpLocal)xLocalWrite(mpStore,mpRows);modpartsRender();}
 function modpartsKey(e){tableArrowNav(e);}
 function modpartsDefaultPeriod(){const n=new Date(),p=x=>String(x).padStart(2,'0');let y=n.getFullYear(),m=n.getMonth()+1;if(n.getDate()<26){m--;if(m<1){m=12;y--;}}const from=y+'-'+p(m)+'-26';let e=new Date(y,m,25);const to=e.getFullYear()+'-'+p(e.getMonth()+1)+'-'+p(e.getDate());const a=document.getElementById('mp-from'),b=document.getElementById('mp-to');if(a)a.value=from;if(b)b.value=to;modpartsReport();}
 function modpartsPeriod(d){const a=document.getElementById('mp-from'),b=document.getElementById('mp-to');if(!a.value)return modpartsDefaultPeriod();const x=new Date(a.value+'T00:00:00');x.setMonth(x.getMonth()+d);const p=n=>String(n).padStart(2,'0');a.value=x.getFullYear()+'-'+p(x.getMonth()+1)+'-26';const e=new Date(x.getFullYear(),x.getMonth()+1,25);b.value=e.getFullYear()+'-'+p(e.getMonth()+1)+'-'+p(e.getDate());modpartsReport();}
