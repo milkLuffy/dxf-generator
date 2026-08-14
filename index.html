@@ -157,6 +157,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .app-brand-name{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .app-brand-sub{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--nav-text);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top-clock{display:flex;align-items:center;gap:12px;background:var(--nav-bg);border:1px solid var(--nav-border);border-radius:var(--rad);padding:8px 16px}
+.admin-preview-toggle{display:none;align-items:center;gap:6px;background:var(--nav-bg);border:1px solid var(--nav-border);border-radius:var(--rad);color:var(--nav-text);padding:8px 11px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.admin-preview-toggle:hover{border-color:var(--nav-green);color:var(--nav-green-text)}
+.admin-preview-toggle.active{background:#f5c542;border-color:#f5c542;color:#241b00}
+.admin-preview-banner{display:none;position:fixed;top:var(--appbar-h);left:var(--rail-w);right:0;height:38px;z-index:109;background:#f5c542;color:#241b00;align-items:center;justify-content:center;gap:12px;padding:0 14px;font-size:12px;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+.admin-preview-banner button{border:1px solid rgba(36,27,0,.35);border-radius:7px;background:rgba(255,255,255,.35);color:#241b00;padding:4px 9px;font-size:11px;font-weight:700;cursor:pointer}
+#app-screen.admin-previewing .admin-preview-banner{display:flex}
+#app-screen.admin-previewing .main-content{padding-top:calc(var(--appbar-h) + 38px)}
 .clock-date{font-family:var(--mono);font-size:12px;color:var(--nav-text)}
 .clock-time{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.08em;color:var(--accent);line-height:1}
 @media(max-width:768px){.app-brand-sub{display:none}.app-brand-name{font-size:16px}}
@@ -1100,6 +1107,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   .app-header-right{gap:6px}
   .app-header-right .theme-toggle{width:38px;height:38px;margin-right:0!important;padding:0}
   .top-clock{display:none}
+  .app-header .admin-preview-toggle{display:none!important}
+  .admin-preview-banner{left:0;height:42px;text-align:center;justify-content:space-between}
+  #app-screen.admin-previewing .main-content{padding-top:calc(var(--appbar-h) + 42px)}
   .content-body{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
   .mobile-bottom-nav{display:grid}
   #page-bom .page-header{margin-bottom:12px}
@@ -1138,12 +1148,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
     backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)
   }
   .mobile-bottom-nav button{
-    min-width:0;min-height:52px;border:0;border-radius:10px;background:transparent;
+    width:100%;height:54px;min-width:0;min-height:54px;max-height:54px;padding:0;border:0;outline:0;border-radius:10px;background:transparent;
     color:var(--nav-text);display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:3px;font-family:var(--sans);font-size:10px;font-weight:500;cursor:pointer
   }
-  .mobile-bottom-nav button .mbn-icon{font-size:20px;line-height:1}
+  .mobile-bottom-nav button .mbn-icon{display:block;width:24px;height:22px;font-size:20px;line-height:22px;text-align:center;flex:none}
   .mobile-bottom-nav button.active{background:var(--nav-active);color:var(--nav-green-text)}
+  .mobile-bottom-nav button:focus-visible{box-shadow:inset 0 0 0 2px var(--nav-green)}
 }
 
 /* ── 列印：橫式 A4 配置圖 ── */
@@ -2351,6 +2362,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="user-name" id="sidebar-name">—</div>
           <div class="user-role" id="sidebar-role">—</div>
         </div>
+        <button class="btn-logout-side admin-preview-side" id="admin-preview-toggle-side" onclick="toggleAdminPreview()" title="一般使用者預覽" aria-label="一般使用者預覽" style="display:none">👁</button>
         <button class="btn-logout-side" onclick="logout()" title="登出">⏻</button>
       </div>
     </div>
@@ -2360,11 +2372,16 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
 
   <nav class="mobile-bottom-nav" aria-label="手機主導覽">
     <button type="button" data-page="dashboard" onclick="navTo('dashboard')"><span class="mbn-icon">⌂</span><span>主頁</span></button>
-    <button type="button" data-page="layout" onclick="navTo('layout')"><span class="mbn-icon">▦</span><span>進度</span></button>
-    <button type="button" data-page="labor" onclick="navTo('labor')"><span class="mbn-icon">▤</span><span>點工</span></button>
-    <button type="button" data-page="hardware" onclick="navTo('hardware')"><span class="mbn-icon">⌘</span><span>庫存</span></button>
+    <button type="button" data-page="daily" onclick="navTo('daily')"><span class="mbn-icon">▥</span><span>進度</span></button>
+    <button type="button" data-page="bom" onclick="navTo('bom')"><span class="mbn-icon">▦</span><span>BOM</span></button>
+    <button type="button" data-page="drawingsearch" onclick="navTo('drawingsearch')"><span class="mbn-icon">⌕</span><span>圖面</span></button>
     <button type="button" data-action="more" onclick="openMobileMore()"><span class="mbn-icon">•••</span><span>更多</span></button>
   </nav>
+
+  <div class="admin-preview-banner" id="admin-preview-banner">
+    <span>👁 一般使用者預覽中（管理員權限未變更）</span>
+    <button type="button" onclick="setAdminPreview(false)">返回管理員模式</button>
+  </div>
 
   <script>
   // 側邊欄使用內嵌線條 SVG，不依賴 Windows/macOS 的 Emoji 字型。
@@ -2457,6 +2474,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         </div>
       </div>
       <div class="app-header-right">
+        <button class="admin-preview-toggle" id="admin-preview-toggle-top" onclick="toggleAdminPreview()" title="切換一般使用者預覽">👁 一般使用者預覽</button>
         <!-- 線上狀態:誰在線上、正在看哪一頁(類似 Google 試算表右上角)-->
         <div id="presence-bar" style="display:none"></div>
         <button class="theme-toggle" id="notif-btn" onclick="toggleNotifPanel()" title="通知" style="margin-right:12px;position:relative">🔔<span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--red);color:#fff;font-family:var(--mono);font-size:10px;font-weight:600;line-height:16px;text-align:center;box-sizing:border-box;border:1px solid var(--bg)"></span></button>
@@ -9160,6 +9178,7 @@ function buildDXF(frames) {
 
 // ── State ──
 let currentSession=null, currentUser=null, isGuest=false;
+let adminPreviewMode=false; // 僅為本次頁面階段的介面預覽；重新整理即恢復管理員模式
 let dxfRowCount=0, lastDXFFrames=[], allLogs=[], allBOM=[], allStaff=[];
 let editBOMId=null, editStaffId=null;
 
@@ -9815,6 +9834,8 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app-screen').style.display='flex';
   const u=currentUser||{name:'?',isAdmin:false};
+  adminPreviewMode=false;
+  document.getElementById('app-screen')?.classList.remove('admin-previewing');
   document.getElementById('sidebar-name').textContent=u.name;
   document.getElementById('sidebar-role').textContent=isGuest?'訪客':(u.isAdmin?'管理者':'一般使用者');
   renderUserAvatar(u);
@@ -9822,6 +9843,10 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
   if(adminBtn) adminBtn.style.display=u.isAdmin?'':'none';
   document.getElementById('sidebar-avatar').setAttribute('title', u.name||'使用者');
   const showAdmin=(u.isAdmin&&!isGuest);
+  const previewTop=document.getElementById('admin-preview-toggle-top');
+  const previewSide=document.getElementById('admin-preview-toggle-side');
+  if(previewTop) previewTop.style.display=showAdmin?'flex':'none';
+  if(previewSide) previewSide.style.display=showAdmin?'':'none';
   const railAdmin=document.getElementById('rail-admin');
   if(railAdmin) railAdmin.style.display=showAdmin?'':'none';
   if(showAdmin) refreshPendingBadge(); else { const b=document.getElementById('rail-admin-badge'); if(b) b.style.display='none'; }
@@ -9920,11 +9945,10 @@ const HR_PAGES=new Set(['emp','leave','payroll','payslip','payrollcfg']);
 const GUEST_PERMS={dashboard:'read','evergreen-sys':'read',bom:'read',multilevel:'read',bomtool:'read',sp:'read',dxf:'read',hazard:'read',selfcheck:'read',namelabels:'read'};
 // 手機導覽只放現場最常用功能；管理員與桌機維持完整選單。
 const MOBILE_NAV_PAGES=new Set([
-  'dashboard','mypage','labor','deductions','hardware',
-  'layout','daily','prod','drawingsearch','attendance'
+  'dashboard','mypage','hardware','bom','layout','daily','drawingsearch','attendance'
 ]);
 function mobileNavLimited(){
-  return window.innerWidth<=768 && !(currentUser&&currentUser.isAdmin&&!isGuest);
+  return window.innerWidth<=768 && (!(currentUser&&currentUser.isAdmin&&!isGuest) || adminPreviewMode);
 }
 
 function navItemVisible(k){
@@ -9934,7 +9958,7 @@ function navItemVisible(k){
 function pagePerm(k){
   if(isGuest) return GUEST_PERMS[k]||'hide';
   const u=currentUser; if(!u) return 'hide';
-  if(u.isAdmin) return 'edit';                         // 管理員:全部可編輯
+  if(u.isAdmin&&!adminPreviewMode) return 'edit';      // 管理員正常模式:全部可編輯
   const p=u.perms||{};
   if(HR_PAGES.has(k)){ const pv=p.payroll; return (pv==='read'||pv==='edit')?pv:'hide'; } // 人事薪資:未授權隱藏
   if(p[k]==='hide'||p[k]==='read'||p[k]==='edit') return p[k];   // 帳號自訂
@@ -9952,6 +9976,23 @@ function applyPermsUI(){
     if(rail) rail.style.display=anyVisible?'':'none';
   });
 }
+function setAdminPreview(on){
+  if(!currentUser?.isAdmin||isGuest) return;
+  adminPreviewMode=!!on;
+  const app=document.getElementById('app-screen');
+  app?.classList.toggle('admin-previewing',adminPreviewMode);
+  const top=document.getElementById('admin-preview-toggle-top');
+  const side=document.getElementById('admin-preview-toggle-side');
+  top?.classList.toggle('active',adminPreviewMode);
+  side?.classList.toggle('active',adminPreviewMode);
+  if(top) top.textContent=adminPreviewMode?'👁 預覽中':'👁 一般使用者預覽';
+  if(side) side.setAttribute('title',adminPreviewMode?'返回管理員模式':'一般使用者預覽');
+  applyPermsUI();
+  const page=(getView()||{}).page||'dashboard';
+  if(pagePerm(page)==='hide') navTo('dashboard');
+  else { selectSection(PAGE_SECTION[page]||'main'); closeNav(); }
+}
+function toggleAdminPreview(){ setAdminPreview(!adminPreviewMode); }
 let _currentSection='main';   // 右欄目前顯示的分類
 let _pageSection='main';      // 目前所在頁面所屬分類(游標移開時回到這個)
 // 只切換右欄顯示的分類(不導頁)
@@ -10035,7 +10076,7 @@ function navTo(page) {
   _pel?.classList.add('active');
   document.getElementById('nav-'+page)?.classList.add('active');
   document.querySelectorAll('.mobile-bottom-nav button').forEach(b=>{
-    b.classList.toggle('active', b.dataset.page===page || (b.dataset.action==='more' && !['dashboard','layout','labor','hardware'].includes(page)));
+    b.classList.toggle('active', b.dataset.page===page || (b.dataset.action==='more' && !['dashboard','daily','bom','drawingsearch'].includes(page)));
   });
   // 唯讀模式:標記頁面 + 啟用寫入攔截 + 顯示唯讀徽章
   const _perm=pagePerm(page);
@@ -12505,8 +12546,7 @@ async function loadBOM() {
   const r=await sbFetchAll('/rest/v1/projects?select=*&order=created_at.desc');
   allBOM=Array.isArray(r.data)?r.data:[];
   await syncBOMProjectStatusFromLayout();
-  if(window.innerWidth<=768 && !sessionStorage.getItem('bom_mobile_view_chosen') && bomView==='list') bomView='card';
-  setBomView(bomView);   // 手機首次預設卡片；使用者切換後保留選擇
+  setBomView(bomView);   // 手機首次預設小卡；使用者切換後保留選擇
 }
 // 狀態排序:進行中 > 未開始 > 已完成
 const BOM_STATUS_ORDER={ '進行中':0, '未開始':1, '已完成':2, '異常':5 };   // 異常排最下(未完成清單中)
@@ -12540,6 +12580,10 @@ function bomProjCmp(a,b){ return String(a.proj_num||'').localeCompare(String(b.p
 // ── 列表 / 卡片 / 小卡 顯示切換 ──
 let bomView = 'list';
 try { const _v=localStorage.getItem('bom_view'); bomView = (_v==='card'||_v==='mini')?_v:'list'; } catch(e) {}
+if(window.innerWidth<=768){
+  try { const _mv=localStorage.getItem('bom_mobile_view'); bomView=(_mv==='list'||_mv==='card'||_mv==='mini')?_mv:'mini'; }
+  catch(e){ bomView='mini'; }
+}
 // 完整卡片:整張可點進工程詳情,工程編號為大標題,形式比照「工程區」卡
 function bomCardHTML(p){
   return `<div class="bom-card${bomIs81(p)?' bom-81tn':''}" onclick="showProjectDetail(${p.id})" title="點卡片開啟工程詳情">
@@ -12567,7 +12611,7 @@ function bomMiniHTML(p){
 }
 function setBomView(v,userChoice=false){
   bomView = (v==='card'||v==='mini') ? v : 'list';
-  if(userChoice && window.innerWidth<=768) sessionStorage.setItem('bom_mobile_view_chosen','1');
+  if(userChoice && window.innerWidth<=768) localStorage.setItem('bom_mobile_view',bomView);
   try { localStorage.setItem('bom_view', bomView); } catch(e) {}
   document.getElementById('bom-view-list')?.classList.toggle('active', bomView==='list');
   document.getElementById('bom-view-card')?.classList.toggle('active', bomView==='card');
