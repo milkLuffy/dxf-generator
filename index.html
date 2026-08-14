@@ -1077,10 +1077,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 
 @media(max-width:768px){
   /* Supabase 風格:側欄改為滑出抽屜 */
-  .sidebar{transform:translateX(-100%);box-shadow:none}
+  .sidebar{width:min(88vw,340px);transform:translateX(-100%);box-shadow:none}
   .sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.35)}
   .nav-backdrop.open{display:block;opacity:1}
   .nav-toggle{display:flex}
+  .nav-rail{width:58px}
+  .rail-item{width:44px;height:44px}
+  .nav-panel-head{padding:18px 14px 10px}
+  .nav-panel-body{padding:4px 10px 12px}
+  .nav-item{min-height:46px;padding:11px 12px}
+  .nav-item .nav-label{font-size:15px}
+  .sidebar-user{padding:14px 12px calc(14px + env(safe-area-inset-bottom))}
+  .panel-toggle{display:none}
   .main-content{margin-left:0;padding-top:var(--appbar-h)}
   .app-header{left:0;padding:12px 16px}
   .stat-grid{grid-template-columns:1fr 1fr}
@@ -9859,6 +9867,17 @@ const ADMIN_PAGES=new Set(['output','pricing','cost','accounts','notify','audit'
 const HR_PAGES=new Set(['emp','leave','payroll','payslip','payrollcfg']);
 // 訪客固定可見(唯讀):主頁、長榮系統、BOM工程列表、工具整區。其餘一律隱藏。
 const GUEST_PERMS={dashboard:'read','evergreen-sys':'read',bom:'read',multilevel:'read',bomtool:'read',sp:'read',dxf:'read',hazard:'read',selfcheck:'read',namelabels:'read'};
+// 手機導覽只放現場最常用功能；管理員與桌機維持完整選單。
+const MOBILE_NAV_PAGES=new Set([
+  'dashboard','mypage','labor','deductions','hardware',
+  'layout','daily','prod','drawingsearch','attendance'
+]);
+function mobileNavLimited(){
+  return window.innerWidth<=768 && !(currentUser&&currentUser.isAdmin&&!isGuest);
+}
+function navItemVisible(k){
+  return pagePerm(k)!=='hide' && (!mobileNavLimited() || MOBILE_NAV_PAGES.has(k));
+}
 // 解析某頁面對「目前使用者」的權限
 function pagePerm(k){
   if(isGuest) return GUEST_PERMS[k]||'hide';
@@ -9873,10 +9892,10 @@ function pagePerm(k){
 function applyPermsUI(){
   PAGE_META.forEach(pm=>{
     const el=document.getElementById('nav-'+pm.k);
-    if(el) el.style.display=(pagePerm(pm.k)==='hide')?'none':'';
+    if(el) el.style.display=navItemVisible(pm.k)?'':'none';
   });
   ['main','prod','tools','staff','eg','hr','admin'].forEach(sec=>{
-    const anyVisible=PAGE_META.some(p=>p.sec===sec && pagePerm(p.k)!=='hide');
+    const anyVisible=PAGE_META.some(p=>p.sec===sec && navItemVisible(p.k));
     const rail=document.querySelector('.rail-item[data-sec="'+sec+'"]');
     if(rail) rail.style.display=anyVisible?'':'none';
   });
@@ -9896,7 +9915,11 @@ function previewSection(sec){ selectSection(sec); }
 // 游標離開整個側邊欄:右欄回到目前頁面所屬分類
 function restoreSection(){ selectSection(_pageSection); }
 // 點圖示(或觸控無 hover 時):導向該分類首頁
-function onRailClick(sec){ const f=SECTION_FIRST[sec]; if(f) navTo(f); }
+function onRailClick(sec){
+  const firstVisible=PAGE_META.find(p=>p.sec===sec && p.k!=='evergreen-sys' && navItemVisible(p.k));
+  const f=firstVisible?.k||SECTION_FIRST[sec];
+  if(f) navTo(f);
+}
 // 綁定 hover 預覽(以屬性指派,重複呼叫不會重複綁定)
 function bindRailHover(){
   document.querySelectorAll('.rail-item').forEach(r=>{ r.onmouseenter=()=>previewSection(r.dataset.sec); });
@@ -9930,7 +9953,10 @@ function closeNav(){
   document.getElementById('nav-backdrop')?.classList.remove('open');
 }
 // 放大回桌機尺寸時自動清掉抽屜開啟狀態
-window.addEventListener('resize', ()=>{ if(window.innerWidth>768) closeNav(); });
+window.addEventListener('resize', ()=>{
+  if(window.innerWidth>768) closeNav();
+  if(currentUser) applyPermsUI();
+});
 // Esc 關閉抽屜
 window.addEventListener('keydown', e=>{ if(e.key==='Escape') closeNav(); });
 
