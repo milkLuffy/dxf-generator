@@ -160,6 +160,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .admin-preview-toggle{display:none;align-items:center;gap:6px;background:var(--nav-bg);border:1px solid var(--nav-border);border-radius:var(--rad);color:var(--nav-text);padding:8px 11px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
 .admin-preview-toggle:hover{border-color:var(--nav-green);color:var(--nav-green-text)}
 .admin-preview-toggle.active{background:#f5c542;border-color:#f5c542;color:#241b00}
+.admin-preview-toggle svg,.admin-preview-side svg,.theme-toggle svg,.admin-preview-banner svg{width:18px;height:18px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.admin-preview-side svg{width:17px;height:17px}
+.theme-toggle svg{width:19px;height:19px}
+.theme-toggle .theme-moon{display:none}
+[data-theme="light"] .theme-toggle .theme-bulb{display:none}
+[data-theme="light"] .theme-toggle .theme-moon{display:block}
 .admin-preview-banner{display:none;position:fixed;top:var(--appbar-h);left:var(--rail-w);right:0;height:38px;z-index:109;background:#f5c542;color:#241b00;align-items:center;justify-content:center;gap:12px;padding:0 14px;font-size:12px;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.2)}
 .admin-preview-banner button{border:1px solid rgba(36,27,0,.35);border-radius:7px;background:rgba(255,255,255,.35);color:#241b00;padding:4px 9px;font-size:11px;font-weight:700;cursor:pointer}
 #app-screen.admin-previewing .admin-preview-banner{display:flex}
@@ -2362,7 +2368,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <div class="user-name" id="sidebar-name">—</div>
           <div class="user-role" id="sidebar-role">—</div>
         </div>
-        <button class="btn-logout-side admin-preview-side" id="admin-preview-toggle-side" onclick="toggleAdminPreview()" title="一般使用者預覽" aria-label="一般使用者預覽" style="display:none">👁</button>
+        <button class="btn-logout-side admin-preview-side" id="admin-preview-toggle-side" onclick="toggleAdminPreview()" title="一般使用者預覽" aria-label="一般使用者預覽" style="display:none"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2.5"/></svg></button>
         <button class="btn-logout-side" onclick="logout()" title="登出">⏻</button>
       </div>
     </div>
@@ -2379,7 +2385,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
   </nav>
 
   <div class="admin-preview-banner" id="admin-preview-banner">
-    <span>👁 一般使用者預覽中（管理員權限未變更）</span>
+    <span style="display:flex;align-items:center;gap:7px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>一般使用者預覽中（管理員權限未變更）</span>
     <button type="button" onclick="setAdminPreview(false)">返回管理員模式</button>
   </div>
 
@@ -2474,11 +2480,11 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         </div>
       </div>
       <div class="app-header-right">
-        <button class="admin-preview-toggle" id="admin-preview-toggle-top" onclick="toggleAdminPreview()" title="切換一般使用者預覽">👁 一般使用者預覽</button>
+        <button class="admin-preview-toggle" id="admin-preview-toggle-top" onclick="toggleAdminPreview()" title="切換一般使用者預覽"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2.5"/></svg><span>一般使用者預覽</span></button>
         <!-- 線上狀態:誰在線上、正在看哪一頁(類似 Google 試算表右上角)-->
         <div id="presence-bar" style="display:none"></div>
-        <button class="theme-toggle" id="notif-btn" onclick="toggleNotifPanel()" title="通知" style="margin-right:12px;position:relative">🔔<span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--red);color:#fff;font-family:var(--mono);font-size:10px;font-weight:600;line-height:16px;text-align:center;box-sizing:border-box;border:1px solid var(--bg)"></span></button>
-        <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="切換亮色/暗色" style="margin-right:12px">💡</button>
+        <button class="theme-toggle" id="notif-btn" onclick="toggleNotifPanel()" title="通知" aria-label="通知" style="margin-right:12px;position:relative"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--red);color:#fff;font-family:var(--mono);font-size:10px;font-weight:600;line-height:16px;text-align:center;box-sizing:border-box;border:1px solid var(--bg)"></span></button>
+        <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="切換亮色/暗色" aria-label="切換亮色/暗色" style="margin-right:12px"><svg class="theme-bulb" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 22h4M8.5 15.5A7 7 0 1 1 15.5 15.5C14.6 16.3 14 17 14 18h-4c0-1-.6-1.7-1.5-2.5Z"/></svg><svg class="theme-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></svg></button>
         <div class="top-clock" id="top-clock">
           <span class="clock-date" id="clock-date">—</span>
           <span class="clock-time" id="clock-time">—</span>
@@ -3369,7 +3375,11 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
       </div>
 
       <div class="dxf-actions" style="margin-top:24px">
+        <button class="btn" id="insp-folder-btn" onclick="inspChooseSaveFolder()">📁 設定固定「報驗」資料夾</button>
         <button class="btn btn-gen" onclick="generateInspection()">▶ 產生申驗單 Word</button>
+      </div>
+      <div class="notice-bar" id="insp-folder-status" style="margin-top:10px;padding:10px 14px">
+        內網第一次使用需選擇「鎮山共用資料夾／報驗」；之後此電腦會自動沿用。外網則直接下載至 Downloads。
       </div>
       <div class="statusbar" id="insp-statusbar"><div class="dot"></div><span id="insp-status-text">就緒</span></div>
 
@@ -9985,7 +9995,8 @@ function setAdminPreview(on){
   const side=document.getElementById('admin-preview-toggle-side');
   top?.classList.toggle('active',adminPreviewMode);
   side?.classList.toggle('active',adminPreviewMode);
-  if(top) top.textContent=adminPreviewMode?'👁 預覽中':'👁 一般使用者預覽';
+  const topLabel=top?.querySelector('span');
+  if(topLabel) topLabel.textContent=adminPreviewMode?'預覽中':'一般使用者預覽';
   if(side) side.setAttribute('title',adminPreviewMode?'返回管理員模式':'一般使用者預覽');
   applyPermsUI();
   const page=(getView()||{}).page||'dashboard';
@@ -19163,7 +19174,147 @@ function inspLockWordLayout(xml) {
 // ctx：{ templateBuffer, proj_name, proj_no, owner, companyUnit, zoneCode, procCode,
 //        workLoc, person, docNo, recvDate, recvTime, today, inspectDay, keyinDate }。
 // 日期一律由 ctx 帶入 → 補報時申請/檢驗日期用「補報當天」,keyin_date 沿用「預報當天」。
-// 只負責產生並下載 Word;不寫每日產量、不動 UI 狀態。成功回傳檔名,失敗丟出例外。
+// 只負責產生並儲存 Word;不寫每日產量、不動 UI 狀態。成功回傳檔名,失敗丟出例外。
+let inspSaveRootHandle = null;
+const INSP_HANDLE_DB = 'zs-inspection-folder';
+
+function inspHandleDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(INSP_HANDLE_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('handles');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function inspRememberHandle(handle) {
+  const db = await inspHandleDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction('handles', 'readwrite');
+    tx.objectStore('handles').put(handle, 'report-root');
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+async function inspLoadRememberedHandle() {
+  if (!window.showDirectoryPicker) return null;
+  try {
+    const db = await inspHandleDb();
+    const handle = await new Promise((resolve, reject) => {
+      const req = db.transaction('handles').objectStore('handles').get('report-root');
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+    db.close();
+    if (!handle) return null;
+    inspSaveRootHandle = handle;
+    const permission = await handle.queryPermission({ mode:'readwrite' });
+    inspFolderStatus(
+      permission === 'granted'
+        ? '已固定使用「' + handle.name + '」；申驗單會自動存入對應工程資料夾。'
+        : '已記住「' + handle.name + '」；下次產生時瀏覽器可能要求重新確認權限。',
+      true
+    );
+    return handle;
+  } catch (err) {
+    console.warn('讀取申驗單資料夾設定失敗', err);
+    return null;
+  }
+}
+
+function inspFolderStatus(message, ok) {
+  const el = document.getElementById('insp-folder-status');
+  if (!el) return;
+  el.textContent = message;
+  el.style.color = ok === false ? 'var(--danger)' : '';
+}
+
+async function inspChooseSaveFolder() {
+  if (!window.showDirectoryPicker) {
+    inspFolderStatus('此瀏覽器不支援指定資料夾，產生 Word 時會使用原本的下載方式。請改用 Chrome 或 Edge。', false);
+    return null;
+  }
+  try {
+    inspSaveRootHandle = await window.showDirectoryPicker({ mode:'readwrite', id:'inspection-word-root' });
+    await inspRememberHandle(inspSaveRootHandle);
+    inspFolderStatus('已固定「' + inspSaveRootHandle.name + '」；之後會依工程編號自動存入對應資料夾。', true);
+    return inspSaveRootHandle;
+  } catch (err) {
+    if (err && err.name !== 'AbortError') {
+      console.error(err);
+      inspFolderStatus('無法使用所選資料夾：' + err.message, false);
+    }
+    return null;
+  }
+}
+
+function inspNormFolderName(value) {
+  return String(value || '').normalize('NFKC').toUpperCase().replace(/\s+/g, '');
+}
+
+async function inspResolveSaveFolder(root, projNo) {
+  const rootName = inspNormFolderName(root.name);
+  if (rootName === '申驗單') return root;
+
+  const projectKey = inspNormFolderName(projNo);
+  let projectFolder = root;
+  // 若選的是最外層「報驗」，尋找 B820、B820-工程名稱等開頭相符的工程資料夾。
+  if (projectKey && rootName !== projectKey && !rootName.startsWith(projectKey + '-')) {
+    for await (const entry of root.values()) {
+      const name = inspNormFolderName(entry.name);
+      if (entry.kind === 'directory' && (name === projectKey || name.startsWith(projectKey + '-'))) {
+        projectFolder = entry;
+        break;
+      }
+    }
+    // 尚無工程資料夾時建立工程編號資料夾，避免檔案落在錯誤工程。
+    if (projectFolder === root) projectFolder = await root.getDirectoryHandle(projNo || '未分類', { create:true });
+  }
+  if (inspNormFolderName(projectFolder.name) === '申驗單') return projectFolder;
+  return projectFolder.getDirectoryHandle('申驗單', { create:true });
+}
+
+async function inspSaveDocx(blob, fname, projNo) {
+  const downloadNormally = () => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    return { directDownload:true };
+  };
+  if (!window.showDirectoryPicker) return downloadNormally();
+  if (!inspSaveRootHandle) await inspLoadRememberedHandle();
+  // 尚未在這台電腦設定共用資料夾時，不強迫跳出選擇視窗，直接下載。
+  if (!inspSaveRootHandle) {
+    inspFolderStatus('尚未設定固定共用資料夾，本次已直接下載至 Downloads。', true);
+    return downloadNormally();
+  }
+  try {
+    let permission = await inspSaveRootHandle.queryPermission({ mode:'readwrite' });
+    if (permission !== 'granted') permission = await inspSaveRootHandle.requestPermission({ mode:'readwrite' });
+    if (permission !== 'granted') throw new Error('未取得資料夾寫入權限');
+    const folder = await inspResolveSaveFolder(inspSaveRootHandle, projNo);
+    const fileHandle = await folder.getFileHandle(fname, { create:true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    inspFolderStatus('已儲存：' + folder.name + '／' + fname, true);
+    return { directDownload:false, folderName:folder.name };
+  } catch (err) {
+    console.warn('共用資料夾目前無法寫入，改存 Downloads', err);
+    inspFolderStatus('目前無法連線至鎮山共用資料夾，本次已改下載至 Downloads。', false);
+    return downloadNormally();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', inspLoadRememberedHandle, { once:true });
+} else {
+  inspLoadRememberedHandle();
+}
+
 async function inspBuildDocx(checked, ctx) {
   const today = ctx.today;
   const inspectDay = ctx.inspectDay;
@@ -19266,9 +19417,7 @@ async function inspBuildDocx(checked, ctx) {
   });
   const ymd = String(today.getFullYear()) + String(today.getMonth()+1).padStart(2,'0') + String(today.getDate()).padStart(2,'0');
   const fname = (ctx.proj_no || '申驗單') + '_申驗單_' + ymd + '_' + docNo + (ctx.fnameSuffix || '') + '.docx';
-  const url = URL.createObjectURL(out);
-  const a = document.createElement('a'); a.href = url; a.download = fname;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  await inspSaveDocx(out, fname, ctx.proj_no || '');
   return fname;
 }
 
@@ -21534,7 +21683,7 @@ function toggleTheme() {
   else document.documentElement.removeAttribute('data-theme');
   try { localStorage.setItem('zhenshan_theme', next); } catch(e){}
   const btn = document.getElementById('theme-toggle');
-  if (btn) btn.textContent = next === 'light' ? '🌙' : '💡';
+  if (btn) btn.setAttribute('aria-label',next==='light'?'切換暗色模式':'切換亮色模式');
 }
 function restoreTheme() {
   let t = '';
@@ -21542,7 +21691,7 @@ function restoreTheme() {
   if (t === 'light') {
     document.documentElement.setAttribute('data-theme', 'light');
     const btn = document.getElementById('theme-toggle');
-    if (btn) btn.textContent = '🌙';
+    if (btn) btn.setAttribute('aria-label','切換暗色模式');
   }
 }
 restoreTheme();
