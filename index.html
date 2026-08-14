@@ -1077,10 +1077,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 
 @media(max-width:768px){
   /* Supabase 風格:側欄改為滑出抽屜 */
-  .sidebar{width:min(88vw,340px);transform:translateX(-100%);box-shadow:none}
-  .sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.35)}
+  .sidebar{
+    top:auto;left:8px;right:8px;bottom:calc(67px + env(safe-area-inset-bottom));
+    width:auto;height:min(68vh,590px);border:1px solid var(--nav-border);border-radius:18px;
+    overflow:hidden;transform:translateY(calc(100% + 90px));box-shadow:none
+  }
+  .sidebar.open{transform:translateY(0);box-shadow:0 -12px 40px rgba(0,0,0,.42)}
   .nav-backdrop.open{display:block;opacity:1}
-  .nav-toggle{display:flex}
+  .nav-toggle{display:none}
   .nav-rail{width:58px}
   .rail-item{width:44px;height:44px}
   .nav-panel-head{padding:18px 14px 10px}
@@ -1088,9 +1092,28 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   .nav-item{min-height:46px;padding:11px 12px}
   .nav-item .nav-label{font-size:15px}
   .sidebar-user{padding:14px 12px calc(14px + env(safe-area-inset-bottom))}
-  .panel-toggle{display:none}
+  .rail-foot{display:none}
   .main-content{margin-left:0;padding-top:var(--appbar-h)}
-  .app-header{left:0;padding:12px 16px}
+  .app-header{left:0;padding:10px 14px}
+  .app-brand-logo{width:76px;height:32px}
+  .app-brand-text{display:none}
+  .app-header-right{gap:6px}
+  .app-header-right .theme-toggle{width:38px;height:38px;margin-right:0!important;padding:0}
+  .top-clock{display:none}
+  .content-body{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+  .mobile-bottom-nav{display:grid}
+  #page-bom .page-header{margin-bottom:12px}
+  #page-bom .page-title{font-size:26px}
+  #page-bom .btn-add-new{padding:10px 12px}
+  #page-bom .search-bar{display:grid;grid-template-columns:1fr 1fr;gap:9px;align-items:stretch}
+  #page-bom .search-input{grid-column:1/-1;width:100%;height:48px;font-size:16px;padding:11px 14px}
+  #page-bom .filter-select{width:100%;min-height:44px;font-size:14px;padding:9px 10px}
+  #page-bom .bom-view-toggle{grid-column:1/-1;width:100%}
+  #page-bom .bom-vbtn{flex:1;min-height:42px;padding:8px 6px}
+  #page-bom .bom-card-grid{grid-template-columns:1fr;gap:10px}
+  #page-bom .bom-card{padding:16px}
+  #page-bom .bom-card-num{font-size:25px}
+  #page-bom .bom-card-actions .btn-icon{min-width:42px;min-height:42px}
   .stat-grid{grid-template-columns:1fr 1fr}
   .stat-grid>.stat-card:last-child{grid-column:1/-1}   /* 本月總產量(噸)手機版佔滿整列,避免半格留白並凸顯噸數 */
   .dash-grid,.dash-row{grid-template-columns:1fr}
@@ -1101,6 +1124,26 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   .insp-fields-grid{grid-template-columns:repeat(2,1fr)}
   .mat-add-grid{grid-template-columns:1fr}
   .detail-grid{grid-template-columns:1fr}
+}
+
+/* 手機底部主導覽：高頻功能單擊直達，其餘收進「更多」。 */
+.mobile-bottom-nav{display:none}
+@media(max-width:768px){
+  .mobile-bottom-nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:120;
+    display:grid;grid-template-columns:repeat(5,1fr);gap:2px;
+    padding:7px 8px calc(7px + env(safe-area-inset-bottom));
+    background:color-mix(in srgb,var(--nav-bg2) 94%,transparent);
+    border-top:1px solid var(--nav-border);box-shadow:0 -8px 24px rgba(0,0,0,.2);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)
+  }
+  .mobile-bottom-nav button{
+    min-width:0;min-height:52px;border:0;border-radius:10px;background:transparent;
+    color:var(--nav-text);display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;font-family:var(--sans);font-size:10px;font-weight:500;cursor:pointer
+  }
+  .mobile-bottom-nav button .mbn-icon{font-size:20px;line-height:1}
+  .mobile-bottom-nav button.active{background:var(--nav-active);color:var(--nav-green-text)}
 }
 
 /* ── 列印：橫式 A4 配置圖 ── */
@@ -2315,6 +2358,14 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
 
   <div class="nav-backdrop" id="nav-backdrop" onclick="closeNav()"></div>
 
+  <nav class="mobile-bottom-nav" aria-label="手機主導覽">
+    <button type="button" data-page="dashboard" onclick="navTo('dashboard')"><span class="mbn-icon">⌂</span><span>主頁</span></button>
+    <button type="button" data-page="layout" onclick="navTo('layout')"><span class="mbn-icon">▦</span><span>進度</span></button>
+    <button type="button" data-page="labor" onclick="navTo('labor')"><span class="mbn-icon">▤</span><span>點工</span></button>
+    <button type="button" data-page="hardware" onclick="navTo('hardware')"><span class="mbn-icon">⌘</span><span>庫存</span></button>
+    <button type="button" data-action="more" onclick="openMobileMore()"><span class="mbn-icon">•••</span><span>更多</span></button>
+  </nav>
+
   <script>
   // 側邊欄使用內嵌線條 SVG，不依賴 Windows/macOS 的 Emoji 字型。
   (function(){
@@ -2583,9 +2634,9 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <option value="異常">異常</option>
         </select>
         <div class="bom-view-toggle">
-          <button type="button" id="bom-view-list" class="bom-vbtn active" onclick="setBomView('list')" title="列表顯示">☰ 列表</button>
-          <button type="button" id="bom-view-card" class="bom-vbtn" onclick="setBomView('card')" title="卡片顯示">▦ 卡片</button>
-          <button type="button" id="bom-view-mini" class="bom-vbtn" onclick="setBomView('mini')" title="小卡(只顯示工程編號)">▫ 小卡</button>
+          <button type="button" id="bom-view-list" class="bom-vbtn active" onclick="setBomView('list',true)" title="列表顯示">☰ 列表</button>
+          <button type="button" id="bom-view-card" class="bom-vbtn" onclick="setBomView('card',true)" title="卡片顯示">▦ 卡片</button>
+          <button type="button" id="bom-view-mini" class="bom-vbtn" onclick="setBomView('mini',true)" title="小卡(只顯示工程編號)">▫ 小卡</button>
         </div>
       </div>
       <div class="card" id="bom-list-wrap" style="padding:0;overflow:hidden">
@@ -9875,6 +9926,7 @@ const MOBILE_NAV_PAGES=new Set([
 function mobileNavLimited(){
   return window.innerWidth<=768 && !(currentUser&&currentUser.isAdmin&&!isGuest);
 }
+
 function navItemVisible(k){
   return pagePerm(k)!=='hide' && (!mobileNavLimited() || MOBILE_NAV_PAGES.has(k));
 }
@@ -9952,6 +10004,11 @@ function closeNav(){
   document.querySelector('.sidebar')?.classList.remove('open');
   document.getElementById('nav-backdrop')?.classList.remove('open');
 }
+function openMobileMore(){
+  const current=PAGE_SECTION[(getView&&getView().page)||'dashboard']||'main';
+  selectSection(current);
+  toggleNav();
+}
 // 放大回桌機尺寸時自動清掉抽屜開啟狀態
 window.addEventListener('resize', ()=>{
   if(window.innerWidth>768) closeNav();
@@ -9977,6 +10034,9 @@ function navTo(page) {
   const _pel=document.getElementById('page-'+page);
   _pel?.classList.add('active');
   document.getElementById('nav-'+page)?.classList.add('active');
+  document.querySelectorAll('.mobile-bottom-nav button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.page===page || (b.dataset.action==='more' && !['dashboard','layout','labor','hardware'].includes(page)));
+  });
   // 唯讀模式:標記頁面 + 啟用寫入攔截 + 顯示唯讀徽章
   const _perm=pagePerm(page);
   window._roActive=(_perm==='read');
@@ -12445,7 +12505,8 @@ async function loadBOM() {
   const r=await sbFetchAll('/rest/v1/projects?select=*&order=created_at.desc');
   allBOM=Array.isArray(r.data)?r.data:[];
   await syncBOMProjectStatusFromLayout();
-  setBomView(bomView);   // 套用目前顯示模式(列表/卡片)並重繪
+  if(window.innerWidth<=768 && !sessionStorage.getItem('bom_mobile_view_chosen') && bomView==='list') bomView='card';
+  setBomView(bomView);   // 手機首次預設卡片；使用者切換後保留選擇
 }
 // 狀態排序:進行中 > 未開始 > 已完成
 const BOM_STATUS_ORDER={ '進行中':0, '未開始':1, '已完成':2, '異常':5 };   // 異常排最下(未完成清單中)
@@ -12504,8 +12565,9 @@ function bomCardHTML(p){
 function bomMiniHTML(p){
   return `<div class="bom-mini st-${p.status}${bomIs81(p)?' bom-81tn':''}" onclick="showProjectDetail(${p.id})" title="${(p.proj_name||'').replace(/"/g,'&quot;')} · ${p.status}">${p.proj_num||'—'}</div>`;
 }
-function setBomView(v){
+function setBomView(v,userChoice=false){
   bomView = (v==='card'||v==='mini') ? v : 'list';
+  if(userChoice && window.innerWidth<=768) sessionStorage.setItem('bom_mobile_view_chosen','1');
   try { localStorage.setItem('bom_view', bomView); } catch(e) {}
   document.getElementById('bom-view-list')?.classList.toggle('active', bomView==='list');
   document.getElementById('bom-view-card')?.classList.toggle('active', bomView==='card');
