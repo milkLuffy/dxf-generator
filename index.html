@@ -1648,6 +1648,16 @@ table.att-week-grid tr.cat-own .name,table.att-week-grid tr.cat-own .team{backgr
 table.att-week-grid tr.cat-own.grp-h th,table.att-week-grid tr.cat-own.sub-h th,table.att-week-grid tr.cat-own.wk-total td{background:rgba(50,200,110,.20)}
 table.att-week-grid tr.cat-eva .name,table.att-week-grid tr.cat-eva .team{background:rgba(191,120,255,.12)}
 table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,table.att-week-grid tr.cat-eva.wk-total td{background:rgba(191,120,255,.20)}
+/* 月總覽容器 */
+.att-overview-scroll{overflow:auto;max-width:100%}
+#att-overview-leave-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+table.att-overview-grid{width:100%;min-width:900px;border-collapse:collapse;font-size:12px}
+table.att-overview-grid th,table.att-overview-grid td{border:1px solid var(--border);padding:7px 9px;white-space:nowrap}
+table.att-overview-grid th{background:var(--bg2);color:var(--text2);text-align:center;font-weight:600}
+table.att-overview-grid td.num{text-align:right;font-family:var(--mono)}
+table.att-overview-grid tr.ov-cat td{background:var(--bg3);font-weight:700;color:var(--accent2)}
+table.att-overview-grid tr.ov-subtotal td{background:var(--bg2);font-weight:700}
+table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;border-top:2px solid var(--border-hi)}
 /* ── 全域提示 Toast(取代原生 alert)────────────────────────── */
 #toast-wrap{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:10px;align-items:center;pointer-events:none;max-width:calc(100vw - 32px)}
 .toast{pointer-events:auto;min-width:230px;max-width:440px;background:var(--bg2);border:1px solid var(--border-hi);border-left:4px solid var(--accent2);border-radius:12px;box-shadow:0 12px 38px rgba(0,0,0,.42);padding:12px 14px;display:flex;gap:11px;align-items:flex-start;font-size:13.5px;color:var(--text);animation:toastIn .22s cubic-bezier(.2,.9,.3,1);transition:opacity .2s,transform .2s}
@@ -3399,7 +3409,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="section-label">② 申驗單填寫資訊</div>
         <div class="insp-fields-grid">
           <div class="insp-field"><label>協力商檢驗者</label><input type="text" id="insp-person" value="詹雯婷"/></div>
-          <div class="insp-field"><label>單據編號</label><input type="text" id="insp-docno" placeholder="第2頁單據編號"/></div>
+          <div class="insp-field"><label>單據編號</label><input type="text" id="insp-docno" placeholder="自動下一號或手動輸入" oninput="inspDocNoChanged(this)"/><select class="filter-select" id="insp-existing-batch" onchange="inspSelectExistingBatch(this)" style="width:100%;margin-top:5px;padding:6px 8px"><option value="">— 不追加既有批次 —</option></select><div class="section-label" id="insp-docno-hint" style="margin-top:4px">自動依最新日期跳下一號；追加時請選擇日期＋流水編號</div></div>
           
           <div class="insp-field"><label>受檢日期</label><input type="text" id="insp-recv-date" placeholder="例 6/11"/></div>
           <div class="insp-field"><label>受檢時間</label><input type="text" id="insp-recv-time" value="08:00" placeholder="例 08:00"/></div>
@@ -5415,6 +5425,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
           <button id="att-tabbtn-main" class="active" onclick="attTab('main')">主頁</button>
           <button id="att-tabbtn-week" onclick="attTab('week')">週回報</button>
           <button id="att-tabbtn-month" onclick="attTab('month')">月回報</button>
+          <button id="att-tabbtn-overview" onclick="attTab('overview')">月總覽</button>
           <button id="att-tabbtn-esg" onclick="attTab('esg')">ESG</button>
         </div>
       </div>
@@ -5529,6 +5540,29 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         </div>
         <div class="card">
           <div id="att-report-box"></div>
+        </div>
+      </div>
+
+      <!-- ════════ 分頁：月總覽 ════════ -->
+      <div id="att-tab-overview" class="att-tab" style="display:none">
+        <div class="card" style="margin-bottom:16px">
+          <div class="dash-date-nav" style="margin-bottom:0">
+            <span style="font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.05em">月份</span>
+            <button class="dash-nav-btn" onclick="attOverviewNav(-1)">« 上個月</button>
+            <span id="att-overview-label" style="font-family:var(--mono);font-size:13px;color:var(--text);min-width:110px;text-align:center">—</span>
+            <button class="dash-nav-btn" onclick="attOverviewNav(1)">下個月 »</button>
+            <button class="dash-nav-btn" onclick="attOverviewNav(0)">本月</button>
+            <button class="dash-nav-btn" id="att-overview-leave-btn" onclick="attToggleOverviewLeave()">列出請假</button>
+            <span style="flex:1"></span>
+            <span id="att-overview-summary" style="font-family:var(--mono);font-size:12px;color:var(--text3)"></span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-header" style="margin-bottom:10px">
+            <div class="section-title">整月出勤表</div>
+            <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">格式與週回報相同，可左右捲動查看整月日期</span>
+          </div>
+          <div id="att-overview-box" class="att-overview-scroll"></div>
         </div>
       </div>
 
@@ -5799,6 +5833,23 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
     </div>
 
     <!-- 扣款明細 -->
+    <style>
+      /* 全部分類共有 12 欄，保留可讀欄寬並讓外層容器負責橫向捲動。 */
+      #gx-ded.ded-all{width:1560px;min-width:1560px;table-layout:fixed}
+      #gx-ded.ded-all th:nth-child(1),#gx-ded.ded-all td:nth-child(1){width:130px}
+      #gx-ded.ded-all th:nth-child(2),#gx-ded.ded-all td:nth-child(2){width:110px}
+      #gx-ded.ded-all th:nth-child(3),#gx-ded.ded-all td:nth-child(3){width:150px}
+      #gx-ded.ded-all th:nth-child(4),#gx-ded.ded-all td:nth-child(4){width:100px}
+      #gx-ded.ded-all th:nth-child(5),#gx-ded.ded-all td:nth-child(5){width:100px}
+      #gx-ded.ded-all th:nth-child(6),#gx-ded.ded-all td:nth-child(6){width:240px}
+      #gx-ded.ded-all th:nth-child(7),#gx-ded.ded-all td:nth-child(7){width:110px}
+      #gx-ded.ded-all th:nth-child(8),#gx-ded.ded-all td:nth-child(8),
+      #gx-ded.ded-all th:nth-child(9),#gx-ded.ded-all td:nth-child(9){width:120px}
+      #gx-ded.ded-all th:nth-child(10),#gx-ded.ded-all td:nth-child(10){width:110px}
+      #gx-ded.ded-all th:nth-child(11),#gx-ded.ded-all td:nth-child(11){width:80px}
+      #gx-ded.ded-all th:nth-child(12),#gx-ded.ded-all td:nth-child(12){width:250px}
+      #gx-ded.ded-all th:nth-child(13),#gx-ded.ded-all td:nth-child(13){width:40px}
+    </style>
     <div class="page" id="page-deductions">
       <div class="page-header"><div><div class="page-title">扣款明細</div><div class="page-subtitle">點工單、品管、材料、工安及運費扣款集中管理</div></div></div>
       <div class="layout-tabs" id="ded-cat-tabs"></div>
@@ -5815,7 +5866,7 @@ table.att-week-grid tr.cat-eva.grp-h th,table.att-week-grid tr.cat-eva.sub-h th,
         <div class="section-label" style="margin-top:8px" id="ded-summary"></div>
         <div class="section-label" style="margin-top:4px">Excel 式操作：方向鍵漫遊、打字即編輯、Enter 下移、拖曳／Shift 多選、Ctrl+C／Ctrl+V（貼上自動補列）、Delete 清除、Ctrl+Z 復原；修改後自動儲存。</div>
       </div>
-      <div class="layout-table-wrap"><table class="layout-table gx-table" id="gx-ded"><thead id="gxHead-ded"></thead><tbody id="gxBody-ded"></tbody></table></div>
+      <div class="layout-table-wrap"><table class="layout-table gx-table ded-all" id="gx-ded"><thead id="gxHead-ded"></thead><tbody id="gxBody-ded"></tbody></table></div>
     </div>
 
     <!-- 修改構件 -->
@@ -9945,6 +9996,7 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
   loadStaff(); loadLog();
   loadNotificationData();
   loadAnnouncements();
+  dashLoadWeather();       // 右上角天氣屬於全域頂欄，無論恢復到哪個頁面都要載入
   if(!isGuest) setTimeout(()=>window.dsProcessCleanupQueue?.(),1200);
   if (restore) restoreLastView();   // 重新整理:回到上次所在頁面(該頁的資料由 navTo 載入)
   else goHome();                    // 登入(含 Google/帳密):一律進主頁
@@ -11799,6 +11851,7 @@ let dashAgendaDbAvailable=null;
 let dashAgendaEditingId=null;
 let dashAgendaLoadError='';
 let dashAgendaUsingApple=false;
+let dashWeatherLoading=false;
 
 function dashBriefInit(){
   dashLoadWeather();
@@ -11837,6 +11890,8 @@ async function dashLoadWeather(){
   let cached=null;
   try{ cached=JSON.parse(sessionStorage.getItem(DASH_WEATHER_CACHE_KEY)||'null'); }catch(e){}
   if(cached && Date.now()-Number(cached._savedAt||0)<20*60*1000){ dashRenderWeather(cached,false); return; }
+  if(dashWeatherLoading) return;
+  dashWeatherLoading=true;
   try{
     const res=await fetch(url); if(!res.ok) throw new Error('weather '+res.status);
     const data=await res.json(); data._savedAt=Date.now();
@@ -11848,6 +11903,8 @@ async function dashLoadWeather(){
       const iconEl=document.getElementById('dash-weather-icon'); if(iconEl)iconEl.textContent='⚠️';
       const descEl=document.getElementById('dash-weather-desc'); if(descEl)descEl.textContent='無法取得';
     }
+  } finally {
+    dashWeatherLoading=false;
   }
 }
 function dashAgendaLocalRead(){ try{ const v=JSON.parse(localStorage.getItem(DASH_AGENDA_LOCAL_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
@@ -18130,6 +18187,7 @@ async function inspLoadZones() {
   if (!pid) {
     zoneSel.innerHTML = '<option value="">— 選擇工程區 —</option>';
     document.getElementById('insp-template-status').innerHTML = '<div class="empty-state" style="padding:16px">請先選擇工程</div>';
+    await inspLoadExistingDocNos('');
     return;
   }
   const r = await sbFetch('/rest/v1/zones?select=*&project_id=eq.' + pid + '&order=zone_code');
@@ -18148,11 +18206,10 @@ async function inspLoadZones() {
   if (company) {
     try {
       const dn = await nextDocNo(company);
-      const docInput = document.getElementById('insp-docno');
-      if (docInput) docInput.value = dn;
-      docInput.placeholder = company + ' 自動帶號';
+      inspSetAutoDocNo(dn, company);
     } catch(e) {}
   }
+  await inspLoadExistingDocNos(projObj ? projObj.proj_num : '');
   zoneSel.innerHTML = '<option value="">— 選擇工程區 —</option>' +
     zones.map(z => '<option value="' + z.id + '">' + z.zone_code + '</option>').join('');
   // Load template for this project
@@ -18420,6 +18477,28 @@ function forceSizeOnMarkerRun(xml, marker, sz) {
   }
   return xml.slice(0, rOpenEnd) + '<w:rPr>' + szTag + '</w:rPr>' + after;
 }
+
+// Word 產出規格：所有文字一律純黑，覆蓋範本中的直接色彩與 theme 色彩。
+function inspForceBlackText(xml) {
+  return xml.replace(/<w:r(?: [^>]*)?>[\s\S]*?<\/w:r>/g, function(run) {
+    const open = run.match(/^<w:r(?: [^>]*)?>/);
+    if (!open) return run;
+    const color = '<w:color w:val="000000"/>';
+    const rpr = run.match(/<w:rPr>([\s\S]*?)<\/w:rPr>/);
+    if (rpr) {
+      const inner = rpr[1].replace(/<w:color\b[^>]*\/>/g, '');
+      return run.replace(rpr[0], '<w:rPr>' + inner + color + '</w:rPr>');
+    }
+    return open[0] + '<w:rPr>' + color + '</w:rPr>' + run.slice(open[0].length);
+  });
+}
+function inspForceBlackZipText(zip) {
+  Object.keys(zip.files || {}).forEach(function(name) {
+    if (!/^word\/(document|header\d+|footer\d+|footnotes|endnotes|comments)\.xml$/.test(name)) return;
+    const file = zip.file(name); if (!file) return;
+    zip.file(name, inspForceBlackText(file.asText()));
+  });
+}
 // injectMarker 並把該格字級設為 16pt(第一頁被標記的資訊)
 function injectMarker16(cellXml, marker) {
   return forceSizeOnMarkerRun(injectMarker(cellXml, marker), marker, 32);
@@ -18436,6 +18515,25 @@ function markBoxBefore(cell, keyword, repl) {
   const bi = cell.lastIndexOf('□', ki);
   if (bi < 0) return cell;
   return cell.slice(0, bi) + repl + cell.slice(bi + 1);
+}
+
+// 自訂方框項目符號依賴 numbering.xml；第一頁併入共用範本後，相同 numId
+// 可能代表數字清單。檢驗項目一律轉成真正的「□」字元，避免下載後變 1.、2.。
+function normalizeInspectionCheckboxList(cellXml) {
+  return cellXml.replace(/<w:p(?: [^>]*)?>[\s\S]*?<\/w:p>/g, function(para) {
+    if (para.indexOf('<w:numPr>') < 0) return para;
+    const text = xmlGetText(para);
+    if (!/(U組|噴砂|塗裝|二次加工|SAW|ESW|MT|UT|VT)/.test(text)) return para;
+    para = para.replace(/<w:numPr>[\s\S]*?<\/w:numPr>/g, '');
+    const boxRun = '<w:r><w:rPr>' + KAI_RPR + '</w:rPr><w:t xml:space="preserve">□　</w:t></w:r>';
+    const pprEnd = para.indexOf('</w:pPr>');
+    if (pprEnd >= 0) {
+      const at = pprEnd + '</w:pPr>'.length;
+      return para.slice(0, at) + boxRun + para.slice(at);
+    }
+    const open = para.match(/^<w:p(?: [^>]*)?>/);
+    return open ? open[0] + boxRun + para.slice(open[0].length) : para;
+  });
 }
 
 function injectMarker(cellXml, marker) {
@@ -18822,6 +18920,7 @@ async function pickColumn(headerRow, colIdx) {
       // 舊版還要求同時含「NDT」,但新版封面該格沒有 NDT → 會整個略過,導致 二次加工/MT 沒變黑框。
       if (cell.text.indexOf('二次加工') >= 0) {
         let cx = xml.slice(cell.absStart, cell.absEnd);
+        cx = normalizeInspectionCheckboxList(cx);
         // 二次加工 -> 永遠 ■。改用 markBoxBefore(往前找最近的 □),
         // 這樣不論 □ 與「二次加工」是否在同一個 run 都能正確變黑框。
         // (舊版用字串相接 '□二次加工',只有當兩者在同一 run 才有效,
@@ -19435,6 +19534,80 @@ function inspHandleDb() {
   });
 }
 
+let inspAutoDocNo = '';
+let inspDocNoManual = false;
+let inspExistingBatchDate = '';
+function inspTodayStr() {
+  const d = new Date(), p = n => String(n).padStart(2,'0');
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate());
+}
+function inspSetAutoDocNo(no, company) {
+  const input = document.getElementById('insp-docno');
+  inspAutoDocNo = String(no || '').trim();
+  inspDocNoManual = false;
+  inspExistingBatchDate = '';
+  const batch = document.getElementById('insp-existing-batch');
+  if (batch) batch.value = '';
+  if (input) {
+    input.value = inspAutoDocNo;
+    if (company) input.placeholder = company + ' 自動帶號';
+  }
+  const hint = document.getElementById('insp-docno-hint');
+  if (hint) hint.textContent = '自動下一號：' + inspAutoDocNo + '；追加時請選擇日期＋流水編號';
+}
+function inspDocNoChanged(input) {
+  const value = String(input && input.value || '').trim();
+  inspDocNoManual = value !== inspAutoDocNo;
+  inspExistingBatchDate = '';
+  const batch = document.getElementById('insp-existing-batch');
+  if (batch) batch.value = '';
+  const hint = document.getElementById('insp-docno-hint');
+  if (!hint) return;
+  hint.textContent = inspDocNoManual ? '已自行更改流水號；未指定既有日期，本次日期使用今天' : '系統會依最新日期自動跳下一號';
+}
+function inspSelectExistingBatch(select) {
+  const opt = select && select.options ? select.options[select.selectedIndex] : null;
+  const serial = opt ? String(opt.dataset.serial || '') : '';
+  const date = opt ? String(opt.dataset.date || '') : '';
+  if (!serial || !date) {
+    inspExistingBatchDate = '';
+    const company = ((allBOM||[]).find(p => String(p.id) === String((document.getElementById('insp-proj')||{}).value))||{}).company || '';
+    nextDocNo(company).then(no => inspSetAutoDocNo(no, company)).catch(()=>{});
+    return;
+  }
+  inspExistingBatchDate = date;
+  inspDocNoManual = true;
+  const input = document.getElementById('insp-docno');
+  if (input) input.value = serial;
+  const hint = document.getElementById('insp-docno-hint');
+  if (hint) hint.textContent = '追加既有批次：' + date + '｜' + serial + '；新增資料會沿用此日期';
+}
+
+// 既有流水號可再次選用：只有使用者主動選取時，本次報驗才沿用相同 serial_no。
+async function inspLoadExistingDocNos(projNum) {
+  const list = document.getElementById('insp-existing-batch');
+  const hint = document.getElementById('insp-docno-hint');
+  if (!list) return;
+  list.innerHTML = '<option value="">— 不追加今日既有批次 —</option>';
+  if (!projNum) return;
+  try {
+    const today = inspTodayStr();
+    const r = await sbFetch('/rest/v1/daily_output?select=serial_no,date,id&proj_num=eq.' + encodeURIComponent(projNum) + '&date=eq.' + today + '&serial_no=not.is.null&order=id.desc&limit=1000');
+    const seen = new Set(), rows = [];
+    (Array.isArray(r.data) ? r.data : []).forEach(x => {
+      const serial = String(x.serial_no || '').trim();
+      const date = String(x.date || '').slice(0,10);
+      const key = date + '|' + serial;
+      if (!serial || !date || seen.has(key)) return;
+      seen.add(key); rows.push({serial, date});
+    });
+    list.innerHTML += rows.slice(0,200).map((x,i) => '<option value="' + i + '" data-date="' + esc(x.date) + '" data-serial="' + esc(x.serial) + '">' + esc(x.date) + '｜' + esc(x.serial) + '</option>').join('');
+    if (hint && !inspAutoDocNo) hint.textContent = rows.length ? '可選擇今日既有流水號追加' : '此工程今日尚無既有流水號，本次將使用自動帶號';
+  } catch(e) {
+    if (hint && !inspAutoDocNo) hint.textContent = '可直接輸入既有流水號，將本次構件追加至同一批';
+  }
+}
+
 async function inspRememberHandle(handle) {
   const db = await inspHandleDb();
   await new Promise((resolve, reject) => {
@@ -19561,6 +19734,20 @@ async function inspSaveDocx(blob, fname, projNo) {
   }
 }
 
+function inspSavedToast(message) {
+  let el = document.getElementById('insp-saved-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'insp-saved-toast';
+    el.style.cssText = 'position:fixed;left:50%;top:22%;transform:translate(-50%,-50%);z-index:10050;background:#16894f;color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:16px 24px;font-size:15px;font-weight:600;box-shadow:0 12px 35px rgba(0,0,0,.35);opacity:0;transition:opacity .2s;pointer-events:none;text-align:center';
+    document.body.appendChild(el);
+  }
+  el.textContent = '✓ ' + message;
+  clearTimeout(el._hideTimer);
+  el.style.opacity = '1';
+  el._hideTimer = setTimeout(() => { el.style.opacity = '0'; }, 2000);
+}
+
 function inspOpenLastInWord() {
   if (!inspLastOpenInfo) {
     alert('請先成功產生並儲存一份申驗單 Word。');
@@ -19579,6 +19766,40 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', inspLoadRememberedHandle, { once:true });
 } else {
   inspLoadRememberedHandle();
+}
+
+// 追加今日既有批次時，重讀該「日期＋流水號」原有構件，再與本次新增構件合併，
+// 讓覆蓋儲存的 Word 保留完整名單，而非只剩本次追加項目。
+async function inspMergeExistingBatchParts(newParts, ctx) {
+  if (!ctx.date || !ctx.docNo || !ctx.projNum) return newParts.slice();
+  const url = '/rest/v1/daily_output?select=id,part_no,zone_code,spec,drawing_no,proc_code,sub_code,net_weight'
+    + '&date=eq.' + encodeURIComponent(ctx.date)
+    + '&serial_no=eq.' + encodeURIComponent(ctx.docNo)
+    + '&proj_num=eq.' + encodeURIComponent(ctx.projNum)
+    + '&order=id.asc';
+  const r = await sbFetch(url);
+  const rows = Array.isArray(r.data) ? r.data : [];
+  const merged = [], byKey = new Map();
+  const add = (c, qty, isExisting) => {
+    const key = [c.part_no||'',c._zone_code||'',c.drawing_no||'',c.spec||''].join('|');
+    const found = byKey.get(key);
+    if (found) { found._inspQty += qty; return; }
+    const item = Object.assign({}, c, {_inspQty:qty});
+    if (isExisting) {
+      const prefix = ((item.spec||'').match(/^[A-Za-z]+/) || [''])[0];
+      item._board = item._board || (prefix ? prefix + '有板' : '');
+      item._utList = Array.isArray(item._utList) ? item._utList : [];
+      item._rev = item._rev || inspCompRev(item.part_no || '');
+    }
+    byKey.set(key, item); merged.push(item);
+  };
+  rows.forEach(row => add({
+    part_no:row.part_no||'', spec:row.spec||'', drawing_no:row.drawing_no||'',
+    net_weight:row.net_weight, _zone_code:row.zone_code||'', _sub:row.sub_code||'',
+    _proc_code:row.proc_code||''
+  }, 1, true));
+  newParts.forEach(c => add(c, Math.max(1,parseInt(c._inspQty)||1), false));
+  return merged;
 }
 
 async function inspBuildDocx(checked, ctx) {
@@ -19657,6 +19878,8 @@ async function inspBuildDocx(checked, ctx) {
 
   let zip = new PizZip(ctx.templateBuffer);
   let docXml = zip.file('word/document.xml').asText();
+  // 也處理修正前就已上傳並儲存的舊範本，不要求使用者重新上傳。
+  docXml = normalizeInspectionCheckboxList(docXml);
   const isFragment = (docXml.match(/<w:tbl>/g) || []).length < 3;
   if (isFragment) {
     const baseBuf = await inspGetSharedBase();
@@ -19669,6 +19892,8 @@ async function inspBuildDocx(checked, ctx) {
   if (nPages > 1) docXml = inspDuplicatePages(docXml, nPages);
   if (ndtParts.length === 0 && !anyUTPart) docXml = inspRemovePage4(docXml);
   docXml = inspLockWordLayout(docXml);
+  // 第四頁 NDT 檢驗「施作部位」5 格固定 11pt（OOXML 字級為 half-points，所以 22=11pt）。
+  for (let j = 1; j <= 5; j++) docXml = forceSizeOnMarkerRun(docXml, '{ndloc' + j + '}', 22);
   zip.file('word/document.xml', docXml);
   const doc = new docxtemplater(zip, {
     paragraphLoop: true,
@@ -19677,6 +19902,7 @@ async function inspBuildDocx(checked, ctx) {
     nullGetter: function() { return ''; }
   });
   doc.render(data);
+  inspForceBlackZipText(doc.getZip());
   const out = doc.getZip().generate({
     type: 'blob',
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -19692,6 +19918,7 @@ async function inspBuildDocx(checked, ctx) {
       docno:String(docNo || '').trim()
     };
     if (openBtn) openBtn.disabled = false;
+    inspSavedToast('已成功儲存到指定資料夾：' + (saveResult.folderName || '') + '／' + fname);
   } else {
     inspLastOpenInfo = null;
     if (openBtn) openBtn.disabled = true;
@@ -19778,17 +20005,24 @@ async function generateInspection() {
   const recvDate = (document.getElementById('insp-recv-date').value || '').trim();
   const recvTime = (document.getElementById('insp-recv-time').value || '').trim();
   const expectedDocPrefix = String(docBaseForCompany(company) + 1).slice(0, 3);
-  if (!docNo || String(parseInt(docNo, 10)).slice(0, 3) !== expectedDocPrefix) {
+  // 沒有手動改號時，在真正產單前重抓一次最新號碼，避免頁面開著期間被其他人先用掉。
+  // 手動選擇既有號碼才保留原值，供追加構件至同一流水號。
+  if (!inspDocNoManual || !docNo || String(parseInt(docNo, 10)).slice(0, 3) !== expectedDocPrefix) {
     docNo = await nextDocNo(company);
-    const docInput = document.getElementById('insp-docno');
-    if (docInput) docInput.value = docNo;
+    inspSetAutoDocNo(docNo, company);
   }
 
   try {
     let fname = '';
+    let wordChecked = realChecked;
+    if (realChecked.length && inspExistingBatchDate) {
+      wordChecked = await inspMergeExistingBatchParts(realChecked, {
+        date:inspExistingBatchDate, docNo, projNum:proj ? proj.proj_num : ''
+      });
+    }
     // (1) 產生申驗單 Word — 只放「實報構件」,預報構件排除在外
     if (realChecked.length) {
-      fname = await inspBuildDocx(realChecked, {
+      fname = await inspBuildDocx(wordChecked, {
         templateBuffer: inspTemplateBuffer,
         proj_name: projName, proj_no: proj ? proj.proj_num : '',
         owner: proj ? (proj.client || '') : '', companyUnit,
@@ -19801,6 +20035,7 @@ async function generateInspection() {
       await saveDailyOutput(checkedAll, {
         proj_num: proj ? proj.proj_num : '',
         zone_code: zoneCode, doc_no: docNo, proc_code: procCode, sub_code: zoneSub,
+        output_date: inspExistingBatchDate || '',
         inspect_time: (function(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');})(),
         company: company
       });
@@ -19831,11 +20066,12 @@ async function generateInspection() {
     // 及時重新整理「可報數量」(重讀每日產量) + 預報暫存區
     try { await inspLoadComponents(); } catch(e) {}
     try { await renderPreInspPanel(); } catch(e) {}
+    // 剛產生／追加的「今日日期＋流水號」立即更新到既有批次下拉選單。
+    try { await inspLoadExistingDocNos(proj ? proj.proj_num : ''); } catch(e) {}
     // 及時更新「單據編號」為下一號
     try {
       const nextNo = await nextDocNo(company);
-      const docInput = document.getElementById('insp-docno');
-      if (docInput) { docInput.value = nextNo; if (company) docInput.placeholder = company + ' 自動帶號'; }
+      inspSetAutoDocNo(nextNo, company);
     } catch(e) {}
     _inspGenerating = false;
   } catch(err) {
@@ -21478,7 +21714,7 @@ function exportDaily() {
 }
 // save checked components to daily_output when generating 申驗單
 async function saveDailyOutput(checked, ctx) {
-  const today = new Date().toISOString().slice(0,10);
+  const outputDate = ctx.output_date || inspTodayStr();
   const recs = [];
   checked.forEach(c => {
     const n = Math.max(1, parseInt(c._inspQty) || 1);   // 報驗支數
@@ -21487,7 +21723,7 @@ async function saveDailyOutput(checked, ctx) {
     const perW = (tw != null && tq > 0) ? tw / tq : tw;   // 每支重量(總重/數量)
     for (let k = 0; k < n; k++) {
       recs.push({
-        date: today,
+        date: outputDate,
         part_no: c.part_no || '',
         proj_num: ctx.proj_num || '',
         zone_code: ctx.zone_code || '',
@@ -21505,9 +21741,9 @@ async function saveDailyOutput(checked, ctx) {
   if (!recs.length) return;
   await sbFetch('/rest/v1/daily_output', { method:'POST', headers:{'Prefer':'return=minimal'}, body: JSON.stringify(recs) });
 }
-// 單據編號 自動帶號: 取「同公司最後一筆(依 id 排序)」的號碼 +1;
+// 單據編號自動帶號：先取該號段的最新日期，再依該日流水號往下一號。
 // 722 號段固定在 72201~72299,818 號段固定在 81801~81899,超過上限就回到起始號(72201 / 81801)。
-// 注意:一定要用「最後一筆」而不是歷史最大值 — 否則迴圈重置回 72201 之後,會被之前出現過的舊高號(例如 72299)卡住,永遠算不出正確的下一號。
+// 取最近一段連續的自動號碼；手動追加舊流水號產生的新資料，不得倒退自動號碼。
 function docBaseForCompany(company) {
   const s = String(company || '').trim();
   return /麗|li\s*sheng|lisheng|818/i.test(s) ? 81800 : 72200;
@@ -21516,30 +21752,28 @@ async function nextDocNo(company) {
   const base = docBaseForCompany(company);       // 72200 / 81800
   const upper = base + 99;                        // 72299 / 81899
   const firstNo = base + 1;                        // 72201 / 81801
-  const prefix = String(firstNo).slice(0, 3);      // '722' / '818'
-  const companyText = String(company || '').trim();
-  let rows = [];
-
-  if (companyText) {
-    const exact = await sbFetch('/rest/v1/daily_output?select=serial_no,company&company=eq.' + encodeURIComponent(companyText) + '&order=id.desc&limit=1000');
-    if (Array.isArray(exact.data)) rows = exact.data;
-  }
-
-  if (!rows.length) {
-    const all = await sbFetch('/rest/v1/daily_output?select=serial_no,company&order=id.desc&limit=1000');
-    rows = Array.isArray(all.data) ? all.data.filter(x => docBaseForCompany(x.company || companyText) === base) : [];
-  }
-
-  // rows 已經是 id 由新到舊排序,取第一筆「同號段」的號碼,才是真正的「上一筆」
-  let lastNo = null;
-  for (const x of rows) {
+  const url = '/rest/v1/daily_output?select=id,date,serial_no&serial_no=gte.' + firstNo + '&serial_no=lte.' + upper + '&order=date.desc,id.desc&limit=2000';
+  const r = await sbFetch(url);
+  const rows = Array.isArray(r.data) ? r.data : [];
+  const latestDate = rows.length ? String(rows[0].date || '').slice(0,10) : '';
+  const nums = [];
+  rows.forEach(x => {
+    if (String(x.date || '').slice(0,10) !== latestDate) return;
     const n = parseInt(x.serial_no, 10);
-    if (!isNaN(n) && String(n).slice(0, 3) === prefix) { lastNo = n; break; }
+    if (isNaN(n) || n < firstNo || n > upper) return;
+    if (nums[nums.length - 1] !== n) nums.push(n); // 同張申驗單多支構件只算一次
+  });
+  if (!nums.length) return String(firstNo);
+  const inc = n => n >= upper ? firstNo : n + 1;
+  let lastAuto = nums[0];
+  // 最新一筆若比前一筆倒退，視為手動追加舊號；正常的 99→01 循環不算倒退。
+  if (nums.length > 1 && nums[0] < nums[1] && !(nums[0] === firstNo && nums[1] === upper)) {
+    lastAuto = nums[1];
+    for (let i = 1; i + 1 < nums.length; i++) {
+      if (nums[i] === inc(nums[i + 1])) { lastAuto = nums[i]; break; }
+    }
   }
-  if (lastNo == null) return String(firstNo);
-  let next = lastNo + 1;
-  if (next > upper) next = firstNo;   // 72299 → 72201 / 81899 → 81801
-  return String(next);
+  return String(inc(lastAuto));
 }
 
 // ═══════════ A201/A202 長榮登錄統計(獨立頁面)═══════════
@@ -22804,6 +23038,9 @@ let attWeekStart = null;   // 週回報：當週週一 ISO
 let attWeekData = [];
 let attRptMonth = null;    // 月回報：當前月份 YYYY-MM
 let attReportData = [];
+let attOverviewMonth = null; // 月總覽：當前月份 YYYY-MM
+let attOverviewData = [];
+let attOverviewLeaveOnly = false;
 let attInited = false;
 
 function attEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -22819,18 +23056,20 @@ function attendanceInit(){
     document.getElementById('att-date').value = attLocalISO(now);
     attWeekStart = attMondayOf(attLocalISO(now));
     attRptMonth = attLocalISO(now).slice(0,7);
+    attOverviewMonth = attLocalISO(now).slice(0,7);
     attInited=true;
   }
   attendanceLoadMonth();
 }
 // 分頁切換
 function attTab(name){
-  ['main','week','month','esg'].forEach(t=>{
+  ['main','week','month','overview','esg'].forEach(t=>{
     const sec=document.getElementById('att-tab-'+t); if(sec) sec.style.display=(t===name)?'':'none';
     const btn=document.getElementById('att-tabbtn-'+t); if(btn) btn.classList.toggle('active',t===name);
   });
   if(name==='week') attLoadWeek();
   if(name==='month') attLoadReport();
+  if(name==='overview') attLoadOverview();
 }
 // 取某日期所在週的「週一」ISO
 function attMondayOf(iso){
@@ -23312,6 +23551,91 @@ function attRenderReport(){
          <tr class="total"><td class="lbl">總數</td><td class="num">${attN(grand)}</td></tr>
        </tbody>
      </table>`;
+}
+
+// 月總覽：獨立月份，以與週回報相同的逐日出勤表呈現整個月
+function attOverviewNav(dir){
+  let m=attOverviewMonth||attLocalISO(new Date()).slice(0,7);
+  if(dir===0){ m=attLocalISO(new Date()).slice(0,7); }
+  else { let [y,mo]=m.split('-').map(Number); mo+=dir; if(mo<1){mo=12;y--;} else if(mo>12){mo=1;y++;} m=y+'-'+String(mo).padStart(2,'0'); }
+  attOverviewMonth=m; attLoadOverview();
+}
+function attToggleOverviewLeave(){
+  attOverviewLeaveOnly=!attOverviewLeaveOnly;
+  const btn=document.getElementById('att-overview-leave-btn');
+  if(btn){ btn.classList.toggle('active',attOverviewLeaveOnly); btn.textContent=attOverviewLeaveOnly?'顯示全部':'列出請假'; }
+  attRenderOverview();
+}
+async function attLoadOverview(){
+  if(!attOverviewMonth) attOverviewMonth=attLocalISO(new Date()).slice(0,7);
+  const r=attRangeOf(attOverviewMonth); if(!r) return;
+  const lab=document.getElementById('att-overview-label'); if(lab) lab.textContent=r.label;
+  const box=document.getElementById('att-overview-box');
+  if(box) box.innerHTML='<div style="text-align:center;color:var(--text3);padding:20px">載入中…</div>';
+  const res=await sbFetchAll(`/rest/v1/att_report?select=*&work_date=gte.${r.first}&work_date=lte.${r.last}&order=staff_name,work_date`);
+  attOverviewData=Array.isArray(res.data)?res.data:[];
+  attRenderOverview();
+}
+function attRenderOverview(){
+  const box=document.getElementById('att-overview-box'); if(!box) return;
+  const range=attRangeOf(attOverviewMonth); if(!range) return;
+  let dates=[]; { const d=new Date(range.first+'T00:00:00'); while(attLocalISO(d)<=range.last){ dates.push(attLocalISO(d)); d.setDate(d.getDate()+1); } }
+  const leaveRows=attOverviewData.filter(r=>r.leave_type||(+r.leave_hours||0)>0);
+  const leaveNames=new Set(leaveRows.map(r=>r.staff_name));
+  if(attOverviewLeaveOnly) dates=[...new Set(leaveRows.map(r=>r.work_date))].sort();
+  const seen=new Set(), list=[];
+  (Array.isArray(allStaff)?allStaff:[]).forEach(s=>{
+    if(!s.name||s.status==='離職'||seen.has(s.name)) return;
+    seen.add(s.name); list.push({name:s.name,cat:staffDept(s.role,s.department),team:(s.role||'').trim()});
+  });
+  attOverviewData.forEach(x=>{
+    if(!x.staff_name||seen.has(x.staff_name)) return;
+    seen.add(x.staff_name); list.push({name:x.staff_name,cat:staffDept(x.team,x.category),team:x.team||''});
+  });
+  list.sort((a,b)=>(ATT_CATORD[a.cat]??9)-(ATT_CATORD[b.cat]??9)
+    ||(ROLE_ORDER[a.team]??9)-(ROLE_ORDER[b.team]??9)||a.name.localeCompare(b.name,'zh-Hant'));
+  if(attOverviewLeaveOnly){
+    for(let i=list.length-1;i>=0;i--) if(!leaveNames.has(list[i].name)) list.splice(i,1);
+  }
+  const summary=document.getElementById('att-overview-summary');
+  if(!list.length){
+    box.innerHTML='<div style="text-align:center;color:var(--text3);padding:24px">'+(attOverviewLeaveOnly?'本月尚無請假資料':'尚無人員資料')+'</div>';
+    if(summary) summary.textContent='0 人'; return;
+  }
+  const idx={}; attOverviewData.forEach(r=>{ idx[r.staff_name+'|'+r.work_date]=r; });
+  const wh=r=>+r.work_hours||0, oh=r=>(+r.ot_hours||0)+(+r.night_hours||0), lh=r=>+r.leave_hours||0, lt=r=>r.leave_type||'';
+  const G=[r=>wh(r)/8,r=>wh(r),r=>oh(r)/6,r=>oh(r),lt,lh], SUM=[true,true,true,true,false,true], NCOL=6;
+  let cg='<col class="c-name"><col class="c-team">'; dates.forEach(()=>{for(let i=0;i<NCOL;i++)cg+='<col class="c-d">';});
+  let head='<tr class="wk-daterow"><th class="wk-corner" colspan="2">'+attEsc(range.label)+' 出勤表<br>總人數：'+list.length+'</th>';
+  dates.forEach((d,di)=>{const dt=new Date(d+'T00:00:00');head+='<th class="wk-date'+(di?' wk-daysep':'')+'" colspan="'+NCOL+'">'+(+d.slice(5,7))+'/'+(+d.slice(8,10))+'<br>('+ATT_WK[dt.getDay()]+')</th>';});
+  head+='</tr>';
+  const secs=[
+    {cat:'辦公人員',cls:'cat-off',ot:'夜間值班',people:list.filter(p=>p.cat==='辦公人員')},
+    {cat:'現場人員（本工）',cls:'cat-site',ot:'加班出勤',people:list.filter(p=>p.cat==='本工')},
+    {cat:'自有外勞',cls:'cat-own',ot:'加班出勤',people:list.filter(p=>p.cat==='自有外勞')},
+    {cat:'長榮外勞',cls:'cat-eva',ot:'加班出勤',people:list.filter(p=>p.cat==='長榮外勞')}
+  ];
+  let body='';
+  secs.forEach(s=>{
+    if(!s.people.length)return;
+    let g1='<tr class="grp-h '+s.cls+'"><th class="secname" colspan="2" rowspan="2">'+attEsc(s.cat)+'<br><span style="font-weight:400;font-size:9px">'+s.people.length+' 人</span></th>';
+    dates.forEach((d,di)=>{g1+='<th class="'+(di?'wk-daysep':'')+'" colspan="2">正常出勤</th><th colspan="2">'+attEsc(s.ot)+'</th><th colspan="2">請假</th>';}); g1+='</tr>';
+    let g2='<tr class="sub-h '+s.cls+'">'; dates.forEach((d,di)=>{g2+='<th class="'+(di?'wk-daysep':'')+'">工數</th><th>時數</th><th>工數</th><th>時數</th><th>類別</th><th>時數</th>';}); g2+='</tr>';
+    const tot=dates.map(()=>new Array(NCOL).fill(0)); let prows='';
+    s.people.forEach(p=>{
+      const team=(s.cat==='辦公人員'&&p.team!=='老闆')?'辦公人員':(p.team||'—');
+      let row='<tr class="'+s.cls+'"><td class="name">'+attEsc(p.name)+'</td><td class="team">'+attEsc(team)+'</td>';
+      dates.forEach((d,di)=>{const rec=idx[p.name+'|'+d]||{};for(let ci=0;ci<NCOL;ci++){const sep=(di&&ci===0)?' class="wk-daysep"':'';const v=G[ci](rec);if(SUM[ci]){const x=+v||0;tot[di][ci]+=x;row+='<td'+sep+'>'+(x?attN(x):'')+'</td>';}else row+='<td'+sep+'>'+(v?attEsc(v):'')+'</td>';}});
+      prows+=row+'</tr>';
+    });
+    let sub='<tr class="wk-total '+s.cls+'"><td class="name" colspan="2">'+attEsc(s.cat)+' 總數</td>';
+    dates.forEach((d,di)=>{for(let ci=0;ci<NCOL;ci++){const x=tot[di][ci];sub+='<td'+((di&&ci===0)?' class="wk-daysep"':'')+'>'+(SUM[ci]&&x?attN(x):'')+'</td>';}}); sub+='</tr>';
+    body+=g1+g2+prows+sub;
+  });
+  const present={}; attOverviewData.forEach(r=>{if((+r.work_hours||0)>0)present[r.work_date]=(present[r.work_date]||0)+1;});
+  let grand='<tr class="wk-grand"><td colspan="2">出勤總人數</td>'; dates.forEach((d,di)=>{const c=present[d]||0;grand+='<td'+(di?' class="wk-daysep"':'')+' colspan="'+NCOL+'">'+(c?c+' 人':'')+'</td>';}); grand+='</tr>';
+  box.innerHTML='<table class="att-week-grid"><colgroup>'+cg+'</colgroup><thead>'+head+'</thead><tbody>'+body+grand+'</tbody></table>';
+  if(summary) summary.textContent=(attOverviewLeaveOnly?'請假 ':'總人數 ')+list.length+' 人（辦公 '+secs[0].people.length+'、本工 '+secs[1].people.length+'、自有外勞 '+secs[2].people.length+'、長榮外勞 '+secs[3].people.length+'）';
 }
 
 function attRenderESG(){
@@ -26358,7 +26682,13 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   var blCompany={};      // zkey -> 最常出現公司(報驗公司)
   var blProjCompany={};  // proj_num(大寫) -> projects.company(鎮山/麗生)
   var blMonth='';        // 'YYYY-MM' 產量月
-  var blPeriods={};      // ym -> {r1from,r1to,r2from,r2to} 本次操作記住的計價期間(改過就記,不必存檔)
+  var BL_PERIODS_STORAGE_KEY='billing_custom_periods_v1';
+  var blPeriods=(function(){
+    try{
+      var saved=JSON.parse(localStorage.getItem(BL_PERIODS_STORAGE_KEY)||'{}');
+      return saved&&typeof saved==='object'&&!Array.isArray(saved)?saved:{};
+    }catch(e){ return {}; }
+  })();                // ym -> {r1from,r1to,r2from,r2to}；手動修改後跨重新整理保留
   var blRecords={};      // 'round|zid' -> record(含輸入欄)
   var blCross={1:[],2:[]};  // 跨月請款:別的產量月、但請款日落在本月此次的列(即時算,不另存表)
   var blLabor=[];           // 點工單(只取請款日/請款金額/保留款),供各次計價的「點工款項」「點工保留款」卡片
@@ -26447,12 +26777,16 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   }
   window.blPaintStatus=function(el){ if(!el)return; el.classList.remove('bst-paid','bst-unpaid','bst-unpriced','bst-labor','bst-other'); el.classList.add(billStatusClassName(el.value!=null?el.value:el.textContent)); };
 
-  // 兩次計價的預設日期區間(依產量月 ym)：第一次 (前月)16~月底、第二次 1~15
+  // 兩次計價的預設日期區間(依產量月 ym)：2026/07 起第一次為前月 16~25，第二次為前月 26~本月 15。
   function roundDates(ym){
     var y=+ym.slice(0,4), m=+ym.slice(5,7);
     if(ym<'2026-03') return {
       1:{ from:mkDate(y,m-1,16), to:mkDate(y,m,15) },
       2:{ from:'', to:'' }
+    };
+    if(ym>='2026-07') return {
+      1:{ from:mkDate(y,m-1,16), to:mkDate(y,m-1,25) },
+      2:{ from:mkDate(y,m-1,26), to:mkDate(y,m,15) }
     };
     return {
       1:{ from:mkDate(y,m-1,16), to:monthEndOf(mkDate(y,m-1,1)) },
@@ -26482,12 +26816,13 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(h1) h1.textContent=oldSingle?'計價':'第一次計價';
     if(h2) h2.textContent='第二次計價';
   }
-  // 把目前四個日期欄記到 blPeriods[blMonth](使用者一改日期就記,不必存檔)
+  // 把目前四個日期欄依月份記住；只在使用者手動修改時呼叫，預設值不會覆蓋自訂值。
   function capturePeriod(){
     var f1=document.getElementById('bl-r1-from'), t1=document.getElementById('bl-r1-to');
     var f2=document.getElementById('bl-r2-from'), t2e=document.getElementById('bl-r2-to');
     if(!blMonth) return;
     blPeriods[blMonth]={ r1from:f1&&f1.value, r1to:t1&&t1.value, r2from:f2&&f2.value, r2to:t2e&&t2e.value };
+    try{ localStorage.setItem(BL_PERIODS_STORAGE_KEY,JSON.stringify(blPeriods)); }catch(e){}
   }
 
   function blSaved(msg,color){ var el=document.getElementById('bl-saved'); if(el){ el.textContent=msg||''; el.style.color=color||'var(--text3)'; } }
@@ -26725,9 +27060,11 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   };
 
   // 第一次計價的「起始日」預設 = 上個月第二次計價的結束日 + 1 天。
-  // 來源優先序:本次操作記住的上月期間(blPeriods) → 已存檔紀錄(billing_records)。
+  // 本月只要曾手動調整日期，就完整保留四個日期，不再套用自動承接。
+  // 尚未手動調整時，來源優先序:上月本次操作記住的期間(blPeriods) → 已存檔紀錄(billing_records)。
   async function applyChainDefaults(ym){
     if(blLegacy[ym]) return;
+    if(blPeriods[ym]) return;
     var prevYm=shiftMonthYm(ym,-1);
     // 上月第二次結束日:優先用本次操作記住的(改了沒存也算),否則用已存檔紀錄
     var to2=(blPeriods[prevYm] && blPeriods[prevYm].r2to) || null;
@@ -26741,7 +27078,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     }
     if(to2){
       var f1=document.getElementById('bl-r1-from');
-      if(f1){ f1.value=addDays(to2,1); if(blPeriods[ym]) blPeriods[ym].r1from=f1.value; }  // 第一次起始永遠接上月第二次結束
+      if(f1) f1.value=addDays(to2,1);
     }
   }
 
@@ -27249,16 +27586,17 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var recIdx={};
     if(blDemo){ Object.keys(blDemoRec).forEach(function(k){ var r=blDemoRec[k]; recIdx[r.ym+'|'+r.round+'|'+r.zone_id]=r; }); }
     else { var res=await sbFetchAll('/rest/v1/billing_records?select=*'); (Array.isArray(res.data)?res.data:[]).forEach(function(r){ recIdx[r.ym+'|'+r.round+'|'+r.zone_id]=r; }); }
-    // 「請款紀錄」(billing_archive)也代表已請款:依 產量月+工程區(不分計價次別)排除→兩張表連動
-    var arcMain={}, arcUtil={};   // 'ym|zid' -> true
+    // 「請款紀錄」(billing_archive)也代表已請款:依 產量月+計價次別+工程區 排除→兩張表連動。
+    // 次別不可省略，否則同月其中一次已請款，會誤把另一次尚未請款的同工程區一起排除。
+    var arcMain={}, arcUtil={};   // 'ym|round|zid' -> true
     // 已請款判定:有正數金額,或文字含 已請款/合併/和算(如「9/17已請款」「NT合併」「NT與F61V和算」)。
     // 注意「未請款」不含「已請款」子字串,故不會誤判為已請款。
     var arcBilled=function(v){ if(v==null) return false; if(billNum(v)>0) return true; return /已請款|合併|和算/.test(String(v)); };
-    if(blDemo){ blDemoArc.forEach(function(r){ var ak=r.ym+'|'+r.zone_id; if(arcBilled(r.bill_price)) arcMain[ak]=true; if(arcBilled(r.util_bill_price)) arcUtil[ak]=true; }); }
+    if(blDemo){ blDemoArc.forEach(function(r){ var ak=r.ym+'|'+r.round+'|'+r.zone_id; if(arcBilled(r.bill_price)) arcMain[ak]=true; if(arcBilled(r.util_bill_price)) arcUtil[ak]=true; }); }
     else {
-      var ares=await sbFetchAll('/rest/v1/billing_archive?select=ym,zone_id,bill_price,util_bill_price');
+      var ares=await sbFetchAll('/rest/v1/billing_archive?select=ym,round,zone_id,bill_price,util_bill_price');
       (Array.isArray(ares.data)?ares.data:[]).forEach(function(r){
-        var ak=r.ym+'|'+r.zone_id;
+        var ak=r.ym+'|'+r.round+'|'+r.zone_id;
         if(arcBilled(r.bill_price)) arcMain[ak]=true;
         if(arcBilled(r.util_bill_price)) arcUtil[ak]=true;
       });
@@ -27297,7 +27635,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var zid=(z.zid==null?null:z.zid);
       var rec = (zid==null)?{}:(recIdx[o.ym+'|'+o.round+'|'+zid]||{});
       var comp=companyOf(o.proj_num,o.zkey);
-      var akey=o.ym+'|'+zid;   // 對照請款紀錄(不分計價次別)
+      var akey=o.ym+'|'+o.round+'|'+zid;   // 對照請款紀錄（同產量月、同次別、同工程區）
       var lines=byYm[o.ym]||(byYm[o.ym]=[]);
       // 主件
       var tons=o.kg/1000, total=tons*num(z.unit_price);
@@ -27366,13 +27704,17 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var monthRows='<tr class="ub-report-period"><td>'+ym.replace('-','/')+'未請款</td><td colspan="8"></td></tr>';
       rs.forEach(function(r){
         var st=r.status||'未請款',stClass=/未請款|未過/.test(st)?'st-unbilled':/已議價|點工/.test(st)?'st-negotiated':'';
-        monthRows+='<tr><td>'+esc(r.proj_num)+'</td><td>'+esc(r.zone_code)+'</td><td>'+esc(r.proc_code||'')+'</td><td>'+esc(r.sub_code||'')+'</td>'
+        var reportZone=String(r.zone_code||'')+(r.kind==='水電'?'水電':'');
+        monthRows+='<tr><td>'+esc(r.proj_num)+'</td><td>'+esc(reportZone)+'</td><td>'+esc(r.proc_code||'')+'</td><td>'+esc(r.sub_code||'')+'</td>'
           +'<td class="num">'+t2(r.tons)+' t</td><td class="num">'+(r.qty==null?'':intf(r.qty)+' 支')+'</td><td class="num">'+ntd(r.amount)+'</td>'
           +'<td class="'+stClass+'">'+esc(st)+'</td><td>'+esc(r.note||'')+'</td></tr>';
       });
       reportRows=monthRows+reportRows;
       reportLines.push(ym.replace('-','/')+'｜主件 '+ntd(monMain)+'｜水電 '+ntd(monUtil)+'｜小計 '+ntd(sub));
-      rs.forEach(function(r){ reportLines.push('  '+r.proj_num+' '+r.zone_code+' '+r.kind+'｜'+(r.labor?'點工計價':ntd(r.amount))+'｜'+(r.status||'未請款')); });
+      rs.forEach(function(r){
+        var reportZone=String(r.zone_code||'')+(r.kind==='水電'?'水電':'');
+        reportLines.push('  '+r.proj_num+' '+reportZone+(r.kind==='水電'?'':' '+r.kind)+'｜'+(r.labor?'點工計價':ntd(r.amount))+'｜'+(r.status||'未請款'));
+      });
       reportLines.push('');
       html+='<section class="ub-month"><div class="ub-group-h">'+(+ym.slice(5,7))+'月產量　('+ym+')　小計 '+ntd(sub)
         +'　<button class="btn" style="padding:2px 10px" onclick="blGoMonth(\''+ym+'\')">→ 前往此月請款核對</button></div>'
@@ -32416,6 +32758,7 @@ async function deductionsInit(){
 function deductionsCat(c){
   dedCat=c||'';
   GridXL._cfg.ded.cols=dedCols(dedCat);   // 依分類換欄位
+  const table=document.getElementById('gx-ded');if(table)table.classList.toggle('ded-all',!dedCat);
   dedRenderTabs();
   GridXL.render('ded');
 }
