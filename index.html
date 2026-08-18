@@ -1447,6 +1447,44 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 /* 每日產量:每欄以內容自動撐開(顯示資訊優先),內容放得下後表格 width:100% 會把剩餘寬度平均分配 */
 #daily-table{table-layout:auto}
 #daily-table td input{field-sizing:content;width:auto;min-width:2ch;max-width:44ch;box-sizing:border-box}
+/* 每日產量:分類卡片式(收合/展開) */
+#page-daily .daily-mode-label{font-size:11px;font-family:var(--mono);color:var(--text3);margin-left:4px}
+.daily-seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--rad);overflow:hidden}
+.daily-seg button{background:none;border:none;border-left:1px solid var(--border);color:var(--text3);font-family:var(--mono);font-size:12px;padding:6px 14px;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+.daily-seg button:first-child{border-left:none}
+.daily-seg button:hover{background:var(--bg3);color:var(--text2)}
+.daily-seg button.on{background:var(--accent2);color:#fff}
+.daily-cards{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.daily-cards .dc-empty{text-align:center;color:var(--text3);padding:32px;font-family:var(--mono);font-size:13px}
+.dc-card{border:1px solid var(--border);border-radius:var(--rad-lg);background:var(--bg2);overflow:hidden;transition:border-color .15s}
+.dc-card:hover,.dc-card.open{border-color:var(--border-hi)}
+.dc-head{display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer;user-select:none}
+.dc-head:hover{background:var(--bg3)}
+.dc-caret{color:var(--text3);font-size:11px;width:12px;flex:none;transition:transform .15s}
+.dc-card.open .dc-caret{transform:rotate(90deg)}
+.dc-proj{font-size:15px;font-weight:600;letter-spacing:.02em;flex:none;font-family:var(--mono)}
+.dc-serial{font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:2px 10px;flex:none;font-family:var(--mono)}
+.dc-spacer{flex:1}
+.dc-stat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.25;flex:none;min-width:48px;font-family:var(--mono)}
+.dc-stat .v{font-size:15px;font-weight:600}
+.dc-stat .k{font-size:10px;color:var(--text3);letter-spacing:.05em}
+.dc-stat.ton .v{color:var(--accent3)}
+.dc-co{font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);padding:4px 10px;flex:none;font-family:var(--mono)}
+.dc-word{font-size:12px;color:#fff;background:var(--accent2);border:1px solid var(--accent2);border-radius:var(--rad);padding:5px 12px;cursor:pointer;flex:none;font-family:var(--mono)}
+.dc-word.dc-word-dim{background:none;border-color:var(--border);color:var(--text3);cursor:default}
+.dc-x{width:28px;height:28px;border:1px solid var(--border);border-radius:var(--rad);background:none;color:var(--text3);cursor:pointer;flex:none;font-size:13px;line-height:1}
+.dc-x:hover{color:var(--danger,#ff453a);border-color:var(--danger,#ff453a)}
+.dc-body{background:var(--bg);border-top:1px solid var(--border);padding:6px 10px 10px}
+.dc-row{display:flex;align-items:center;gap:12px;padding:9px 8px;border-radius:var(--rad)}
+.dc-row+.dc-row{border-top:1px solid var(--border)}
+.dc-row:hover{background:var(--bg2)}
+.dc-pno{font-size:13px;font-weight:600;color:var(--text);flex:none;min-width:56px;font-family:var(--mono)}
+.dc-qty{font-size:11px;color:var(--accent3);background:rgba(64,200,224,.12);border-radius:999px;padding:1px 8px;flex:none;font-family:var(--mono)}
+.dc-meta{color:var(--text3);font-size:11.5px;flex:1;display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono)}
+.dc-meta b{color:var(--text2);font-weight:400}
+.dc-x-sm{width:24px;height:24px;border:1px solid transparent;border-radius:var(--rad);background:none;color:var(--text3);cursor:pointer;flex:none;font-size:12px;line-height:1}
+.dc-x-sm:hover{color:var(--danger,#ff453a);border-color:var(--danger,#ff453a)}
+.daily-cards .pager-bar{display:flex;align-items:center;gap:8px;justify-content:center;padding:10px 0;flex-wrap:wrap}
 
 /* ===== S/P 板厚分類剖析 (namespaced) ===== */
 #page-sp *, #page-sp *::before, #page-sp *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -3543,8 +3581,8 @@ window.normalizeFullWidth=function(value){
         <div class="axx-hint" id="a202-hint"></div>
         <div class="axx-wrap">
           <table class="axx-table">
-            <thead><tr><th style="width:92px">時間</th><th style="width:76px">輸入完成</th><th style="width:60px">日期</th><th style="width:88px">工程編號</th><th style="width:90px">工程區</th><th style="width:90px">代號</th><th style="width:90px">副號</th><th style="width:88px">流水編號</th><th style="width:52px">支數</th><th>構件編號</th><th style="width:56px">照片</th><th style="width:92px">鍵入系統</th></tr></thead>
-            <tbody id="a202-body"><tr><td colspan="12" class="axx-empty">載入中…</td></tr></tbody>
+            <thead><tr><th style="width:92px">時間</th><th style="width:76px">輸入完成</th><th style="width:60px">日期</th><th style="width:68px" title="送進 Oracle Forms 的日期;只有每月 15 號 +1(遇週日跳週一),其餘同日期">keyin日期</th><th style="width:88px">工程編號</th><th style="width:90px">工程區</th><th style="width:90px">代號</th><th style="width:90px">副號</th><th style="width:88px">流水編號</th><th style="width:52px">支數</th><th>構件編號</th><th style="width:56px">照片</th><th style="width:92px">鍵入系統</th></tr></thead>
+            <tbody id="a202-body"><tr><td colspan="13" class="axx-empty">載入中…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -4811,6 +4849,12 @@ window.normalizeFullWidth=function(value){
         <input type="text" id="daily-f-part" placeholder="搜尋構件編號…" oninput="renderDaily()"/>
         <button class="btn" onclick="dailyResetFilters()">重設篩選</button>
         <button class="btn" onclick="dailyShowAll()" title="顯示所有日期">列出全部</button>
+        <span class="daily-mode-label">顯示</span>
+        <div class="daily-seg" id="daily-view-mode" role="group" title="顯示方式">
+          <button type="button" data-mode="flat" onclick="dailySetViewMode('flat')">明細</button>
+          <button type="button" data-mode="collapsed" onclick="dailySetViewMode('collapsed')">分類收合</button>
+          <button type="button" data-mode="expanded" onclick="dailySetViewMode('expanded')">分類展開</button>
+        </div>
         <div class="toolbar-sep"></div>
         <span class="count-label" id="daily-count"></span>
         <button class="btn" onclick="dailyBatchImport()">📥 批次輸入</button>
@@ -4818,7 +4862,7 @@ window.normalizeFullWidth=function(value){
       </div>
       <div class="layout-table-wrap" style="margin-top:14px">
         <table class="layout-table" id="daily-table" onkeydown="tableArrowNav(event)">
-          <thead><tr>
+          <thead id="daily-thead"><tr>
             <th>日期</th><th>構件編號</th><th>工程編號</th><th>工程區</th><th>數量</th><th>單重(kg)</th>
             <th>圖號</th><th>流水編號</th><th>規格</th><th>加工代號</th><th>工程副號</th>
             <th>報驗時間</th><th>報驗公司</th><th>報驗單</th><th></th>
@@ -4826,6 +4870,7 @@ window.normalizeFullWidth=function(value){
           <tbody id="daily-body"></tbody>
         </table>
       </div>
+      <div id="daily-cards" class="daily-cards" style="display:none"></div>
     </div>
 
     <!-- S/P 板厚分類剖析 -->
@@ -19397,6 +19442,13 @@ function nextInspectDate(today) {
   else if (dow === 0) d = new Date(d.getTime() + 1*86400000); // Sun -> Mon
   return d;
 }
+// 製造 Key in 時間:只有「每月 15 號」報驗才 +1 天(遇週日再跳週一,週六照常 Key in);其餘日期維持當天
+function nextKeyinDate(today) {
+  if (today.getDate() !== 15) return today;        // 非 15 號 → 當天,不調整
+  let d = new Date(today.getTime() + 86400000);     // 15 號 → +1 天
+  if (d.getDay() === 0) d = new Date(d.getTime() + 86400000); // 若落在週日 → 再 +1 到週一
+  return d;
+}
 
 // #7 Duplicate page 1 (table 0) and page 3 (table 2) when parts > 20
 function inspNthTableSpan(xml, n) {
@@ -20151,7 +20203,7 @@ async function generateInspection() {
         proj_name: projName, proj_no: proj ? proj.proj_num : '',
         owner: proj ? (proj.client || '') : '', companyUnit,
         zoneCode, procCode, workLoc, person, docNo,
-        recvDate, recvTime, today, inspectDay, keyinDate: westDot(today)
+        recvDate, recvTime, today, inspectDay, keyinDate: westDot(nextKeyinDate(today))
       });
     }
     // (2) 寫入每日產量 — 實報 + 預報「全部」都要計入產量(流水編號同一個 docNo)
@@ -20171,7 +20223,7 @@ async function generateInspection() {
         const pr = await preInspInsert(preChecked, {
           proj_id: pid, zone_id: zid, proj_num: proj ? proj.proj_num : '', proj_name: projName,
           client: proj ? (proj.client || '') : '', zoneCode, zoneSub, procCode,
-          docNo, company, companyUnit, workLoc, keyinDate: westDot(today), person
+          docNo, company, companyUnit, workLoc, keyinDate: westDot(nextKeyinDate(today)), person
         });
         preOk = !!(pr && pr.ok);
       } catch(e) { console.error('預報構件暫存失敗', e); preOk = false; }
@@ -21675,6 +21727,11 @@ document.addEventListener('keydown', e => {
 // ── 每日產量 (#5) ──
 let dailyRows = [];
 let dailyViewDate = '';   // 單日檢視(預設今天);空字串=顯示全部日期
+// 顯示方式:flat=明細(原本)、collapsed=分類收合、expanded=分類展開。使用者選擇記到 localStorage 當預設。
+let dailyViewMode = (function(){ try { return localStorage.getItem('daily_view_mode') || 'flat'; } catch(e){ return 'flat'; } })();
+const dailyOpenSet = new Set();     // collapsed 模式:被點開的批次 key
+const dailyClosedSet = new Set();   // expanded 模式:被收起的批次 key
+const DAILY_THEAD_FLAT = '<tr><th>日期</th><th>構件編號</th><th>工程編號</th><th>工程區</th><th>數量</th><th>單重(kg)</th><th>圖號</th><th>流水編號</th><th>規格</th><th>加工代號</th><th>工程副號</th><th>報驗時間</th><th>報驗公司</th><th>報驗單</th><th></th></tr>';
 // 效能:預設只抓「近 DAILY_INIT_DAYS 天」讓頁面快速顯示;需要看更舊日期或「列出全部」時才補抓完整歷史。
 const DAILY_INIT_DAYS = 120;
 let dailyFullLoaded = false;   // 是否已載入完整歷史
@@ -21796,14 +21853,20 @@ function dailyGroupRows(rows){
 function renderDaily() {
   refreshDateWk();   // 更新「日期（星期）」顯示
   const tbody = dailyEl('daily-body'); if (!tbody) return;
+  const modeSeg = dailyEl('daily-view-mode'); if (modeSeg) modeSeg.querySelectorAll('button').forEach(btn => btn.classList.toggle('on', btn.dataset.mode === dailyViewMode));
+  const grouped = (dailyViewMode !== 'flat');
+  const thead = dailyEl('daily-thead'); if (thead) thead.innerHTML = DAILY_THEAD_FLAT;
+  const dTblEl = dailyEl('daily-table'); if (dTblEl) { const wrap = dTblEl.closest('.layout-table-wrap') || dTblEl; wrap.style.display = grouped ? 'none' : ''; }
+  const cardsEl = dailyEl('daily-cards'); if (cardsEl) cardsEl.style.display = grouped ? '' : 'none';
   const rs=(dailyEl('daily-range-start')||{}).value||'', re=(dailyEl('daily-range-end')||{}).value||'';
   const nb=dailyEl('daily-next-btn'); if (nb) nb.disabled = !!(rs&&re) || !dailyViewDate || dailyViewDate >= dailyTodayStr();
-  // 篩選條件有變就跳回第 1 頁(分頁按鈕不改條件,故切頁時保留頁碼)
-  const dsig = [rs,re,dailyViewDate,(dailyEl('daily-f-proj')||{}).value,(dailyEl('daily-f-zone')||{}).value,(dailyEl('daily-f-company')||{}).value,(dailyEl('daily-f-serial')||{}).value].join('|');
+  // 篩選條件(含顯示模式)有變就跳回第 1 頁(分頁按鈕不改條件,故切頁時保留頁碼)
+  const dsig = [dailyViewMode,rs,re,dailyViewDate,(dailyEl('daily-f-proj')||{}).value,(dailyEl('daily-f-zone')||{}).value,(dailyEl('daily-f-company')||{}).value,(dailyEl('daily-f-serial')||{}).value].join('|');
   if (dsig !== dailyLastSig) { dailyLastSig = dsig; pgState.daily = 0; }
   const rawRows = dailyGetFiltered();
-  const groups = dailyGroupRows(rawRows);   // 合併相同構件,qty = 支數
   let ctx = (rs&&re) ? (rs+' ~ '+re) : (dailyViewDate || '全部日期');
+  if (grouped) { renderDailyGrouped(rawRows, ctx); return; }
+  const groups = dailyGroupRows(rawRows);   // 合併相同構件,qty = 支數
   dailyEl('daily-count').textContent = ctx + ' · 共 ' + groups.length + ' 筆 / ' + rawRows.length + ' 支';
   if (!groups.length) { tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:var(--text3);padding:32px;font-family:var(--mono);font-size:13px">尚無資料</td></tr>'; return; }
   const pgD = pagerSlice('daily', groups);
@@ -21822,6 +21885,108 @@ function renderDaily() {
   '</tr>'; }).join('') + pagerRow(pgD, 15);
   const dTbl = document.getElementById('daily-table');
   if (dTbl) tblInitSelection(dTbl);
+}
+// ── 分類收合/展開:以「日期+工程+流水編號」為一個報驗批次 ──
+function dailyBatchKey(r){ return [r.date||'', r.proj_num||'', String(r.serial_no||'')].join(''); }
+function dailyBuildBatches(rows){
+  const map = new Map(), order = [];
+  rows.forEach(r => {
+    const k = dailyBatchKey(r);
+    let b = map.get(k);
+    if (!b) { b = { key:k, date:r.date||'', proj_num:r.proj_num||'', serial_no:r.serial_no||'', company:r.company||'', qty:0, tonKg:0, ids:[], rows:[] }; map.set(k,b); order.push(b); }
+    b.qty++;
+    const w = (r.net_weight!=null && r.net_weight!=='') ? parseFloat(r.net_weight) : 0; if (!isNaN(w)) b.tonKg += w;
+    if (r.id != null) b.ids.push(r.id);
+    if (!b.company && r.company) b.company = r.company;
+    b.rows.push(r);
+  });
+  order.sort((a,b) => String(b.date).localeCompare(String(a.date)) || String(b.serial_no).localeCompare(String(a.serial_no), undefined, {numeric:true}));
+  return order;
+}
+function dailyBatchOpen(key){ return dailyViewMode === 'expanded' ? !dailyClosedSet.has(key) : dailyOpenSet.has(key); }
+function renderDailyGrouped(rows, ctx){
+  const cont = dailyEl('daily-cards'); if (!cont) return;
+  const enc = s => encodeURIComponent(s).replace(/'/g,'%27');
+  const batches = dailyBuildBatches(rows);
+  dailyEl('daily-count').textContent = ctx + ' · 共 ' + batches.length + ' 批 / ' + rows.length + ' 支';
+  if (!batches.length) { cont.innerHTML = '<div class="dc-empty">尚無資料</div>'; return; }
+  const pgB = pagerSlice('daily', batches);
+  let html = '';
+  pgB.slice.forEach(b => {
+    const open = dailyBatchOpen(b.key);
+    const ton = b.tonKg/1000;
+    const wordBtn = '<button class="dc-word" onclick="event.stopPropagation();inspDownloadArchived(\''+esc(b.date||'')+'\',\''+esc(b.proj_num||'')+'\',\''+esc(String(b.serial_no||''))+'\')" title="下載雲端備份的最新版 Word">Word</button>';
+    html += '<div class="dc-card'+(open?' open':'')+'">' +
+      '<div class="dc-head" onclick="dailyToggleBatch(\''+enc(b.key)+'\')">' +
+        '<span class="dc-caret">▶</span>' +
+        '<span class="dc-proj">'+esc(b.proj_num||'—')+'</span>' +
+        '<span class="dc-serial"># '+esc(b.serial_no||'—')+'</span>' +
+        '<span class="dc-spacer"></span>' +
+        '<span class="dc-stat"><span class="v">'+b.qty+'</span><span class="k">支數</span></span>' +
+        '<span class="dc-stat ton"><span class="v">'+(ton>0?ton.toFixed(2):'—')+'</span><span class="k">噸數</span></span>' +
+        '<span class="dc-co">'+esc(b.company||'—')+'</span>' +
+        wordBtn +
+        '<button class="dc-x" onclick="event.stopPropagation();delDailyBatch(\''+enc(b.key)+'\')" title="刪除整批">✕</button>' +
+      '</div>';
+    if (open) {
+      const comps = dailyGroupRows(b.rows);
+      const rowsHtml = comps.map(g => { const r = g.rep;
+        const meta = [];
+        if (r.net_weight!=null && r.net_weight!=='') meta.push('<span><b>單重</b> '+esc(r.net_weight)+'kg</span>');
+        if (r.drawing_no) meta.push('<span><b>圖號</b> '+esc(r.drawing_no)+'</span>');
+        if (r.zone_code) meta.push('<span><b>工程區</b> '+esc(r.zone_code)+'</span>');
+        if (r.spec) meta.push('<span><b>規格</b> '+esc(r.spec)+'</span>');
+        if (r.proc_code) meta.push('<span><b>加工</b> '+esc(r.proc_code)+'</span>');
+        if (r.sub_code) meta.push('<span><b>副號</b> '+esc(r.sub_code)+'</span>');
+        if (r.inspect_time) meta.push('<span><b>時間</b> '+esc(r.inspect_time)+'</span>');
+        return '<div class="dc-row"><span class="dc-pno">'+esc(r.part_no||'')+'</span><span class="dc-qty">×'+g.qty+'</span>' +
+          '<span class="dc-meta">'+meta.join('')+'</span>' +
+          '<button class="dc-x-sm" onclick="delDailyGroup(\''+g.ids.join(',')+'\')" title="刪除此構件">✕</button></div>';
+      }).join('');
+      html += '<div class="dc-body">'+rowsHtml+'</div>';
+    }
+    html += '</div>';
+  });
+  cont.innerHTML = html + dailyPagerBar(pgB);
+}
+function dailyPagerBar(info){
+  if (info.total <= info.size) return '';
+  const p = info.page, pages = info.pages;
+  const from = p*info.size + 1, to = Math.min((p+1)*info.size, info.total);
+  return '<div class="pager-bar">' +
+    '<button class="btn-page" '+(p<=0?'disabled':'')+' onclick="pagerGo(\'daily\',-999999)">« 首頁</button>' +
+    '<button class="btn-page" '+(p<=0?'disabled':'')+' onclick="pagerGo(\'daily\',-1)">‹ 上一頁</button>' +
+    '<span class="pager-info">'+from+'–'+to+' / 共 '+info.total+' 批 · 第 '+(p+1)+' / '+pages+' 頁</span>' +
+    '<button class="btn-page" '+(p>=pages-1?'disabled':'')+' onclick="pagerGo(\'daily\',1)">下一頁 ›</button>' +
+    '<button class="btn-page" '+(p>=pages-1?'disabled':'')+' onclick="pagerGo(\'daily\',999999)">末頁 »</button>' +
+  '</div>';
+}
+function dailyToggleBatch(encKey){
+  const key = decodeURIComponent(encKey);
+  if (dailyViewMode === 'expanded') { if (dailyClosedSet.has(key)) dailyClosedSet.delete(key); else dailyClosedSet.add(key); }
+  else { if (dailyOpenSet.has(key)) dailyOpenSet.delete(key); else dailyOpenSet.add(key); }
+  renderDaily();
+}
+function dailySetViewMode(m){
+  if (m!=='flat' && m!=='collapsed' && m!=='expanded') m = 'flat';
+  dailyViewMode = m; try { localStorage.setItem('daily_view_mode', m); } catch(e){}
+  dailyOpenSet.clear(); dailyClosedSet.clear();
+  pgState.daily = 0;
+  renderDaily();
+}
+async function delDailyBatch(encKey){
+  const key = decodeURIComponent(encKey);
+  const b = dailyBuildBatches(dailyGetFiltered()).find(x => x.key === key);
+  if (!b || !b.ids.length) return;
+  const who = [b.date, b.proj_num, '流水 '+b.serial_no, b.company].filter(Boolean).join(' / ');
+  if (!await uiConfirm('確定刪除「整批」每日產量紀錄?\n\n' + who + '\n共 ' + b.ids.length + ' 支,刪除後無法復原。', {danger:true})) return;
+  for (const id of b.ids) {
+    await sbFetch('/rest/v1/daily_output?id=eq.' + id, { method:'DELETE', headers:{'Prefer':'return=minimal'} });
+  }
+  const idset = new Set(b.ids);
+  dailyRows = dailyRows.filter(r => !idset.has(r.id));
+  dailyFillFilterOptions();
+  renderDaily();
 }
 async function delDailyGroup(idsStr) {
   const ids = String(idsStr||'').split(',').map(s=>parseInt(s,10)).filter(n=>!isNaN(n));
@@ -22217,14 +22382,19 @@ function a202Render() {
   let rows = a202Groups.filter(g => g.company === a202Co);
   // 完成＝「輸入完成」及「照片」皆勾選;只要有一項未勾就仍算未完成、不隱藏
   if (pendingOnly) rows = rows.filter(g => { const r = recOf[g.date+'|'+g.serial]; return !(r && r.done && r.photo); });
-  if (!rows.length) { body.innerHTML = '<tr><td colspan="12" class="axx-empty">'+(pendingOnly?'沒有未完成的項目':'尚無資料')+'</td></tr>'; return; }
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="13" class="axx-empty">'+(pendingOnly?'沒有未完成的項目':'尚無資料')+'</td></tr>'; return; }
   body.innerHTML = rows.map(g => {
     const r = recOf[g.date+'|'+g.serial];
     const arg = "'" + g.date + "','" + g.serial.replace(/'/g,'') + "'";
+    const kd = a202KeyinDate(g.date);   // keyin 日期:只有 15 號 +1(遇週日跳週一)
+    const kdCell = (kd !== g.date)
+      ? '<td class="axx-num" style="color:var(--accent2);font-weight:600" title="15 號順延自 ' + esc(g.date) + '">' + axxMD(kd) + '</td>'
+      : '<td class="axx-num">' + axxMD(kd) + '</td>';
     return '<tr>' +
       '<td class="axx-time">' + esc((r && r.done_time) || '') + '</td>' +
       '<td><input type="checkbox" class="axx-chk" ' + ((r && r.done) ? 'checked ' : '') + 'onchange="a202Toggle(' + arg + ',\'done\',this.checked)"/></td>' +
       '<td class="axx-num">' + axxMD(g.date) + '</td>' +
+      kdCell +
       '<td class="axx-num">' + esc(g.proj) + '</td>' +
       '<td class="axx-num">' + esc(g.zone) + '</td>' +
       '<td class="axx-num">' + esc(g.proc) + '</td>' +
@@ -22236,6 +22406,16 @@ function a202Render() {
       '<td><button class="btn" style="padding:2px 8px;font-size:11px" onclick="a202KeyIn(' + arg + ')">鍵入系統</button></td>' +
     '</tr>';
   }).join('');
+}
+// A202 keyin 日期:規則同報驗——只有每月 15 號 +1 天(遇週日跳週一,週六照常 key in),其餘日期不變。
+// 輸入/輸出皆 'YYYY-MM-DD';沿用報驗的 nextKeyinDate,顯示與送出 Forms 共用同一份換算。
+function a202KeyinDate(dateStr) {
+  if (!dateStr) return dateStr;
+  const t = new Date(dateStr + 'T12:00:00');
+  if (isNaN(t.getTime())) return dateStr;
+  const d = nextKeyinDate(t);
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
 }
 // ── A202 一鍵鍵入 Oracle Forms：把該列資料送到本機 keyin_agent.py ──
 const KEYIN_AGENT_URL = 'http://localhost:8765/keyin';
@@ -22249,8 +22429,9 @@ async function a202KeyIn(date, serial) {
   const g = a202Groups.find(x => x.date === date && String(x.serial) === String(serial));
   if (!g) { alert('找不到該列資料'); return; }
   const parts = a202PartsWithQty(g.parts);
+  const keyinDate = a202KeyinDate(g.date);   // keyin 日期:只有 15 號 +1(遇週日跳週一,週六照常),其餘同 g.date
   const payload = {
-    date: g.date,            // 例 2026-07-22（agent 端轉成 2026/07/22）
+    date: keyinDate,         // ← 送進 Forms 的日期(15 號自動 +1);agent 端轉成 2026/07/22
     serial: g.serial,        // 單據編號＝流水編號
     proj: g.proj,            // 工程
     sub: g.sub,              // 副號（zones.sub_code）
@@ -22259,7 +22440,8 @@ async function a202KeyIn(date, serial) {
     company: g.company,      // 鎮山/麗生 → agent 端對到外包商代號
     parts: parts             // [{part, qty}, ...]
   };
-  const summary = '日期 ' + g.date + '　單據 ' + g.serial + '\n工程 ' + g.proj + '　副號 ' + g.sub + '　分區 ' + g.zone + '　加工 ' + g.proc +
+  const dateLine = (keyinDate !== g.date) ? ('keyin日期 ' + keyinDate + '（原 ' + g.date + '，15 號順延）') : ('日期 ' + keyinDate);
+  const summary = dateLine + '　單據 ' + g.serial + '\n工程 ' + g.proj + '　副號 ' + g.sub + '　分區 ' + g.zone + '　加工 ' + g.proc +
     '\n構件 ' + parts.map(p => p.qty > 1 ? p.part + '*' + p.qty : p.part).join(' ') +
     '\n\n確定要自動鍵入 Oracle Forms 嗎？（打完不會自動送出，請自行核對後確認）';
   if (!confirm(summary)) return;
