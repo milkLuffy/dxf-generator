@@ -3337,20 +3337,22 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
         <div class="section-label">① 選擇工程與工程區 → 依 BOM 產生自檢表（一支構件一張表）</div>
         <div class="sc-row">
           <select class="filter-select" id="sc-proj" onchange="scProjChange()" style="min-width:220px"><option value="">— 選擇工程 —</option></select>
-          <select class="filter-select" id="sc-zone" style="min-width:150px"><option value="">— 選擇工程區 —</option></select>
+          <select class="filter-select" id="sc-zone" onchange="scZoneChange()" style="min-width:150px"><option value="">— 選擇工程區 —</option></select>
           <button class="btn btn-gen" style="flex:0 0 auto" onclick="scGenForms()">▶ 產生自檢表</button>
         </div>
         <div class="sc-row" style="margin-top:9px">
-          <div class="sc-field"><label>JOB NO</label><input type="text" id="sc-jobno" value="G820/B820" size="12"/></div>
-          <div class="sc-field" style="flex:1;min-width:240px"><label>JOB NAME</label><input type="text" id="sc-jobname" value="台肥南港C4辦公大樓新建工程" style="flex:1"/></div>
+          <div class="sc-field"><label>JOB NO</label><input type="text" id="sc-jobno" value="" size="12"/></div>
+          <div class="sc-field" style="flex:1;min-width:240px"><label>JOB NAME</label><input type="text" id="sc-jobname" value="" style="flex:1"/></div>
         </div>
       </div>
 
       <div class="proj-section" style="margin-top:14px">
-        <div class="section-label">② 載入製造圖 PDF（自動切分頁、自動辨識右下角圖號）</div>
+        <div class="section-label">② 共用圖面快搜的製造圖（兩邊皆可上傳，相同圖面不重複上傳）</div>
         <div class="sc-row">
-          <button class="btn btn-gen" style="flex:0 0 auto" onclick="document.getElementById('sc-file').click()">📂 載入 PDF / 頁圖</button>
-          <input type="file" id="sc-file" accept="application/pdf,image/*" multiple hidden onchange="scFiles(this)"/>
+          <select class="filter-select" id="sc-drawing-file" style="min-width:260px"><option value="">— 請先選擇工程區 —</option></select>
+          <button class="btn" id="sc-load-existing" onclick="scLoadSelectedDrawing()" disabled>載入既有圖面</button>
+          <button class="btn btn-gen" style="flex:0 0 auto" onclick="document.getElementById('sc-file').click()">⬆ 選擇／上傳 PDF</button>
+          <input type="file" id="sc-file" accept="application/pdf,.pdf" hidden onchange="scFiles(this)"/>
           <span id="sc-loadmsg" class="sc-dim"></span>
         </div>
       </div>
@@ -3362,11 +3364,10 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
             <span id="sc-pagelbl">— / —</span>
             <button class="btn-sm" onclick="scShowPage(scPi+1)">▶</button>
             <span class="sc-field"><label>本頁圖號</label><input type="text" id="sc-pagedwg" size="10" placeholder="S4-B601" oninput="scPageDwgInput(this.value)"/></span>
-            <span id="sc-ocrmsg" class="sc-dim"></span>
             <span class="sc-dim" style="margin-left:auto">在圖上拖拉框選樑立面圖 → 填入自檢表</span>
           </div>
           <div class="sc-stage" id="sc-stage">
-            <div id="sc-empty" class="empty-state" style="padding:60px 20px">尚未載入製造圖。<br/>按上方「載入 PDF / 頁圖」,可直接選整份製造圖 PDF。</div>
+            <div id="sc-empty" class="empty-state" style="padding:60px 20px">尚未載入製造圖。<br/>可載入圖面快搜的既有 PDF，或從這裡上傳新 PDF。</div>
             <div id="sc-wrap" hidden><canvas id="sc-view"></canvas><div id="sc-ovl"><div id="sc-sel"></div></div></div>
           </div>
           <div class="sc-films" id="sc-films"></div>
@@ -4769,7 +4770,7 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
           <thead><tr>
             <th>日期</th><th>構件編號</th><th>工程編號</th><th>工程區</th><th>數量</th><th>單重(kg)</th>
             <th>圖號</th><th>流水編號</th><th>規格</th><th>加工代號</th><th>工程副號</th>
-            <th>報驗時間</th><th>報驗公司</th><th></th>
+            <th>報驗時間</th><th>報驗公司</th><th>報驗單</th><th></th>
           </tr></thead>
           <tbody id="daily-body"></tbody>
         </table>
@@ -5130,16 +5131,6 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
 
       <!-- ── 生產進度表 ── -->
       <div class="prod-view" id="prodview-track" style="display:none">
-        <div class="prod-paste">
-          <div class="p-lbl">貼上 S/P 追蹤表（欄序：<b>工程區　編號　單號　項目　製造　狀態　備註</b>，含表頭亦可）</div>
-          <div class="prod-projrow"><label>工程編號</label><input type="text" id="prodTrackProj" list="prodProjList" placeholder="例:B822（套用到本次匯入的每一列）"></div>
-          <textarea id="prodTrackPaste" placeholder="5DG	A15	C085	SP		OK	&#10;4DG	A15	C082	SP		-	轉包"></textarea>
-          <div class="p-btns">
-            <button class="btn btn-primary" onclick="prodImportTrack(false)">匯入（附加）</button>
-            <button class="btn" onclick="prodImportTrack(true)">清空後匯入</button>
-            <span class="prod-count" id="prodTrackMsg"></span>
-          </div>
-        </div>
         <div class="prod-toolbar">
           <button class="btn" onclick="spxUndo('track')" title="復原 (Ctrl+Z)">↶ 復原</button>
           <button class="btn" onclick="spxRedoAct('track')" title="重做 (Ctrl+Y)">↷ 重做</button>
@@ -5161,16 +5152,6 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
 
       <!-- ── 保留料 ── -->
       <div class="prod-view" id="prodview-reserved" style="display:none">
-        <div class="prod-paste">
-          <div class="p-lbl">貼上保留料（欄序：<b>單號　工程編號　工程區　領料單/RCP　餘料編號　規格　數量　施作形式　構件編號　給單日期　領取日期　是否需退還　備註</b>）</div>
-          <div class="prod-projrow"><label>工程編號</label><input type="text" id="prodReservedProj" list="prodProjList" placeholder="工程編號欄留空時，套用此值"></div>
-          <textarea id="prodReservedPaste" placeholder="A15-C634	B814	A76B	RCP	H-E8020	RH*500*200*10*16*1064	1	切640*1		2026/1/5	2026/1/5	否	"></textarea>
-          <div class="p-btns">
-            <button class="btn btn-primary" onclick="prodImportReserved(false)">匯入（附加）</button>
-            <button class="btn" onclick="prodImportReserved(true)">清空後匯入</button>
-            <span class="prod-count" id="prodReservedMsg"></span>
-          </div>
-        </div>
         <div class="prod-toolbar">
           <button class="btn" onclick="spxUndo('reserved')" title="復原 (Ctrl+Z)">↶ 復原</button>
           <button class="btn" onclick="spxRedoAct('reserved')" title="重做 (Ctrl+Y)">↷ 重做</button>
@@ -5192,13 +5173,11 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
       <!-- ── 成品材領料 ── -->
       <div class="prod-view" id="prodview-product" style="display:none">
         <div class="prod-paste">
-          <div class="p-lbl">可貼上<b>領料通知單全文</b>自動剖析，或貼上成品材紀錄（欄序：<b>日期　工程編號　流水編號　事由　備註</b>）</div>
-          <div class="prod-projrow"><label>工程編號</label><input type="text" id="prodProductProj" list="prodProjList" placeholder="工程編號欄留空時，套用此值"></div>
-          <textarea id="prodProductPaste" placeholder="貼上「通知單」全文，系統會辨識日期、倉庫別、工程編號、流水編號與品項明細；也可貼上既有的五欄資料。"></textarea>
+          <div class="p-lbl">貼上<b>領料通知單全文</b>，系統會自動剖析並匯入成品材領料資料。</div>
+          <div class="prod-projrow"><label>系統工程編號</label><input type="text" id="prodProductProj" list="prodProjList" placeholder="剖析通知單前請先選擇，例如 F187"></div>
+          <textarea id="prodProductPaste" placeholder="貼上「通知單」全文，系統會辨識日期、倉庫別、工程編號、流水編號與品項明細。"></textarea>
           <div class="p-btns">
             <button class="btn btn-primary" onclick="prodImportProductNotice()">剖析通知單並匯入</button>
-            <button class="btn btn-primary" onclick="prodImportProduct(false)">匯入（附加）</button>
-            <button class="btn" onclick="prodImportProduct(true)">清空後匯入</button>
             <span class="prod-count" id="prodProductMsg"></span>
           </div>
         </div>
@@ -9338,6 +9317,10 @@ function viewToHash(v) {
   if (!v) return '#/dashboard';
   if (v.proj) return v.zone ? ('#/proj/'+v.proj+'/zone/'+v.zone) : ('#/proj/'+v.proj);
   if (v.page === 'layout' && v.tab === 'chart') return '#/layout/chart';
+  if (v.page === 'prod') {
+    if (v.pdetail) return '#/prod/detail/'+encodeURIComponent(v.pproj||'')+'/'+encodeURIComponent(v.pzone||'');
+    if (v.ptab) return '#/prod/'+encodeURIComponent(v.ptab);
+  }
   return '#/'+(v.page || 'dashboard');
 }
 // 網址 hash -> view (格式不符或含登入資訊則回傳 null)
@@ -9352,6 +9335,8 @@ function hashToView(h) {
     return v;
   }
   if (p[0] === 'layout' && p[1] === 'chart') return { page:'layout', tab:'chart' };
+  if (p[0] === 'prod' && p[1] === 'detail') return {page:'prod',pdetail:1,pproj:decodeURIComponent(p[2]||''),pzone:decodeURIComponent(p[3]||'')};
+  if (p[0] === 'prod' && p[1]) return {page:'prod',ptab:decodeURIComponent(p[1])};
   return p[0] ? { page: p[0] } : null;
 }
 function setView(v) {
@@ -9380,7 +9365,9 @@ async function applyView(v) {
 }
 // 登入後還原上次頁面:優先用網址 hash (書籤/分享網址),其次用上次記錄;再把目前狀態設為歷史起點
 async function restoreLastView() {
-  const v = hashToView(location.hash) || getView();
+  const hashed = hashToView(location.hash), saved = getView();
+  // 相容舊版只寫入 #/prod 的網址：同頁時保留 localStorage 中的子分頁／詳情位置。
+  const v = hashed&&hashed.page==='prod'&&!hashed.ptab&&!hashed.pdetail&&saved&&saved.page==='prod' ? saved : (hashed||saved);
   if (v) await applyView(v);
   const cur = getView();
   try { history.replaceState({ __view: cur }, '', viewToHash(cur)); } catch(e) {}
@@ -19748,6 +19735,78 @@ function inspSavedToast(message) {
   el._hideTimer = setTimeout(() => { el.style.opacity = '0'; }, 2000);
 }
 
+const INSP_ARCHIVE_BUCKET = 'inspection-reports';
+let inspLastArchiveState = null;
+function inspArchivePath(projNum, date, serial) {
+  const clean = v => String(v||'').normalize('NFKC').replace(/[^A-Za-z0-9_-]/g,'_');
+  return clean(projNum) + '/' + clean(date) + '/' + clean(serial) + '.docx';
+}
+function inspStorageObjectUrl(path) {
+  return SUPA_URL + '/storage/v1/object/' + INSP_ARCHIVE_BUCKET + '/' + String(path).split('/').map(encodeURIComponent).join('/');
+}
+function inspStorageAuthHeaders(extra) {
+  return Object.assign({
+    apikey:SUPA_KEY,
+    Authorization:'Bearer ' + (currentSession?.access_token || '')
+  }, extra || {});
+}
+async function inspArchiveDocx(blob, fname, checked, ctx) {
+  const reportDate = ctx.report_date || inspTodayStr();
+  const path = inspArchivePath(ctx.proj_no, reportDate, ctx.docNo);
+  try {
+    if (!currentSession || isGuest) throw new Error('需登入才能建立雲端備份');
+    const upload = await fetch(inspStorageObjectUrl(path), {
+      method:'POST',
+      headers:inspStorageAuthHeaders({
+        'Content-Type':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'x-upsert':'true'
+      }),
+      body:blob
+    });
+    if (!upload.ok) throw new Error((await upload.text()) || ('Storage HTTP ' + upload.status));
+    const snapshot = {
+      project_name:ctx.proj_name||'', owner:ctx.owner||'', zone_code:ctx.zoneCode||'',
+      person:ctx.person||'', recv_date:ctx.recvDate||'', recv_time:ctx.recvTime||'',
+      parts:(checked||[]).map(c=>({
+        part_no:c.part_no||'', qty:Math.max(1,parseInt(c._inspQty)||1), spec:c.spec||'',
+        drawing_no:c.drawing_no||'', zone_code:c._zone_code||ctx.zoneCode||'', sub_code:c._sub||'',
+        board:c._board||'', ut_list:Array.isArray(c._utList)?c._utList:[], rev:c._rev||inspCompRev(c.part_no||'')
+      }))
+    };
+    const meta = await sbFetch('/rest/v1/inspection_reports?on_conflict=report_date,proj_num,serial_no', {
+      method:'POST',
+      headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({
+        report_date:reportDate, proj_num:ctx.proj_no||'', serial_no:String(ctx.docNo||''),
+        file_name:fname, storage_path:path, snapshot, updated_at:new Date().toISOString()
+      })
+    });
+    if (!meta.ok) throw new Error('報驗單索引寫入失敗（請確認已執行 migration）');
+    return {ok:true,path};
+  } catch(err) {
+    console.error('報驗單雲端備份失敗', err);
+    return {ok:false,error:err.message||String(err)};
+  }
+}
+
+async function inspDownloadArchived(date, projNum, serial) {
+  try {
+    const q = '/rest/v1/inspection_reports?select=file_name,storage_path&report_date=eq.' + encodeURIComponent(date)
+      + '&proj_num=eq.' + encodeURIComponent(projNum) + '&serial_no=eq.' + encodeURIComponent(serial) + '&limit=1';
+    const meta = await sbFetch(q);
+    if (!meta.ok || !Array.isArray(meta.data) || !meta.data[0]) throw new Error('找不到這筆報驗單的雲端備份');
+    const row = meta.data[0];
+    const res = await fetch(inspStorageObjectUrl(row.storage_path), {headers:inspStorageAuthHeaders()});
+    if (!res.ok) throw new Error((await res.text()) || '雲端檔案下載失敗');
+    const blob = await res.blob(), url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=row.file_name||((projNum||'申驗單')+'_'+serial+'.docx');
+    document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),4000);
+    if (typeof auditDownload==='function') auditDownload(a.download);
+  } catch(err) {
+    alert('無法重新下載：' + (err.message||err) + '\n\n若是首次使用此功能，請先執行 inspection_reports_migration.sql。');
+  }
+}
+
 function inspOpenLastInWord() {
   if (!inspLastOpenInfo) {
     alert('請先成功產生並儲存一份申驗單 Word。');
@@ -19910,6 +19969,10 @@ async function inspBuildDocx(checked, ctx) {
   const ymd = String(today.getFullYear()) + String(today.getMonth()+1).padStart(2,'0') + String(today.getDate()).padStart(2,'0');
   const fname = (ctx.proj_no || '申驗單') + '_申驗單_' + ymd + '_' + docNo + (ctx.fnameSuffix || '') + '.docx';
   const saveResult = await inspSaveDocx(out, fname, ctx.proj_no || '');
+  // 一般報驗單同步封存到雲端；預報補送檔另有生命週期，不覆蓋正式批次備份。
+  inspLastArchiveState = ctx.fnameSuffix ? null : await inspArchiveDocx(out, fname, checked, Object.assign({}, ctx, {
+    docNo, report_date:inspTodayStr()
+  }));
   const openBtn = document.getElementById('insp-open-word-btn');
   if (saveResult && !saveResult.directDownload) {
     inspLastOpenInfo = {
@@ -20062,6 +20125,10 @@ async function generateInspection() {
       setInspStatus('已產生 ' + fname + '（' + realChecked.length + ' 項構件）', true);
     else
       setInspStatus('已將 ' + preChecked.length + ' 項預報構件存入暫存區並計入每日產量（本次未產生申驗單）', true);
+
+    if (realChecked.length && inspLastArchiveState && !inspLastArchiveState.ok) {
+      setInspStatus('⚠ Word 已產生，但雲端備份失敗：' + inspLastArchiveState.error + '。請保留本機檔案並確認已執行 inspection_reports_migration.sql。', false);
+    }
 
     // 及時重新整理「可報數量」(重讀每日產量) + 預報暫存區
     try { await inspLoadComponents(); } catch(e) {}
@@ -21551,7 +21618,8 @@ let dailyViewDate = '';   // 單日檢視(預設今天);空字串=顯示全部�
 const DAILY_INIT_DAYS = 120;
 let dailyFullLoaded = false;   // 是否已載入完整歷史
 let dailyLoadedFrom = '';      // 目前已載入資料的最早日期(YYYY-MM-DD);空=全部
-function dailyTodayStr(){ return new Date().toISOString().slice(0,10); }   // 與寫入時相同的格式
+// 使用瀏覽器本地日期（台灣時區），避免凌晨 00:00～07:59 被 UTC 判成前一天。
+function dailyTodayStr(){ const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
 function dailyDaysAgoStr(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function dailyEl(id){ return document.getElementById(id); }
 async function loadDaily() {
@@ -21676,15 +21744,21 @@ function renderDaily() {
   const groups = dailyGroupRows(rawRows);   // 合併相同構件,qty = 支數
   let ctx = (rs&&re) ? (rs+' ~ '+re) : (dailyViewDate || '全部日期');
   dailyEl('daily-count').textContent = ctx + ' · 共 ' + groups.length + ' 筆 / ' + rawRows.length + ' 支';
-  if (!groups.length) { tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:var(--text3);padding:32px;font-family:var(--mono);font-size:13px">尚無資料</td></tr>'; return; }
+  if (!groups.length) { tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:var(--text3);padding:32px;font-family:var(--mono);font-size:13px">尚無資料</td></tr>'; return; }
   const pgD = pagerSlice('daily', groups);
   const dtd = v => '<td><input type="text" readonly value="'+esc(v==null?'':v)+'" style="text-align:center"></td>';
-  tbody.innerHTML = pgD.slice.map(g => { const r = g.rep; return '<tr>' +
+  const reportSeen = new Set();
+  tbody.innerHTML = pgD.slice.map(g => { const r = g.rep;
+    const reportKey = [r.date,r.proj_num,r.serial_no].join('|');
+    const reportBtn = reportSeen.has(reportKey) ? '—' : '<button class="btn-sm btn-export" onclick="inspDownloadArchived(\''+esc(r.date||'')+'\',\''+esc(r.proj_num||'')+'\',\''+esc(String(r.serial_no||''))+'\')" title="下載雲端備份的最新版 Word">Word</button>';
+    reportSeen.add(reportKey);
+    return '<tr>' +
     dtd(r.date) + dtd(r.part_no) + dtd(r.proj_num) + dtd(r.zone_code) +
     dtd(g.qty) + dtd(r.net_weight!=null?r.net_weight:'') + dtd(r.drawing_no) + dtd(r.serial_no) + dtd(r.spec) +
     dtd(r.proc_code) + dtd(r.sub_code) + dtd(r.inspect_time) + dtd(r.company) +
+    '<td style="text-align:center">'+reportBtn+'</td>' +
     '<td class="del-col"><button class="btn-del-row" onclick="delDailyGroup(\''+g.ids.join(',')+'\')">✕</button></td>' +
-  '</tr>'; }).join('') + pagerRow(pgD, 14);
+  '</tr>'; }).join('') + pagerRow(pgD, 15);
   const dTbl = document.getElementById('daily-table');
   if (dTbl) tblInitSelection(dTbl);
 }
@@ -31875,7 +31949,7 @@ function pmReasonSummary(details){
 function prodParseProductNotices(text){
   const src=String(text||'').replace(/\r/g,'');
   // 每張通知單以日期/倉庫/批次/工程/副號/流水編號的固定表頭切開。
-  const header=/^\s*(\d{8})\s+([A-Z]\d{3})\s+(\d{4})\s+([A-Z]\d{3,})\s+([A-Z])\s+([A-Z0-9]+-\d+)\s*$/gmi;
+  const header=/^\s*(\d{8})\s+([A-Z]\d{3})\s+(\d{4})\s+([A-Z0-9*_-]+)\s+([A-Z])\s+([A-Z0-9]+-\d+)\s*$/gmi;
   const hits=[]; let m;
   while((m=header.exec(src))) hits.push({at:m.index,end:header.lastIndex,date:m[1],warehouse:m[2],batch:m[3],project:m[4],sub:m[5],fullSerial:pmNormalizeSerial(m[6])});
   return hits.map((h,idx)=>{
@@ -31884,14 +31958,21 @@ function prodParseProductNotices(text){
     block.split('\n').forEach(line=>{
       // 從右側固定欄（材質、區域、數量、單位）定位，再依大段空白拆品名與規格。
       // 規格尾端到材質之間有些通知單只有一格，不能假定一定是兩格。
-      const x=line.match(/^\s*([A-Z]-[A-Z0-9]+)\s+(.+?)\s+([A-Z0-9]+)\s{2,}([A-Z0-9]{2,4})\s+([\d,.]+)\s+[A-Z]\s+/i);
-      if(!x) return;
-      const mid=x[2].trim().split(/\s{2,}/);
-      if(mid.length<2) return;
+      const x=line.match(/^\s*([A-Z]-[A-Z0-9-]+)\s+(.+?)\s+([A-Z0-9]+)\s{2,}([A-Z0-9]{2,4})\s+([\d,.]+)\s+[A-Z]\s+/i);
+      // 新版通知單會在「品名」與「規格」間留大段空白，材質與工程區則只隔一格。
+      const spaced=line.match(/^\s*([A-Z]-[A-Z0-9-]+)\s+(.+?)\s{2,}(\S+)\s+([A-Z0-9]+)\s+([A-Z0-9*_-]+)\s+([\d,.]+)\s+[A-Z]\s+/i);
+      if(!x&&!spaced) return;
+      let item,spec,material,area,qty,itemNo;
+      if(spaced){ itemNo=spaced[1];item=spaced[2];spec=spaced[3];material=spaced[4];area=spaced[5];qty=spaced[6]; }
+      else {
+        const mid=x[2].trim().split(/\s{2,}/);
+        if(mid.length<2) return;
+        itemNo=x[1];item=mid.shift();spec=mid.join(' ');material=x[3];area=x[4];qty=x[5];
+      }
       details.push({
-        full_serial:h.fullSerial, project:h.project, area:x[4].toUpperCase(),
-        item:mid.shift().trim().replace(/\s+/g,' '), spec:mid.join(' ').trim().replace(/\s+/g,' '),
-        qty:prodNum(x[5]), warehouse:h.warehouse, material:x[3], item_no:x[1]
+        full_serial:h.fullSerial, project:h.project, area:String(area).toUpperCase(),
+        item:String(item).trim().replace(/\s+/g,' '), spec:String(spec).trim().replace(/\s+/g,' '),
+        qty:prodNum(qty), warehouse:h.warehouse, material:material, item_no:itemNo
       });
     });
     return {
@@ -31904,8 +31985,21 @@ function prodParseProductNotices(text){
 }
 async function prodImportProductNotice(){
   const ta=document.getElementById('prodProductPaste'),msg=document.getElementById('prodProductMsg');
+  const selectedProj=(document.getElementById('prodProductProj')?.value||'').trim();
+  if(!selectedProj){msg.textContent='請先選擇系統工程編號，再剖析通知單';return;}
   const objs=prodParseProductNotices(ta.value);
   if(!objs.length){msg.textContent='無法辨識通知單，請確認已貼上包含表頭與品項的全文';return;}
+  objs.forEach(o=>{
+    const sourceProj=String(o.proj_no||'').trim();
+    const displayProj=sourceProj&&sourceProj!==selectedProj?selectedProj+'('+sourceProj+')':selectedProj;
+    const meta=pmMeta(o.remark);
+    o.proj_no=displayProj;
+    if(meta){
+      meta.source_project=sourceProj;
+      (meta.details||[]).forEach(d=>{d.project=displayProj;});
+      o.remark=pmPackRemark(pmPlainRemark(o.remark),meta);
+    }
+  });
   const detailCount=objs.reduce((n,o)=>n+(pmMeta(o.remark)?.details?.length||0),0);
   msg.textContent='剖析完成，寫入中…';
   const r=await prodInsert('product_material',objs,false);
@@ -31957,61 +32051,22 @@ async function prodInsert(table, objs, clearFirst){
   return {ok:true};
 }
 
-async function prodImportTrack(clearFirst){
-  const ta=document.getElementById('prodTrackPaste'), msg=document.getElementById('prodTrackMsg');
-  const proj=(document.getElementById('prodTrackProj').value||'').trim();
-  const rows=prodParseTSV(ta.value);
-  const objs=rows.filter(r=>(r[0]||'').trim()!=='工程區'&&(r[0]||'').trim()!=='節區').map(r=>({
-    proj_no:proj, zone:(r[0]||'').trim(), dwg_no:(r[1]||'').trim(), order_no:(r[2]||'').trim(),
-    item:(r[3]||'').trim(), make:(r[4]||'').trim(), status:(r[5]||'').trim()||'-', remark:(r[6]||'').trim()
-  })).filter(o=>o.zone||o.dwg_no||o.order_no);
-  if(!objs.length){ msg.textContent='沒有可匯入的資料'; return; }
-  msg.textContent='匯入中…';
-  const r=await prodInsert('sp_track',objs,clearFirst);
-  if(!r.ok){ msg.textContent=r.err; return; }
-  ta.value=''; msg.textContent='已匯入 '+objs.length+' 列';
-  await prodInit();
-}
-async function prodImportReserved(clearFirst){
-  const ta=document.getElementById('prodReservedPaste'), msg=document.getElementById('prodReservedMsg');
-  const proj=(document.getElementById('prodReservedProj').value||'').trim();
-  const rows=prodParseTSV(ta.value);
-  const objs=rows.filter(r=>(r[0]||'').trim()!=='單號').map(r=>({
-    order_no:(r[0]||'').trim(), proj_no:(r[1]||'').trim()||proj, zone:(r[2]||'').trim(), source:(r[3]||'').trim(),
-    mat_no:(r[4]||'').trim(), spec:(r[5]||'').trim(), qty:prodNum(r[6]), work_form:(r[7]||'').trim(),
-    comp_no:(r[8]||'').trim(), issue_date:(r[9]||'').trim(), take_date:(r[10]||'').trim(),
-    need_return:(r[11]||'').trim()==='是'?true:((r[11]||'').trim()==='否'?false:null), remark:(r[12]||'').trim()
-  })).filter(o=>o.order_no||o.zone||o.mat_no);
-  if(!objs.length){ msg.textContent='沒有可匯入的資料'; return; }
-  msg.textContent='匯入中…';
-  const r=await prodInsert('reserved_material',objs,clearFirst);
-  if(!r.ok){ msg.textContent=r.err; return; }
-  ta.value=''; msg.textContent='已匯入 '+objs.length+' 列';
-  await prodInit();
-}
 // (SP狀態表 Excel 引擎見下方獨立 script 區塊)
-async function prodImportProduct(clearFirst){
-  const ta=document.getElementById('prodProductPaste'), msg=document.getElementById('prodProductMsg');
-  const proj=(document.getElementById('prodProductProj').value||'').trim();
-  const rows=prodParseTSV(ta.value);
-  const objs=rows.filter(r=>(r[0]||'').trim()!=='日期').map(r=>({
-    pick_date:prodDate(r[0]), proj_no:(r[1]||'').trim()||proj, serial:(r[2]||'').trim(),
-    reason:(r[3]||'').trim(), remark:(r[4]||'').trim()
-  })).filter(o=>o.serial||o.reason||o.proj_no);
-  if(!objs.length){ msg.textContent='沒有可匯入的資料'; return; }
-  msg.textContent='匯入中…';
-  const r=await prodInsert('product_material',objs,clearFirst);
-  if(!r.ok){ msg.textContent=r.err; return; }
-  ta.value=''; msg.textContent='已匯入 '+objs.length+' 列';
-  await prodInit();
-}
 </script>
 
 <!-- ═══════════ Excel 式可編輯表格引擎(SP狀態表/保留料/成品材,比照「明細輸入」) ═══════════ -->
 <script>
 // 三張表共用的 Excel 式可編輯引擎(比照「明細輸入」#layout-input-table)
+function spxNewestFirst(a,b){
+  if(!a.id!==!b.id) return a.id?1:-1;
+  const created=String(b.created_at||'').localeCompare(String(a.created_at||''));
+  if(created) return created;
+  const id=String(b.id||'').localeCompare(String(a.id||''),undefined,{numeric:true});
+  if(id) return id;
+  return Number(b._key||0)-Number(a._key||0);
+}
 const SPX={
-  track:{ tbl:'sp_track', sort:(a,b)=>(a.proj_no||'').localeCompare(b.proj_no||'','zh-Hant')||(a.zone||'').localeCompare(b.zone||'','zh-Hant')||(a.order_no||'').localeCompare(b.order_no||''),
+  track:{ tbl:'sp_track', sort:spxNewestFirst,
     cols:[
       {k:'proj_no',h:'工程編號'},{k:'zone',h:'工程區'},{k:'cp_no',h:'CP編號',combo:['dwg_no','order_no']},
       {k:'item',h:'項目',sel:['-','SP','L','FB','P','Q','Z'],def:'-',noData:true},
@@ -32075,7 +32130,7 @@ async function spxFlush(key){
     for(const row of dirty){
       const payload={}; cfg.cols.forEach(c=>{ if(c.virtual) return; if(c.combo){ c.combo.forEach(f=>{ payload[f]=(row[f]==null?'':String(row[f])); }); } else if(c.k==='remark'&&key==='product') payload[c.k]=pmPackRemark(pmPlainRemark(row[c.k]),pmMeta(row[c.k])); else payload[c.k]=spxCoerce(c,row[c.k]); });
       if(row.id){ const r=await sbFetch('/rest/v1/'+cfg.tbl+'?id=eq.'+row.id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)}); if(r.ok){row._dirty=false;saved++;} else if(r.status===401||r.status===403){ spxHint('需登入才能儲存',true); break; } }
-      else { const r=await sbFetch('/rest/v1/'+cfg.tbl,{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)}); if(r.ok&&r.data&&r.data[0]){row.id=r.data[0].id;row._dirty=false;saved++;} else if(r.status===401||r.status===403){ spxHint('需登入才能儲存',true); break; } }
+      else { const r=await sbFetch('/rest/v1/'+cfg.tbl,{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)}); if(r.ok&&r.data&&r.data[0]){const localKey=row._key;Object.assign(row,r.data[0]);row._key=localKey;row._dirty=false;saved++;} else if(r.status===401||r.status===403){ spxHint('需登入才能儲存',true); break; } }
     }
   } finally { s.busy=false; if(s.again){ s.again=false; spxFlush(key); } }
   if(saved){ spxAfterChange(key); spxHint('✓ 已自動儲存'); }
@@ -33544,7 +33599,7 @@ function modpartsExport(report){const f=document.getElementById('mp-from')?.valu
 <script>
 /* ═══════════ 自檢表產生器(工具) ═══════════
    ① 選工程+工程區 → 依 BOM 產生 N 張自檢表(構件編號/圖號/規格/A全長 自動代入,一支一張)
-   ② 載入整份製造圖 PDF → pdf.js 逐頁轉 3000px 頁圖(解碼在 worker,不凍結) → tesseract 辨識右下角圖號
+   ② 共用圖面快搜 PDF 與頁碼圖號索引 → pdf.js 逐頁轉 3000px 頁圖(解碼在 worker,不凍結)
    ③ 在頁圖拖框截樑立面圖 → 自動填入「選取中」或「同圖號」的下一張表 → 匯出 Word(沿用 B820 範本引擎)
    範本:SC_TPL_B64(B820 空白自檢表,獨立 <script> 內嵌於檔尾) */
 const scEl = id => document.getElementById(id);
@@ -33554,6 +33609,7 @@ const SC_COLS=['A','B','C','D','E','F','G','H','I'];
 let scPages=[], scPi=0, scDisp=1, scForms=[], scSeq=0, scSelId=null, scZones=[], scInited=false;
 let scTplB64=null;                                   // 換範本:自選 .docx(未換則用內建 SC_TPL_B64)
 let scMeta={projNum:'',zoneCode:''};                 // 產生自檢表時記住工程編號/工程區(匯出檔名用)
+let scDrawingFiles=[], scDrawingRows=[], scDrawingBusy=false;
 const scStatus=m=>{ const e=scEl('sc-status'); if(e) e.textContent=m; };
 const scLoadMsg=m=>{ const e=scEl('sc-loadmsg'); if(e) e.textContent=m; };
 
@@ -33593,6 +33649,24 @@ async function scProjChange(){
   scZones=Array.isArray(r.data)?r.data:[];
   zSel.innerHTML='<option value="">— 選擇工程區 —</option>'+
     scZones.map(z=>'<option value="'+z.id+'">'+esc(z.zone_code)+'</option>').join('');
+  await scZoneChange();
+}
+
+async function scZoneChange(){
+  const zid=scEl('sc-zone').value, sel=scEl('sc-drawing-file'), btn=scEl('sc-load-existing');
+  scDrawingFiles=[]; scDrawingRows=[]; btn.disabled=true;
+  if(!zid){ sel.innerHTML='<option value="">— 請先選擇工程區 —</option>'; return; }
+  sel.innerHTML='<option value="">— 載入中… —</option>';
+  const [fr,pr]=await Promise.all([
+    sbFetch('/rest/v1/drawing_files?select=id,project_id,zone_id,original_name,storage_key,storage_parts,page_count,size_bytes,created_at&zone_id=eq.'+encodeURIComponent(zid)+'&order=created_at.desc'),
+    sbFetchAll('/rest/v1/drawing_page_drawings?select=file_id,drawing_no,page_no&zone_id=eq.'+encodeURIComponent(zid))
+  ]);
+  scDrawingFiles=fr.ok&&Array.isArray(fr.data)?fr.data:[];
+  scDrawingRows=pr.ok&&Array.isArray(pr.data)?pr.data:[];
+  sel.innerHTML='<option value="">'+(scDrawingFiles.length?'— 選擇既有圖面 —':'目前沒有已上傳圖面')+'</option>'+scDrawingFiles.map(f=>
+    '<option value="'+f.id+'">'+esc(f.original_name)+'（'+Number(f.page_count||0)+' 頁）</option>').join('');
+  sel.onchange=()=>{ btn.disabled=!sel.value; };
+  scLoadMsg(scDrawingFiles.length?'已有 '+scDrawingFiles.length+' 份共用圖面':'尚無共用圖面，可從此上傳');
 }
 
 /* ── ① BOM → 產生自檢表 ── */
@@ -33615,7 +33689,7 @@ async function scGenForms(){
   scRender();
   const p=allBOM.find(x=>String(x.id)===String(pid)), z=scZones.find(x=>String(x.id)===String(zid));
   scMeta={projNum:p?String(p.proj_num||'').trim():'',zoneCode:z?String(z.zone_code||'').trim():''};
-  scStatus('已依 BOM 產生 '+scForms.length+' 張自檢表('+scMeta.projNum+'-'+scMeta.zoneCode+')。載入製造圖 PDF 後框選立面圖填入。');
+  scStatus('已依 BOM 產生 '+scForms.length+' 張自檢表('+scMeta.projNum+'-'+scMeta.zoneCode+')。載入共用製造圖後框選立面圖填入。');
 }
 
 /* ── ② 載入 PDF / 頁圖 ── */
@@ -33637,22 +33711,119 @@ async function scEnsurePdfjs(){
 }
 const scLoadImg=src=>new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error('圖片載入失敗')); im.src=src; });
 async function scFiles(inp){
-  const files=Array.from(inp.files||[]); inp.value='';
-  if(!files.length) return;
-  files.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
-  const first=scPages.length===0;
+  const f=inp.files?.[0]; inp.value='';
+  if(!f) return;
+  if(!scEl('sc-zone').value){ alert('請先選擇工程與工程區。'); return; }
+  if(!(/\.pdf$/i.test(f.name)||f.type==='application/pdf')){ alert('只能上傳 PDF。'); return; }
+  const duplicate=scDrawingFiles.find(x=>String(x.original_name||'').toLowerCase()===f.name.toLowerCase()&&Number(x.size_bytes)===f.size);
+  if(duplicate){
+    scLoadMsg('偵測到重複圖面，未再次上傳；正在載入既有檔案…');
+    scEl('sc-drawing-file').value=duplicate.id;
+    await scLoadStoredDrawing(duplicate);
+    return;
+  }
+  const sameName=scDrawingFiles.find(x=>String(x.original_name||'').toLowerCase()===f.name.toLowerCase());
+  if(sameName&&!await uiConfirm('已有同名圖面「'+f.name+'」，但檔案大小不同，可能是新版。仍要新增上傳嗎？')) return;
+  await scUploadSharedDrawing(f);
+}
+
+function scReleasePages(){
+  scPages.forEach(p=>{ try{ if(p.img?.src?.startsWith('blob:')) URL.revokeObjectURL(p.img.src); }catch(_){} });
+  scPages=[]; scPi=0;
+}
+
+async function scLoadSelectedDrawing(){
+  const file=scDrawingFiles.find(f=>String(f.id)===String(scEl('sc-drawing-file').value));
+  if(file) await scLoadStoredDrawing(file);
+}
+
+async function scLoadStoredDrawing(file){
+  if(scDrawingBusy) return; scDrawingBusy=true;
   try{
-    for(const f of files){
-      if(/\.pdf$/i.test(f.name)||f.type==='application/pdf') await scPdfToPages(f);
-      else if(f.type.startsWith('image/')){
-        const url=URL.createObjectURL(f); const img=await scLoadImg(url);
-        scPages.push({name:f.name,img,w:img.naturalWidth,h:img.naturalHeight,dwg:'',ocr:'wait'});
+    scReleasePages(); await scEnsurePdfjs();
+    const map=new Map(scDrawingRows.filter(r=>String(r.file_id)===String(file.id)).map(r=>[Number(r.page_no),String(r.drawing_no||'')]));
+    const parts=dsPartsForFile(file); let globalPage=0;
+    for(let pi=0;pi<parts.length;pi++){
+      const part=parts[pi]; scLoadMsg('下載共用圖面 '+(pi+1)+' / '+parts.length+'…');
+      const response=await dsStorageDownload(part.storage_key);
+      if(!response.ok) throw new Error((await response.text())||('HTTP '+response.status));
+      const doc=await pdfjsLib.getDocument({data:await response.arrayBuffer()}).promise;
+      for(let p=1;p<=doc.numPages;p++){
+        globalPage=part.page_start+p-1;
+        scLoadMsg('轉換 '+file.original_name+' 第 '+globalPage+'/'+file.page_count+' 頁…');
+        await scPdfPageToScPage(await doc.getPage(p),file.original_name.replace(/\.pdf$/i,'')+' p'+String(globalPage).padStart(3,'0'),map.get(globalPage)||'');
       }
+      try{ await doc.destroy(); }catch(_){}
     }
-  }catch(err){ console.error(err); alert('載入失敗:'+err.message); }
-  scLoadMsg('共 '+scPages.length+' 頁');
-  if(scPages.length){ scEl('sc-empty').hidden=true; scEl('sc-wrap').hidden=false; scFilms(); scShowPage(first?0:scPi); }
-  scOcrKick();
+    scLoadMsg('已載入共用圖面 '+file.original_name+'，共 '+scPages.length+' 頁');
+    if(scPages.length){ scEl('sc-empty').hidden=true; scEl('sc-wrap').hidden=false; scFilms(); scShowPage(0); }
+  }catch(err){ console.error(err); alert('載入共用圖面失敗：'+err.message); }
+  finally{ scDrawingBusy=false; }
+}
+
+async function scPdfPageToScPage(page,name,dwg){
+  let vp=page.getViewport({scale:1}); vp=page.getViewport({scale:Math.min(SC_PAGE_W/vp.width,8)});
+  const cv=document.createElement('canvas'); cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
+  await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+  const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.85));
+  if(!blob) throw new Error('頁面轉圖失敗');
+  const img=await scLoadImg(URL.createObjectURL(blob));
+  scPages.push({name,img,w:img.naturalWidth,h:img.naturalHeight,dwg:String(dwg||''),ocr:'done'});
+  try{ page.cleanup(); }catch(_){} cv.width=cv.height=0;
+}
+
+async function scUploadSharedDrawing(file){
+  if(scDrawingBusy) return; scDrawingBusy=true;
+  const projectId=scEl('sc-proj').value, zoneId=scEl('sc-zone').value, id=crypto.randomUUID();
+  const uploadedPaths=[]; let dbFileCreated=false;
+  try{
+    scLoadMsg('準備上傳共用圖面…');
+    await dsEnsureStorageReady(); await scEnsurePdfjs();
+    const uploadParts=await dsPreparePdfParts(file); let totalPages=0;
+    for(const part of uploadParts){
+      const doc=await pdfjsLib.getDocument({data:await part.file.arrayBuffer()}).promise;
+      part.page_start=totalPages+1; totalPages+=doc.numPages; part.page_end=totalPages;
+      try{ await doc.destroy(); }catch(_){}
+    }
+    const bom=await sbFetchAll('/rest/v1/components?select=seq,drawing_no&zone_id=eq.'+encodeURIComponent(zoneId)+'&order=seq');
+    const drawings=[], seen=new Set();
+    (Array.isArray(bom.data)?bom.data:[]).forEach(row=>{ const d=String(row.drawing_no||'').trim(),k=dsNorm(d); if(d&&k&&!seen.has(k)){ seen.add(k); drawings.push(d); } });
+    if(!drawings.length) throw new Error('此工程區 BOM 沒有圖號，無法建立頁碼索引。');
+    if(totalPages!==drawings.length&&!await uiConfirm('PDF 有 '+totalPages+' 頁，BOM 有 '+drawings.length+' 個圖號。自檢表將依 BOM 順序標記前 '+Math.min(totalPages,drawings.length)+' 頁；是否繼續？')) return;
+    const storageParts=uploadParts.map((part,index)=>({
+      storage_key:dsStorageKey(projectId,zoneId,id,index+1,uploadParts.length),
+      page_start:part.page_start,page_end:part.page_end,size_bytes:part.file.size
+    }));
+    let completed=0, totalBytes=uploadParts.reduce((sum,p)=>sum+p.file.size,0);
+    for(let i=0;i<uploadParts.length;i++){
+      const part=uploadParts[i], descriptor=storageParts[i];
+      await dsStorageUpload(descriptor.storage_key,part.file,bytes=>scLoadMsg('上傳共用圖面… '+Math.round((completed+bytes)/Math.max(1,totalBytes)*100)+'%'));
+      uploadedPaths.push(descriptor.storage_key); completed+=part.file.size;
+    }
+    const fileRow={id,project_id:Number(projectId),zone_id:Number(zoneId),original_name:file.name,
+      storage_key:storageParts[0].storage_key,storage_parts:storageParts,page_count:totalPages,size_bytes:file.size,created_by:currentUser.id};
+    const fr=await sbFetch('/rest/v1/drawing_files',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(fileRow)});
+    if(!fr.ok) throw new Error(dsErrorMessage(fr,'圖面資料寫入失敗'));
+    dbFileCreated=true;
+    const pageRows=drawings.slice(0,totalPages).map((drawing_no,index)=>({file_id:id,project_id:Number(projectId),zone_id:Number(zoneId),page_no:index+1,drawing_no,created_by:currentUser.id}));
+    for(let i=0;i<pageRows.length;i+=200){
+      const pr=await sbFetch('/rest/v1/drawing_page_drawings',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(pageRows.slice(i,i+200))});
+      if(!pr.ok) throw new Error(dsErrorMessage(pr,'頁碼標記寫入失敗'));
+    }
+    scLoadMsg('上傳完成，已共用至圖面快搜；正在載入…');
+    await scZoneChange();
+    const saved=scDrawingFiles.find(x=>String(x.id)===id);
+    if(saved){
+      scEl('sc-drawing-file').value=id; scEl('sc-load-existing').disabled=false;
+      scDrawingBusy=false;
+      await scLoadStoredDrawing(saved);
+    }
+  }catch(error){
+    console.error(error);
+    if(dbFileCreated) await sbFetch('/rest/v1/drawing_files?id=eq.'+id,{method:'DELETE'});
+    if(uploadedPaths.length){ try{ await dsStorageRemove(uploadedPaths); }catch(_){} }
+    alert('圖面上傳失敗：'+error.message); scLoadMsg('上傳失敗：'+error.message);
+  }finally{ scDrawingBusy=false; }
 }
 async function scPdfToPages(file){
   await scEnsurePdfjs();
@@ -33708,7 +33879,7 @@ function scPageDwgInput(v){ if(scPages[scPi]){ scPages[scPi].dwg=v.trim(); scPag
 let scOcrWorker=null, scOcrBusy=false;
 function scOcrMsg(){
   const left=scPages.filter(p=>p.ocr==='wait'||p.ocr==='run').length;
-  scEl('sc-ocrmsg').textContent=left?('圖號辨識中… 剩 '+left+' 頁'):'';
+  const el=scEl('sc-ocrmsg'); if(el) el.textContent=left?('圖號辨識中… 剩 '+left+' 頁'):'';
 }
 /* 圖號固定格式:S + 數字 + - + 英文 + 3位數字(如 S4-B731)。
    依位元別修正 OCR 常見誤認,修不回這個格式就回空(寧缺勿錯,避免誤配)。 */
@@ -34239,7 +34410,7 @@ async function dsLoadAllUploaded(render = true) {
   const [fileResult, pageResult, zoneResult] = await Promise.all([
     sbFetchAll('/rest/v1/drawing_files?select=id,project_id,zone_id,original_name,storage_key,storage_parts,page_count,size_bytes,created_by,created_at&order=created_at.desc'),
     sbFetchAll('/rest/v1/drawing_page_drawings?select=id,file_id,drawing_no,page_no'),
-    sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,zone_name,status&status=eq.' + encodeURIComponent('進行中') + '&order=zone_code')
+    sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,zone_name,status&order=zone_code')
   ]);
   if (!fileResult.ok || !pageResult.ok || !zoneResult.ok) {
     dsAllFiles = []; dsAllPageDrawings = []; dsAllZones = [];
@@ -34262,10 +34433,10 @@ async function drawingSearchInit() {
   dsBusy = true;
   try {
     if (!allBOM.length) await loadBOM();
-    dsProjects = allBOM.filter(project => project.status === '進行中');
+    dsProjects = allBOM.filter(project => String(project.status || '').trim() !== '已完成');
     const select = dsEl('ds-project');
     const oldValue = select.value;
-    select.innerHTML = '<option value="">' + (dsProjects.length ? '請選擇進行中工程' : '目前沒有進行中的工程') + '</option>' +
+    select.innerHTML = '<option value="">' + (dsProjects.length ? '請選擇工程' : '目前沒有可用工程') + '</option>' +
       dsProjects.map(project => '<option value="' + project.id + '">' + dsEsc(project.proj_num || '') + ' ' + dsEsc(project.proj_name || '') + '</option>').join('');
     if (dsProjects.some(project => String(project.id) === oldValue)) select.value = oldValue;
     if (select.value) await dsProjectChanged();
@@ -34291,9 +34462,9 @@ async function dsProjectChanged() {
     zoneSelect.innerHTML = '<option value="">請先選擇工程</option>';
     return;
   }
-  const result = await sbFetch('/rest/v1/zones?select=id,zone_code,zone_name,status&project_id=eq.' + encodeURIComponent(projectId) + '&status=eq.' + encodeURIComponent('進行中') + '&order=zone_code');
+  const result = await sbFetch('/rest/v1/zones?select=id,zone_code,zone_name,status&project_id=eq.' + encodeURIComponent(projectId) + '&order=zone_code');
   dsZones = result.ok && Array.isArray(result.data) ? result.data : [];
-  zoneSelect.innerHTML = '<option value="">' + (dsZones.length ? '請選擇進行中工程區' : '此工程沒有進行中的工程區') + '</option>' +
+  zoneSelect.innerHTML = '<option value="">' + (dsZones.length ? '請選擇工程區' : '此工程沒有工程區') + '</option>' +
     dsZones.map(zone => '<option value="' + zone.id + '">' + dsEsc(zone.zone_code || '') + ' ' + dsEsc(zone.zone_name || '') + '</option>').join('');
 }
 
@@ -34421,8 +34592,19 @@ async function dsFileSelected(input) {
   dsSetSelectedFileName(file.name);
   dsOpenUploadPanel();
   dsPending = null; dsRenderPending(); dsEl('ds-save').disabled = true;
-  if (!dsZoneId()) { alert('請先選擇進行中的工程與工程區。'); input.value = ''; dsSetSelectedFileName(); return; }
+  if (!dsZoneId()) { alert('請先選擇工程與工程區。'); input.value = ''; dsSetSelectedFileName(); return; }
   if (!dsDrawingGroups.length) { alert('此工程區 BOM 沒有圖號，無法依序標記 PDF。'); input.value = ''; dsSetSelectedFileName(); return; }
+  const duplicate = dsFiles.find(item => String(item.original_name || '').toLowerCase() === file.name.toLowerCase() && Number(item.size_bytes) === file.size);
+  if (duplicate) {
+    dsSetProgress(100, '偵測到重複圖面，未再次上傳：' + duplicate.original_name);
+    alert('此工程區已有相同圖面，無需重複上傳。\n\n將直接開啟既有圖面的頁碼標記。');
+    input.value = ''; dsSetSelectedFileName(); dsEditFileMappings(duplicate.id);
+    return;
+  }
+  const sameName = dsFiles.find(item => String(item.original_name || '').toLowerCase() === file.name.toLowerCase());
+  if (sameName && !await uiConfirm('已有同名圖面「' + file.name + '」，但檔案大小不同，可能是新版。仍要新增上傳嗎？')) {
+    input.value = ''; dsSetSelectedFileName(); return;
+  }
   try {
     dsSetProgress(1, '正在檢查 PDF 與 Supabase Storage…');
     await dsEnsureStorageReady();
@@ -34651,14 +34833,14 @@ async function dsSelectFileZone(id) {
   if (!file) return;
   const projectSelect = dsEl('ds-project');
   if (!Array.from(projectSelect.options).some(option => option.value === String(file.project_id))) {
-    alert('此圖面的工程已不是進行中，無法編輯。');
+    alert('此圖面的工程已完成或不存在，無法編輯。');
     return;
   }
   projectSelect.value = String(file.project_id);
   await dsProjectChanged();
   const zoneSelect = dsEl('ds-zone');
   if (!Array.from(zoneSelect.options).some(option => option.value === String(file.zone_id))) {
-    alert('此圖面的工程區已不是進行中，無法編輯。');
+    alert('找不到此圖面的工程區，無法編輯。');
     return;
   }
   zoneSelect.value = String(file.zone_id);
@@ -34671,14 +34853,14 @@ async function dsActivateFile(id) {
   if (!file) return;
   const projectSelect = dsEl('ds-project');
   if (!Array.from(projectSelect.options).some(option => option.value === String(file.project_id))) {
-    alert('此圖面的工程已不是進行中，無法搜尋。');
+    alert('此圖面的工程已完成或不存在，無法搜尋。');
     return;
   }
   projectSelect.value = String(file.project_id);
   await dsProjectChanged();
   const zoneSelect = dsEl('ds-zone');
   if (!Array.from(zoneSelect.options).some(option => option.value === String(file.zone_id))) {
-    alert('此圖面的工程區已不是進行中，無法搜尋。');
+    alert('找不到此圖面的工程區，無法搜尋。');
     return;
   }
   zoneSelect.value = String(file.zone_id);
@@ -34721,7 +34903,7 @@ function dsRenderFiles() {
   });
   if (summary) summary.textContent = filter
     ? '顯示 ' + visibleFiles.length + '／' + dsAllFiles.length + ' 份 PDF'
-    : '共 ' + dsAllFiles.length + ' 份 PDF（所有進行中工程區）';
+    : '共 ' + dsAllFiles.length + ' 份 PDF（所有工程區）';
   if (!dsAllFiles.length) { box.innerHTML = '<div class="ds-empty">目前尚未上傳任何圖面。</div>'; return; }
   if (!visibleFiles.length) { box.innerHTML = '<div class="ds-empty">找不到符合條件的已上傳圖面。</div>'; return; }
   box.innerHTML = visibleFiles.map(file => {
