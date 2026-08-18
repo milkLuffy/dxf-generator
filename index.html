@@ -2450,6 +2450,57 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
   </div>
 
   <script>
+// ── 全站輸入共用層：中文輸入法保護 + 全形 ASCII 正規化 ──
+// 僅轉換全形英數與常用符號(U+FF01～FF5E)，不改動中文字本身。
+window.normalizeFullWidth=function(value){
+  return String(value==null?'':value).replace(/[！-～]/g,function(ch){
+    return String.fromCharCode(ch.charCodeAt(0)-0xFEE0);
+  }).replace(/　/g,' ');
+};
+(function(){
+  var imeStarts=new WeakMap();
+  function editableTarget(t){
+    return !!t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable);
+  }
+  // 必須比各功能的 keydown 更早註冊：組字期間只讓瀏覽器/輸入法處理，不讓表格換格、複製或送出。
+  document.addEventListener('keydown',function(e){
+    if(editableTarget(e.target)&&(e.isComposing||e.keyCode===229)) e.stopImmediatePropagation();
+  },true);
+  document.addEventListener('compositionstart',function(e){
+    if(editableTarget(e.target)) imeStarts.set(e.target,{value:String(e.target.value||''),data:''});
+  },true);
+  document.addEventListener('compositionupdate',function(e){
+    var s=imeStarts.get(e.target); if(s) s.data=String(e.data||'');
+  },true);
+  document.addEventListener('compositionend',function(e){
+    var t=e.target,s=imeStarts.get(t),raw=String(e.data||(s&&s.data)||''); imeStarts.delete(t);
+    if(!editableTarget(t)||!/[！-～　]/.test(raw)) return;
+    // number 欄位有些瀏覽器會先丟掉全形數字；等原生 composition/input 完成後再補回半形內容。
+    setTimeout(function(){
+      var normalized=window.normalizeFullWidth(raw),cur=String(t.value||''),next=window.normalizeFullWidth(cur);
+      if((t.getAttribute&&t.getAttribute('type')||'').toLowerCase()==='number'&&!cur&&s) next=window.normalizeFullWidth(s.value)+normalized;
+      if(next!==cur){ t.value=next; t.dispatchEvent(new Event('input',{bubbles:true})); }
+    },0);
+  },true);
+  // number 欄位可能在 input 事件前就拒絕全形內容；貼上時先轉半形再交給既有儲存邏輯。
+  document.addEventListener('paste',function(e){
+    var t=e.target,type=(t&&t.getAttribute?t.getAttribute('type'):'')||'';
+    if(!editableTarget(t)||String(type).toLowerCase()!=='number') return;
+    var raw=(e.clipboardData||window.clipboardData)&&((e.clipboardData||window.clipboardData).getData('text'));
+    if(!raw||/[\t\r\n]/.test(raw)||!/[！-～　]/.test(raw)) return;
+    e.preventDefault();
+    t.value=window.normalizeFullWidth(raw.trim());
+    t.dispatchEvent(new Event('input',{bubbles:true}));
+  },true);
+  // capture 階段先改 value，後續各頁既有的 oninput/change 會直接收到半形值。
+  function normalizeElementValue(e){
+    var t=e.target; if(!editableTarget(t)||t.isContentEditable) return;
+    var v=String(t.value||''),n=window.normalizeFullWidth(v);
+    if(n!==v) t.value=n;
+  }
+  document.addEventListener('input',normalizeElementValue,true);
+  document.addEventListener('change',normalizeElementValue,true);
+})();
   // 側邊欄使用內嵌線條 SVG，不依賴 Windows/macOS 的 Emoji 字型。
   (function(){
     var icons={
@@ -13178,7 +13229,7 @@ async function commitZoneSave(data, compMode){
   await loadZones(currentProjectId);
 }
 // 依模式將解析出的構件寫入指定工程區(與批次匯入邏輯一致)
-// mode: 'weight'(只更新重量/數量/規格) | 'overwrite'(刪除舊構件重建)
+// mode: 'weight'(更新共通編號/重量/數量/規格) | 'overwrite'(刪除舊構件重建)
 async function applyZoneComponents(zoneId, mode, parsed){
   parsed=parsed||zoneModalParsed;
   if(!parsed.length) return;
@@ -13190,7 +13241,12 @@ async function applyZoneComponents(zoneId, mode, parsed){
       const cid=idByPart[c.partNo];
       if(cid){
         await sbFetch('/rest/v1/components?id=eq.'+cid,{method:'PATCH',headers:{'Prefer':'return=minimal'},
-          body:JSON.stringify({ net_weight:parseFloat(c.netW)||null, qty:parseInt(c.qty)||null, spec:c.spec })});
+          body:JSON.stringify({
+            common_no:c.commonNo,
+            net_weight:parseFloat(c.netW)||null,
+            qty:parseInt(c.qty)||null,
+            spec:c.spec
+          })});
       }
     }
     return;
@@ -13212,7 +13268,7 @@ function showZoneCompChoiceModal(onChoose){
     '<div class="input-modal-title">此工程區已有構件</div>'+
     '<div style="font-family:var(--sans);font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:18px">偵測到你貼上了新的構件總表,請選擇處理方式：</div>'+
     '<div style="display:flex;flex-direction:column;gap:10px">'+
-    '<button class="dup-choice-btn" data-mode="weight"><strong>只更新重量</strong><span>更新重量/數量/規格,保留加工機、進料、A201 等已填欄位</span></button>'+
+    '<button class="dup-choice-btn" data-mode="weight"><strong>更新基本資料</strong><span>更新共通編號、重量、數量、規格，保留加工機、進料、A201 等已填欄位</span></button>'+
     '<button class="dup-choice-btn" data-mode="overwrite"><strong>完全覆蓋</strong><span>刪除舊構件重建（A201 等欄位會清空）</span></button>'+
     '<button class="dup-choice-btn" data-mode="skip"><strong>不變更構件</strong><span>只儲存工程區資料,略過這次貼上的構件</span></button>'+
     '</div>'+
@@ -15937,7 +15993,7 @@ async function importBatchZones() {
   }
 }
 
-// mode: 'new'(no dups), 'weight'(only update weight), 'overwrite'(full rebuild), 'skip'(skip dups)
+// mode: 'new'(no dups), 'weight'(update BOM basic fields), 'overwrite'(full rebuild), 'skip'(skip dups)
 async function runBatchImport(dupMode) {
   const btn = document.getElementById('batch-import-btn');
   btn.disabled = true; btn.textContent = '匯入中...';
@@ -15949,7 +16005,7 @@ async function runBatchImport(dupMode) {
       if (!existing) continue;
       const zoneId = existing.id;
       if (dupMode === 'weight') {
-        // only update net_weight (and spec/qty) of matching components by part_no; keep ext untouched
+        // update BOM basic fields of matching components by part_no; keep ext untouched
         // fetch existing components to map part_no -> id
         const cr = await sbFetch('/rest/v1/components?select=id,part_no&zone_id=eq.' + zoneId);
         const idByPart = {};
@@ -15959,7 +16015,12 @@ async function runBatchImport(dupMode) {
           if (cid) {
             await sbFetch('/rest/v1/components?id=eq.' + cid, {
               method:'PATCH', headers:{'Prefer':'return=minimal'},
-              body: JSON.stringify({ net_weight: parseFloat(c.netW)||null, qty: parseInt(c.qty)||null, spec: c.spec })
+              body: JSON.stringify({
+                common_no: c.commonNo,
+                net_weight: parseFloat(c.netW)||null,
+                qty: parseInt(c.qty)||null,
+                spec: c.spec
+              })
             });
           }
         }
@@ -16011,7 +16072,7 @@ function showDupChoiceModal(dupCount, onChoose) {
     '<div class="input-modal-title">有 ' + dupCount + ' 個分區已存在</div>' +
     '<div style="font-family:var(--sans);font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:18px">請選擇處理方式：</div>' +
     '<div style="display:flex;flex-direction:column;gap:10px">' +
-    '<button class="dup-choice-btn" data-mode="weight"><strong>只更新重量</strong><span>更新重量/數量/規格,保留加工機、進料、A201 等已填欄位</span></button>' +
+    '<button class="dup-choice-btn" data-mode="weight"><strong>更新基本資料</strong><span>更新共通編號、重量、數量、規格，保留加工機、進料、A201 等已填欄位</span></button>' +
     '<button class="dup-choice-btn" data-mode="overwrite"><strong>完全覆蓋</strong><span>刪除舊構件重建（A201 等欄位會清空）</span></button>' +
     '<button class="dup-choice-btn" data-mode="skip"><strong>略過已存在的</strong><span>只匯入全新的分區</span></button>' +
     '</div>' +
@@ -21039,7 +21100,7 @@ document.addEventListener('paste', e => {
   const grid = text.replace(/\r/g,'').split('\n');
   // drop trailing empty line from clipboard
   while (grid.length > 1 && grid[grid.length-1] === '') grid.pop();
-  let cells2d = grid.map(l => l.split('\t'));
+  let cells2d = grid.map(l => l.split('\t').map(v => window.normalizeFullWidth ? window.normalizeFullWidth(v) : v));
 
   // 單一值貼到「一格以上」的選取範圍 → 用同一個值填滿整個選取範圍(Excel 行為)
   const isSingleVal = (cells2d.length === 1 && cells2d[0].length === 1);
@@ -27409,7 +27470,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     gridFocus(target);
   }
   function gridNormalize(field,value){
-    var v=String(value==null?'':value);
+    var v=window.normalizeFullWidth?window.normalizeFullWidth(value):String(value==null?'':value);
     if(field!=='bill_date'||!v.trim()) return v;
     var s=v.trim().replace(/\//g,'-'),m;
     if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) return m[1]+'-'+pad(m[2])+'-'+pad(m[3]);
@@ -27475,13 +27536,17 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(last) gridSetRange(gridCoord(first),gridCoord(last));
   }
   function gridKey(e,td){
-    if(e.isComposing) return;
+    if(e.isComposing||e.keyCode===229) return;
     var activeEl=blGridActive?gridCellAt(blGridActive.round,blGridActive.row,blGridActive.col):null;
     var base=activeEl||td;
     var mod=e.metaKey||e.ctrlKey;
     if(mod&&String(e.key).toLowerCase()==='c'){ e.preventDefault(); gridCopy(td); return; }
     if(mod) return;   // 其他 Ctrl 組合(含 Ctrl+A/V)交還瀏覽器
-    if(e.key==='Backspace'||e.key==='Delete'){ e.preventDefault(); gridDelete(td); return; }
+    // 焦點在可編輯輸入框內時，Delete / Backspace 是刪除文字；只有焦點在 td 本身時才清空整格。
+    if(e.key==='Backspace'||e.key==='Delete'){
+      if(e.target&&e.target.matches&&e.target.matches('input.bl-grid-cell:not([disabled])')) return;
+      e.preventDefault(); gridDelete(td); return;
+    }
     if(e.key==='Enter'){ e.preventDefault(); gridMove(base,1,0,false); return; }
     if(e.key==='ArrowUp'){ e.preventDefault(); gridMove(base,-1,0,e.shiftKey); return; }
     if(e.key==='ArrowDown'){ e.preventDefault(); gridMove(base,1,0,e.shiftKey); return; }
@@ -27579,8 +27644,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     // 取該列單價以判定狀況
     var rows=blRowsCache[round]||[]; var up=null, pnote='';
     for(var i=0;i<rows.length;i++){ if(rows[i].zid===zid){ up=rows[i].unit_price; pnote=rows[i].price_note||''; break; } }
-    // 請款金額有數字 → 自動帶「已請款」+ 請款日期(當天)
-    if((field==='bill_price'||field==='util_bill_price') && billNum(rec[field])>0){
+    // 請款價格有數字，或貼上「8/18已請款／合併／和算」等已請款文字 → 自動帶狀況與今日日期。
+    if((field==='bill_price'||field==='util_bill_price') && billedValue(rec[field])){
       rec.bill_status='已請款';
       if(isLegacyViewYm(blMonth)||!rec.bill_date) rec.bill_date=today();
     }
@@ -28268,6 +28333,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   var LAB_COLS=['proj_num','doc_no','work_date','work_count','amount','actual_count','actual_amount',null,'content','bill_date','resp_unit','note','manager',null];
 
   function applyField(r, field, val){
+    if(typeof val==='string'&&window.normalizeFullWidth) val=window.normalizeFullWidth(val);
     if((field==='work_count'||field==='actual_count') && parseFloat(val)<0) val='0';   // 禁止負數
     if((field==='amount'||field==='actual_amount') && typeof val==='string') val=val.replace(/,/g,'');   // 金額欄允許千分位輸入,存前去逗號(加總的 num()/cleanNum 才正確)
     var prevProj = (field==='proj_num') ? String(r.proj_num||'').trim().toUpperCase() : null;
@@ -28340,6 +28406,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   }
   window.laborGridKey=function(e){
     var t=e.target; if(!t||t.tagName!=='INPUT') return;
+    // 中文輸入法選字期間的 Enter／方向鍵只交給 IME，不得移格或把組字內容帶到下一格。
+    if(e.isComposing||e.keyCode===229) return;
     var tr=t.closest('tr'); if(!tr) return;
     var tb=tr.parentElement; var rows=Array.prototype.slice.call(tb.children);
     var ri=rows.indexOf(tr), ci=Array.prototype.slice.call(tr.children).indexOf(t.closest('td'));
@@ -32326,6 +32394,7 @@ function spxPasteGrid(key,cells2d,anchor){ const cfg=SPX[key], arr=prodArr(key);
   }
   document.addEventListener('keydown', function(e){
     if(e.defaultPrevented) return;                                    // 該表已自行處理此鍵 → 讓路
+    if(e.isComposing||e.keyCode===229) return;                         // 中文輸入法組字／選字期間不做儲存格操作
     if(e.ctrlKey||e.metaKey||e.altKey) return;
     const t=e.target; if(!t||(t.tagName!=='INPUT'&&t.tagName!=='SELECT')) return;
     const table=t.closest?t.closest(DATA_TABLE_SEL):null; if(!table) return;
@@ -32362,6 +32431,7 @@ function spxPasteGrid(key,cells2d,anchor){ const cfg=SPX[key], arr=prodArr(key);
   //     當焦點不在任何輸入元件、但目前有選取範圍(tblSel)時,改用選取狀態導覽並把焦點帶進去。
   document.addEventListener('keydown', function(e){
     if(e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+    if(e.isComposing||e.keyCode===229) return;
     const isArrow = ARROWS.indexOf(e.key)>=0, isEnter = e.key==='Enter';
     if(!isArrow && !isEnter) return;
     const ae = document.activeElement;                                  // 焦點已在輸入元件 → 交給既有處理器
@@ -33646,7 +33716,7 @@ async function scProjChange(){
   }
   zSel.innerHTML='<option value="">— 載入中… —</option>';
   const r=await sbFetch('/rest/v1/zones?select=*&project_id=eq.'+pid+'&order=zone_code');
-  scZones=Array.isArray(r.data)?r.data:[];
+  scZones=(Array.isArray(r.data)?r.data:[]).filter(z=>String(z.status||'').trim()!=='已完成');
   zSel.innerHTML='<option value="">— 選擇工程區 —</option>'+
     scZones.map(z=>'<option value="'+z.id+'">'+esc(z.zone_code)+'</option>').join('');
   await scZoneChange();
@@ -34463,7 +34533,8 @@ async function dsProjectChanged() {
     return;
   }
   const result = await sbFetch('/rest/v1/zones?select=id,zone_code,zone_name,status&project_id=eq.' + encodeURIComponent(projectId) + '&order=zone_code');
-  dsZones = result.ok && Array.isArray(result.data) ? result.data : [];
+  dsZones = result.ok && Array.isArray(result.data)
+    ? result.data.filter(zone => String(zone.status || '').trim() !== '已完成') : [];
   zoneSelect.innerHTML = '<option value="">' + (dsZones.length ? '請選擇工程區' : '此工程沒有工程區') + '</option>' +
     dsZones.map(zone => '<option value="' + zone.id + '">' + dsEsc(zone.zone_code || '') + ' ' + dsEsc(zone.zone_name || '') + '</option>').join('');
 }
