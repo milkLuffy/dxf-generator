@@ -1028,6 +1028,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .layout-chart-table td.pos-cell{background:var(--bg4);color:var(--text3);font-size:10px;width:32px}
 .lcell{padding:4px 6px;font-size:11px;height:100%;display:flex;flex-direction:column;gap:1px;align-items:center;justify-content:center}
 .lcell-part{color:var(--text);font-weight:500}
+/* 同一編號多支構件:在編號右側標註「×支數」 */
+.lcell-qty{margin-left:3px;font-size:9px;font-weight:700;color:var(--accent3)}
 .lcell-status{font-size:8px;padding:0px 4px;border-radius:2px}
 .st-上線中{background:rgba(245,197,66,.18);color:var(--yellow)}
 .st-待出貨{background:rgba(79,142,247,.18);color:var(--accent2)}
@@ -1227,6 +1229,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   .layout-chart-table th { background: #eee !important; color: #000 !important; }
   .layout-chart-table td.pos-cell { background: #eee !important; color: #000 !important; }
   .layout-chart-table .lcell-part { color: #000 !important; }
+  /* ×N 支數標記:列印時保留原色(比照狀態標籤,不強制轉黑) */
   /* 注意:.lcell-status(狀態小標籤)與 .cell-上線中/.cell-待出貨等底色,都要保留原本的狀態配色,
      不能再強制改成灰黑色,否則就是「彩色列印卻印不出彩色」的根本原因 */
   body.layout-chart-printing .sidebar, body.layout-chart-printing .app-header { display: none !important; }
@@ -2877,6 +2880,8 @@ window.normalizeFullWidth=function(value){
       <div class="bom-result-bar" style="margin-top:40px">
         <div class="section-label" style="margin:0">托樑零件表</div>
         <div class="bom-result-actions">
+          <button class="btn-sm btn-export" id="beam-undo-btn" onclick="beamUndo()" title="復原 (Ctrl+Z)" disabled>↶ 復原</button>
+          <button class="btn-sm btn-export" id="beam-redo-btn" onclick="beamRedo()" title="重做 (Ctrl+Y)" disabled>↷ 重做</button>
           <button class="btn-sm btn-export" onclick="beamAddRow()">＋ 新增列</button>
           <button class="btn-sm btn-export" onclick="beamAddCol()">＋ 新增欄位</button>
           <button class="btn-sm btn-export" onclick="clearColFilters('beam')">清除篩選</button>
@@ -5112,7 +5117,7 @@ window.normalizeFullWidth=function(value){
     #page-prod .pc-unit .pu-chips{display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end}
     #page-prod .prod-cards-empty{grid-column:1/-1;padding:40px;text-align:center;color:var(--text3);font-size:13px}
     /* ── 進度條「小卡」(依工程編號,可點→SP狀態表) ── */
-    #page-prod .prod-cards.is-mini{grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:10px}
+    #page-prod .prod-cards.is-mini{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
     #page-prod .prod-mini{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:9px 12px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
     #page-prod .prod-mini .pm-manual{display:flex;align-items:baseline;gap:6px;font-family:var(--mono);font-size:11px;color:var(--text3)}
     #page-prod .prod-mini .pm-manual .pp-lbl{font-size:10px;color:var(--text3)}
@@ -5126,13 +5131,27 @@ window.normalizeFullWidth=function(value){
     .prod-zmenu button.zm-danger{color:var(--red)}
     .prod-zmenu button.zm-danger:hover{background:rgba(255,69,58,.14)}
     #page-prod .prod-mini:hover{border-color:var(--accent);box-shadow:0 4px 16px rgba(0,0,0,.18)}
-    #page-prod .pm-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-    #page-prod .pm-title{font-family:var(--mono);font-weight:600;font-size:14px;color:var(--text);letter-spacing:.02em}
+    #page-prod .pm-head{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:nowrap;min-height:21px}
+    /* 標題列一律單行:徽章不換行、長工程區名改用…截斷 → 所有小卡高度一致 */
+    #page-prod .pm-title{font-family:var(--mono);font-weight:600;font-size:14px;color:var(--text);letter-spacing:.02em;min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #page-prod .pm-status{display:flex;align-items:center;gap:4px;flex:0 1 auto;min-width:0;overflow:hidden;white-space:nowrap}
+    #page-prod .pm-status .chip{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+    #page-prod .pm-status .pm-menu{flex:0 0 auto}
     #page-prod .pm-sub{font-size:11px;color:var(--text3);font-family:var(--mono)}
+    /* 摘要列:固定兩行高(內容多少都一樣高),避免卡片參差不齊 */
+    #page-prod .pm-sum{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;height:32px;line-height:16px;word-break:break-all}
+    #page-prod .pm-sum b{color:var(--text2);font-weight:600}
+    #page-prod .pm-sum .pms-x{color:var(--text3)}
+    /* 看板依整體狀態分區塊(進行中/未開始/完成…各自一段) */
+    #page-prod .prod-group-head{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;color:var(--text2);border-top:1px solid var(--border);padding-top:10px;margin-top:4px}
+    #page-prod .prod-group-head:first-child,#page-prod .prod-mini-head+.prod-group-head{border-top:0;padding-top:0;margin-top:0}
+    #page-prod .prod-group-head .pgh-n{color:var(--text3);font-size:11px}
     #page-prod .pm-bar{height:5px;background:var(--bg4);border-radius:99px;overflow:hidden}
     #page-prod .pm-fill{height:100%;border-radius:99px;transition:width .3s}
-    #page-prod .pm-foot{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--text3);font-family:var(--mono)}
+    #page-prod .pm-foot{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text3);font-family:var(--mono);min-height:19px}
     #page-prod .pm-foot .pm-pct{color:var(--text2);font-weight:600;font-size:13px}
+    #page-prod .pm-foot-r{display:flex;align-items:center;gap:5px;flex:0 0 auto}
+    #page-prod .pm-foot-r .pm-alert{align-self:center;line-height:1.4}
     #page-prod .pm-sub .pm-more{float:right;color:var(--text3);font-weight:700}
     #page-prod .pm-title .pm-tproj{color:var(--accent3)}
     #page-prod .prod-mini-head{grid-column:1/-1;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:2px}
@@ -5206,6 +5225,24 @@ window.normalizeFullWidth=function(value){
     .pm-summary-title{padding:10px 12px;background:var(--bg3);color:var(--text);font:700 13px var(--mono);border-bottom:1px solid var(--border)}
     .pm-summary .pm-detail-table th{position:static}
     .pm-summary-total td{font-weight:700;background:rgba(10,132,255,.08);color:var(--accent2)}
+    #pmPrintArea{display:none}
+    @media print{
+      /* 具名頁面:只有細項彈窗列印套 A4 直式,不動到全站預設的橫式 @page(床位配置圖等) */
+      @page pmA4{size:A4 portrait;margin:12mm}
+      body.pm-printing{page:pmA4}
+      body.pm-printing>*{display:none!important}
+      body.pm-printing>#pmPrintArea{display:block!important}
+      #pmPrintArea,#pmPrintArea *{background:#fff!important;color:#000!important;box-shadow:none!important}
+      #pmPrintArea .pm-detail-modal{width:100%;max-height:none;overflow:visible;border:0;border-radius:0}
+      #pmPrintArea .pm-detail-head{position:static;padding:0 0 10px;border-bottom:1px solid #666}
+      #pmPrintArea .pm-detail-table th{position:static;background:#eee!important;border-bottom:1px solid #666;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      #pmPrintArea .pm-detail-table td{border-bottom:1px solid #ccc}
+      #pmPrintArea .pm-detail-table tr{break-inside:avoid}
+      #pmPrintArea thead{display:table-header-group}
+      #pmPrintArea .pm-summary{margin:16px 0 0;border:1px solid #666;break-inside:avoid}
+      #pmPrintArea .pm-summary-title{border-bottom:1px solid #666}
+      #pmPrintArea .pm-summary-total td{background:#eee!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
     </style>
     <div class="page" id="page-prod">
       <div class="page-title">🏗️ SP鋼材狀態追蹤表</div>
@@ -5416,17 +5453,10 @@ window.normalizeFullWidth=function(value){
         <div class="pd-section">
           <div class="pd-sec-head">
             <span class="pd-sec-title">🔩 成品材領用 <span class="pd-count-badge" id="pdProdCount"></span></span>
+            <button class="btn" id="pdProdSumBtn" style="display:none" onclick="pmOpenZoneDetails()">🧾 統整全部細項</button>
             <a class="pd-link" onclick="prodDrillToTab('product', prodDetailCtx.proj, prodDetailCtx.zone)">去成品材分頁編輯 →</a>
           </div>
           <div id="pdProduct" class="pd-list"></div>
-        </div>
-
-        <div class="pd-section">
-          <div class="pd-sec-head">
-            <span class="pd-sec-title">🔥 焊材領料 <span class="pd-count-badge" id="pdWeldCount"></span></span>
-            <a class="pd-link" onclick="prodDrillToTab('welding', prodDetailCtx.proj, prodDetailCtx.zone)">去焊材領料分頁 →</a>
-          </div>
-          <div id="pdWelding" class="pd-list"></div>
         </div>
 
         <div class="pd-section">
@@ -10292,9 +10322,12 @@ function readNavPreferences(){
 function writeNavPreferences(value){
   try{localStorage.setItem(navPreferenceKey(),JSON.stringify(value));}catch(e){}
 }
+// 從「常用功能」進入的頁面,側邊欄要留在常用功能(不要跳去該功能原本的分類)。
+// navTo 會取用這個旗標一次,之後從一般選單進入就恢復正常行為。
+let _favoriteNavSticky=false;
 function favoriteOpen(k){
   if(k==='evergreen-sys') window.open('https://egstpsa.evergreennet.com/dana-na/auth/url_xm52bsJ1cg3szywW/welcome.cgi','_blank');
-  else navTo(k);
+  else { _favoriteNavSticky=true; navTo(k); }
 }
 function renderFavoriteNav(){
   const wrap=document.getElementById('favorite-nav-items'); if(!wrap)return;
@@ -10501,7 +10534,9 @@ function navTo(page, viewState) {
   window._roActive=(_perm==='read');
   if(_pel) _pel.classList.toggle('perm-ro', _perm==='read');
   const _rb=document.getElementById('ro-badge'); if(_rb) _rb.style.display=(_perm==='read')?'':'none';
-  if(PAGE_SECTION[page]){ _pageSection=PAGE_SECTION[page]; selectSection(_pageSection); }   // 右欄切到當前頁所屬分類
+  // 右欄切到當前頁所屬分類;若這次是從「常用功能」點進來的,就留在常用功能
+  if(PAGE_SECTION[page]){ _pageSection=(_favoriteNavSticky&&SECTION_TITLE.favorite)?'favorite':PAGE_SECTION[page]; selectSection(_pageSection); }
+  _favoriteNavSticky=false;
   auditSetPage(page);   // 記住目前頁面:之後的每筆紀錄都會標上,同時回報「我在這一頁」
   if(page!=='attend') attendStop(); // 離開打卡機就關相機
   if(page==='dashboard') loadDashboard();
@@ -14369,6 +14404,9 @@ async function delMaterialReceipt(id) {
 
 // ── 托樑零件表 ──
 async function loadBeam(zoneId) {
+  // 切換工程區時清空復原/重做,避免把別區的狀態還原到本區
+  beamHistory = []; beamRedoStack = []; beamDeletedIds = new Set();
+  clearTimeout(beamHistTimer); beamHistTimer = null;
   const r = await sbFetch(`/rest/v1/beam_parts?select=*&zone_id=eq.${zoneId}&order=id`);
   zoneBeamRows = (Array.isArray(r.data)?r.data:[]).map(b => ({
     id:b.id, seq:b.seq||'', part_no:b.part_no||'', common_no:b.common_no||'', spec:b.spec||'',
@@ -14379,56 +14417,199 @@ async function loadBeam(zoneId) {
   renderBeamTable();
 }
 
+// 托樑零件表欄位:label＝顯示標題;key＝beam_parts 固定欄位;ext＝存在 extra(jsonb) 的欄位。
+// 「序號 / 構件編號」不再顯示(舊資料仍保留在 DB,只是不上表);「單重」是新欄位,存在 extra。
+const BEAM_COLS = [
+  {label:'共編',         key:'common_no'},
+  {label:'規格',         key:'spec'},
+  {label:'數量',         key:'qty',        num:true},
+  {label:'單重',         ext:'單重',        num:true},
+  {label:'總重',         key:'net_weight', num:true},
+  {label:'圖號',         key:'drawing_no'},
+  {label:'加工機',       ext:'加工機'},
+  {label:'進料',         ext:'進料'},
+  {label:'備註',         ext:'備註'},
+  {label:'RH/BH',        ext:'RH/BH'},
+  {label:'CP編號',       ext:'CP編號'},
+  {label:'A201',         ext:'A201'}
+];
 function beamCols() {
-  // fixed beam columns; 加工機/進料/A201 are in extra
-  return { fixed: ['序號','構件編號','共通編號','規格','數量','總重','圖號'], ext: ['加工機','進料','A201'].concat(zoneBeamCustomCols) };
+  const cols = BEAM_COLS.slice();
+  const names = cols.map(c => c.label);
+  // 自訂欄位若與內建欄位同名(舊資料可能自己加過「備註」),不重複顯示
+  zoneBeamCustomCols.filter(c => !names.includes(c)).forEach(c => cols.push({label:c, ext:c, custom:true}));
+  return cols;
+}
+const beamVal = (r, col) => {
+  const v = col.key ? r[col.key] : ((r.extra||{})[col.ext]);
+  return v == null ? '' : v;
+};
+// 每列總重:有填「總重」就用填的,沒填就以 數量 × 單重 補算
+function beamRowWeight(r) {
+  const w = String(r.net_weight == null ? '' : r.net_weight).trim();
+  if (w !== '' && isFinite(parseFloat(w))) return parseFloat(w);
+  return (parseFloat(r.qty)||0) * (parseFloat((r.extra||{})['單重'])||0);
 }
 
 function renderBeamTable() {
   const el = document.getElementById('zone-beam');
   const cols = beamCols();
-  const allCols = cols.fixed.concat(cols.ext);
-  const fkeys = ['seq','part_no','common_no','spec','qty','net_weight','drawing_no'];
-
-  const fkeys2 = ['seq','part_no','common_no','spec','qty','net_weight','drawing_no'];
   // distinct values per column for filters
   const beamColVals = {};
-  allCols.forEach((label, ci) => {
-    beamColVals[label] = zoneBeamRows.map(r => ci < cols.fixed.length ? (r[fkeys2[ci]]||'') : ((r.extra&&r.extra[label])||''));
-  });
+  cols.forEach(col => { beamColVals[col.label] = zoneBeamRows.map(r => beamVal(r, col)); });
   // apply column filters
-  let rows = zoneBeamRows.map((r,idx)=>({r,idx})).filter(({r}) => {
+  const rows = zoneBeamRows.map((r,idx)=>({r,idx})).filter(({r}) => {
     return rowPassesColFilters('beam', (label) => {
-      const ci = allCols.indexOf(label);
-      if (ci < 0) return '';
-      return ci < cols.fixed.length ? (r[fkeys2[ci]]||'') : ((r.extra&&r.extra[label])||'');
+      const col = cols.find(c => c.label === label);
+      return col ? beamVal(r, col) : '';
     });
   });
   let html = '<div class="layout-table-wrap"><table class="layout-table" onkeydown="beamTableKey(event)"><thead><tr>';
-  allCols.forEach(c => {
-    const active = colFilterActive('beam', c) ? ' active' : '';
-    html += '<th>'+c+'<button class="cf-th-btn'+active+'" onclick=\'openColFilter(event,"beam","'+c.replace(/"/g,'')+'",'+JSON.stringify(beamColVals[c]).replace(/'/g,"&#39;")+')\'>▼</button></th>';
+  cols.forEach(col => {
+    const active = colFilterActive('beam', col.label) ? ' active' : '';
+    html += '<th>'+col.label+'<button class="cf-th-btn'+active+'" onclick=\'openColFilter(event,"beam","'+col.label.replace(/"/g,'')+'",'+JSON.stringify(beamColVals[col.label]).replace(/'/g,"&#39;")+')\'>▼</button></th>';
   });
   html += '<th></th></tr></thead><tbody>';
   if (!zoneBeamRows.length) {
-    html += '<tr><td colspan="'+(allCols.length+1)+'" class="empty-state">尚無資料,點「新增列」或按 Enter 開始</td></tr>';
+    html += '<tr><td colspan="'+(cols.length+1)+'" class="empty-state">尚無資料,點「新增列」或按 Enter 開始</td></tr>';
   }
   rows.forEach(({r, idx}) => {
     html += '<tr data-bkey="'+idx+'">';
-    fkeys.forEach(k => {
-      html += '<td><input type="text" value="'+((r[k]||'')+'').replace(/"/g,'&quot;')+'" oninput="beamEdit('+idx+',\''+k+'\',this.value)"/></td>';
-    });
-    cols.ext.forEach(c => {
-      const val = ((r.extra[c]||'')+'').replace(/"/g,'&quot;');
-      html += '<td><input type="text" value="'+val+'" data-col="'+c.replace(/"/g,'&quot;')+'" oninput="beamExtEdit('+idx+',\''+c.replace(/'/g,"")+'\',this.value)"/></td>';
+    cols.forEach(col => {
+      const val = (beamVal(r, col)+'').replace(/"/g,'&quot;');
+      const oc = col.key
+        ? 'beamEdit('+idx+',&#39;'+col.key+'&#39;,this.value)'
+        : 'beamExtEdit('+idx+',&#39;'+col.ext.replace(/'/g,'')+'&#39;,this.value)';
+      html += '<td><input type="text" value="'+val+'" data-col="'+col.label.replace(/"/g,'&quot;')+'" oninput="'+oc+'"/></td>';
     });
     html += '<td class="del-col"><button class="btn-del-row" onclick="beamDelRow('+idx+')">✕</button></td>';
     html += '</tr>';
   });
+  // 合計(依目前顯示中的列計算;有篩選時就是篩選後的合計)
+  if (zoneBeamRows.length) {
+    let tQty = 0, tW = 0;
+    rows.forEach(({r}) => { tQty += parseFloat(r.qty)||0; tW += beamRowWeight(r); });
+    const filtered = rows.length !== zoneBeamRows.length;
+    const label = '合計' + (filtered ? '（顯示中 '+rows.length+' 列）' : '（'+rows.length+' 列）');
+    html += '<tr class="total-row"><td colspan="2">'+label+'</td>'+
+            '<td>'+(Math.round(tQty*100)/100)+'</td><td></td>'+
+            '<td class="total-weight">'+tW.toFixed(2)+' ('+(tW/1000).toFixed(2)+'t)</td>'+
+            '<td colspan="'+(cols.length-5+1)+'"></td></tr>';
+  }
   html += '</tbody></table></div>';
   el.innerHTML = html;
   const bt = el.querySelector('.layout-table');
   if (bt) tblInitSelection(bt);
+  beamHistoryButtons();
+}
+
+// ═══════════ 托樑零件表 復原/重做 ═══════════
+// 比照「明細輸入」:整份 zoneBeamRows 存快照,連續打字 400ms 內合併成一筆。
+// 復原後要讓資料庫跟著回到同一個狀態,所以差異列重存、快照裡沒有的列刪掉。
+let beamHistory = [], beamRedoStack = [], beamHistTimer = null;
+// 這個工程區在本次操作中被刪掉的列 id:復原要把它救回來時不能再 PATCH(那筆已不存在),必須重新 INSERT
+let beamDeletedIds = new Set();
+const beamSnapStr = () => JSON.stringify(zoneBeamRows);
+function beamSnapshot() {
+  if (beamHistTimer) { clearTimeout(beamHistTimer); }
+  else {
+    beamHistory.push(beamSnapStr());
+    if (beamHistory.length > 50) beamHistory.shift();
+    beamRedoStack = [];
+  }
+  beamHistTimer = setTimeout(() => { beamHistTimer = null; }, 400);
+  beamHistoryButtons();
+}
+function beamSnapshotNow() {
+  clearTimeout(beamHistTimer); beamHistTimer = null;
+  beamHistory.push(beamSnapStr());
+  if (beamHistory.length > 50) beamHistory.shift();
+  beamRedoStack = [];
+  beamHistoryButtons();
+}
+function beamHistoryButtons() {
+  const u = document.getElementById('beam-undo-btn'), r = document.getElementById('beam-redo-btn');
+  if (u) u.disabled = !beamHistory.length;
+  if (r) r.disabled = !beamRedoStack.length;
+}
+async function beamUndo() {
+  if (!beamHistory.length) return;
+  beamRedoStack.push(beamSnapStr());
+  await beamApplySnapshot(beamHistory.pop());
+}
+async function beamRedo() {
+  if (!beamRedoStack.length) return;
+  beamHistory.push(beamSnapStr());
+  await beamApplySnapshot(beamRedoStack.pop());
+}
+async function beamApplySnapshot(str) {
+  let target; try { target = JSON.parse(str); } catch (e) { return; }
+  clearTimeout(beamHistTimer); beamHistTimer = null;
+  const persisted = r => JSON.stringify([r.seq||'', r.part_no||'', r.common_no||'', r.spec||'', r.qty||'', r.net_weight||'', r.drawing_no||'', r.extra||{}]);
+  const before = {};
+  zoneBeamRows.forEach(r => { if (r.id != null) before[r.id] = persisted(r); });
+  const tgtIds = new Set(target.map(r => r.id).filter(x => x != null));
+  const delIds = zoneBeamRows.filter(r => r.id != null && !tgtIds.has(r.id)).map(r => r.id);
+  zoneBeamRows = target.map(r => {
+    const row = Object.assign({}, r, { extra: Object.assign({}, r.extra || {}) });
+    if (row.id != null && beamDeletedIds.has(row.id)) {   // 這列已被刪出資料庫 → 當新列重新寫入
+      beamDeletedIds.delete(row.id);
+      delete row.id;
+    }
+    if (row.id == null || before[row.id] !== persisted(row)) { row._dirty = true; row._zid = currentZoneId; }
+    else row._dirty = false;
+    return row;
+  });
+  renderBeamTable();
+  for (let i = 0; i < delIds.length; i += 80) {
+    const chunk = delIds.slice(i, i + 80);
+    const res = await sbFetch('/rest/v1/beam_parts?id=in.(' + chunk.join(',') + ')', { method:'DELETE' });
+    if (res.ok) chunk.forEach(id => beamDeletedIds.add(id));
+  }
+  clearTimeout(_beamSaveTimer); _beamSaveTimer = null;
+  await beamFlushDirty();
+  beamHistoryButtons();
+}
+// 焦點在托樑零件表內才接管 Ctrl+Z / Ctrl+Y(構件總表有自己的復原,不能被搶走)
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  const k = String(e.key).toLowerCase();
+  if (k !== 'z' && k !== 'y') return;
+  const inBeam = e.target && e.target.closest && e.target.closest('#zone-beam');
+  if (!inBeam) return;
+  e.preventDefault();
+  if (k === 'y' || e.shiftKey) beamRedo(); else beamUndo();
+});
+
+// 貼上時自動補列:只按了一次「新增列」卻貼 10 列,就自動長成 10 列
+function beamPasteGrid(cells2d, anchor) {
+  beamSnapshotNow();
+  const cols = beamCols();
+  const table = document.querySelector('#zone-beam .layout-table');
+  const domRows = table ? Array.from(table.querySelectorAll('tbody tr[data-bkey]')) : [];
+  const startC = anchor.c;
+  let added = 0;
+  cells2d.forEach((line, dr) => {
+    const dom = domRows[anchor.r + dr];
+    let idx;
+    if (dom) idx = parseInt(dom.dataset.bkey);
+    else {
+      zoneBeamRows.push({seq:'',part_no:'',common_no:'',spec:'',qty:'',net_weight:'',drawing_no:'',extra:{}});
+      idx = zoneBeamRows.length - 1; added++;
+    }
+    const row = zoneBeamRows[idx];
+    if (!row) return;
+    line.forEach((val, dc) => {
+      const col = cols[startC + dc];
+      if (!col) return;                 // 超出最後一欄的內容直接忽略
+      const v = String(val == null ? '' : val).trim();
+      if (col.key) row[col.key] = v;
+      else { row.extra = row.extra || {}; row.extra[col.ext] = v; }
+    });
+    beamMarkDirty(idx);
+  });
+  renderBeamTable();
+  if (added) beamSaved('已自動新增 '+added+' 列', 'var(--text3)');
 }
 
 // Generic arrow-key navigation for editable tables
@@ -14490,19 +14671,20 @@ function beamTableKey(e) {
   if (e.key !== 'Enter') return;
   e.preventDefault();
   const tr = e.target.closest('tr');
-  const tbody = e.target.closest('tbody');
-  const isLast = tr === tbody.lastElementChild;
+  const next = tr ? tr.nextElementSibling : null;
+  // 合計列固定在最後,不算「下一列」
+  const isLast = !next || next.classList.contains('total-row');
   if (isLast) {
     beamAddRow();
     setTimeout(()=>{
-      const rows = tbody.querySelectorAll('tr');
+      // 表格是整個重繪的,要重新查詢(不能沿用舊的 tbody 參照)
+      const rows = document.querySelectorAll('#zone-beam .layout-table tbody tr[data-bkey]');
       const nr = rows[rows.length-1];
       const inp = nr ? nr.querySelector('input[type=text]') : null;
       if (inp) inp.focus();
     },30);
   } else {
-    const next = tr.nextElementSibling;
-    if (next) { const inp = next.querySelector('input[type=text]'); if(inp) inp.focus(); }
+    const inp = next.querySelector('input[type=text]'); if(inp) inp.focus();
   }
 }
 
@@ -14521,8 +14703,8 @@ function compTableKey(e) {
   }
 }
 
-function beamEdit(i, k, v) { if (zoneBeamRows[i]) { zoneBeamRows[i][k] = v; beamMarkDirty(i); } }
-function beamExtEdit(i, c, v) { if (zoneBeamRows[i]) { if(!zoneBeamRows[i].extra) zoneBeamRows[i].extra={}; zoneBeamRows[i].extra[c] = v; beamMarkDirty(i); } }
+function beamEdit(i, k, v) { if (zoneBeamRows[i]) { beamSnapshot(); zoneBeamRows[i][k] = v; beamMarkDirty(i); } }
+function beamExtEdit(i, c, v) { if (zoneBeamRows[i]) { beamSnapshot(); if(!zoneBeamRows[i].extra) zoneBeamRows[i].extra={}; zoneBeamRows[i].extra[c] = v; beamMarkDirty(i); } }
 
 // ── 托樑零件表自動儲存:編輯停手後即逐列寫入(既有列 PATCH、新列 POST),不必再按「儲存」──
 let _beamSaveTimer = null, _beamSaving = false, _beamSaveAgain = false, _beamSavedHideTimer = null;
@@ -14544,7 +14726,8 @@ function beamMarkDirty(i) {
 }
 async function beamFlushDirty() {
   if (_beamSaving) { _beamSaveAgain = true; return; }   // 避免同時寫入造成重複新增
-  const dirty = zoneBeamRows.filter(r => r._dirty && beamRowHasContent(r));
+  // 已存在資料庫的列即使被清空也要寫回(否則「清空」或「復原成空白」不會生效);沒 id 又全空的列才略過
+  const dirty = zoneBeamRows.filter(r => r._dirty && (beamRowHasContent(r) || r.id));
   if (!dirty.length) return;
   _beamSaving = true;
   beamSaved('儲存中…', 'var(--text3)');
@@ -14583,18 +14766,24 @@ function beamSaved(text, color) {
   if (el) { el.textContent = text; el.style.color = color || 'var(--text3)'; }
 }
 function beamAddRow() {
+  beamSnapshotNow();
   zoneBeamRows.push({seq:'',part_no:'',common_no:'',spec:'',qty:'',net_weight:'',drawing_no:'',extra:{}});
   renderBeamTable();
 }
 function beamDelRow(i) {
+  beamSnapshotNow();
   const row = zoneBeamRows[i];
-  if (row && row.id) sbFetch('/rest/v1/beam_parts?id=eq.'+row.id, {method:'DELETE'});
+  // 記下被刪掉的 id:之後按復原要救回這列時,得重新 INSERT(資料庫裡那筆已經不在了)
+  if (row && row.id) {
+    beamDeletedIds.add(row.id);   // 先記下:按復原可能比 DELETE 回應還快
+    sbFetch('/rest/v1/beam_parts?id=eq.'+row.id, {method:'DELETE'}).then(res => { if (!res || !res.ok) beamDeletedIds.delete(row.id); });
+  }
   zoneBeamRows.splice(i,1);
   renderBeamTable();
 }
 function beamAddCol() {
   showInputModal('新增托樑零件表欄位', '輸入欄位名稱', async (n) => {
-    if (beamCols().ext.includes(n)) { alert('欄位已存在'); return; }
+    if (beamCols().some(c => c.label === n)) { alert('欄位已存在'); return; }
     zoneBeamCustomCols.push(n);
     renderBeamTable();
     await saveBeamCustomColDefs();   // 自訂欄位定義即時存檔
@@ -14634,14 +14823,18 @@ function beamExportExcel() {
   if (typeof XLSX === 'undefined') { alert('Excel 函式庫尚未載入'); return; }
   if (!zoneBeamRows.length) { alert('沒有資料'); return; }
   const cols = beamCols();
-  const header = cols.fixed.concat(cols.ext);
-  const data = [header];
+  const data = [cols.map(c => c.label)];
+  let tQty = 0, tW = 0;
   zoneBeamRows.forEach(r => {
-    if (!r.part_no && !r.seq) return;
-    const fixed = [r.seq, r.part_no, r.common_no, r.spec, r.qty, r.net_weight, r.drawing_no];
-    const ext = cols.ext.map(c => r.extra[c]||'');
-    data.push(fixed.concat(ext));
+    if (!beamRowHasContent(r)) return;
+    data.push(cols.map(c => beamVal(r, c)));
+    tQty += parseFloat(r.qty)||0; tW += beamRowWeight(r);
   });
+  // 合計列(對齊畫面上的合計:數量、總重)
+  const totalRow = cols.map(c => c.label === '數量' ? (Math.round(tQty*100)/100)
+                                : c.label === '總重' ? (Math.round(tW*100)/100) : '');
+  totalRow[0] = '合計';
+  data.push(totalRow);
   const ws = XLSX.utils.aoa_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '托樑零件表');
@@ -18171,14 +18364,21 @@ function renderLayoutChart() {
     if (r.part_no && r.bed && byBed[r.bed] && !r.ship_date) byBed[r.bed].push(r);
   });
   const maxRows = Math.max(1, ...BEDS.map(b => byBed[b].length));
+  // 一列可能是同編號多支構件:床位標題統計「實際支數」(數量加總),不是列數
+  const qtyOf = r => { const n = parseInt(r.qty); return n > 0 ? n : 1; };
+  const bedQty = b => byBed[b].reduce((s, r) => s + qtyOf(r), 0);
   let html = '<table class="layout-chart-table"><thead><tr><th class="pos-col">柱位</th>';
-  BEDS.forEach(b => { html += '<th>'+b+' <span style="color:var(--text3);font-weight:400">('+byBed[b].length+')</span></th>'; });
+  BEDS.forEach(b => { html += '<th>'+b+' <span style="color:var(--text3);font-weight:400">('+bedQty(b)+')</span></th>'; });
   html += '</tr></thead><tbody>';
   for (let pos = 0; pos < maxRows; pos++) {
     html += '<tr><td class="pos-cell">'+(pos+1)+'</td>';
     BEDS.forEach(b => {
       const item = byBed[b][pos];
-      if (item) html += '<td class="cell-'+item.status+'"><div class="lcell"><span class="lcell-part">'+item.part_no+'</span><span class="lcell-status st-'+item.status+'">'+item.status+'</span></div></td>';
+      if (item) {
+        const q = qtyOf(item);
+        const qTag = q > 1 ? '<span class="lcell-qty">×'+q+'</span>' : '';
+        html += '<td class="cell-'+item.status+'"><div class="lcell"><span class="lcell-part">'+item.part_no+qTag+'</span><span class="lcell-status st-'+item.status+'">'+item.status+'</span></div></td>';
+      }
       else html += '<td></td>';
     });
     html += '</tr>';
@@ -19699,6 +19899,18 @@ function inspRemovePage4(xml) {
   return xml.slice(0, p4Start) + xml.slice(bodyEnd);
 }
 
+// 鎖住表格欄寬:只把每個表格改成 fixed 版面,不動列高/換行/跨頁設定。
+// 範本的欄寬全靠每格 <w:tcW> 定義;若維持 autofit,Word 會依填入內容重算欄寬,
+// 後三頁(檢測申請單/檢驗明細表/NDT)的格線就會整個跑掉。
+// 註:舊版的 inspLockWordLayout() 還會強制 cantSplit + noWrap,那才是造成
+//     頁尾被擠到下一頁、產生大片空白的原因,故不還原那兩項。
+function inspLockTableWidths(xml) {
+  return xml.replace(/<w:tblPr>([\s\S]*?)<\/w:tblPr>/g, function(match, inner) {
+    inner = inner.replace(/<w:tblLayout[^>]*\/>/g, '');
+    return '<w:tblPr>' + inner + '<w:tblLayout w:type="fixed"/></w:tblPr>';
+  });
+}
+
 // ── 申驗單 Word 組建(共用引擎)──────────────────────────────────────────
 // 「首次報驗」與「補報驗(預報構件)」兩條路徑共用同一份組單邏輯。
 // checked：構件陣列(需含 part_no/spec/drawing_no/_inspQty/_board/_utList/_zone_code/_sub;
@@ -20168,8 +20380,9 @@ async function inspBuildDocx(checked, ctx) {
   // 造成第 4 頁表格被擠到下一頁中段。此函式具冪等性，已有分頁時不會重複加入。
   docXml = inspForceTitleBreaks(docXml);
   if (ndtParts.length === 0 && !anyUTPart) docXml = inspRemovePage4(docXml);
-  // 完整保留範本原有的表格寬度、換行與跨頁設定。
-  // 不再全域強制 fixed / cantSplit / noWrap，避免頁尾被擠到下一頁後又遇分頁而產生大片空白。
+  // 只鎖欄寬(fixed 版面),換行與跨頁仍依範本;不再強制 cantSplit / noWrap,
+  // 避免頁尾被擠到下一頁後又遇分頁而產生大片空白。
+  docXml = inspLockTableWidths(docXml);
   // 第四頁 NDT 檢驗「施作部位」5 格固定 11pt（OOXML 字級為 half-points，所以 22=11pt）。
   for (let j = 1; j <= 5; j++) docXml = forceSizeOnMarkerRun(docXml, '{ndloc' + j + '}', 22);
   zip.file('word/document.xml', docXml);
@@ -21071,6 +21284,91 @@ function tblApplySel() {
   updateExcelSelectionStats();
 }
 
+// ═══════════ 拖曳多選時自動捲動 ═══════════
+// 按著滑鼠往下拉時,游標壓到「表格容器」或「視窗」邊緣就持續往該方向捲動,
+// 不必放開滑鼠再捲一次。容器捲不動(已到底/沒有內部捲軸,例如構件總表展開全部列時)
+// 就改捲整頁。捲動後以 elementFromPoint 取得游標下的儲存格,把選取範圍一起延伸。
+const tblAuto = { raf:0, x:0, y:0, table:null };
+const TBL_AUTO_EDGE = 56;    // 邊緣感應範圍(px)
+const TBL_AUTO_MAX  = 24;    // 每幀最大捲動量(px)
+function tblScrollBox(el) {
+  for (let p = el && el.parentElement; p && p !== document.body; p = p.parentElement) {
+    const st = getComputedStyle(p);
+    if (!/(auto|scroll)/.test(st.overflowY + ' ' + st.overflowX)) continue;
+    if (p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1) return p;
+  }
+  return null;
+}
+// 把座標夾進「表格 ∩ 視窗」的範圍後找儲存格:游標拉到表格外(下方/左右)也能延伸到最近的格
+function tblCellAtPoint(table, x, y) {
+  const r = table.getBoundingClientRect();
+  const cx = Math.min(Math.max(x, Math.max(r.left, 0) + 2), Math.min(r.right, innerWidth) - 2);
+  const cy = Math.min(Math.max(y, Math.max(r.top, 0) + 2), Math.min(r.bottom, innerHeight) - 2);
+  const hit = document.elementFromPoint(cx, cy);
+  const td = hit && hit.closest ? hit.closest('td') : null;
+  return (td && table.contains(td)) ? td : null;
+}
+function tblExtendToPoint() {
+  if (!tblSel.selecting || !tblSel.table || !tblSel.focus) return;
+  const td = tblCellAtPoint(tblSel.table, tblAuto.x, tblAuto.y);
+  if (!td) return;
+  const rc = cellRC(td);
+  if (rc.r !== tblSel.focus.r || rc.c !== tblSel.focus.c) {
+    tblSel.focus = rc;
+    tblApplySel();
+    const s = window.getSelection(); if (s) s.removeAllRanges();
+  }
+}
+function tblAutoStep() {
+  tblAuto.raf = 0;
+  if (!tblSel.selecting || !tblAuto.table) return;
+  const spd = d => Math.max(2, Math.round((1 - Math.max(0, d) / TBL_AUTO_EDGE) * TBL_AUTO_MAX));
+  const E = TBL_AUTO_EDGE, x = tblAuto.x, y = tblAuto.y;
+  let scrolled = false;
+  const box = tblScrollBox(tblAuto.table);
+  if (box) {
+    const r = box.getBoundingClientRect();
+    let dy = 0, dx = 0;
+    if (box.scrollHeight > box.clientHeight + 1) {
+      if (y < r.top + E) dy = -spd(y - r.top);
+      else if (y > r.bottom - E) dy = spd(r.bottom - y);
+    }
+    if (box.scrollWidth > box.clientWidth + 1) {
+      if (x < r.left + E) dx = -spd(x - r.left);
+      else if (x > r.right - E) dx = spd(r.right - x);
+    }
+    if (dy) { const p = box.scrollTop;  box.scrollTop  = p + dy; if (box.scrollTop  !== p) scrolled = true; }
+    if (dx) { const p = box.scrollLeft; box.scrollLeft = p + dx; if (box.scrollLeft !== p) scrolled = true; }
+  }
+  if (!scrolled) {   // 容器捲不動 → 捲整頁
+    let wy = 0, wx = 0;
+    if (y < E) wy = -spd(y); else if (y > innerHeight - E) wy = spd(innerHeight - y);
+    if (x < E) wx = -spd(x); else if (x > innerWidth  - E) wx = spd(innerWidth  - x);
+    if (wy || wx) {
+      const py = scrollY, px = scrollX;
+      window.scrollBy(wx, wy);
+      if (scrollY !== py || scrollX !== px) scrolled = true;
+    }
+  }
+  if (scrolled) tblExtendToPoint();
+  tblAuto.raf = requestAnimationFrame(tblAutoStep);
+}
+function tblAutoStart(table, e) {
+  tblAuto.table = table;
+  tblAuto.x = e.clientX; tblAuto.y = e.clientY;
+  if (!tblAuto.raf) tblAuto.raf = requestAnimationFrame(tblAutoStep);
+}
+function tblAutoStop() {
+  if (tblAuto.raf) cancelAnimationFrame(tblAuto.raf);
+  tblAuto.raf = 0; tblAuto.table = null;
+}
+// 游標離開表格後 table 的 mousemove 不會再觸發,所以座標與延伸都掛在 document 上
+document.addEventListener('mousemove', e => {
+  if (!tblSel.selecting || !tblAuto.table) return;
+  tblAuto.x = e.clientX; tblAuto.y = e.clientY;
+  tblExtendToPoint();
+}, true);
+
 function tblInitSelection(table) {
   if (table._selInit) return;
   table._selInit = true;
@@ -21084,6 +21382,7 @@ function tblInitSelection(table) {
     tblSel.focus = tblSel.anchor;
     tblSel.selecting = true;
     tblApplySel();
+    tblAutoStart(table, e);
   });
   table.addEventListener('mousemove', e => {
     if (!tblSel.selecting || tblSel.table !== table) return;
@@ -21097,7 +21396,7 @@ function tblInitSelection(table) {
       window.getSelection().removeAllRanges();
     }
   });
-  document.addEventListener('mouseup', () => { tblSel.selecting = false; });
+  document.addEventListener('mouseup', () => { tblSel.selecting = false; tblAutoStop(); });
 
   // 手機／平板：一般滑動維持表格捲動；長按約 0.3 秒後才進入 Excel 式矩形選取。
   // touchmove 的 target 仍是起點，因此以 elementFromPoint 取得手指目前所在格。
@@ -21131,6 +21430,7 @@ function tblInitSelection(table) {
       tblSel.focus = tblSel.anchor;
       tblSel.selecting = true;
       tblApplySel();
+      tblAutoStart(table, touch);   // 長按框選期間原生捲動被停用,改由自動捲動接手
       if (navigator.vibrate) { try { navigator.vibrate(20); } catch (_) {} }
     }, 320);
   }, { passive:true });
@@ -21147,6 +21447,7 @@ function tblInitSelection(table) {
       return;
     }
     if (tblSel.table !== table) return;
+    tblAuto.x = touch.clientX; tblAuto.y = touch.clientY;
     const hit = document.elementFromPoint(touch.clientX, touch.clientY);
     const td = hit && hit.closest ? hit.closest('td') : null;
     if (!td || !table.contains(td)) return;
@@ -21166,6 +21467,7 @@ function tblInitSelection(table) {
     touchId = null;
     touchStartTd = null;
     tblSel.selecting = false;
+    tblAutoStop();
     table.classList.remove('touch-cell-selecting');
   };
   table.addEventListener('touchend', endTouchSelection, { passive:true });
@@ -21306,6 +21608,11 @@ document.addEventListener('paste', e => {
   // Excel 式表格(SP狀態表/保留料/成品材):自動補列 + 依欄位填入
   if (tblSel.table.classList.contains('spx-table') && typeof spxPasteGrid === 'function') {
     spxPasteGrid(tblSel.table.id.replace('spx-',''), cells2d, startAnchor);
+    return;
+  }
+  // 托樑零件表:自動補列 + 依欄位填入(只按一次「新增列」也能一次貼上多列)
+  if (tblSel.table.closest('#zone-beam') && typeof beamPasteGrid === 'function') {
+    beamPasteGrid(cells2d, startAnchor);
     return;
   }
   // 點工單明細:自動補列 + 依欄位填入
@@ -31801,16 +32108,28 @@ function prodManualZones(row){
 function prodManualForZone(proj,zone){
   return prodManual.filter(r=>(!(r.proj_no||'').trim() || !(proj||'').trim() || (r.proj_no||'').trim()===(proj||'').trim()) && prodManualZones(r).includes(String(zone||'').trim().toUpperCase()));
 }
+// 手工單已完成 → 標出領取日期(未跑 take_date migration 時不顯示)
+function prodManualTakeText(r){
+  if(!r||!r.completed||!spxOptional.manual_take_date) return '';
+  const d=String(r.take_date||'').slice(0,10);
+  return '｜領取日期：'+(d||'—');
+}
 function prodManualCell(proj,zone){
   const rows=prodManualForZone(proj,zone);
   if(!rows.length) return '<span class="prod-no">—</span>';
-  return rows.map(r=>'<label style="display:flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" '+(r.completed?'checked ':'')+'onchange="prodToggleManual('+Number(r.id||0)+',this.checked)"><span>'+esc(r.manual_no||'手工單')+'</span></label>').join('');
+  return rows.map(r=>'<label style="display:flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" '+(r.completed?'checked ':'')+'onchange="prodToggleManual('+Number(r.id||0)+',this.checked)"><span>'+esc(r.manual_no||'手工單')+'</span>'+(prodManualTakeText(r)?'<span style="color:var(--text2);font-size:11px">'+esc(prodManualTakeText(r))+'</span>':'')+'</label>').join('');
 }
 async function prodToggleManual(id,completed){
   const row=prodManual.find(r=>Number(r.id)===Number(id)); if(!row) return;
-  row.completed=!!completed; prodRenderBoard(); if(prodDetailCtx.proj) prodRenderDetail();
-  const res=await sbFetch('/rest/v1/manual_order?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({completed:!!completed})});
-  if(!res.ok){ row.completed=!completed; prodRenderBoard(); if(prodDetailCtx.proj) prodRenderDetail(); alert('手工單狀態儲存失敗('+res.status+')'); }
+  const prevTake=row.take_date;
+  // 勾完成 = 領取：沒填過就帶今天，取消勾選則清掉
+  row.completed=!!completed; row.take_date=completed?(row.take_date||spxToday()):null;
+  prodRenderBoard(); if(prodDetailCtx.proj) prodRenderDetail();
+  const payload={completed:!!completed};
+  if(spxOptional.manual_take_date) payload.take_date=row.take_date||null;
+  const res=await sbFetch('/rest/v1/manual_order?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)});
+  if(!res.ok){ row.completed=!completed; row.take_date=prevTake; prodRenderBoard(); if(prodDetailCtx.proj) prodRenderDetail(); alert('手工單狀態儲存失敗('+res.status+')'); }
+  else if(typeof spxRender==='function') spxRender('manual');
 }
 // 單一生產單位的資料格(項目×6 + 成品材 + 保留料 + 手工單 + 整體)
 function prodUnitCells(u){
@@ -31847,7 +32166,7 @@ function prodRenderCards(units, f){
   zones.sort((a,b)=>prodOvRank(a.ov.label)-prodOvRank(b.ov.label) || a.proj.localeCompare(b.proj,'zh-Hant')||a.zone.localeCompare(b.zone,'zh-Hant'));
   document.getElementById('prodBoardCount').textContent=zones.length+' 張卡片';
   if(!zones.length){ wrap.innerHTML='<div class="prod-cards-empty">尚無資料。請到「SP狀態表」分頁貼上或新增。</div>'; return; }
-  wrap.innerHTML=zones.map(z=>{
+  wrap.innerHTML=prodStatusSections(zones,z=>{
     const ready=z.us.filter(u=>['完成','已送工地'].includes(prodOverall(u.items).label)).length;
     const pjOk=(a)=>!z.proj||!a||a===z.proj;
     const pmCell=prodPmCell(p=>!pmIsWelding(p) && pjOk((p.proj_no||'').trim()) && pmZoneMatch(p,z.zone));
@@ -31875,7 +32194,7 @@ function prodRenderCards(units, f){
       '<div class="pc-units">'+unitRows+'</div>'+
       '<div class="pc-open">🔍 開啟 SP狀態表 →</div>'+
     '</div>';
-  }).join('');
+  });
 }
 
 // 進度條「小卡」:依工程編號一張,可點→SP狀態表(只顯示該工程編號,含底下所有工程區)
@@ -31909,17 +32228,15 @@ function prodRenderMini(units, f){
   groups.sort((a,b)=>prodOvRank(a.ov.label)-prodOvRank(b.ov.label) || a.proj.localeCompare(b.proj,'zh-Hant'));
   document.getElementById('prodBoardCount').textContent=groups.length+' 個工程';
   if(!groups.length){ wrap.innerHTML='<div class="prod-cards-empty">尚無資料。請到「SP狀態表」分頁貼上或新增。</div>'; return; }
-  wrap.innerHTML=groups.map(g=>{
+  wrap.innerHTML=prodStatusSections(groups,g=>{
     const bar=prodStatusColor(g.ov.cls);
-    const manualRows=prodManual.filter(r=>(r.proj_no||'').trim()===g.proj);
     return '<div class="prod-mini" data-proj="'+esc(g.proj)+'" onclick="prodMiniOpen(this)" title="點擊 → 看 '+esc(g.proj)+' 各工程區">'+
       '<div class="pm-head"><div class="pm-title">'+esc(g.proj||'—')+'</div><span class="chip '+g.ov.cls+'">'+esc(g.ov.label)+'</span></div>'+
-      '<div class="pm-sub">'+g.zones.length+' 個工程區 · '+g.us.length+' 個 CP編號 <span class="pm-more">›</span></div>'+
-      '<div class="pc-prop"><div class="pp-lbl">手工單</div><div class="pp-val">'+(manualRows.length?(manualRows.filter(r=>r.completed).length+'/'+manualRows.length+' 完成'):'—')+'</div></div>'+
+      '<div class="pm-sub pm-sum">'+prodProjSummary(g)+'</div>'+
       '<div class="pm-bar"><div class="pm-fill" style="width:'+g.pct+'%;background:'+bar+'"></div></div>'+
       '<div class="pm-foot"><span>'+prodBarFoot(g,g.us.length)+'</span><span class="pm-pct">'+g.pct+'%</span></div>'+
     '</div>';
-  }).join('');
+  });
 }
 // 第二層:某工程編號底下,依工程區各一張小卡(點卡才進 SP狀態表)
 function prodRenderMiniZones(wrap, units, f){
@@ -31932,16 +32249,15 @@ function prodRenderMiniZones(wrap, units, f){
   const head='<div class="prod-mini-head"><button class="pm-back" onclick="prodMiniBack()">← 返回全部工程</button>'+
     '<div class="pm-crumb"><b>'+esc(proj)+'</b> 各工程區　點卡片 → 開啟 SP狀態表</div></div>';
   if(!zones.length){ wrap.innerHTML=head+'<div class="prod-cards-empty">此工程尚無工程區資料。</div>'; return; }
-  wrap.innerHTML=head+zones.map(z=>{
+  wrap.innerHTML=head+prodStatusSections(zones,z=>{
     const bar=prodStatusColor(z.ov.cls);
     return '<div class="prod-mini" data-proj="'+esc(z.proj)+'" data-zone="'+esc(z.zone)+'" onclick="prodOpenZoneDetail(this.dataset.proj,this.dataset.zone)" title="點擊 → 開啟 '+esc(z.proj)+'-'+esc(z.zone)+' 詳情">'+
-      '<div class="pm-head"><div class="pm-title"><span class="pm-tproj">'+esc(z.proj)+'-</span>'+esc(z.zone||'—')+'</div><span class="pm-status">'+prodOnlineBadge(z.proj,z.zone)+prodAlertBadge(z.proj,z.zone)+'<span class="chip '+z.ov.cls+'">'+esc(z.ov.label)+'</span><button class="pm-menu" onclick="prodZoneMenu(event,this)" title="更多操作" aria-label="更多操作">⋯</button></span></div>'+
-      '<div class="pm-sub">'+z.us.length+' 個 CP編號</div>'+
-      '<div class="pm-manual"><span class="pp-lbl">手工單</span><span class="pp-val">'+prodManualCell(z.proj,z.zone)+'</span></div>'+
+      '<div class="pm-head"><div class="pm-title">'+esc(z.zone||'—')+'</div><span class="pm-status">'+prodOnlineBadge(z.proj,z.zone)+'<span class="chip '+z.ov.cls+'">'+esc(z.ov.label)+'</span><button class="pm-menu" onclick="prodZoneMenu(event,this)" title="更多操作" aria-label="更多操作">⋯</button></span></div>'+
+      '<div class="pm-sub pm-sum">'+prodZoneSummary(z)+'</div>'+
       '<div class="pm-bar"><div class="pm-fill" style="width:'+z.pct+'%;background:'+bar+'"></div></div>'+
-      '<div class="pm-foot"><span>'+prodBarFoot(z,z.us.length)+'</span><span class="pm-pct">'+z.pct+'%</span></div>'+
+      '<div class="pm-foot"><span>'+prodBarFoot(z,z.us.length)+'</span><span class="pm-foot-r">'+prodAlertBadge(z.proj,z.zone)+'<span class="pm-pct">'+z.pct+'%</span></span></div>'+
     '</div>';
-  }).join('');
+  });
 }
 function prodMiniOpen(el){ prodMiniProj=(el&&el.dataset)?el.dataset.proj:el; prodRenderBoard(); }
 function prodMiniBack(){ prodMiniProj=null; prodRenderBoard(); }
@@ -31951,6 +32267,58 @@ function prodZoneAlerts(proj,zone){
   const manual=prodManualForZone(proj,zone).filter(r=>!r.completed).length;
   const reserved=prodReserved.filter(r=>zEq(r) && !String(r.take_date||'').trim()).length;
   return {manual, reserved, total:manual+reserved};
+}
+// 看板小卡摘要:圖號各幾個 CP編號 + 成品材/保留料/手工單筆數(為 0 不顯示)。
+// 一次重繪內快取,避免每張卡都重新掃一遍 prodProduct/prodReserved。
+let prodCountCache=Object.create(null);
+function prodZoneCounts(z){
+  const key='z\u0001'+z.proj+'\u0001'+z.zone, hit=prodCountCache[key]; if(hit) return hit;
+  const proj=z.proj, zone=z.zone, docs=z.us.map(u=>u.doc).filter(Boolean), pjOk=a=>!proj||!a||a===proj;
+  const r={
+    product: prodProduct.filter(p=>!pmIsWelding(p)&&pjOk((p.proj_no||'').trim())&&(pmZoneMatch(p,zone)||docs.some(d=>(p.remark||'').includes(d)))).length,
+    reserved:prodReserved.filter(x=>pjOk((x.proj_no||'').trim())&&((x.zone||'')===zone||docs.includes((x.order_no||'')))).length,
+    manual:  prodManualForZone(proj,zone).length
+  };
+  prodCountCache[key]=r; return r;
+}
+function prodProjCounts(proj){
+  const key='p\u0001'+proj, hit=prodCountCache[key]; if(hit) return hit;
+  const eq=a=>(a||'').trim()===proj;
+  const r={
+    product: prodProduct.filter(p=>!pmIsWelding(p)&&eq(p.proj_no)).length,
+    reserved:prodReserved.filter(x=>eq(x.proj_no)).length,
+    manual:  prodManual.filter(x=>eq(x.proj_no)).length
+  };
+  prodCountCache[key]=r; return r;
+}
+function prodSumParts(parts,c){
+  if(c.product)  parts.push('成品材:'+c.product);
+  if(c.reserved) parts.push('保留料:'+c.reserved);
+  if(c.manual)   parts.push('手工單:'+c.manual);
+  return parts;
+}
+function prodZoneSummary(z){
+  const byDwg=new Map();
+  z.us.forEach(u=>{ if(!u.doc) return; const d=(u.dwg||u.ord||'—'); byDwg.set(d,(byDwg.get(d)||0)+1); });
+  const parts=[...byDwg.entries()].sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'zh-Hant'))
+    .map(([d,n])=>'<b>'+esc(d)+'</b>:'+n);
+  prodSumParts(parts,prodZoneCounts(z));
+  return parts.length?parts.join('<span class="pms-x"> · </span>'):'—';
+}
+function prodProjSummary(g){
+  const parts=['<b>'+g.zones.length+'</b> 個工程區','<b>'+g.us.length+'</b> 個 CP編號'];
+  prodSumParts(parts,prodProjCounts(g.proj));
+  return parts.join('<span class="pms-x"> · </span>');
+}
+// 依整體狀態分段輸出(進行中 / 未開始 / 完成 / 已送工地 / 轉包 不混在同一列)
+const PROD_GROUP_ORDER=['進行中','未開始','完成','已送工地','轉包'];
+function prodStatusSections(rows,cardHtml){
+  const buckets=new Map();
+  rows.forEach(r=>{ const k=(r.ov&&r.ov.label)||'—'; if(!buckets.has(k)) buckets.set(k,[]); buckets.get(k).push(r); });
+  const keys=PROD_GROUP_ORDER.filter(k=>buckets.has(k)).concat([...buckets.keys()].filter(k=>PROD_GROUP_ORDER.indexOf(k)<0));
+  return keys.map(k=>{ const rs=buckets.get(k);
+    return '<div class="prod-group-head"><span class="chip '+esc((rs[0].ov&&rs[0].ov.cls)||'')+'">'+esc(k)+'</span><span class="pgh-n">'+rs.length+' 張</span></div>'+rs.map(cardHtml).join('');
+  }).join('');
 }
 function prodAlertBadge(proj,zone){
   const a=prodZoneAlerts(proj,zone); if(!a.total) return '';
@@ -32022,16 +32390,15 @@ function prodRenderMiniZonesFlat(wrap, units, f){
   zones.sort((a,b)=>prodOvRank(a.ov.label)-prodOvRank(b.ov.label) || a.proj.localeCompare(b.proj,'zh-Hant') || a.zone.localeCompare(b.zone,'zh-Hant'));
   document.getElementById('prodBoardCount').textContent=zones.length+' 個工程區';
   if(!zones.length){ wrap.innerHTML='<div class="prod-cards-empty">尚無資料。請到「SP狀態表」分頁貼上或新增。</div>'; return; }
-  wrap.innerHTML=zones.map(z=>{
+  wrap.innerHTML=prodStatusSections(zones,z=>{
     const bar=prodStatusColor(z.ov.cls);
     return '<div class="prod-mini" data-proj="'+esc(z.proj)+'" data-zone="'+esc(z.zone)+'" onclick="prodOpenZoneDetail(this.dataset.proj,this.dataset.zone)" title="點擊 → 開啟 '+esc(z.proj)+'-'+esc(z.zone)+' 詳情">'+
-      '<div class="pm-head"><div class="pm-title"><span class="pm-tproj">'+esc(z.proj)+'-</span>'+esc(z.zone||'—')+'</div><span class="pm-status">'+prodOnlineBadge(z.proj,z.zone)+prodAlertBadge(z.proj,z.zone)+'<span class="chip '+z.ov.cls+'">'+esc(z.ov.label)+'</span><button class="pm-menu" onclick="prodZoneMenu(event,this)" title="更多操作" aria-label="更多操作">⋯</button></span></div>'+
-      '<div class="pm-sub">'+z.us.length+' 個 CP編號</div>'+
-      '<div class="pm-manual"><span class="pp-lbl">手工單</span><span class="pp-val">'+prodManualCell(z.proj,z.zone)+'</span></div>'+
+      '<div class="pm-head"><div class="pm-title"><span class="pm-tproj">'+esc(z.proj)+'-</span>'+esc(z.zone||'—')+'</div><span class="pm-status">'+prodOnlineBadge(z.proj,z.zone)+'<span class="chip '+z.ov.cls+'">'+esc(z.ov.label)+'</span><button class="pm-menu" onclick="prodZoneMenu(event,this)" title="更多操作" aria-label="更多操作">⋯</button></span></div>'+
+      '<div class="pm-sub pm-sum">'+prodZoneSummary(z)+'</div>'+
       '<div class="pm-bar"><div class="pm-fill" style="width:'+z.pct+'%;background:'+bar+'"></div></div>'+
-      '<div class="pm-foot"><span>'+prodBarFoot(z,z.us.length)+'</span><span class="pm-pct">'+z.pct+'%</span></div>'+
+      '<div class="pm-foot"><span>'+prodBarFoot(z,z.us.length)+'</span><span class="pm-foot-r">'+prodAlertBadge(z.proj,z.zone)+'<span class="pm-pct">'+z.pct+'%</span></span></div>'+
     '</div>';
-  }).join('');
+  });
 }
 
 // 跳到某分頁(track/reserved/product)並只顯示某工程編號(+工程區)——「去分頁編輯」用
@@ -32194,18 +32561,11 @@ function prodRenderDetail(){
       (pmPlainRemark(p.remark)?'<span class="pdr-s">'+esc(pmPlainRemark(p.remark))+'</span>':'')+
       (pmMeta(p.remark)?.details?.length?'<button class="spx-detail-btn" onclick="pmOpenDetails('+p._key+')">查看細項</button>':'')+'</div>'
   ).join(''):'<div class="pd-empty">此工程區無成品材領用。</div>';
-  // 焊材領料(唯讀,僅記錄)
-  const wc=document.getElementById('pdWeldCount'); if(wc) wc.textContent=(m.welding||[]).length+' 筆';
-  const wl=document.getElementById('pdWelding');
-  if(wl) wl.innerHTML=(m.welding||[]).length? m.welding.slice().sort((a,b)=>String(b.pick_date||'').localeCompare(String(a.pick_date||''))).map(p=>
-    '<div class="pd-row"><span class="pdr-k">'+esc(p.serial||'—')+'</span>'+
-      (p.pick_date?'<span class="pdr-s">'+esc(String(p.pick_date).slice(0,10))+'</span>':'')+
-      '<span class="pdr-m">'+esc(p.reason||'')+'</span>'+
-      (pmPlainRemark(p.remark)?'<span class="pdr-s">'+esc(pmPlainRemark(p.remark))+'</span>':'')+'</div>'
-  ).join(''):'<div class="pd-empty">此工程區無焊材領料紀錄。</div>';
+  const psb=document.getElementById('pdProdSumBtn');
+  if(psb) psb.style.display=m.product.some(p=>pmMeta(p.remark)?.details?.length)?'':'none';
   const mc=document.getElementById('pdManualCount'); if(mc) mc.textContent=m.manual.length+' 筆';
   const ml=document.getElementById('pdManual');
-  if(ml) ml.innerHTML=m.manual.length?m.manual.map(r=>'<label class="pd-row" style="cursor:pointer"><input type="checkbox" '+(r.completed?'checked ':'')+'onchange="prodToggleManual('+Number(r.id||0)+',this.checked)"><span class="pdr-k">'+esc(r.manual_no||'—')+'</span><span class="pdr-s">'+esc(r.issue_date||'')+'</span><span class="pdr-m">'+(r.completed?'完成':'未完成')+'</span></label>').join(''):'<div class="pd-empty">此工程區無手工單。</div>';
+  if(ml) ml.innerHTML=m.manual.length?m.manual.map(r=>'<label class="pd-row" style="cursor:pointer"><input type="checkbox" '+(r.completed?'checked ':'')+'onchange="prodToggleManual('+Number(r.id||0)+',this.checked)"><span class="pdr-k">'+esc(r.manual_no||'—')+'</span><span class="pdr-s">'+esc(r.issue_date||'')+'</span><span class="pdr-m">'+(r.completed?'完成':'未完成')+'</span>'+(prodManualTakeText(r)?'<span class="pdr-s">'+esc(prodManualTakeText(r))+'</span>':'')+'</label>').join(''):'<div class="pd-empty">此工程區無手工單。</div>';
 }
 // 詳情頁「＋新增SP列」:直接建一列已帶入本工程區的資料列(略過空白輸入列機制)
 function prodDetailAddSP(){
@@ -32230,6 +32590,7 @@ function prodGroupZones(units){
 
 function prodRenderBoard(){
   const body=document.getElementById('prodBoardBody'); if(!body) return;
+  prodCountCache=Object.create(null);   // 小卡摘要筆數:每次重繪重算一次就好
   const view=(document.getElementById('prodViewMode')||{}).value||'list';
   if(view!=='mini') prodMiniProj=null;
   const mode=document.getElementById('prodGroupMode').value;
@@ -32654,38 +33015,141 @@ async function prodImportProductNotice(){
   ta.value='';msg.textContent='已匯入 '+objs.length+' 張通知單／'+detailCount+' 筆細項';
   await prodInit();
 }
+// 細項彈窗共用產生器:上=原始明細、下=同規格加總。
+// 單張通知單(pmOpenDetails)與整個工程區彙總(pmOpenZoneDetails)共用同一套版面與列印。
+function pmRound2(n){ return Math.round((Number(n)||0)*100)/100; }
+function pmDetailModalHtml(title,metaText,items){
+  const grouped=new Map();
+  items.forEach(d=>{ const k=String(d.spec||'').trim();
+    if(!grouped.has(k)) grouped.set(k,{spec:k,qty:0,n:0});
+    const g=grouped.get(k); g.qty+=(Number(d.qty)||0); g.n++; });
+  const summary=[...grouped.values()];
+  const rows=items.map(d=>'<tr><td>'+esc(d.full_serial||'')+'</td><td>'+esc(d.project||'')+'</td><td>'+esc(d.area||'')+'</td><td>'+esc(d.item||'')+'</td><td>'+esc(d.spec||'')+'</td><td class="num">'+esc(d.qty==null?'':d.qty)+'</td><td>'+esc(d.warehouse||'')+'</td></tr>').join('');
+  const sumRows=summary.map(g=>'<tr><td>'+esc(g.spec)+'</td><td class="num">'+g.n+'</td><td class="num">'+esc(pmRound2(g.qty))+'</td></tr>').join('');
+  const grandQty=pmRound2(summary.reduce((n,g)=>n+g.qty,0));
+  return '<div class="pm-detail-backdrop" onclick="if(event.target===this)pmCloseDetails()"><div class="pm-detail-modal">'+
+    '<div class="pm-detail-head"><div><div class="pm-detail-title">'+esc(title)+'</div><div class="pm-detail-meta">'+esc(metaText)+'</div></div>'+
+      '<button class="btn pm-no-print" style="margin-left:auto" onclick="pmPrintDetails()">🖨 列印A4</button>'+
+      '<button class="pm-detail-close pm-no-print" onclick="pmCloseDetails()">✕</button></div>'+
+    '<table class="pm-detail-table"><thead><tr><th>完整流水編號</th><th>工程編號</th><th>區域</th><th>品名</th><th>規格</th><th class="num">原始數量</th><th>倉庫別</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<div class="pm-summary"><div class="pm-summary-title">同規格數量加總</div><table class="pm-detail-table"><thead><tr><th>規格</th><th class="num">原始筆數</th><th class="num">加總數量</th></tr></thead><tbody>'+sumRows+
+      '<tr class="pm-summary-total"><td>全部規格合計</td><td class="num">'+items.length+'</td><td class="num">'+esc(grandQty)+'</td></tr></tbody></table></div></div></div>';
+}
+// 把一張通知單的細項補齊成完整欄位(缺值從該列/meta 帶入)
+function pmDetailItems(row,meta,details){
+  return details.map(d=>({
+    full_serial:d.full_serial||meta.full_serial||row.serial||'',
+    project:d.project||row.proj_no||'',
+    area:d.area||'', item:d.item||'', spec:d.spec||'', qty:d.qty,
+    warehouse:d.warehouse||meta.warehouse||''
+  }));
+}
 function pmOpenDetails(rowKey){
   const row=prodProduct.find(r=>String(r._key)===String(rowKey));
   const meta=row?pmMeta(row.remark):null, details=meta&&Array.isArray(meta.details)?meta.details:[];
   if(!row||!details.length) return;
   const modal=document.getElementById('pmDetailModal');
-  // 上方保留原始明細；下方另依「規格完全相同」產生統計，不改動原始數量。
-  const grouped=new Map();
-  details.forEach(d=>{
-    const key=String(d.spec||'').trim();
-    if(!grouped.has(key)) grouped.set(key,{spec:key,qty:0,serials:[],projects:[],areas:[],items:[],warehouses:[]});
-    const g=grouped.get(key);
-    g.qty+=(Number(d.qty)||0);
-    [
-      [g.serials,d.full_serial||meta.full_serial||''],
-      [g.projects,d.project||row.proj_no||''],
-      [g.areas,d.area||''],
-      [g.items,d.item||''],
-      [g.warehouses,d.warehouse||meta.warehouse||'']
-    ].forEach(([arr,val])=>{val=String(val||'').trim();if(val&&!arr.includes(val))arr.push(val);});
-  });
-  const summary=[...grouped.values()];
-  const rows=details.map(d=>'<tr><td>'+esc(d.full_serial||meta.full_serial||'')+'</td><td>'+esc(d.project||row.proj_no||'')+'</td><td>'+esc(d.area||'')+'</td><td>'+esc(d.item||'')+'</td><td>'+esc(d.spec||'')+'</td><td class="num">'+esc(d.qty==null?'':d.qty)+'</td><td>'+esc(d.warehouse||meta.warehouse||'')+'</td></tr>').join('');
-  const sumRows=summary.map(g=>'<tr><td>'+esc(g.spec)+'</td><td class="num">'+details.filter(d=>String(d.spec||'').trim()===g.spec).length+'</td><td class="num">'+esc(g.qty)+'</td></tr>').join('');
-  const grandQty=summary.reduce((n,g)=>n+g.qty,0);
-  modal.innerHTML='<div class="pm-detail-backdrop" onclick="if(event.target===this)pmCloseDetails()"><div class="pm-detail-modal">'+
-    '<div class="pm-detail-head"><div><div class="pm-detail-title">'+esc(row.proj_no||'')+' '+esc(row.reason||'')+'－細項</div><div class="pm-detail-meta">'+esc(String(row.pick_date||'').slice(0,10))+'　流水編號 '+esc(meta.full_serial||row.serial||'')+'　倉庫別 '+esc(meta.warehouse||'')+'　共 '+details.length+' 筆</div></div><button class="pm-detail-close" onclick="pmCloseDetails()">✕</button></div>'+
-    '<table class="pm-detail-table"><thead><tr><th>完整流水編號</th><th>工程編號</th><th>區域</th><th>品名</th><th>規格</th><th class="num">原始數量</th><th>倉庫別</th></tr></thead><tbody>'+rows+'</tbody></table>'+
-    '<div class="pm-summary"><div class="pm-summary-title">同規格數量加總</div><table class="pm-detail-table"><thead><tr><th>規格</th><th class="num">原始筆數</th><th class="num">加總數量</th></tr></thead><tbody>'+sumRows+
-    '<tr class="pm-summary-total"><td>全部規格合計</td><td class="num">'+details.length+'</td><td class="num">'+esc(grandQty)+'</td></tr></tbody></table></div></div></div>';
+  const title=(row.proj_no||'')+' '+(row.reason||'')+'－細項';
+  const metaText=String(row.pick_date||'').slice(0,10)+'　流水編號 '+(meta.full_serial||row.serial||'')+'　倉庫別 '+(meta.warehouse||'')+'　共 '+details.length+' 筆';
+  modal.innerHTML=pmDetailModalHtml(title,metaText,pmDetailItems(row,meta,details));
   modal.style.display='';
 }
+// 工程區詳情頁:把該工程區所有成品材通知單的細項彙整成一張
+function pmOpenZoneDetails(){
+  const {proj,zone}=prodDetailCtx;
+  const m=prodZoneMatched(proj,zone);
+  const notes=(m.product||[]).slice().sort((a,b)=>String(a.pick_date||'').localeCompare(String(b.pick_date||'')));
+  const items=[]; let noteCount=0;
+  notes.forEach(row=>{
+    const meta=pmMeta(row.remark), details=meta&&Array.isArray(meta.details)?meta.details:[];
+    if(!details.length) return;
+    noteCount++; items.push(...pmDetailItems(row,meta,details));
+  });
+  if(!items.length){ alert('此工程區的成品材領料沒有細項資料。'); return; }
+  const dates=notes.filter(r=>pmMeta(r.remark)?.details?.length).map(r=>String(r.pick_date||'').slice(0,10)).filter(Boolean);
+  const span=dates.length?(dates[0]===dates[dates.length-1]?dates[0]:dates[0]+' ～ '+dates[dates.length-1]):'';
+  const modal=document.getElementById('pmDetailModal');
+  const title=(proj||'')+'-'+(zone||'')+'－成品材領用彙總';
+  const metaText=(span?span+'　':'')+'共 '+noteCount+' 張通知單　'+items.length+' 筆細項';
+  modal.innerHTML=pmDetailModalHtml(title,metaText,items);
+  modal.style.display='';
+}
+// 列印 A4:把彈窗內容原樣複製到 body 下的列印區(静態排版才能自動分頁)
+function pmPrintDetails(){
+  const box=document.querySelector('#pmDetailModal .pm-detail-modal'); if(!box) return;
+  let area=document.getElementById('pmPrintArea');
+  if(!area){ area=document.createElement('div'); area.id='pmPrintArea'; document.body.appendChild(area); }
+  area.innerHTML='<div class="pm-detail-modal">'+box.innerHTML+'</div>';
+  area.querySelectorAll('.pm-no-print').forEach(el=>el.remove());
+  document.body.classList.add('pm-printing');
+  const clean=()=>{ document.body.classList.remove('pm-printing'); area.innerHTML=''; window.removeEventListener('afterprint',clean); };
+  window.addEventListener('afterprint',clean);
+  try{ window.print(); }catch(e){ clean(); }
+  setTimeout(clean,60000);
+}
 function pmCloseDetails(){const modal=document.getElementById('pmDetailModal');if(modal){modal.style.display='none';modal.innerHTML='';}}
+
+// ── 手工單細項(SP編號／數量):沿用成品材細項的彈窗樣式,但可手動輸入,改動自動儲存。
+// 資料與成品材同樣夾在既有文字欄尾端(這裡是「內容」欄),不需另開資料表。
+function moDetails(r){ const m=r?pmMeta(r.content):null; return (m&&Array.isArray(m.details))?m.details:[]; }
+function moDetailQty(v){ const n=parseFloat(String(v==null?'':v).replace(/,/g,'')); return isNaN(n)?null:n; }
+function moSetDetails(r,draft){
+  const clean=draft.map(d=>({sp:String(d.sp==null?'':d.sp).trim(),qty:moDetailQty(d.qty)})).filter(d=>d.sp!==''||d.qty!=null);
+  r.content=pmPackRemark(pmPlainRemark(r.content),clean.length?{details:clean}:null);
+  return clean;
+}
+function moDetailsCell(r){ const n=moDetails(r).length;
+  return '<button class="spx-detail-btn" title="編輯細項" onclick="moOpenDetails('+r._key+')">＋'+(n?(' '+n+' 筆'):'')+'</button>'; }
+let moKey=null, moDraft=[];
+function moCurRow(){ return (typeof prodManual!=='undefined'?prodManual:[]).find(r=>String(r._key)===String(moKey)); }
+function moOpenDetails(rowKey){
+  const row=(typeof prodManual!=='undefined'?prodManual:[]).find(r=>String(r._key)===String(rowKey)); if(!row) return;
+  moKey=rowKey;
+  moDraft=moDetails(row).map(d=>({sp:d.sp==null?'':String(d.sp),qty:d.qty==null?'':String(d.qty)}));
+  if(!moDraft.length) moDraft.push({sp:'',qty:''});
+  moRenderDetails(false);
+}
+function moTotalQty(){ const t=moDraft.reduce((n,d)=>n+(moDetailQty(d.qty)||0),0); return Math.round(t*100)/100; }
+function moFilledCount(){ return moDraft.filter(d=>String(d.sp||'').trim()!==''||moDetailQty(d.qty)!=null).length; }
+const MO_INPUT_CSS='padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text);font:12px var(--mono);outline:none';
+function moRenderDetails(focusLast){
+  const row=moCurRow(), modal=document.getElementById('pmDetailModal'); if(!row||!modal) return;
+  const rows=moDraft.map((d,i)=>'<tr>'+
+      '<td style="width:46px;color:var(--text2)">'+(i+1)+'</td>'+
+      '<td><input id="moD-'+i+'-sp" type="text" value="'+esc(d.sp)+'" placeholder="SP編號" autocomplete="off" style="width:240px;'+MO_INPUT_CSS+'" oninput="moEditDetail('+i+',\'sp\',this.value)" onkeydown="moDetailKey(event,'+i+')"></td>'+
+      '<td class="num"><input id="moD-'+i+'-qty" type="text" value="'+esc(d.qty)+'" placeholder="數量" autocomplete="off" style="width:130px;text-align:right;'+MO_INPUT_CSS+'" oninput="moEditDetail('+i+',\'qty\',this.value)" onkeydown="moDetailKey(event,'+i+')"></td>'+
+      '<td style="width:46px"><button class="btn-del-row" title="刪除這列" onclick="moDelDetail('+i+')">✕</button></td>'+
+    '</tr>').join('');
+  modal.innerHTML='<div class="pm-detail-backdrop" onclick="if(event.target===this)moCloseDetails()"><div class="pm-detail-modal" style="width:min(680px,96vw)">'+
+    '<div class="pm-detail-head"><div><div class="pm-detail-title">'+esc(row.manual_no||'手工單')+'－細項</div>'+
+      '<div class="pm-detail-meta">'+esc(row.proj_no||'')+'　'+esc(row.zone||'')+'　'+esc(String(row.issue_date||'').slice(0,10))+'　改動自動儲存</div></div>'+
+      '<button class="pm-detail-close" onclick="moCloseDetails()">✕</button></div>'+
+    '<table class="pm-detail-table"><thead><tr><th style="width:46px">#</th><th>SP編號</th><th class="num">數量</th><th style="width:46px"></th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<div style="padding:12px 18px"><button class="btn" onclick="moAddDetail()">＋ 新增一列</button></div>'+
+    '<div class="pm-summary"><div class="pm-summary-title">合計</div><table class="pm-detail-table"><tbody>'+
+      '<tr class="pm-summary-total"><td>合計數量（<span id="moTotalCnt">'+moFilledCount()+'</span> 筆）</td><td class="num" id="moTotalQty">'+moTotalQty()+'</td></tr>'+
+    '</tbody></table></div></div></div>';
+  modal.style.display='';
+  if(focusLast){ const el=document.getElementById('moD-'+(moDraft.length-1)+'-sp'); if(el) el.focus(); }
+}
+function moUpdateTotal(){
+  const q=document.getElementById('moTotalQty'), c=document.getElementById('moTotalCnt');
+  if(q) q.textContent=moTotalQty(); if(c) c.textContent=moFilledCount();
+}
+function moCommit(){ const row=moCurRow(); if(!row) return;
+  spxSnapshot('manual'); moSetDetails(row,moDraft);
+  const i=prodManual.indexOf(row); if(i>=0) spxMarkDirty('manual',i);
+}
+function moEditDetail(i,field,val){ if(!moDraft[i]) return; moDraft[i][field]=val; moCommit(); moUpdateTotal(); }
+function moAddDetail(){ moDraft.push({sp:'',qty:''}); moRenderDetails(true); }
+function moDelDetail(i){ moDraft.splice(i,1); if(!moDraft.length) moDraft.push({sp:'',qty:''}); moCommit(); moRenderDetails(false); }
+function moDetailKey(ev,i){
+  if(ev.key!=='Enter') return; ev.preventDefault();
+  const field=(ev.target.id||'').endsWith('-qty')?'qty':'sp';
+  if(i>=moDraft.length-1){ moAddDetail(); return; }
+  const el=document.getElementById('moD-'+(i+1)+'-'+field); if(el){ el.focus(); el.select(); }
+}
+function moCloseDetails(){ moKey=null; moDraft=[]; pmCloseDetails(); if(typeof spxRender==='function') spxRender('manual'); }
 
 async function prodInsert(table, objs, clearFirst){
   if(clearFirst){ const d=await sbFetch('/rest/v1/'+table+'?id=gt.0',{method:'DELETE'}); if(!d.ok){ return {ok:false,err:'清空失敗'}; } }
@@ -32740,9 +33204,9 @@ const SPX={
     cols:[
       {k:'pick_date',h:'日期',date:true,noData:true,defFn:spxToday},{k:'_zone',h:'焊材',virtual:true,noData:true,render:pmWeldingText},{k:'serial',h:'流水編號'},{k:'reason',h:'細目',wide:true,noData:true,defFn:()=>'焊材領料'},{k:'remark',h:'備註',wide:true},{k:'_details',h:'細項',virtual:true,noData:true}
     ]}
-  ,manual:{ tbl:'manual_order', sort:spxNewestFirst,
+  ,manual:{ tbl:'manual_order', sort:spxNewestFirst, extraData:r=>moDetails(r).length>0,
     cols:[
-      {k:'manual_no',h:'手工單編號'},{k:'proj_no',h:'工程編號'},{k:'zone',h:'工程區'},{k:'issue_date',h:'開單日期',date:true,noData:true,defFn:spxToday},{k:'completed',h:'狀態',check:true,bool:true,noData:true,def:false}
+      {k:'manual_no',h:'手工單編號'},{k:'proj_no',h:'工程編號'},{k:'zone',h:'工程區'},{k:'issue_date',h:'開單日期',date:true,noData:true,defFn:spxToday},{k:'completed',h:'狀態',check:true,bool:true,noData:true,def:false},{k:'take_date',h:'領取日期',date:true,noData:true,optional:'manual_take_date'},{k:'content',h:'內容',wide:true,meta:true,optional:'manual_content'},{k:'_details',h:'細項',virtual:true,noData:true,render:moDetailsCell,optional:'manual_content'}
     ]}
 };
 // 工程區詳情頁的 SP 編輯格:與 track 同一張 sp_track / 同一份 prodTrack 陣列,只是另一個 DOM(spx-detail)+獨立篩選,並關掉最上方空白輸入列(改用「＋新增SP列」自動帶入工程區)
@@ -32750,10 +33214,13 @@ SPX.detail={ tbl:SPX.track.tbl, sort:SPX.track.sort, cols:SPX.track.cols, noBlan
 // 狀態下拉的「顯示名稱」對照:DB 仍存 OK(sp_progress view 依賴此值),畫面一律顯示「完成」
 const SPX_STATUS_LABEL={'OK':'完成'};
 // 選用欄位:DB 尚未加欄時整欄自動隱藏(也不會送出),跑完 migration 後自動出現
-const spxOptional={sp_qty:false};
+const spxOptional={sp_qty:false,manual_content:true,manual_take_date:true};
 function spxDetectOptional(){
   const r=(typeof prodTrack!=='undefined'&&prodTrack||[]).find(x=>x&&x.id!=null);
   if(r) spxOptional.sp_qty=('qty_need' in r);
+  // 手工單「內容／細項」需 manual_order_content_migration.sql;未跑時自動隱藏
+  const m=(typeof prodManual!=='undefined'&&prodManual||[]).find(x=>x&&x.id!=null);
+  if(m){ spxOptional.manual_content=('content' in m); spxOptional.manual_take_date=('take_date' in m); }
 }
 function spxCols(key){ const cfg=SPX[key]||{}; return (cfg.cols||[]).filter(c=>!c.optional||spxOptional[c.optional]); }
 const SPX_ARROWS=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
@@ -32771,11 +33238,12 @@ function spxSetCombo(r,c,val){ const s=String(val==null?'':val).trim(), i=s.inde
 function spxColStr(r,c){ if(c.virtual) return ''; if(c.combo) return spxComboStr(r,c);
   /* 欄位篩選/搜尋也用顯示名(OK→完成) */
   if(c.status){ const sv=String(r[c.k]||c.def||'-'); return SPX_STATUS_LABEL[sv]||sv; }
-  if(c.check) return r[c.k]===true?'完成':'未完成'; if(c.bool) return r[c.k]===true?'是':r[c.k]===false?'否':''; const v=r[c.k]; return c.k==='remark'?pmPlainRemark(v):(v==null?'':String(v)); }
+  if(c.check) return r[c.k]===true?'完成':'未完成'; if(c.bool) return r[c.k]===true?'是':r[c.k]===false?'否':''; const v=r[c.k]; return (c.k==='remark'||c.meta)?pmPlainRemark(v):(v==null?'':String(v)); }
 function spxCoerce(c,v){ if(c.bool) return v===true?true:v===false?false:(v==='是'?true:v==='否'?false:null); if(c.num){ const n=parseFloat(String(v==null?'':v).replace(/,/g,'')); return isNaN(n)?null:n; } if(c.date) return prodDate(v); return v==null?'':String(v); }
+function spxIsMetaField(key,field){ return ((key==='product'||key==='welding')&&field==='remark')||(key==='manual'&&field==='content'); }
 function spxToday(){ const d=new Date(), p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
 function spxBlankObj(cfg){ const o={}; cfg.cols.forEach(c=>{ o[c.k]=c.defFn?c.defFn():(c.def!=null?c.def:(c.bool?null:'')); }); o._key=++spxSeq; return o; }
-function spxRowHasData(cfg,r){ return !!(r && cfg.cols.some(c=>!c.noData && spxColStr(r,c).trim()!=='')); }
+function spxRowHasData(cfg,r){ return !!(r && (cfg.cols.some(c=>!c.noData && spxColStr(r,c).trim()!=='') || (cfg.extraData&&cfg.extraData(r)))); }
 function spxRowIsBlank(cfg,r){ return !!(r && !r.id && !spxRowHasData(cfg,r)); }
 function spxEnsureBlank(key){ const cfg=SPX[key], arr=prodArr(key); if(cfg.noBlank) return; if(!arr.some(r=>spxRowIsBlank(cfg,r))) arr.push(spxBlankObj(cfg)); }
 function spxKeyRows(key){ prodArr(key).forEach(r=>{ if(r._key==null) r._key=++spxSeq; }); }
@@ -32799,7 +33267,7 @@ async function spxFlush(key){
   s.busy=true; let saved=0;
   try{
     for(const row of dirty){
-      const payload={}; spxCols(key).forEach(c=>{ if(c.virtual) return; if(c.combo){ c.combo.forEach(f=>{ payload[f]=(row[f]==null?'':String(row[f])); }); } else if(c.k==='remark'&&(key==='product'||key==='welding')) payload[c.k]=pmPackRemark(pmPlainRemark(row[c.k]),pmMeta(row[c.k])); else payload[c.k]=spxCoerce(c,row[c.k]); });
+      const payload={}; spxCols(key).forEach(c=>{ if(c.virtual) return; if(c.combo){ c.combo.forEach(f=>{ payload[f]=(row[f]==null?'':String(row[f])); }); } else if(spxIsMetaField(key,c.k)) payload[c.k]=pmPackRemark(pmPlainRemark(row[c.k]),pmMeta(row[c.k])); else payload[c.k]=spxCoerce(c,row[c.k]); });
       if(row.id){ const r=await sbFetch('/rest/v1/'+cfg.tbl+'?id=eq.'+row.id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)}); if(r.ok){row._dirty=false;saved++;} else if(r.status===401||r.status===403){ spxHint('需登入才能儲存',true); break; } }
       else { const r=await sbFetch('/rest/v1/'+cfg.tbl,{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)}); if(r.ok&&r.data&&r.data[0]){const localKey=row._key;Object.assign(row,r.data[0]);row._key=localKey;row._dirty=false;saved++;} else if(r.status===401||r.status===403){ spxHint('需登入才能儲存',true); break; } }
     }
@@ -32891,7 +33359,7 @@ function spxRowHtml(key,i){ const cfg=SPX[key], arr=prodArr(key), r=arr[i], blan
   h+='<td class="del-col"><button class="btn-del-row" title="刪除整列" onclick="spxDelRow(\''+key+'\','+i+')">✕</button></td></tr>';
   return h;
 }
-function spxEdit(key,i,field,val){ const r=prodArr(key)[i]; if(!r) return; const c=SPX[key].cols.find(x=>x.k===field); spxSnapshot(key); r[field]=c?spxCoerce(c,val):val; if(key==='product'&&field==='is_picked') r.pickup_date=r.is_picked?(r.pickup_date||spxToday()):''; spxMarkDirty(key,i); const hideTrackStatus=key==='track'&&field==='status'&&((r.status==='OK'&&!prodShowCompleted.track)||(r.status==='轉包'&&!prodTrackShowSubcontract)); if((c&&c.check)||hideTrackStatus){spxRender(key);spxAfterChange(key);} if(key==='detail'&&typeof prodRenderDetailHeader==='function') prodRenderDetailHeader(); }
+function spxEdit(key,i,field,val){ const r=prodArr(key)[i]; if(!r) return; const c=SPX[key].cols.find(x=>x.k===field); spxSnapshot(key); r[field]=c?spxCoerce(c,val):val; if(key==='product'&&field==='is_picked') r.pickup_date=r.is_picked?(r.pickup_date||spxToday()):''; if(key==='manual'&&field==='completed') r.take_date=r.completed?(r.take_date||spxToday()):''; spxMarkDirty(key,i); const hideTrackStatus=key==='track'&&field==='status'&&((r.status==='OK'&&!prodShowCompleted.track)||(r.status==='轉包'&&!prodTrackShowSubcontract)); if((c&&c.check)||hideTrackStatus){spxRender(key);spxAfterChange(key);} if(key==='detail'&&typeof prodRenderDetailHeader==='function') prodRenderDetailHeader(); }
 
 // 勾選欄批次更新：一次 PATCH 一批，避免數百列逐筆儲存。
 async function spxBulkSetCheck(key,field,rows,checked){
@@ -32920,7 +33388,7 @@ async function spxCompleteBeforeDate(key){
   if(!await uiConfirm('確定要將目前篩選結果中，日期早於 '+cutoff+' 的 '+rows.length+' 筆資料勾選完成？')) return;
   await spxBulkSetCheck(key,'is_picked',rows,true);
 }
-function spxEditText(key,i,field,el){ const r=prodArr(key)[i]; if(!r) return; const c=SPX[key].cols.find(x=>x.k===field); spxSnapshot(key); if(c&&c.combo) spxSetCombo(r,c,el.value); else if((key==='product'||key==='welding')&&field==='remark') r[field]=pmPackRemark(el.value,pmMeta(r[field])); else r[field]=el.value; spxMarkDirty(key,i); }
+function spxEditText(key,i,field,el){ const r=prodArr(key)[i]; if(!r) return; const c=SPX[key].cols.find(x=>x.k===field); spxSnapshot(key); if(c&&c.combo) spxSetCombo(r,c,el.value); else if(spxIsMetaField(key,field)) r[field]=pmPackRemark(el.value,pmMeta(r[field])); else r[field]=el.value; spxMarkDirty(key,i); }
 function spxCompletionCommit(key,i,field){ if(key==='reserved'&&field==='take_date'&&!prodShowCompleted.reserved){ const r=prodArr(key)[i]; if(r&&String(r.take_date||'').trim()){spxRender(key);spxAfterChange(key);} } }
 function spxAddRow(key){ spxSnapshotNow(key); spxEnsureBlank(key); spxRender(key); }
 function spxDelRow(key,i){ const cfg=SPX[key], arr=prodArr(key), row=arr[i]; if(!row) return; spxSnapshotNow(key); if(row.id) sbFetch('/rest/v1/'+cfg.tbl+'?id=eq.'+row.id,{method:'DELETE'}); arr.splice(i,1); spxRender(key); spxAfterChange(key); }
@@ -32995,7 +33463,7 @@ function spxPasteGrid(key,cells2d,anchor){ const cfg=SPX[key], arr=prodArr(key);
   const domRows=Array.from(document.getElementById('spxBody-'+key).children);
   const startC=anchor.c, affected=[];
   const _pcols=spxCols(key);
-  const fill=(ri,line)=>{ const row=arr[ri]; line.forEach((val,dc)=>{ const ci=startC+dc; if(ci>=_pcols.length) return; const col=_pcols[ci]; if(col.combo) spxSetCombo(row,col,val); else row[col.k]= col.bool?spxCoerce(col,val):val; }); affected.push(ri); };
+  const fill=(ri,line)=>{ const row=arr[ri]; line.forEach((val,dc)=>{ const ci=startC+dc; if(ci>=_pcols.length) return; const col=_pcols[ci]; if(col.virtual) return; if(col.combo) spxSetCombo(row,col,val); else if(spxIsMetaField(key,col.k)) row[col.k]=pmPackRemark(val,pmMeta(row[col.k])); else row[col.k]= col.bool?spxCoerce(col,val):val; }); affected.push(ri); };
   const anchorTr=domRows[anchor.r];
   const anchorIdx=(anchorTr&&anchorTr.dataset&&anchorTr.dataset.key)?arr.findIndex(r=>String(r._key)===anchorTr.dataset.key):-1;
   if(anchorIdx<0||spxRowIsBlank(cfg,arr[anchorIdx])){
@@ -33850,9 +34318,14 @@ window.lmChooseSaveFolder=async function(){
     return lmSaveRootHandle;
   }catch(err){if(err&&err.name!=='AbortError'){console.error(err);lmFolderStatus('無法使用所選資料夾：'+err.message,false);}return null;}
 };
+// 工程資料夾名稱樣式：B245、B822-台積電…(1~2 碼英文 + 3~4 碼數字)
+const LM_PROJ_DIR_RE=/^[A-Z]{1,2}\d{3,4}(?!\d)/;
 async function lmResolveSaveFolder(root,proj){
   const key=inspNormFolderName(proj),rootName=inspNormFolderName(root.name);
   if(rootName===key)return root; // 使用者也可直接選某一工程資料夾
+  // 固定資料夾本身就是「別的工程」時，絕不在它底下建/寫本次工程，
+  // 否則會變成 B245-xxx/B822/…，即使用者回報的「存到前一個工程」。
+  if(LM_PROJ_DIR_RE.test(rootName)) throw new Error('固定資料夾「'+root.name+'」是單一工程的資料夾，不能拿來存 '+(proj||'本次')+'；請重新指定到工程資料夾的上一層');
   for await(const entry of root.values()){
     if(entry.kind==='directory'&&inspNormFolderName(entry.name)===key)return entry;
   }
@@ -33878,7 +34351,7 @@ async function lmSaveDocx(blob,fname,proj){
     return {directDownload:false,folderName:folder.name};
   }catch(err){
     console.warn('點工單共用資料夾目前無法寫入，改存 Downloads',err);
-    lmFolderStatus('目前無法使用鎮山共用資料夾，本次已改下載至 Downloads。',false);
+    lmFolderStatus((err&&err.message?err.message+'；':'目前無法使用鎮山共用資料夾，')+'本次已改下載至 Downloads。',false);
     return downloadNormally();
   }
 }
