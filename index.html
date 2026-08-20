@@ -5318,6 +5318,10 @@ window.normalizeFullWidth=function(value){
           <button class="btn" onclick="spxAddRow('product')">＋ 新增一列</button>
           <button class="btn" onclick="clearColFilters('product')">清除篩選</button>
           <button class="btn" id="productCompletedToggle" onclick="prodToggleCompleted('product')">顯示已完成</button>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px">早於日期
+            <input type="date" id="productBulkBefore" class="search-input" style="width:138px">
+          </label>
+          <button class="btn" onclick="spxCompleteBeforeDate('product')">批次勾選完成</button>
           <input type="text" id="spxSearch-product" placeholder="全欄搜尋…" oninput="spxSearchInput('product')">
           <div style="flex:1"></div>
           <span class="prod-count" id="spxCount-product"></span>
@@ -5364,7 +5368,7 @@ window.normalizeFullWidth=function(value){
           <div style="flex:1"></div>
           <span class="prod-count" id="spxCount-welding"></span>
         </div>
-        <div class="section-label" style="margin:0 0 8px;font-size:11px">自動從<b>成品材領料</b>分流出事由／品名含「焊材、銲條、焊絲」等關鍵字的紀錄，此處<b>僅作記錄</b>，不列入領料與工程區備料進度。手動新增時事由請保留「焊材」字樣。改動自動儲存。</div>
+        <div class="section-label" style="margin:0 0 8px;font-size:11px">自動從<b>成品材領料</b>分流出細目／品名含「焊材、銲條、焊絲」等關鍵字的紀錄，此處<b>僅作記錄</b>，不列入領料與工程區備料進度。手動新增時細目請保留「焊材」字樣。改動自動儲存。</div>
         <div id="prodBanner-welding" class="prod-filter-banner" style="display:none"></div>
         <div class="spx-wrap">
           <table id="spx-welding" class="layout-table spx-table">
@@ -19695,19 +19699,6 @@ function inspRemovePage4(xml) {
   return xml.slice(0, p4Start) + xml.slice(bodyEnd);
 }
 
-function inspLockWordLayout(xml) {
-  xml = xml.replace(/<w:tblPr>([\s\S]*?)<\/w:tblPr>/g, function(match, inner) {
-    inner = inner.replace(/<w:tblLayout[^>]*\/>/g, '');
-    return '<w:tblPr>' + inner + '<w:tblLayout w:type="fixed"/></w:tblPr>';
-  });
-  xml = xml.replace(/<w:trPr>([\s\S]*?)<\/w:trPr>/g, function(match, inner) {
-    return inner.indexOf('<w:cantSplit') >= 0 ? match : '<w:trPr><w:cantSplit/>' + inner + '</w:trPr>';
-  });
-  xml = xml.replace(/<w:tcPr>([\s\S]*?)<\/w:tcPr>/g, function(match, inner) {
-    return inner.indexOf('<w:noWrap') >= 0 ? match : '<w:tcPr>' + inner + '<w:noWrap/></w:tcPr>';
-  });
-  return xml;
-}
 // ── 申驗單 Word 組建(共用引擎)──────────────────────────────────────────
 // 「首次報驗」與「補報驗(預報構件)」兩條路徑共用同一份組單邏輯。
 // checked：構件陣列(需含 part_no/spec/drawing_no/_inspQty/_board/_utList/_zone_code/_sub;
@@ -19825,6 +19816,12 @@ async function inspLoadRememberedHandle() {
     });
     db.close();
     if (!handle) return null;
+    // 只能記住最外層「報驗」資料夾；舊版若誤記工程或「申驗單」子資料夾，不再沿用。
+    if (inspNormFolderName(handle.name) !== '報驗') {
+      inspSaveRootHandle = null;
+      inspFolderStatus('原本固定的位置不是最外層「報驗」資料夾，請重新設定，避免申驗單存到錯誤工程。', false);
+      return null;
+    }
     inspSaveRootHandle = handle;
     const permission = await handle.queryPermission({ mode:'readwrite' });
     inspFolderStatus(
@@ -19853,9 +19850,15 @@ async function inspChooseSaveFolder() {
     return null;
   }
   try {
-    inspSaveRootHandle = await window.showDirectoryPicker({ mode:'readwrite', id:'inspection-word-root' });
+    const picked = await window.showDirectoryPicker({ mode:'readwrite', id:'inspection-word-root' });
+    if (inspNormFolderName(picked.name) !== '報驗') {
+      inspSaveRootHandle = null;
+      inspFolderStatus('請選擇最外層名稱為「報驗」的資料夾，不要選工程資料夾或裡面的「申驗單」。', false);
+      return null;
+    }
+    inspSaveRootHandle = picked;
     await inspRememberHandle(inspSaveRootHandle);
-    inspFolderStatus('已固定「' + inspSaveRootHandle.name + '」；之後會依工程編號自動存入對應資料夾。', true);
+    inspFolderStatus('已固定「報驗」；之後會依本次工程編號存入正確的工程／申驗單資料夾。', true);
     return inspSaveRootHandle;
   } catch (err) {
     if (err && err.name !== 'AbortError') {
@@ -19873,26 +19876,28 @@ function inspNormFolderName(value) {
 async function inspResolveSaveFolder(root, projNo, create) {
   if (create == null) create = true;
   const rootName = inspNormFolderName(root.name);
-  if (rootName === '申驗單') return root;
+  if (rootName !== '報驗') throw new Error('固定位置必須是最外層「報驗」資料夾，請重新設定');
 
   const projectKey = inspNormFolderName(projNo);
-  let projectFolder = root;
-  // 若選的是最外層「報驗」，尋找 B820、B820-工程名稱等開頭相符的工程資料夾。
-  if (projectKey && rootName !== projectKey && !rootName.startsWith(projectKey + '-')) {
-    for await (const entry of root.values()) {
-      const name = inspNormFolderName(entry.name);
-      if (entry.kind === 'directory' && (name === projectKey || name.startsWith(projectKey + '-'))) {
-        projectFolder = entry;
-        break;
-      }
-    }
-    // 尚無工程資料夾時建立工程編號資料夾，避免檔案落在錯誤工程。
-    if (projectFolder === root) {
-      if (!create) throw new Error('找不到「' + (projNo || '未分類') + '」工程資料夾');
-      projectFolder = await root.getDirectoryHandle(projNo || '未分類', { create:true });
+  if (!projectKey) throw new Error('缺少工程編號，無法判斷申驗單儲存位置');
+  let projectFolder = null;
+  // 從最外層「報驗」逐次依本次工程編號尋找，不沿用上一個工程的資料夾。
+  for await (const entry of root.values()) {
+    const name = inspNormFolderName(entry.name);
+    if (entry.kind === 'directory' && (name === projectKey || name.startsWith(projectKey + '-'))) {
+      projectFolder = entry;
+      break;
     }
   }
-  if (inspNormFolderName(projectFolder.name) === '申驗單') return projectFolder;
+  // 尚無工程資料夾時，直接在「報驗」底下建立，絕不建立在其他工程裡。
+  if (!projectFolder) {
+    if (!create) throw new Error('找不到「' + projNo + '」工程資料夾');
+    projectFolder = await root.getDirectoryHandle(projNo, { create:true });
+  }
+  const resolvedName = inspNormFolderName(projectFolder.name);
+  if (resolvedName !== projectKey && !resolvedName.startsWith(projectKey + '-')) {
+    throw new Error('工程資料夾核對失敗：本次為 ' + projNo + '，解析到 ' + projectFolder.name);
+  }
   return projectFolder.getDirectoryHandle('申驗單', { create:create });
 }
 
@@ -20157,8 +20162,14 @@ async function inspBuildDocx(checked, ctx) {
     zip = baseZip;
   }
   if (nPages > 1) docXml = inspDuplicatePages(docXml, nPages);
+  // 不論構件是否超過 20 筆，都要固定各張表單從新頁開始。
+  // 先前只有多頁資料會透過 inspDuplicatePages() 補分頁，單頁資料則完全依賴
+  // 範本原本的自然排版；當第 3 頁內容較短時，第 4 頁標題會接到第 3 頁底部，
+  // 造成第 4 頁表格被擠到下一頁中段。此函式具冪等性，已有分頁時不會重複加入。
+  docXml = inspForceTitleBreaks(docXml);
   if (ndtParts.length === 0 && !anyUTPart) docXml = inspRemovePage4(docXml);
-  docXml = inspLockWordLayout(docXml);
+  // 完整保留範本原有的表格寬度、換行與跨頁設定。
+  // 不再全域強制 fixed / cantSplit / noWrap，避免頁尾被擠到下一頁後又遇分頁而產生大片空白。
   // 第四頁 NDT 檢驗「施作部位」5 格固定 11pt（OOXML 字級為 half-points，所以 22=11pt）。
   for (let j = 1; j <= 5; j++) docXml = forceSizeOnMarkerRun(docXml, '{ndloc' + j + '}', 22);
   zip.file('word/document.xml', docXml);
@@ -22275,8 +22286,13 @@ async function a201LoadInner() {
     const proj = String(it.proj_num).trim().toUpperCase();
     const k = it.work_date + '|' + proj;
     if (!groups[k]) groups[k] = { date: it.work_date, proj, qty: 0, parts: [], zones: new Set(), procs: new Set(), subs: new Set() };
-    groups[k].qty += parseInt(it.qty) || 1;
-    if (it.part_no) groups[k].parts.push(it.part_no);
+    // layout_items 一列可代表多支；A201 的構件清單也必須保留相同支數，
+    // 後續 axxPartsStr / a202PartsWithQty 才會顯示並送出「構件編號 × 支數」。
+    const itemQty = Math.max(1, parseInt(it.qty, 10) || 1);
+    groups[k].qty += itemQty;
+    if (it.part_no) {
+      for (let n = 0; n < itemQty; n++) groups[k].parts.push(it.part_no);
+    }
     if (it.zone_code) {
       const zc = String(it.zone_code).trim();
       groups[k].zones.add(zc);
@@ -31669,6 +31685,7 @@ async function prodInit(){
     prodTrack    = (rt.ok&&Array.isArray(rt.data))?rt.data:[];
     prodReserved = (rr.ok&&Array.isArray(rr.data))?rr.data:[];
     prodProduct  = (rp.ok&&Array.isArray(rp.data))?rp.data:[];
+    await prodClearWeldingProjectNumbers();
     prodManual   = (rm.ok&&Array.isArray(rm.data))?rm.data:[];
     prodOnline   = (ro.ok&&Array.isArray(ro.data))?ro.data:[];
     prodRebuildOnline();
@@ -32354,7 +32371,7 @@ const PROD_GRID={
     sort:(a,b)=>(a.proj_no||'').localeCompare(b.proj_no||'','zh-Hant')||(a.order_no||'').localeCompare(b.order_no||'') },
   product:{ tbl:'product_material', head:'prodProductHead', body:'prodProductBody', count:'prodProductCount', search:'prodProductSearch',
     cols:[
-      {k:'pick_date',h:'日期',t:'text',date:true},{k:'proj_no',h:'工程編號',t:'text'},{k:'serial',h:'流水編號',t:'text'},{k:'reason',h:'事由',t:'text'},{k:'remark',h:'備註',t:'text'}
+      {k:'pick_date',h:'日期',t:'text',date:true},{k:'proj_no',h:'工程編號',t:'text'},{k:'serial',h:'流水編號',t:'text'},{k:'reason',h:'細目',t:'text'},{k:'remark',h:'備註',t:'text'}
     ],
     sort:(a,b)=>String(b.pick_date||'').localeCompare(String(a.pick_date||'')) }
 };
@@ -32530,6 +32547,7 @@ function pmZonesOfRow(p){
 }
 // 顯示用儲存格:沿用一般欄位的 input 外觀(唯讀),但寬度依內容縮放,不占大格
 function pmZoneText(p){ const z=pmZonesOfRow(p); return '<input type="text" class="lt-edit spx-vcell" readonly value="'+esc(z.join('.'))+'" title="由領料明細/事由自動判定的工程區"/>'; }
+function pmWeldingText(p){ const z=pmZonesOfRow(p); return '<input type="text" class="lt-edit spx-vcell" readonly value="'+esc(z.join('.'))+'" title="由領料明細/細目自動判定的焊材"/>'; }
 function pmZoneMatch(p,zone){
   const target=String(zone||'').trim().toUpperCase(); if(!target) return true;
   const zones=pmZonesOfRow(p);
@@ -32544,6 +32562,15 @@ function pmIsWelding(p){
   const meta=pmMeta(p.remark);
   if(meta&&Array.isArray(meta.details)&&meta.details.some(d=>PM_WELD_RE.test(String(d&&d.item||''))||PM_WELD_RE.test(String(d&&d.spec||'')))) return true;
   return false;
+}
+// 焊材領料不再使用工程編號；載入時同步清除既有焊材紀錄中的舊資料。
+async function prodClearWeldingProjectNumbers(){
+  const rows=prodProduct.filter(p=>p.id&&pmIsWelding(p)&&String(p.proj_no||'').trim());
+  if(!rows.length) return;
+  await Promise.all(rows.map(async p=>{
+    const r=await sbFetch('/rest/v1/product_material?id=eq.'+p.id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({proj_no:null})});
+    if(r.ok) p.proj_no=null;
+  }));
 }
 function pmReasonItem(name){
   const s=String(name||'').replace(/[（(].*?[）)]/g,'').replace(/^標準型/,'').trim();
@@ -32706,12 +32733,12 @@ const SPX={
     ]},
   product:{ tbl:'product_material', sort:spxNewestFirst,
     cols:[
-      {k:'pick_date',h:'日期',date:true,noData:true,defFn:spxToday},{k:'proj_no',h:'工程編號'},{k:'_zone',h:'工程區',virtual:true,noData:true,render:pmZoneText},{k:'serial',h:'流水編號'},{k:'reason',h:'事由',wide:true},{k:'remark',h:'備註',wide:true},{k:'is_picked',h:'是否領料',check:true,bool:true,noData:true,def:false},{k:'pickup_date',h:'領料日期',date:true,noData:true},{k:'_details',h:'細項',virtual:true,noData:true}
+      {k:'pick_date',h:'日期',date:true,noData:true,defFn:spxToday},{k:'proj_no',h:'工程編號'},{k:'_zone',h:'工程區',virtual:true,noData:true,render:pmZoneText},{k:'serial',h:'流水編號'},{k:'reason',h:'細目',wide:true},{k:'remark',h:'備註',wide:true},{k:'is_picked',h:'是否領料',check:true,bool:true,noData:true,def:false},{k:'pickup_date',h:'領料日期',date:true,noData:true},{k:'_details',h:'細項',virtual:true,noData:true}
     ]}
   // 焊材領料:同一張 product_material,僅記錄用 → 不放「是否領料/領料日期」
   ,welding:{ tbl:'product_material', sort:spxNewestFirst,
     cols:[
-      {k:'pick_date',h:'日期',date:true,noData:true,defFn:spxToday},{k:'proj_no',h:'工程編號'},{k:'_zone',h:'工程區',virtual:true,noData:true,render:pmZoneText},{k:'serial',h:'流水編號'},{k:'reason',h:'事由',wide:true,noData:true,defFn:()=>'焊材領料'},{k:'remark',h:'備註',wide:true},{k:'_details',h:'細項',virtual:true,noData:true}
+      {k:'pick_date',h:'日期',date:true,noData:true,defFn:spxToday},{k:'_zone',h:'焊材',virtual:true,noData:true,render:pmWeldingText},{k:'serial',h:'流水編號'},{k:'reason',h:'細目',wide:true,noData:true,defFn:()=>'焊材領料'},{k:'remark',h:'備註',wide:true},{k:'_details',h:'細項',virtual:true,noData:true}
     ]}
   ,manual:{ tbl:'manual_order', sort:spxNewestFirst,
     cols:[
@@ -32865,6 +32892,34 @@ function spxRowHtml(key,i){ const cfg=SPX[key], arr=prodArr(key), r=arr[i], blan
   return h;
 }
 function spxEdit(key,i,field,val){ const r=prodArr(key)[i]; if(!r) return; const c=SPX[key].cols.find(x=>x.k===field); spxSnapshot(key); r[field]=c?spxCoerce(c,val):val; if(key==='product'&&field==='is_picked') r.pickup_date=r.is_picked?(r.pickup_date||spxToday()):''; spxMarkDirty(key,i); const hideTrackStatus=key==='track'&&field==='status'&&((r.status==='OK'&&!prodShowCompleted.track)||(r.status==='轉包'&&!prodTrackShowSubcontract)); if((c&&c.check)||hideTrackStatus){spxRender(key);spxAfterChange(key);} if(key==='detail'&&typeof prodRenderDetailHeader==='function') prodRenderDetailHeader(); }
+
+// 勾選欄批次更新：一次 PATCH 一批，避免數百列逐筆儲存。
+async function spxBulkSetCheck(key,field,rows,checked){
+  const cfg=SPX[key], val=!!checked, savedRows=rows.filter(r=>r.id), chunks=[];
+  for(let i=0;i<savedRows.length;i+=100) chunks.push(savedRows.slice(i,i+100));
+  let okCount=0;
+  for(const chunk of chunks){
+    const payload={[field]:val};
+    if(key==='product'&&field==='is_picked') payload.pickup_date=val?spxToday():null;
+    const ids=chunk.map(r=>r.id).join(',');
+    const res=await sbFetch('/rest/v1/'+cfg.tbl+'?id=in.('+ids+')',{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)});
+    if(!res.ok){ spxHint('批次儲存失敗，請確認登入權限',true); return okCount; }
+    chunk.forEach(r=>{r[field]=val;if(key==='product'&&field==='is_picked')r.pickup_date=val?spxToday():null;r._dirty=false;});
+    okCount+=chunk.length;
+  }
+  rows.filter(r=>!r.id).forEach(r=>{r[field]=val;if(key==='product'&&field==='is_picked')r.pickup_date=val?spxToday():'';});
+  spxRender(key); spxAfterChange(key); spxHint('✓ 已批次更新 '+okCount+' 筆');
+  return okCount;
+}
+async function spxCompleteBeforeDate(key){
+  const el=document.getElementById('productBulkBefore'), cutoff=el&&el.value;
+  if(!cutoff){alert('請先選擇截止日期');return;}
+  const cfg=SPX[key], kw=spxFilterText[key];
+  const rows=prodArr(key).filter(r=>!spxRowIsBlank(cfg,r)&&spxRowVisible(key,r,kw)&&String(r.pick_date||'')<cutoff&&!r.is_picked);
+  if(!rows.length){alert('沒有符合條件且尚未完成的資料');return;}
+  if(!await uiConfirm('確定要將目前篩選結果中，日期早於 '+cutoff+' 的 '+rows.length+' 筆資料勾選完成？')) return;
+  await spxBulkSetCheck(key,'is_picked',rows,true);
+}
 function spxEditText(key,i,field,el){ const r=prodArr(key)[i]; if(!r) return; const c=SPX[key].cols.find(x=>x.k===field); spxSnapshot(key); if(c&&c.combo) spxSetCombo(r,c,el.value); else if((key==='product'||key==='welding')&&field==='remark') r[field]=pmPackRemark(el.value,pmMeta(r[field])); else r[field]=el.value; spxMarkDirty(key,i); }
 function spxCompletionCommit(key,i,field){ if(key==='reserved'&&field==='take_date'&&!prodShowCompleted.reserved){ const r=prodArr(key)[i]; if(r&&String(r.take_date||'').trim()){spxRender(key);spxAfterChange(key);} } }
 function spxAddRow(key){ spxSnapshotNow(key); spxEnsureBlank(key); spxRender(key); }
