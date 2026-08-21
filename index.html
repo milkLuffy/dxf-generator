@@ -13552,6 +13552,15 @@ function zoneDateSlashShort(d) {
   d = String(d || '');
   return d.length >= 10 ? d.slice(5, 10).replace('-', '/') : d.replace('-', '/');
 }
+// 同一構件可分批上線／報驗；欄位顯示「日期 × 支數（累計/BOM）」而非只顯示最早日期。
+function zoneDateQtyText(batches, need) {
+  const rows = Object.entries(batches || {}).filter(([,q]) => (parseInt(q) || 0) > 0).sort((a,b) => a[0].localeCompare(b[0]));
+  if (!rows.length) return '';
+  const done = rows.reduce((s,[,q]) => s + (parseInt(q) || 0), 0);
+  if (rows.length === 1 && done === 1 && (parseInt(need) || 0) <= 1) return zoneDateShort(rows[0][0]);
+  const detail = rows.map(([d,q]) => zoneDateShort(d) + ' ×' + q).join('、');
+  return detail + ((parseInt(need) || 0) ? '（' + done + '/' + parseInt(need) + '）' : '');
+}
 // 統一取得「構件總表」某欄位的實際顯示值(渲染與篩選共用同一份邏輯,避免像進料/A201/A202/出貨/流水編號
 // 這種自動帶入的欄位,篩選抓不到畫面上實際顯示的值)
 function compExtDisplayValue(r, c) {
@@ -13563,16 +13572,18 @@ function compExtDisplayValue(r, c) {
     const need = parseInt(r.qty) || 0;
     return String(got) + (need ? '/' + need : '');
   }
-  if (c === 'A201') return zoneDateShort(zoneOnlineMap[r.part_no] || '');
-  if (c === 'A202') return zoneDateShort(zoneDailyMap[r.part_no] || '');
+  if (c === 'A201') return zoneDateQtyText(zoneOnlineBatches[r.part_no], r.qty) || zoneDateShort(zoneOnlineMap[r.part_no] || '');
+  if (c === 'A202') return zoneDateQtyText(zoneDailyBatches[r.part_no], r.qty) || zoneDateShort(zoneDailyMap[r.part_no] || '');
   if (c === '出貨') return zoneDateShort(zoneShipMap[r.part_no] || '');
   if (c === '流水編號') return zoneSerialMap[r.part_no] || '';
   return (zoneCompExt[r.part_no] || {})[c] || '';
 }
 const BEAM_FIXED = ['序號','構件編號','共通編號','規格','數量','總重','圖號','加工機','進料','A201'];
 let zoneOnlineMap = {};
+let zoneOnlineBatches = {}; // part_no -> {work_date: qty}
 let zoneShipMap = {};      // part_no -> 出貨日期 (from layout_items ship_date)
 let zoneDailyMap = {};     // part_no -> 每日產量日期 (A202, from daily_output)
+let zoneDailyBatches = {}; // part_no -> {date: qty}; daily_output 每列視為一支
 let zoneSerialMap = {};    // part_no -> 流水編號 (from daily_output serial_no)
 let zoneCompExt = {};      // part_no -> extra obj
 let zoneReceipts = {};     // part_no -> [{id,date,qty,note}] 進料批次紀錄
@@ -13622,18 +13633,22 @@ async function loadComponents(zoneId) {
     : [];
   // #9 A201(上線日期) 與 出貨日期 from 線上進度表 (layout_items);A202 from 每日產量 (daily_output)
   zoneOnlineMap = {};
+  zoneOnlineBatches = {};
   zoneShipMap = {};
   zoneDailyMap = {};
+  zoneDailyBatches = {};
   zoneSerialMap = {};
   const proj = allBOM.find(x => x.id === currentProjectId);
   const zoneObj = allZones.find(x => x.id === zoneId);
   if (proj && zoneObj) {
-    const lr = await sbFetchAll('/rest/v1/layout_items?select=part_no,work_date,ship_date&proj_num=eq.' + encodeURIComponent(proj.proj_num) + '&zone_code=eq.' + encodeURIComponent(zoneObj.zone_code));
+    const lr = await sbFetchAll('/rest/v1/layout_items?select=part_no,work_date,ship_date,qty&proj_num=eq.' + encodeURIComponent(proj.proj_num) + '&zone_code=eq.' + encodeURIComponent(zoneObj.zone_code));
     if (Array.isArray(lr.data)) {
       lr.data.forEach(it => {
         if (it.part_no && it.work_date) {
           // keep earliest 上線日期
           if (!zoneOnlineMap[it.part_no] || it.work_date < zoneOnlineMap[it.part_no]) zoneOnlineMap[it.part_no] = it.work_date;
+          const b = zoneOnlineBatches[it.part_no] = zoneOnlineBatches[it.part_no] || {};
+          b[it.work_date] = (b[it.work_date] || 0) + Math.max(1, parseInt(it.qty, 10) || 1);
         }
         if (it.part_no && it.ship_date && String(it.ship_date).trim()) {
           // keep latest 出貨日期 (最後一支出貨)
@@ -13650,6 +13665,8 @@ async function loadComponents(zoneId) {
           zoneDailyMap[it.part_no] = it.date;
           zoneSerialMap[it.part_no] = it.serial_no || '';
         }
+        const b = zoneDailyBatches[it.part_no] = zoneDailyBatches[it.part_no] || {};
+        b[it.date] = (b[it.date] || 0) + 1;
       });
     }
   }
@@ -14095,12 +14112,14 @@ function renderCompTable() {
         // 未上線時也不可輸入 —— A201 唯一來源是「線上進度表 → 明細輸入」,手打進 component_ext 也不會被顯示。
         const full = zoneOnlineMap[r.part_no] || '';
         const title = full ? ('自動帶入上線日期:'+full) : '尚未上線;A201 由「線上進度表 → 明細輸入」自動帶入,不可手動填寫';
-        html += '<td><input type="text" value="'+(full?zoneDateShort(full):'')+'" data-part="'+r.part_no+'" data-col="'+c+'" readonly style="color:var(--accent3)" title="'+title+'"/></td>';
+        const display = zoneDateQtyText(zoneOnlineBatches[r.part_no], r.qty) || (full ? zoneDateShort(full) : '');
+        html += '<td><input type="text" value="'+display+'" data-part="'+r.part_no+'" data-col="'+c+'" readonly style="color:var(--accent3)" title="'+title+'"/></td>';
       } else if (c === 'A202') {
         // auto from 每日產量 日期,一律唯讀(只顯示 mm-dd);尚未報驗時空白,同樣不可手動填寫
         const full = zoneDailyMap[r.part_no] || '';
         const title = full ? ('自動帶入每日產量日期:'+full) : '尚未報驗;A202 由「每日產量」自動帶入,不可手動填寫';
-        html += '<td><input type="text" value="'+(full?zoneDateShort(full):'')+'" data-part="'+r.part_no+'" data-col="'+c+'" readonly style="color:var(--accent3)" title="'+title+'"/></td>';
+        const display = zoneDateQtyText(zoneDailyBatches[r.part_no], r.qty) || (full ? zoneDateShort(full) : '');
+        html += '<td><input type="text" value="'+display+'" data-part="'+r.part_no+'" data-col="'+c+'" readonly style="color:var(--accent3)" title="'+title+'"/></td>';
       } else if (c === '出貨') {
         // auto from 線上進度表 出貨日期,一律唯讀(只顯示 mm-dd)
         const full = zoneShipMap[r.part_no] || '';
@@ -14451,6 +14470,38 @@ function beamRowWeight(r) {
   return (parseFloat(r.qty)||0) * (parseFloat((r.extra||{})['單重'])||0);
 }
 
+// 托樑 A201 手動批次格式：8/18*2,8/19*1 → 08-18 ×2、08-19 ×1。
+// 無法完整辨識時保留原文，避免舊備註型資料被改寫。
+function beamA201Parse(raw) {
+  const src = String(raw == null ? '' : raw).trim().replace(/（\s*\d+\s*\/\s*\d+\s*）\s*$/,'');
+  if (!src) return [];
+  const parts = src.split(/[、,，;；]+/).map(s=>s.trim()).filter(Boolean), out=[];
+  for (const part of parts) {
+    const m = part.match(/^(?:(\d{4})[-/.])?(\d{1,2})[-/.](\d{1,2})(?:\s*(?:\*|×|x|X)\s*(\d+))?$/);
+    if (!m) return null;
+    const mon = parseInt(m[2],10), day = parseInt(m[3],10), qty = Math.max(1,parseInt(m[4],10)||1);
+    if (mon<1 || mon>12 || day<1 || day>31) return null;
+    const date = (m[1] ? m[1]+'-' : '') + String(mon).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    const found=out.find(x=>x.date===date); if(found) found.qty+=qty; else out.push({date,qty});
+  }
+  return out;
+}
+function beamA201Stored(raw) {
+  const rows=beamA201Parse(raw); if(rows===null) return String(raw==null?'':raw).trim();
+  return rows.map(x=>x.date+(x.qty>1?' ×'+x.qty:'')).join('、');
+}
+function beamA201Display(raw, need) {
+  const rows=beamA201Parse(raw); if(rows===null) return String(raw==null?'':raw);
+  if(!rows.length) return '';
+  const showQty=(parseInt(need)||0)>1 || rows.length>1;
+  const done=rows.reduce((s,x)=>s+x.qty,0), detail=rows.map(x=>x.date+((showQty||x.qty>1)?' ×'+x.qty:'')).join('、');
+  return detail+((parseInt(need)||0)>1?'（'+done+'/'+parseInt(need)+'）':'');
+}
+function beamA201Commit(i, el) {
+  const stored=beamA201Stored(el.value); beamExtEdit(i,'A201',stored);
+  el.value=beamA201Display(stored,zoneBeamRows[i]&&zoneBeamRows[i].qty);
+}
+
 function renderBeamTable() {
   const el = document.getElementById('zone-beam');
   const cols = beamCols();
@@ -14476,11 +14527,13 @@ function renderBeamTable() {
   rows.forEach(({r, idx}) => {
     html += '<tr data-bkey="'+idx+'">';
     cols.forEach(col => {
-      const val = (beamVal(r, col)+'').replace(/"/g,'&quot;');
+      const rawVal = beamVal(r, col);
+      const val = ((col.ext==='A201'?beamA201Display(rawVal,r.qty):rawVal)+'').replace(/"/g,'&quot;');
       const oc = col.key
         ? 'beamEdit('+idx+',&#39;'+col.key+'&#39;,this.value)'
         : 'beamExtEdit('+idx+',&#39;'+col.ext.replace(/'/g,'')+'&#39;,this.value)';
-      html += '<td><input type="text" value="'+val+'" data-col="'+col.label.replace(/"/g,'&quot;')+'" oninput="'+oc+'"/></td>';
+      const editAttr = col.ext==='A201' ? 'onchange="beamA201Commit('+idx+',this)"' : 'oninput="'+oc+'"';
+      html += '<td><input type="text" value="'+val+'" data-col="'+col.label.replace(/"/g,'&quot;')+'" '+editAttr+'/></td>';
     });
     html += '<td class="del-col"><button class="btn-del-row" onclick="beamDelRow('+idx+')">✕</button></td>';
     html += '</tr>';
@@ -14671,6 +14724,13 @@ function beamTableKey(e) {
   if (e.key !== 'Enter') return;
   e.preventDefault();
   const tr = e.target.closest('tr');
+  const td = e.target.closest('td');
+  const cellIdx = tr && td ? Array.from(tr.children).indexOf(td) : 0;
+  // A201 使用 onchange 才正規化；按 Enter 導覽前先立即提交目前內容。
+  if (e.target && e.target.dataset && e.target.dataset.col === 'A201') {
+    const rowIdx = parseInt(tr && tr.dataset ? tr.dataset.bkey : '', 10);
+    if (!isNaN(rowIdx)) beamA201Commit(rowIdx, e.target);
+  }
   const next = tr ? tr.nextElementSibling : null;
   // 合計列固定在最後,不算「下一列」
   const isLast = !next || next.classList.contains('total-row');
@@ -14680,11 +14740,12 @@ function beamTableKey(e) {
       // 表格是整個重繪的,要重新查詢(不能沿用舊的 tbody 參照)
       const rows = document.querySelectorAll('#zone-beam .layout-table tbody tr[data-bkey]');
       const nr = rows[rows.length-1];
-      const inp = nr ? nr.querySelector('input[type=text]') : null;
-      if (inp) inp.focus();
+      const inp = nr && nr.children[cellIdx] ? nr.children[cellIdx].querySelector('input[type=text]') : null;
+      if (inp) { inp.focus(); if(inp.select) inp.select(); }
     },30);
   } else {
-    const inp = next.querySelector('input[type=text]'); if(inp) inp.focus();
+    const inp = next.children[cellIdx] ? next.children[cellIdx].querySelector('input[type=text]') : null;
+    if(inp) { inp.focus(); if(inp.select) inp.select(); }
   }
 }
 
@@ -14819,15 +14880,29 @@ async function beamSave() {
   alert('托樑零件表已儲存');
   renderBeamTable();
 }
+function beamLatestRevisionLabel(rows) {
+  const source=(rows||zoneBeamRows).slice().reverse();
+  for(let rev=5; rev>=0; rev--) {
+    const key='R'+rev;
+    const hit=source.find(r=>String((r.extra||{})[key]||'').trim());
+    if(hit) return String((hit.extra||{})[key]).trim()+'(R0)';
+  }
+  return '';
+}
 function beamExportExcel() {
   if (typeof XLSX === 'undefined') { alert('Excel 函式庫尚未載入'); return; }
   if (!zoneBeamRows.length) { alert('沒有資料'); return; }
   const cols = beamCols();
-  const data = [cols.map(c => c.label)];
+  const p = allBOM.find(x=>x.id===currentProjectId);
+  const projNum=p?p.proj_num:'';
+  const zoneCode=currentZone?currentZone.zone_code:'';
+  const titleText=[projNum,zoneCode].filter(Boolean).join('-')||'托樑零件表';
+  const header=cols.map(c=>c.label);
+  const data = [[titleText].concat(header.slice(1).map(()=>'')),header];
   let tQty = 0, tW = 0;
-  zoneBeamRows.forEach(r => {
-    if (!beamRowHasContent(r)) return;
-    data.push(cols.map(c => beamVal(r, c)));
+  const exportedRows=zoneBeamRows.filter(r=>beamRowHasContent(r));
+  exportedRows.forEach(r => {
+    data.push(cols.map(c => c.ext==='A201'?beamA201Display(beamVal(r,c),r.qty):beamVal(r,c)));
     tQty += parseFloat(r.qty)||0; tW += beamRowWeight(r);
   });
   // 合計列(對齊畫面上的合計:數量、總重)
@@ -14835,11 +14910,34 @@ function beamExportExcel() {
                                 : c.label === '總重' ? (Math.round(tW*100)/100) : '');
   totalRow[0] = '合計';
   data.push(totalRow);
+  const latestRev=beamLatestRevisionLabel(exportedRows);
+  const revisionRow=data.length+2;
+  if(latestRev){ data.push([]); const rr=header.map(()=>''); rr[header.length-1]=latestRev; data.push(rr); }
   const ws = XLSX.utils.aoa_to_sheet(data);
+  const range=XLSX.utils.decode_range(ws['!ref']),fontName='DFKai-SB';
+  for(let R=range.s.r;R<=range.e.r;R++) for(let C=range.s.c;C<=range.e.c;C++){
+    const addr=XLSX.utils.encode_cell({r:R,c:C}),cell=ws[addr]; if(!cell)continue;
+    cell.s=cell.s||{};
+    cell.s.font={name:fontName,sz:R===0?16:14,bold:R===0||R===1};
+    cell.s.alignment={vertical:'center',horizontal:R===0?'center':(R===1?'center':(cols[C]&&cols[C].num?'right':'left')),wrapText:false};
+    if(R===1)cell.s.fill={patternType:'solid',fgColor:{rgb:'D9EAF7'}};
+    if(R>=1&&R<revisionRow-1)cell.s.border={top:{style:'thin',color:{rgb:'808080'}},bottom:{style:'thin',color:{rgb:'808080'}},left:{style:'thin',color:{rgb:'808080'}},right:{style:'thin',color:{rgb:'808080'}}};
+  }
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:header.length-1}}];
+  if(latestRev){const rc=XLSX.utils.encode_cell({r:revisionRow-1,c:header.length-1});if(ws[rc])ws[rc].s={font:{name:fontName,sz:14,bold:true},alignment:{horizontal:'right',vertical:'center'}};}
+  ws['!cols']=header.map((_,C)=>{
+    let max=String(header[C]||'').length;
+    for(let R=1;R<=range.e.r;R++){
+      const cell=ws[XLSX.utils.encode_cell({r:R,c:C})],text=cell&&cell.v!=null?String(cell.v):'';
+      max=Math.max(max,[...text].reduce((n,ch)=>n+(/[\u3000-\u9fff\uff00-\uffef]/.test(ch)?2:1),0));
+    }
+    return {wch:Math.min(60,Math.max(6,max+2))};
+  });
+  ws['!rows']=data.map((_,i)=>({hpt:i===0?24:21}));
+  ws['!freeze']={xSplit:0,ySplit:2,topLeftCell:'A3',activePane:'bottomLeft',state:'frozen'};
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '托樑零件表');
-  const p = allBOM.find(x=>x.id===currentProjectId);
-  XLSX.writeFile(wb, (p?p.proj_num:'') + '-' + (currentZone?currentZone.zone_code:'') + '-托樑零件表.xlsx');
+  XLSX.writeFile(wb, projNum + '-' + zoneCode + '-托樑零件表.xlsx');
 }
 
 // ── Staff ──
@@ -16480,6 +16578,18 @@ function zoneModalParse() {
   el.style.color = 'var(--green)';
 }
 
+// R0～R5 是版次構件編號紀錄；由最高欄往回找，只取最新一筆內容。
+// 右下角固定以「欄位內容(R0)」呈現，例如 R1=A16-190 → A16-190(R0)。
+function compLatestRevisionLabel(rows) {
+  const source=(rows&&rows.length?rows:zoneComponents).slice().reverse();
+  for(let rev=5; rev>=0; rev--) {
+    const key='R'+rev;
+    const hit=source.find(r=>String((zoneCompExt[r.part_no]||{})[key]||'').trim());
+    if(hit) return String((zoneCompExt[hit.part_no]||{})[key]).trim()+'(R0)';
+  }
+  return '';
+}
+
 // Export current zone components to Excel
 function exportZoneExcel() {
   if (!zoneComponents.length) { alert('此工程區無構件資料'); return; }
@@ -16488,9 +16598,10 @@ function exportZoneExcel() {
   const projNum = p ? p.proj_num : '';
   const zoneCode = currentZone ? currentZone.zone_code : '';
   const fname = ([projNum, zoneCode].filter(Boolean).join('-') || '構件總表') + '.xlsx';
+  const titleText = [projNum, zoneCode].filter(Boolean).join('-') || '構件總表';
   const extCols = COMP_EXT_COLS.concat(zoneCompCustomCols);
   const header = ['序號','構件編號','共通編號','規格','數量','總重','圖號'].concat(extCols);
-  const data = [header];
+  const data = [[titleText].concat(header.slice(1).map(()=>'')), header];
   const isExcluded = r => zoneExcludedParts.has(r.part_no);
   const buildRow = r => {
     const ext = zoneCompExt[r.part_no] || {};
@@ -16500,6 +16611,7 @@ function exportZoneExcel() {
         const recs = zoneReceipts[r.part_no] || [];
         return recs.reduce((s,x) => s + (parseInt(x.qty)||0), 0);
       }
+      if (c === 'A201' || c === 'A202' || c === '出貨' || c === '流水編號') return compExtDisplayValue(r,c);
       return ext[c]||'';
     });
     return base.concat(extVals);
@@ -16518,7 +16630,44 @@ function exportZoneExcel() {
     excluded.forEach(r => { data.push(buildRow(r)); eQty += parseInt(r.qty)||0; eW += parseFloat(r.net_weight)||0; });
     data.push(['合計（不列入統計）','','','', eQty, parseFloat(eW.toFixed(2)), ''].concat(extCols.map(()=>'')));
   }
+  const latestRev = compLatestRevisionLabel(zoneComponents);
+  const revisionRow = data.length + 2; // 與表格隔一空白列
+  if(latestRev) {
+    data.push([]);
+    const rr=header.map(()=> ''); rr[header.length-1]=latestRev; data.push(rr);
+  }
   const ws = XLSX.utils.aoa_to_sheet(data);
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const fontName = 'DFKai-SB'; // 標楷體
+  for(let R=range.s.r; R<=range.e.r; R++) for(let C=range.s.c; C<=range.e.c; C++) {
+    const addr=XLSX.utils.encode_cell({r:R,c:C}), cell=ws[addr]; if(!cell) continue;
+    cell.s=cell.s||{};
+    cell.s.font={name:fontName,sz:R===0?16:14,bold:R===0||R===1};
+    cell.s.alignment={vertical:'center',horizontal:R===0?'center':(R===1?'center':([0,4,5].includes(C)?'right':'left')),wrapText:false};
+    if(R===1) cell.s.fill={patternType:'solid',fgColor:{rgb:'D9EAF7'}};
+    if(R>=1 && R<revisionRow-1) cell.s.border={
+      top:{style:'thin',color:{rgb:'808080'}},bottom:{style:'thin',color:{rgb:'808080'}},
+      left:{style:'thin',color:{rgb:'808080'}},right:{style:'thin',color:{rgb:'808080'}}
+    };
+  }
+  // 標題跨越整張表；版次放在最右欄並靠右，不加表格框線。
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:header.length-1}}];
+  if(latestRev) {
+    const rc=XLSX.utils.encode_cell({r:revisionRow-1,c:header.length-1});
+    if(ws[rc]) ws[rc].s={font:{name:fontName,sz:14,bold:true},alignment:{horizontal:'right',vertical:'center'}};
+  }
+  // 依儲存格實際內容估算欄寬；略過跨欄標題，避免第一欄被標題撐寬。
+  ws['!cols']=header.map((_,C)=>{
+    let max=String(header[C]||'').length;
+    for(let R=1; R<=range.e.r; R++) {
+      const cell=ws[XLSX.utils.encode_cell({r:R,c:C})];
+      const text=cell&&cell.v!=null?String(cell.v):'';
+      max=Math.max(max,[...text].reduce((n,ch)=>n+(/[\u3000-\u9fff\uff00-\uffef]/.test(ch)?2:1),0));
+    }
+    return {wch:Math.min(60,Math.max(6,max+2))};
+  });
+  ws['!rows']=data.map((_,i)=>({hpt:i===0?24:21}));
+  ws['!freeze']={xSplit:0,ySplit:2,topLeftCell:'A3',activePane:'bottomLeft',state:'frozen'};
   const wb = XLSX.utils.book_new();
   const sheetName = ([projNum, zoneCode].filter(Boolean).join('-') || 'BOM').substring(0,31);
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
@@ -16584,6 +16733,7 @@ function printZoneComp() {
       '<td>合計</td><td></td><td></td><td></td>'+
       '<td>'+totalQty+'</td><td>'+fmtW(totalW)+'</td><td></td>'+
     '</tr>';
+  const latestRev = compLatestRevisionLabel(rows);
 
   const docHtml =
     '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>'+esc(titleMain)+'</title><style>'+
@@ -16591,6 +16741,7 @@ function printZoneComp() {
     'body{margin:0;font-family:"標楷體","DFKai-SB","BiauKai","Kaiti TC","KaiTi TC","KaiTi",serif;color:#000;font-size:13px}'+
     '.doc{padding:16px 18px}'+
     '.hdr{margin:0 0 8px;font-size:16px;font-weight:400}'+
+    '.revision{margin-top:8px;text-align:right;font-size:14px;font-weight:700}'+
     'table.main{width:100%;border-collapse:collapse;table-layout:fixed}'+
     'table.main th,table.main td{border:1px solid #000;padding:3px 6px;font-size:13px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
     'table.main th{font-weight:700}'+
@@ -16605,6 +16756,7 @@ function printZoneComp() {
     '<thead><tr><th>序號</th><th>構件編號</th><th>共通編號</th><th>規格</th><th>數量</th><th>總重</th><th>圖號</th></tr></thead>'+
     '<tbody>'+bodyRows+totalRow+'</tbody>'+
     '</table>'+
+    (latestRev?'<div class="revision">'+esc(latestRev)+'</div>':'')+
     '</div></body></html>';
 
   // 用隱藏 iframe 直接叫出列印對話框(不另開分頁、不需再按一次列印)
@@ -32067,6 +32219,16 @@ function prodBuildProjOptions(){
   if(dl) dl.innerHTML=projs.map(p=>'<option value="'+esc(p)+'">').join('');
 }
 
+// 成品材匯入時，若通知單工程與系統工程不同，會保存成「系統工程(通知單工程)」。
+// 看板統計仍應歸入括號前的系統工程，例如 F187(NP*2) 要計入 F187。
+function prodProductProjBase(v){
+  return String(v||'').trim().replace(/\s*\([^)]*\)\s*$/,'').trim();
+}
+function prodProductProjMatch(materialProj, boardProj){
+  const a=String(materialProj||'').trim(), b=String(boardProj||'').trim();
+  return !a || !b || a===b || prodProductProjBase(a)===prodProductProjBase(b);
+}
+
 // ── 生產看板 ──
 function prodBuildUnits(){
   const map=new Map();
@@ -32139,7 +32301,7 @@ function prodUnitCells(u){
     return '<td>'+(it?prodChip(it.status,it.remark,it.make):'<span class="st-na">·</span>')+'</td>';
   }).join('');
   const pjOk=(a)=>!u.proj||!a||a===u.proj;   // 工程編號相符(或任一為空)
-  const pmCell=prodPmCell(p=>!pmIsWelding(p) && pjOk((p.proj_no||'').trim()) && (pmZoneMatch(p,u.zone) || (u.doc && (p.remark||'').includes(u.doc))));
+  const pmCell=prodPmCell(p=>!pmIsWelding(p) && prodProductProjMatch(p.proj_no,u.proj) && (pmZoneMatch(p,u.zone) || (u.doc && (p.remark||'').includes(u.doc))));
   const rmCell=prodRmCell(r=>pjOk((r.proj_no||'').trim()) && (((r.zone||'')===u.zone) || (u.doc && (r.order_no||'')===u.doc)));
   const manualCell=prodManualCell(u.proj,u.zone);
   const ov=prodOverall(u.items);
@@ -32169,7 +32331,7 @@ function prodRenderCards(units, f){
   wrap.innerHTML=prodStatusSections(zones,z=>{
     const ready=z.us.filter(u=>['完成','已送工地'].includes(prodOverall(u.items).label)).length;
     const pjOk=(a)=>!z.proj||!a||a===z.proj;
-    const pmCell=prodPmCell(p=>!pmIsWelding(p) && pjOk((p.proj_no||'').trim()) && pmZoneMatch(p,z.zone));
+    const pmCell=prodPmCell(p=>!pmIsWelding(p) && prodProductProjMatch(p.proj_no,z.proj) && pmZoneMatch(p,z.zone));
     const rmCell=prodRmCell(r=>pjOk((r.proj_no||'').trim()) && ((r.zone||'')===z.zone || z.us.some(u=>u.doc && (r.order_no||'')===u.doc)));
     const manualCell=prodManualCell(z.proj,z.zone);
     // 各料件狀態摘要(只列有資料的)
@@ -32275,7 +32437,7 @@ function prodZoneCounts(z){
   const key='z\u0001'+z.proj+'\u0001'+z.zone, hit=prodCountCache[key]; if(hit) return hit;
   const proj=z.proj, zone=z.zone, docs=z.us.map(u=>u.doc).filter(Boolean), pjOk=a=>!proj||!a||a===proj;
   const r={
-    product: prodProduct.filter(p=>!pmIsWelding(p)&&pjOk((p.proj_no||'').trim())&&(pmZoneMatch(p,zone)||docs.some(d=>(p.remark||'').includes(d)))).length,
+    product: prodProduct.filter(p=>!pmIsWelding(p)&&prodProductProjMatch(p.proj_no,proj)&&(pmZoneMatch(p,zone)||docs.some(d=>(p.remark||'').includes(d)))).length,
     reserved:prodReserved.filter(x=>pjOk((x.proj_no||'').trim())&&((x.zone||'')===zone||docs.includes((x.order_no||'')))).length,
     manual:  prodManualForZone(proj,zone).length
   };
@@ -32285,7 +32447,7 @@ function prodProjCounts(proj){
   const key='p\u0001'+proj, hit=prodCountCache[key]; if(hit) return hit;
   const eq=a=>(a||'').trim()===proj;
   const r={
-    product: prodProduct.filter(p=>!pmIsWelding(p)&&eq(p.proj_no)).length,
+    product: prodProduct.filter(p=>!pmIsWelding(p)&&prodProductProjMatch(p.proj_no,proj)).length,
     reserved:prodReserved.filter(x=>eq(x.proj_no)).length,
     manual:  prodManual.filter(x=>eq(x.proj_no)).length
   };
@@ -32490,8 +32652,8 @@ function prodZoneMatched(proj, zone){
   const docs=us.map(u=>u.doc).filter(Boolean);
   const pjOk=a=>!proj||!a||a===proj;
   const reserved=prodReserved.filter(r=>pjOk((r.proj_no||'').trim()) && ((r.zone||'')===zone || docs.includes((r.order_no||''))));
-  const product =prodProduct.filter(p=>!pmIsWelding(p) && pjOk((p.proj_no||'').trim()) && (pmZoneMatch(p,zone) || docs.some(d=>(p.remark||'').includes(d))));
-  const welding =prodProduct.filter(p=>pmIsWelding(p) && pjOk((p.proj_no||'').trim()) && pmZoneMatch(p,zone));
+  const product =prodProduct.filter(p=>!pmIsWelding(p) && prodProductProjMatch(p.proj_no,proj) && (pmZoneMatch(p,zone) || docs.some(d=>(p.remark||'').includes(d))));
+  const welding =prodProduct.filter(p=>pmIsWelding(p) && prodProductProjMatch(p.proj_no,proj) && pmZoneMatch(p,zone));
   const manual=prodManualForZone(proj,zone);
   return {us, docs, reserved, product, welding, manual};
 }
@@ -32670,7 +32832,7 @@ function prodRenderBoard(){
       const ready=z.us.filter(u=>['完成','已送工地'].includes(prodOverall(u.items).label)).length;
       const itemCells=PROD_ITEMS.map(code=>prodAggItemCell(z.proj,z.zone,code)).join('');
       const pjOk=(a)=>!z.proj||!a||a===z.proj;
-      const pmCell=prodPmCell(p=>!pmIsWelding(p) && pjOk((p.proj_no||'').trim()) && pmZoneMatch(p,z.zone));
+      const pmCell=prodPmCell(p=>!pmIsWelding(p) && prodProductProjMatch(p.proj_no,z.proj) && pmZoneMatch(p,z.zone));
       const rmCell=prodRmCell(r=>pjOk((r.proj_no||'').trim()) && ((r.zone||'')===z.zone || z.us.some(u=>u.doc && (r.order_no||'')===u.doc)));
       const manualCell=prodManualCell(z.proj,z.zone);
       let html='<tr class="prod-zrow" onclick="prodToggleZone(\''+esc(z.key)+'\')">'+
