@@ -349,6 +349,26 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .bom-vbtn{background:var(--bg2);color:var(--text2);border:none;padding:7px 12px;font-size:13px;cursor:pointer;font-family:var(--sans);white-space:nowrap}
 .bom-vbtn+.bom-vbtn{border-left:1px solid var(--border)}
 .bom-vbtn.active{background:var(--accent2);color:#fff}
+/* 報驗需求（BOM modal 內的編輯區 + 報驗頁的需求卡） */
+#bom-modal .modal{max-width:560px}
+.insp-req-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:9px 0}
+.insp-req-k{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.1em;min-width:60px;flex:none}
+.insp-seg .bom-vbtn{padding:6px 11px;font-size:12px}
+.insp-req-photo{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:var(--text2)}
+.insp-req-photo input{width:62px;text-align:center;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:13px;padding:6px 8px;outline:none}
+.insp-req-photo input:focus{border-color:var(--accent2)}
+.insp-req-hint{font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:2px}
+.insp-req-card{border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);padding:13px 15px;margin-top:12px}
+.insp-req-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.insp-req-title{font-family:var(--mono);font-size:12px;color:var(--text2);letter-spacing:.06em}
+.insp-req-grid{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;align-items:baseline}
+.insp-req-lbl{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.08em;white-space:nowrap}
+.insp-req-val{font-size:13px;color:var(--text);word-break:break-all}
+.insp-req-val .na{color:var(--text3);font-family:var(--mono);font-size:12px}
+.insp-req-fixed{margin-top:10px;padding-top:9px;border-top:1px dashed var(--border);font-family:var(--mono);font-size:11px;color:var(--text3);line-height:1.7}
+.insp-req-edit{background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:var(--rad);padding:5px 11px;font-size:12px;cursor:pointer;font-family:var(--mono);flex:none}
+.insp-req-edit:hover{border-color:var(--accent2);color:var(--accent2)}
+@media(max-width:768px){.insp-req-k{min-width:100%}.insp-req-grid{grid-template-columns:1fr;gap:2px}.insp-req-lbl{margin-top:6px}}
 .bom-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
 .bom-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:14px 15px;display:flex;flex-direction:column;gap:10px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
 .bom-card:hover{border-color:var(--accent);box-shadow:0 4px 18px rgba(0,0,0,.18)}
@@ -708,6 +728,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .btn-icon{background:none;border:1px solid transparent;border-radius:var(--rad);color:var(--text3);cursor:pointer;padding:4px 8px;font-size:13px;transition:all .15s}
 .btn-icon.edit:hover{color:var(--accent2);border-color:var(--accent2)}
 .btn-icon.del:hover{color:var(--danger);border-color:var(--danger)}
+.btn-act{border-color:var(--border);color:var(--text2);font-family:var(--sans);font-size:12px;padding:5px 10px;white-space:nowrap}
 .empty-state{text-align:center;padding:48px;color:var(--text3);font-family:var(--mono);font-size:13px}
 
 /* ── Staff page ── */
@@ -1172,7 +1193,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   #page-bom .bom-card-grid{grid-template-columns:1fr;gap:10px}
   #page-bom .bom-card{padding:16px}
   #page-bom .bom-card-num{font-size:25px}
-  #page-bom .bom-card-actions .btn-icon{min-width:42px;min-height:42px}
+  #page-bom .bom-card-actions .btn-icon{min-height:42px}
+  #page-bom .bom-card-actions .btn-act{flex:1}
   .stat-grid{grid-template-columns:1fr 1fr}
   .stat-grid>.stat-card:last-child{grid-column:1/-1}   /* 本月總產量(噸)手機版佔滿整列,避免半格留白並凸顯噸數 */
   .dash-grid,.dash-row{grid-template-columns:1fr}
@@ -1923,6 +1945,11 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
         </select>
       </div>
     </div>
+    <div class="login-divider" style="margin-top:8px"><span>報驗需求</span></div>
+    <div class="lf"><label>複製自其他工程</label>
+      <select id="bom-insp-copy" onchange="bomInspCopyFrom(this)"><option value="">— 不複製 —</option></select>
+    </div>
+    <div id="bom-insp-fields"></div>
     <div class="modal-actions">
       <button class="btn-modal-cancel" onclick="closeModal('bom-modal')">取消</button>
       <button class="btn-modal-ok" onclick="saveBOM()" id="btn-save-bom">儲存</button>
@@ -3514,6 +3541,7 @@ window.normalizeFullWidth=function(value){
             <option value="">— 選擇工程區 —</option>
           </select>
         </div>
+        <div class="insp-req-card" id="insp-req-card" style="display:none"></div>
       </div>
 
       <div class="proj-section" style="margin-top:16px">
@@ -9703,6 +9731,9 @@ const AUDIT_FIELD_LABEL={
   part_no:'構件編號', comp_no:'構件編號', net_weight:'淨重', weight:'重量', length:'長度',
   work_date:'施作日期', ship_date:'出貨日期', bed:'床位', serial_no:'單據編號', doc_no:'單據編號',
   company:'公司', inspect_time:'報驗時間', proc_code:'製程', sub_code:'區別',
+  // 報驗需求（projects 的 insp_* 欄位）
+  insp_photo_beam:'樑拍照張數', insp_photo_col:'柱拍照張數', insp_sc_form:'自檢表',
+  insp_sc_sign:'是否手寫', insp_sc_color:'字體顏色', insp_note:'報驗需求備註',
   // 預報構件
   insp_qty:'報驗支數', board:'有/無板', ut_list:'UT部位', rev:'版次', work_loc:'施作地點',
   keyin_date:'製造Key in日期', insp_person:'協力商檢驗者', company_unit:'公司單位', client:'業主',
@@ -12547,7 +12578,7 @@ function dashClassifySpec(spec) {
 async function dashLoadStats() {
   const [dRes, lRes, cRes, eRes, zRes, pRes, mRes] = await Promise.all([
     sbFetchAll('/rest/v1/daily_output?select=date,part_no,proj_num,zone_code,net_weight,spec'),
-    sbFetchAll('/rest/v1/layout_items?select=proj_num,zone_code,part_no,work_date'),
+    sbFetchAll('/rest/v1/layout_items?select=proj_num,zone_code,part_no,work_date,qty'),
     sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,qty'),
     sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no,extra'),
     sbFetchAll('/rest/v1/zones?select=id,zone_code,project_id'),
@@ -12739,12 +12770,16 @@ function dashRenderRatioTrend(endMonth) {
 function dashRenderProgress() {
   const progressDate = dashSelectedDate();
   const today = dashTodayStr();
-  // 已報驗支數 (proj|zone|part -> 支數) — 累計至 progressDate (daily_output 一列 = 一支)
-  const doneCount = {};
+  // 已報驗支數/噸重 (proj|zone|part) — 累計至 progressDate (daily_output 一列 = 一支,net_weight 已是單支重)
+  // zoneDoneParts 另存每個工程區「報驗過的構件編號」,供後面找出 BOM 沒有的編號(不能無聲吃掉)。
+  const doneCount = {}, doneWeight = {}, zoneDoneParts = {};
   dashDailyRows.filter(r => r.date && r.date <= progressDate).forEach(r => {
     if (!r.proj_num || !r.part_no || dashProjectIsAbnormal(r.proj_num)) return;
-    const k = dashKey(r.proj_num, r.zone_code) + '|' + String(r.part_no).trim().toUpperCase();
+    const zk = dashKey(r.proj_num, r.zone_code), pn = String(r.part_no).trim().toUpperCase();
+    const k = zk + '|' + pn;
     doneCount[k] = (doneCount[k]||0) + 1;
+    doneWeight[k] = (doneWeight[k]||0) + (parseFloat(r.net_weight)||0);
+    (zoneDoneParts[zk] = zoneDoneParts[zk] || new Set()).add(pn);
   });
   // 每個工程區最後報驗日期 (用來判斷 100% 是否已過當日)
   const zoneMaxDate = {};
@@ -12753,12 +12788,17 @@ function dashRenderProgress() {
     const k = dashKey(r.proj_num, r.zone_code);
     if (!zoneMaxDate[k] || r.date > zoneMaxDate[k]) zoneMaxDate[k] = r.date;
   });
-  // 上線: proj|part -> 最早上線日期 (依 progressDate 過濾)
-  const onlineDate = {};
+  // 上線支數 (proj|zone|part -> 支數) — 累計至 progressDate。
+  // 注意兩件事(舊版都錯):
+  //  1. layout_items「一列可代表多支」(qty 欄),不能一個編號只算 1 支,否則單位跟進料/已完成/BOM 對不起來。
+  //  2. key 必須帶工程區;同一工程 A 區、B 區常有相同構件編號,少了工程區會互相污染。
+  const onlineQty = {}, zoneOnlineParts = {};
   dashLayoutRows.forEach(r => {
     if (!r.proj_num || !r.part_no || !r.work_date || dashProjectIsAbnormal(r.proj_num)) return;
-    const k = dashKey(r.proj_num, r.part_no);
-    if (!onlineDate[k] || r.work_date < onlineDate[k]) onlineDate[k] = r.work_date;
+    if (r.work_date > progressDate) return;
+    const zk = dashKey(r.proj_num, r.zone_code), pn = String(r.part_no).trim().toUpperCase();
+    onlineQty[zk + '|' + pn] = (onlineQty[zk + '|' + pn]||0) + Math.max(1, parseInt(r.qty, 10) || 1);
+    (zoneOnlineParts[zk] = zoneOnlineParts[zk] || new Set()).add(pn);
   });
   // BOM 構件依 zone_id 分組
   const byZone = {};
@@ -12774,7 +12814,10 @@ function dashRenderProgress() {
     const zoneId = dashZoneMap[k];
     const comps = (zoneId != null && byZone[zoneId]) ? byZone[zoneId] : [];
     let feed = 0, needQty = 0, online = 0, done = 0, doneW = 0, totW = 0;
+    const bomParts = new Set();   // 這個工程區 BOM 有的構件編號(含非本公司,兩者都不算「BOM 外」)
     comps.forEach(c => {
+      const pn = String(c.part_no||'').trim().toUpperCase();
+      bomParts.add(pn);
       // 非本公司製作構件不列入統計
       const cext = dashCompExt[c.zone_id + '|' + c.part_no] || {};
       if (cext[NONCO_KEY] === '1' || cext[NONCO_KEY] === true) return;
@@ -12786,13 +12829,30 @@ function dashRenderProgress() {
       // 進料: 累計至 progressDate 的進料支數
       const recs = dashReceipts[c.zone_id + '|' + c.part_no] || [];
       feed += recs.filter(x => !x.date || x.date <= progressDate).reduce((s,x) => s + (parseInt(x.qty)||0), 0);
-      const od = onlineDate[dashKey(proj, c.part_no)];
-      if (od && od <= progressDate) online += 1;
-      // 已完成: 依報驗支數 (不超過該編號 BOM 支數)
-      const dc = doneCount[dashKey(proj, zone) + '|' + String(c.part_no||'').trim().toUpperCase()] || 0;
-      const doneSup = q > 0 ? Math.min(dc, q) : dc;
-      done += doneSup;
-      doneW += perW * doneSup;
+      // 上線: 累計上線支數,不超過該編號 BOM 支數(重複上線不灌水)
+      const oq = onlineQty[k + '|' + pn] || 0;
+      online += q > 0 ? Math.min(oq, q) : oq;
+      // 已完成: 真實報驗支數(不截斷),超報要看得出來才知道哪裡對不上
+      const dc = doneCount[k + '|' + pn] || 0;
+      done += dc;
+      // 噸數以 daily_output 當時記的單支重為準;沒有值才用 BOM 平均單支重回推
+      const dw = doneWeight[k + '|' + pn] || 0;
+      doneW += dw > 0 ? dw : perW * dc;
+    });
+    // BOM 找不到的報驗/上線編號(打錯字、BOM 未更新、報驗時工程區填錯,或這區根本沒匯 BOM):
+    // 舊版是「從 BOM 反查報驗」,這些支數會被整批無聲吃掉 → 這裡補回來,並在畫面上標示。
+    let extraDone = 0, extraOnline = 0;
+    const extraList = [];
+    (zoneDoneParts[k] || []).forEach(pn => {
+      if (bomParts.has(pn)) return;
+      const dc = doneCount[k + '|' + pn] || 0;
+      extraDone += dc; done += dc; doneW += doneWeight[k + '|' + pn] || 0;
+      extraList.push(pn + '×' + dc);
+    });
+    (zoneOnlineParts[k] || []).forEach(pn => {
+      if (bomParts.has(pn)) return;
+      const oq = onlineQty[k + '|' + pn] || 0;
+      extraOnline += oq; online += oq;
     });
     const bom = needQty;   // BOM 改為總支數
     const diff = done - bom;
@@ -12801,18 +12861,21 @@ function dashRenderProgress() {
     // 100% 完成且最後報驗日期不是今天 → 隱藏
     const maxDate = zoneMaxDate[k] || '';
     const hide100 = bom > 0 && done >= bom && maxDate < today;
-    return { proj, zone, feed, needQty, online, done, bom, diff, pct, doneT, leftT, planT, hide100 };
+    return { proj, zone, feed, needQty, online, done, bom, diff, pct, doneT, leftT, planT, hide100, extraDone, extraOnline, extraList };
   }).filter(r => !r.hide100)
     .filter(r => !dashProjectIsAbnormal(r.proj))   // 工程狀態為「異常」的不列入線上進度統計
     .sort((a,b) => a.proj.localeCompare(b.proj) || a.zone.localeCompare(b.zone));
   const body = document.getElementById('dash-progress-body');
   body.innerHTML = rows.length ? rows.map(r => {
-    const diffColor = r.diff < 0 ? 'var(--red)' : 'var(--green)';
+    // 差異: 負數=還沒做完(紅);0=剛好(綠);正數=報驗支數超過 BOM,屬異常要查(紫,滑過看是哪些編號)
+    const diffColor = r.diff < 0 ? 'var(--red)' : (r.diff > 0 ? 'var(--purple)' : 'var(--green)');
     const feedColor = (r.needQty && r.feed>=r.needQty) ? 'var(--green)' : (r.feed>0 ? 'var(--yellow)' : 'var(--text3)');
+    const extraTip = r.extraDone ? ' title="其中 '+r.extraDone+' 支的構件編號不在本工程區 BOM 內:'+r.extraList.slice(0,20).join('、').replace(/"/g,'')+(r.extraList.length>20?' …':'')+'"' : '';
+    const extraMark = r.extraDone ? '<span style="color:var(--purple)"> ⚠</span>' : '';
     return `<tr>
       <td>${r.proj||'—'}</td><td>${r.zone||'—'}</td>
       <td class="dash-prog-sec" style="color:${feedColor}">${r.feed}${r.needQty?'/'+r.needQty:''}</td><td class="dash-prog-sec">${r.online}</td>
-      <td class="dash-prog-sec" style="color:var(--yellow)">${r.done}</td><td class="dash-prog-sec">${r.bom}</td>
+      <td class="dash-prog-sec" style="color:var(--yellow)"${extraTip}>${r.done}${extraMark}</td><td class="dash-prog-sec">${r.bom}</td>
       <td class="dash-prog-sec" style="color:${diffColor}">${r.diff>0?'+':''}${r.diff}</td>
       <td><div class="dash-prog-wrap"><div class="dash-prog"><div class="dash-prog-bar" style="width:${Math.min(100,r.pct).toFixed(1)}%"></div></div><span class="dash-prog-pct">${r.pct.toFixed(1)}%</span></div></td>
       <td style="color:var(--yellow)">${r.doneT.toFixed(2)}</td>
@@ -13056,8 +13119,8 @@ function bomRowHTML(p){
     <td>${bomCoHTML(p.company)}</td>
     <td>
       <div class="bom-row-actions">
-        <button class="btn-icon edit" onclick="event.stopPropagation();editBOM(${p.id})" aria-label="編輯工程 ${p.proj_num||''}" title="編輯">✏️</button>
-        <button class="btn-icon del" onclick="event.stopPropagation();deleteBOM(${p.id})" aria-label="刪除工程 ${p.proj_num||''}" title="刪除">🗑</button>
+        <button class="btn-icon btn-act edit" onclick="event.stopPropagation();editBOM(${p.id})" aria-label="編輯工程與報驗需求 ${p.proj_num||''}">編輯工程與報驗需求</button>
+        <button class="btn-icon btn-act del" onclick="event.stopPropagation();deleteBOM(${p.id})" aria-label="刪除工程 ${p.proj_num||''}">刪除</button>
         <span class="bom-row-arrow" aria-hidden="true">›</span>
       </div>
     </td>
@@ -13088,8 +13151,8 @@ function bomCardHTML(p){
       <div class="bom-cp"><i>品管主辦</i><b>${p.qc_manager||'—'}</b></div>
     </div>
     <div class="bom-card-actions" onclick="event.stopPropagation()">
-      <button class="btn-icon edit" onclick="event.stopPropagation();editBOM(${p.id})">✏️</button>
-      <button class="btn-icon del" onclick="event.stopPropagation();deleteBOM(${p.id})">🗑</button>
+      <button class="btn-icon btn-act edit" onclick="event.stopPropagation();editBOM(${p.id})" aria-label="編輯工程與報驗需求 ${p.proj_num||''}">編輯工程與報驗需求</button>
+      <button class="btn-icon btn-act del" onclick="event.stopPropagation();deleteBOM(${p.id})" aria-label="刪除工程 ${p.proj_num||''}">刪除</button>
     </div>
   </div>`;
 }
@@ -13196,6 +13259,148 @@ function bomFillMgr(selectId, unitKeyword, currentVal){
     sel.value=cur;
   });
 }
+// ── 報驗需求（projects 的 insp_* 欄位）────────────────────────────────────
+// 協力商 = 既有的 company、品管主辦 = 既有的 qc_manager，一律沿用不重複儲存。
+// 「同一工程做一份／封面分區分開」「申請=當天、檢驗=下一工作天」全公司一致 → 固定說明文字，不入欄位。
+// 空值(null) = 尚未建檔（顯示灰色「未設定」提醒去補）；'不限' = 已確認業主沒規定。兩者意義不同。
+const INSP_REQ_SEGS=[
+  {key:'insp_sc_form',  id:'sc-form',  label:'自檢表',   opts:['自檢表','製造圖蓋自檢章']},
+  {key:'insp_sc_sign',  id:'sc-sign',  label:'是否手寫', opts:['便章','手寫']},
+  {key:'insp_sc_color', id:'sc-color', label:'字體顏色', opts:['黑色','藍色','不限']}
+];
+// 三態分段按鈕：再點一次已選取的按鈕 → 取消回「未設定」
+function inspSegBox(x){ return typeof x==='string'?document.getElementById(x):x; }
+function inspSegVal(box){ box=inspSegBox(box); return box?(box.dataset.val||''):''; }
+function inspSegSet(box,v){
+  box=inspSegBox(box); if(!box) return;
+  box.dataset.val=v||'';
+  box.querySelectorAll('button').forEach(b=>b.classList.toggle('active',(b.dataset.v||'')===(v||'')));
+}
+function inspSegPick(btn){
+  const box=btn.closest('.insp-seg'); if(!box) return;
+  const v=btn.dataset.v||'';
+  inspSegSet(box, inspSegVal(box)===v?'':v);
+}
+// 一組完整的報驗需求編輯欄位（BOM modal 與 報驗頁需求卡共用同一份，prefix 區隔 id）
+function inspReqFormHtml(prefix,p){
+  p=p||{};
+  const numv=x=>(x==null||x==='')?'':String(x);
+  const segs=INSP_REQ_SEGS.map(sg=>{
+    const val=p[sg.key]||'';
+    return '<div class="insp-req-row"><span class="insp-req-k">'+sg.label+'</span>'+
+      '<div class="bom-view-toggle insp-seg" id="'+prefix+sg.id+'" data-val="'+esc(val)+'">'+
+      sg.opts.map(o=>'<button type="button" class="bom-vbtn'+(o===val?' active':'')+'" data-v="'+esc(o)+'" onclick="inspSegPick(this)">'+esc(o)+'</button>').join('')+
+      '</div></div>';
+  }).join('');
+  return segs+
+    '<div class="insp-req-row"><span class="insp-req-k">拍照</span>'+
+      '<span class="insp-req-photo">樑 <input type="number" min="0" id="'+prefix+'photo-beam" placeholder="—" value="'+esc(numv(p.insp_photo_beam))+'"/> 張</span>'+
+      '<span class="insp-req-photo">柱 <input type="number" min="0" id="'+prefix+'photo-col" placeholder="—" value="'+esc(numv(p.insp_photo_col))+'"/> 張</span>'+
+    '</div>'+
+    '<div class="lf" style="margin-top:8px"><label>備註</label><input type="text" id="'+prefix+'note" placeholder="(選填)" value="'+esc(p.insp_note||'')+'"/></div>'+
+    '<div class="insp-req-hint">再點一次已選取的按鈕可取消 → 回「未設定」；「不限」代表已確認業主沒有規定。</div>';
+}
+// 收集編輯欄位 → 可直接寫入 projects 的物件（空值一律送 null，區分「未設定」與「不限」）
+function inspReqCollect(prefix){
+  const val=id=>{ const el=document.getElementById(prefix+id); return el?String(el.value==null?'':el.value).trim():''; };
+  const num=id=>{ const t=val(id); if(t==='') return null; const n=parseInt(t,10); return isNaN(n)?null:n; };
+  const o={ insp_photo_beam:num('photo-beam'), insp_photo_col:num('photo-col'), insp_note:val('note')||null };
+  INSP_REQ_SEGS.forEach(sg=>{ o[sg.key]=inspSegVal(prefix+sg.id)||null; });
+  return o;
+}
+// 這個工程有沒有填過報驗需求（決定要不要出現在「複製自其他工程」清單）
+function inspReqHas(p){
+  return !!(p&&(p.insp_sc_form||p.insp_sc_sign||p.insp_sc_color||p.insp_note||p.insp_photo_beam!=null||p.insp_photo_col!=null));
+}
+// BOM modal：帶入報驗需求欄位 + 「複製自其他工程」下拉
+function inspReqFillModal(p){
+  const box=document.getElementById('bom-insp-fields');
+  if(box) box.innerHTML=inspReqFormHtml('bom-',p||{});
+  const sel=document.getElementById('bom-insp-copy');
+  if(!sel) return;
+  const curId=p?p.id:null, curNum=String((p&&p.proj_num)||'').trim().toUpperCase();
+  const tail=x=>String(x||'').trim().toUpperCase().slice(-3);
+  // 只列已填過需求的工程；後三碼相同者排最前面（同案子常見，少捲一點），但不做自動配對
+  const list=(allBOM||[]).filter(x=>String(x.id)!==String(curId)&&inspReqHas(x));
+  list.sort((a,b)=>{
+    const ka=(curNum&&tail(a.proj_num)===tail(curNum))?0:1, kb=(curNum&&tail(b.proj_num)===tail(curNum))?0:1;
+    return ka-kb || String(a.proj_num||'').localeCompare(String(b.proj_num||''));
+  });
+  sel.innerHTML='<option value="">— 不複製 —</option>'+
+    list.map(x=>'<option value="'+x.id+'">'+esc(x.proj_num||'')+(x.proj_name?'　'+esc(x.proj_name):'')+'</option>').join('');
+  sel.value='';
+  if(sel.parentElement) sel.parentElement.style.display=list.length?'':'none';
+}
+// 一次性把來源工程的需求整組帶過來；帶完兩邊各自獨立，之後不連動
+function bomInspCopyFrom(sel){
+  const src=(allBOM||[]).find(x=>String(x.id)===String(sel.value));
+  if(!src) return;
+  const box=document.getElementById('bom-insp-fields');
+  if(box){
+    box.innerHTML=inspReqFormHtml('bom-',src);
+    const h=box.querySelector('.insp-req-hint');
+    if(h) h.innerHTML='✅ 已帶入 <b>'+esc(src.proj_num||'')+'</b> 的報驗需求，可再單獨微調（兩邊各自獨立，日後不連動）。';
+  }
+  sel.value='';
+}
+
+// ── 報驗頁：本工程報驗需求卡（就地檢視／編輯）─────────────────────────────
+let inspReqEditing=false;
+function inspReqCanEdit(){ return pagePerm('inspect')==='edit'||pagePerm('bom')==='edit'; }
+function inspReqYmd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+// 全公司一致的固定規則（不進 DB，直接寫在卡片下方，順便把系統實際會帶的日期算給人看）
+function inspReqFixedHtml(){
+  const t=new Date();
+  return '<div class="insp-req-fixed">申驗方式：同一工程做一份、封面依工程區分開<br>'+
+    '封面日期：申請＝當天 '+fmtDateWk(inspReqYmd(t))+'、檢驗＝下一個工作天 '+fmtDateWk(inspReqYmd(nextInspectDate(t)))+'（產單時自動帶入）</div>';
+}
+function inspReqRender(){
+  const box=document.getElementById('insp-req-card');
+  if(!box) return;
+  const selEl=document.getElementById('insp-proj');
+  const p=(allBOM||[]).find(x=>String(x.id)===String(selEl?selEl.value:''));
+  if(!p){ box.style.display='none'; box.innerHTML=''; inspReqEditing=false; return; }
+  box.style.display='';
+  if(inspReqEditing){
+    box.innerHTML='<div class="insp-req-head"><span class="insp-req-title">✎ 編輯 '+esc(p.proj_num||'')+' 報驗需求</span></div>'+
+      inspReqFormHtml('inspreq-',p)+
+      '<div class="modal-actions" style="margin-top:12px">'+
+        '<button class="btn-modal-cancel" onclick="inspReqToggleEdit(false)">取消</button>'+
+        '<button class="btn-modal-ok" id="inspreq-save" onclick="inspReqSave()">儲存</button>'+
+      '</div>';
+    return;
+  }
+  const na='<span class="na">未設定</span>';
+  const segTxt=INSP_REQ_SEGS.some(sg=>p[sg.key])
+    ? INSP_REQ_SEGS.map(sg=>p[sg.key]?esc(p[sg.key]):na).join(' · ') : na;
+  const photoTxt=(p.insp_photo_beam==null&&p.insp_photo_col==null) ? na
+    : ('樑 '+(p.insp_photo_beam==null?'—':p.insp_photo_beam)+' 張 · 柱 '+(p.insp_photo_col==null?'—':p.insp_photo_col)+' 張 <span class="na">（柱以支計、樑以批計）</span>');
+  const rows=[['自檢表模式',segTxt],['拍照',photoTxt],
+    ['品管主辦',p.qc_manager?esc(p.qc_manager):na],['協力商',p.company?esc(p.company):na]];
+  if(p.insp_note) rows.push(['備註',esc(p.insp_note)]);
+  box.innerHTML='<div class="insp-req-head"><span class="insp-req-title">📋 '+esc(p.proj_num||'')+' 報驗需求</span>'+
+      (inspReqCanEdit()?'<button type="button" class="insp-req-edit" onclick="inspReqToggleEdit(true)">✎ 編輯</button>':'')+
+    '</div><div class="insp-req-grid">'+
+      rows.map(r=>'<span class="insp-req-lbl">'+r[0]+'</span><span class="insp-req-val">'+r[1]+'</span>').join('')+
+    '</div>'+inspReqFixedHtml();
+}
+function inspReqToggleEdit(on){ inspReqEditing=!!on; inspReqRender(); }
+async function inspReqSave(){
+  const selEl=document.getElementById('insp-proj');
+  const p=(allBOM||[]).find(x=>String(x.id)===String(selEl?selEl.value:''));
+  if(!p) return;
+  const data=inspReqCollect('inspreq-');
+  const btn=document.getElementById('inspreq-save');
+  if(btn){ btn.disabled=true; btn.textContent='儲存中...'; }
+  const r=await sbFetch('/rest/v1/projects?id=eq.'+p.id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(data)});
+  if(btn){ btn.disabled=false; btn.textContent='儲存'; }
+  if(r&&r.ok===false){ alert('儲存失敗：'+((r.data&&r.data.message)||'未知錯誤')); return; }
+  Object.assign(p,data);          // 就地更新記憶體，BOM 頁不必重抓
+  inspReqEditing=false;
+  inspReqRender();
+  if(typeof filterBOM==='function') filterBOM();
+}
+
 function openBOMModal(p=null) {
   editBOMId=p?p.id:null;
   document.getElementById('bom-modal-title').textContent=p?'編輯工程':'新增工程';
@@ -13208,6 +13413,7 @@ function openBOMModal(p=null) {
   bomFillMgr('bom-qc-mgr','品管課', p?.qc_manager||'');         // 品管主辦:長榮人員 單位品管課、非經理
   document.getElementById('bom-status').value=p?.status||'未開始';
   document.getElementById('bom-company').value=p?.company||'';
+  inspReqFillModal(p);            // 報驗需求欄位 + 「複製自其他工程」下拉
   openModal('bom-modal');
 }
 function editBOM(id) { openBOMModal(allBOM.find(p=>p.id===id)); }
@@ -13220,7 +13426,8 @@ async function saveBOM() {
     proj_manager:document.getElementById('bom-proj-mgr').value.trim(),
     qc_manager:document.getElementById('bom-qc-mgr').value.trim(),
     status:document.getElementById('bom-status').value,
-    company:document.getElementById('bom-company').value
+    company:document.getElementById('bom-company').value,
+    ...inspReqCollect('bom-')       // 報驗需求（空值送 null）
   };
   if(!data.proj_num||!data.proj_name){alert('工程編號和名稱為必填');return;}
   const btn=document.getElementById('btn-save-bom');
@@ -18728,6 +18935,7 @@ async function inspLoadZones() {
   document.getElementById('insp-selected').innerHTML = '<div class="empty-state">尚未勾選構件</div>';
   document.getElementById('insp-sel-stat').textContent = '';
   inspTemplateBuffer = null;
+  inspReqEditing = false; inspReqRender();   // 本工程報驗需求卡
   if (!pid) {
     zoneSel.innerHTML = '<option value="">— 選擇工程區 —</option>';
     document.getElementById('insp-template-status').innerHTML = '<div class="empty-state" style="padding:16px">請先選擇工程</div>';
