@@ -5209,6 +5209,34 @@ window.normalizeFullWidth=function(value){
     #page-prod .pd-row .pdr-s{color:var(--text3);font-size:11px}
     #page-prod .pd-row .pd-tag{color:var(--text3);font-size:11px;border:1px solid var(--border);border-radius:8px;padding:0 7px}
     #page-prod .pd-empty{color:var(--text3);font-size:12px;padding:12px;text-align:center}
+    /* 詳情頁每一列右側的「領取狀態」就地編輯區(保留料/成品材/手工單共用) */
+    /* 狀態區:徽章／勾選／日期／下拉各自一格,交給 subgrid 對齊
+       (放同一格用彈性排列的話,徽章字數不同就會把後面的東西推開) */
+    #page-prod .pd-row .pdr-cell{display:flex;align-items:center;gap:6px;min-width:0}
+    #page-prod .pd-row .pdr-gstart{border-left:1px solid var(--border);padding-left:12px}
+    /* 可點的編號:安靜時像清單文字,要點的時候才有按鈕回饋。
+       可點與不可點用同一個盒子(pdr-serial),只切換外觀,兩種列的編號才會對齊。 */
+    #page-prod .pd-row .pdr-serial{display:inline-flex;align-items:center;gap:5px;padding:2px 6px;border-radius:6px;border-bottom:1px solid transparent;line-height:1.5}
+    #page-prod .pd-row .pdr-link{cursor:pointer;border-bottom-color:var(--text3);border-bottom-style:dashed;transition:background .12s}
+    #page-prod .pd-row .pdr-link:hover,#page-prod .pd-row .pdr-link:focus-visible{background:var(--bg4);border-bottom-color:transparent;outline:none}
+    #page-prod .pd-row .pdr-cnt{color:var(--text3);font-size:11px;font-weight:400}
+    /* 列與列之間的欄位對齊:整份清單共用同一組欄寬(subgrid)。
+       不支援 subgrid 的瀏覽器自動退回原本的彈性排列,只是不對齊,功能不受影響。 */
+    @supports (grid-template-columns: subgrid){
+      #page-prod .pd-list.pdl-grid{display:grid;row-gap:8px;column-gap:12px;overflow-x:auto}
+      #page-prod .pd-list.pdl-grid .pd-row{display:grid;grid-column:1/-1;grid-template-columns:subgrid;align-items:center}
+      #page-prod .pd-list.pdl-grid .pd-row>*{min-width:0}
+      /* 資料欄 …… 1fr …… 狀態欄(徽章/勾選/日期,退還多一個下拉) */
+      #page-prod .pd-list.pdl-res{grid-template-columns:max-content max-content max-content minmax(0,1fr) repeat(7,max-content)}
+      #page-prod .pd-list.pdl-prod{grid-template-columns:max-content max-content minmax(0,1fr) repeat(3,max-content)}
+      #page-prod .pd-list.pdl-man{grid-template-columns:max-content max-content minmax(0,1fr) repeat(3,max-content)}
+    }
+    #page-prod .pd-row .pdr-chk{display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--text2);font-size:11px;white-space:nowrap}
+    #page-prod .pd-row .pdr-chk input{cursor:pointer;margin:0}
+    #page-prod .pd-row input[type=date]{background:var(--bg2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--mono);font-size:11px;padding:3px 7px}
+    #page-prod .pd-row input[type=date]:focus{outline:none;border-color:var(--accent)}
+    #page-prod .pd-row .pdr-sel{background:var(--bg2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--mono);font-size:11px;padding:3px 6px}
+    #page-prod .pd-row .pdr-sel:focus{outline:none;border-color:var(--accent)}
     /* ── Excel 式編輯表格(SP狀態表/保留料/成品材),比照「明細輸入」#layout-input-table ── */
     /* wrap 收合成貼齊表格寬度,避免右側大片留白;超寬才內部捲動 */
     .spx-wrap{display:inline-block;max-width:100%;vertical-align:top;overflow:auto;max-height:calc(100vh - 330px);border:1px solid var(--border);border-radius:var(--rad);background:var(--bg2)}
@@ -5311,11 +5339,7 @@ window.normalizeFullWidth=function(value){
         </div>
         <div class="prod-table-wrap" id="prodTableWrap">
           <table class="prod-table">
-            <thead><tr>
-              <th>工程編號</th><th>工程區</th><th>CP編號</th>
-              <th>SP 主件</th><th>L 角鐵</th><th>FB 扁鐵</th><th>P</th><th>Q 帷幕</th><th>Z 成品</th>
-              <th>成品材領用</th><th>保留料</th><th>手工單</th><th>整體狀態</th>
-            </tr></thead>
+            <thead><tr id="prodBoardHead"></tr></thead>
             <tbody id="prodBoardBody"></tbody>
           </table>
         </div>
@@ -5475,7 +5499,7 @@ window.normalizeFullWidth=function(value){
             <span class="pd-sec-title">♻️ 保留料 <span class="pd-count-badge" id="pdResCount"></span></span>
             <a class="pd-link" onclick="prodDrillToTab('reserved', prodDetailCtx.proj, prodDetailCtx.zone)">去保留料分頁編輯 →</a>
           </div>
-          <div id="pdReserved" class="pd-list"></div>
+          <div id="pdReserved" class="pd-list pdl-grid pdl-res"></div>
         </div>
 
         <div class="pd-section">
@@ -5484,7 +5508,7 @@ window.normalizeFullWidth=function(value){
             <button class="btn" id="pdProdSumBtn" style="display:none" onclick="pmOpenZoneDetails()">🧾 統整全部細項</button>
             <a class="pd-link" onclick="prodDrillToTab('product', prodDetailCtx.proj, prodDetailCtx.zone)">去成品材分頁編輯 →</a>
           </div>
-          <div id="pdProduct" class="pd-list"></div>
+          <div id="pdProduct" class="pd-list pdl-grid pdl-prod"></div>
         </div>
 
         <div class="pd-section">
@@ -5492,7 +5516,7 @@ window.normalizeFullWidth=function(value){
             <span class="pd-sec-title">📝 手工單 <span class="pd-count-badge" id="pdManualCount"></span></span>
             <a class="pd-link" onclick="prodDrillToTab('manual', prodDetailCtx.proj, prodDetailCtx.zone)">去手工單分頁編輯 →</a>
           </div>
-          <div id="pdManual" class="pd-list"></div>
+          <div id="pdManual" class="pd-list pdl-grid pdl-man"></div>
         </div>
       </div>
       <div id="pmDetailModal" style="display:none"></div>
@@ -9750,7 +9774,7 @@ const AUDIT_FIELD_LABEL={
   created_name:'發佈人', notification_key:'通知鍵',
   // SP狀態表 / 保留料 / 成品材
   dwg_no:'編號', order_no:'單號', item:'項目', make:'製造者', source:'單據來源', mat_no:'餘料編號',
-  work_form:'施作長度', issue_date:'給單日期', take_date:'領取日期', need_return:'是否退還',
+  work_form:'施作長度', issue_date:'給單日期', take_date:'領取日期', need_return:'是否退還', return_date:'退還日期',
   pick_date:'日期', serial:'流水編號', cp_no:'CP編號', reason:'事由',
   // 扣款明細
   record_date:'日期', seq_no:'序號', expected_work:'預計工數', expected_amount:'預計金額',
@@ -32299,7 +32323,19 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 <!-- ═══════════ 生產進度模組 ═══════════ -->
 <script>
 let prodTrack=[], prodReserved=[], prodProduct=[], prodManual=[], prodCurTab='board', prodBusy=false;
-const PROD_ITEMS=['SP','L','FB','P','Q','Z'];
+// 項目:DB 存的仍是既有代碼(SP/L/FB/P/Q/Z 不可更動,舊資料與 sp_progress view 依賴),
+// 畫面一律顯示中文全名;後四項沒有現成代碼,直接以名稱本身當值。
+const PROD_ITEMS=['FB','L','P','Q','Z','U','BT','RH&BH','板組托樑','板組BT','SP'];
+const PROD_ITEM_LABEL={FB:'扁鐵 FB',L:'角鐵 L',P:'圓管 P',Q:'方管 Q',Z:'成品材 Z',U:'槽鐵 U',BT:'BT(T-BAR)','RH&BH':'RH & BH'};
+function prodItemLabel(code){ return PROD_ITEM_LABEL[code]||code; }
+// 看板列表的表頭:項目欄由 PROD_ITEMS 產生,日後增減項目表頭與欄數會自動跟著變
+const PROD_BOARD_HEAD=['工程編號','工程區','CP編號'];
+const PROD_BOARD_TAIL=['成品材領用','保留料','手工單','整體狀態'];
+const PROD_BOARD_COLS=PROD_BOARD_HEAD.length+PROD_ITEMS.length+PROD_BOARD_TAIL.length;
+function prodRenderBoardHead(){
+  const tr=document.getElementById('prodBoardHead'); if(!tr) return;
+  tr.innerHTML=PROD_BOARD_HEAD.concat(PROD_ITEMS.map(prodItemLabel)).concat(PROD_BOARD_TAIL).map(h=>'<th>'+esc(h)+'</th>').join('');
+}
 let prodExpanded=new Set();
 let prodMiniProj=null;   // 小卡下鑽:null=工程層,設值=顯示該工程的工程區小卡
 // 小卡分組:'zone'=直接平鋪所有工程區(預設,大多以工程區追蹤)、'proj'=依工程編號(可下鑽到工程區)
@@ -32340,7 +32376,7 @@ async function prodInit(){
   if(prodBusy) return;
   prodTab(prodCurTab||'board');
   prodBusy=true;
-  document.getElementById('prodBoardBody').innerHTML='<tr><td colspan="13" class="prod-empty">載入中…</td></tr>';
+  document.getElementById('prodBoardBody').innerHTML='<tr><td colspan="'+PROD_BOARD_COLS+'" class="prod-empty">載入中…</td></tr>';
   try{
     const [rt,rr,rp,rm,ro]=await Promise.all([
       sbFetchAll('/rest/v1/sp_track?select=*'),
@@ -32465,6 +32501,12 @@ function prodPmCell(pred){
   const last=pm.map(p=>p.pick_date).filter(Boolean).sort().pop()||'';
   return '<span class="prod-yes" title="'+esc(pm.map(p=>p.serial+' '+(p.reason||'')).join('\n'))+'">✓ '+pm.length+'筆'+(last?' '+esc(last.slice(5)):'')+'</span>';
 }
+// ── 保留料的狀態判定 ──
+// 整筆完成 = 已領取 且 (不需退還 或 已退還)。
+// 已領取但還欠著沒退還的不算完成,會留在清單裡,只是顯示「已領取・待退還」。
+function prodResTaken(r){ return String(r&&r.take_date||'').trim()!==''; }
+function prodResReturned(r){ return String(r&&r.return_date||'').trim()!==''; }
+function prodResDone(r){ return prodResTaken(r) && (!(r&&r.need_return===true) || prodResReturned(r)); }
 function prodRmCell(pred){
   const rm=prodReserved.filter(pred);
   return rm.length?('<span class="prod-yes" title="'+esc(rm.map(r=>(r.mat_no||'')+' '+(r.spec||'')).join('\n'))+'">'+rm.length+'筆</span>'):'<span class="prod-no">—</span>';
@@ -32501,7 +32543,7 @@ async function prodToggleManual(id,completed){
   if(!res.ok){ row.completed=!completed; row.take_date=prevTake; prodRenderBoard(); if(prodDetailCtx.proj) prodRenderDetail(); alert('手工單狀態儲存失敗('+res.status+')'); }
   else if(typeof spxRender==='function') spxRender('manual');
 }
-// 單一生產單位的資料格(項目×6 + 成品材 + 保留料 + 手工單 + 整體)
+// 單一生產單位的資料格(各項目 + 成品材 + 保留料 + 手工單 + 整體)
 function prodUnitCells(u){
   const byItem={}; u.items.forEach(i=>{ byItem[(i.item||'').trim().toUpperCase()]=i; });
   const cells=PROD_ITEMS.map(code=>{
@@ -32635,8 +32677,9 @@ function prodMiniBack(){ prodMiniProj=null; prodRenderBoard(); }
 function prodZoneAlerts(proj,zone){
   const zEq=r=>(r.proj_no||'').trim()===proj && (r.zone||'').trim()===zone;
   const manual=prodManualForZone(proj,zone).filter(r=>!r.completed).length;
-  const reserved=prodReserved.filter(r=>zEq(r) && !String(r.take_date||'').trim()).length;
-  return {manual, reserved, total:manual+reserved};
+  const rs=prodReserved.filter(r=>zEq(r) && !prodResDone(r));          // 未領 + 已領未退,都算未結
+  const resNoTake=rs.filter(r=>!prodResTaken(r)).length;
+  return {manual, reserved:rs.length, resNoTake, resNoRet:rs.length-resNoTake, total:manual+rs.length};
 }
 // 看板小卡摘要:圖號各幾個 CP編號 + 成品材/保留料/手工單筆數(為 0 不顯示)。
 // 一次重繪內快取,避免每張卡都重新掃一遍 prodProduct/prodReserved。
@@ -32692,7 +32735,7 @@ function prodStatusSections(rows,cardHtml){
 }
 function prodAlertBadge(proj,zone){
   const a=prodZoneAlerts(proj,zone); if(!a.total) return '';
-  const tip=[a.manual?('手工單未完成 '+a.manual+' 張'):'', a.reserved?('保留料未領 '+a.reserved+' 筆'):''].filter(Boolean).join('、');
+  const tip=[a.manual?('手工單未完成 '+a.manual+' 張'):'', a.resNoTake?('保留料未領 '+a.resNoTake+' 筆'):'', a.resNoRet?('保留料已領未退 '+a.resNoRet+' 筆'):''].filter(Boolean).join('、');
   return '<span class="pm-alert" title="'+esc(tip)+'">⚠'+a.total+'</span>';
 }
 // 小卡右上「⋯」選單:整個工程區「設為轉包 / 刪除」(只動 SP 細項 sp_track)
@@ -32773,6 +32816,7 @@ function prodRenderMiniZonesFlat(wrap, units, f){
 
 // 跳到某分頁(track/reserved/product)並只顯示某工程編號(+工程區)——「去分頁編輯」用
 let prodProductZoneReason='';   // 成品材:以「事由包含此工程區」篩選(成品材無 zone 欄,工程區寫在事由裡)
+let prodProductProjFilter='';   // 成品材:工程編號可能存成「系統工程(通知單工程)」或留空,要用 prodProductProjMatch 比,不能用精確欄位篩選
 let prodManualZoneFilter='';    // 手工單可含多工程區，需以拆分後的工程區比對
 const prodShowCompleted={track:false,reserved:false,product:false};
 function prodToggleCompleted(key){
@@ -32814,8 +32858,11 @@ function prodDrillToTab(tabKey, proj, zone){
   proj=proj||''; zone=zone||'';
   colFilterState[tabKey]={};
   prodProductZoneReason='';
+  prodProductProjFilter='';
   prodManualZoneFilter='';
-  if(proj) colFilterState[tabKey].proj_no=new Set([proj]);
+  // 成品材/焊材:工程編號用寬鬆比對(與看板小卡、工程區詳情頁同一套),精確欄位篩選會濾掉「B21(XX)」或空白的列
+  if(proj && (tabKey==='product'||tabKey==='welding')) prodProductProjFilter=proj;
+  else if(proj) colFilterState[tabKey].proj_no=new Set([proj]);
   // 有「工程區(zone)」欄的表(SP狀態表/保留料)直接套欄位篩選;
   // 成品材沒有 zone 欄,工程區寫在「事由」裡 → 改以事由包含工程區來篩。
   const _hasZone=(SPX[tabKey]?.cols||[]).some(c=>c.k==='zone');
@@ -32833,7 +32880,7 @@ function prodDrillToTab(tabKey, proj, zone){
 function prodDrillToTrack(cardEl){ const p=cardEl&&cardEl.dataset?cardEl.dataset.proj:''; const z=cardEl&&cardEl.dataset?cardEl.dataset.zone:''; prodDrillToTab('track',p,z); }
 function prodClearTabFilter(tabKey){
   if(colFilterState[tabKey]){ delete colFilterState[tabKey].proj_no; delete colFilterState[tabKey].zone; }
-  if(tabKey==='product') prodProductZoneReason='';
+  if(tabKey==='product'||tabKey==='welding'){ prodProductZoneReason=''; prodProductProjFilter=''; }
   if(tabKey==='manual') prodManualZoneFilter='';
   spxRender(tabKey);
   prodTabBanner(tabKey);
@@ -32844,7 +32891,8 @@ function prodTabBanner(tabKey){
   const parts=[];
   if(f.proj_no) parts.push([...f.proj_no].join('、'));
   if(f.zone)    parts.push([...f.zone].join('、'));
-  if(tabKey==='product' && prodProductZoneReason) parts.push(prodProductZoneReason+'(事由)');
+  if((tabKey==='product'||tabKey==='welding') && prodProductProjFilter) parts.push(prodProductProjFilter);
+  if((tabKey==='product'||tabKey==='welding') && prodProductZoneReason) parts.push(prodProductZoneReason+'(事由)');
   if(tabKey==='manual' && prodManualZoneFilter) parts.push(prodManualZoneFilter+'(含此工程區)');
   if(!parts.length){ el.style.display='none'; el.innerHTML=''; return; }
   el.style.display='';
@@ -32897,6 +32945,49 @@ function prodMaybeApplyPending(){
   const prev=_applyingPop; _applyingPop=true;      // 套用期間不要再推歷史
   try{ prodApplyViewNow(v); } finally { _applyingPop=prev; }
 }
+// ── 成品材/保留料結清 → 自動把 SP狀態表對應項目標成完成 ──
+// SP狀態表登記的是「確定有這個東西」,實際領取是另一個人、另一張表在處理:
+//   成品材領用 全部已領料      → SP狀態表的「成品材 Z」自動完成
+//   保留料     全部結清(已領且該退的都退了) → SP狀態表的「RH & BH」自動完成
+// 只做單向(未完成→完成),不會把已經標成完成/轉包的改回去。
+const PROD_AUTO_DONE=[
+  {item:'Z',     pick:m=>m.product,  done:p=>p.is_picked===true},
+  {item:'RH&BH', pick:m=>m.reserved, done:r=>prodResDone(r)}
+];
+function prodAutoDoneZone(proj,zone){
+  if(!String(proj||'').trim()&&!String(zone||'').trim()) return 0;
+  const m=prodZoneMatched(proj,zone); let n=0;
+  PROD_AUTO_DONE.forEach(t=>{
+    const rows=t.pick(m);
+    if(!rows.length||!rows.every(t.done)) return;      // 沒資料 或 還有沒結清的 → 不動
+    prodTrack.forEach((r,i)=>{
+      if((r.proj_no||'').trim()!==proj||(r.zone||'').trim()!==zone||(r.item||'').trim()!==t.item) return;
+      const st=String(r.status||'').trim();
+      if(st==='OK'||st==='轉包') return;
+      r.status='OK'; spxMarkDirty('track',i); n++;
+    });
+  });
+  return n;
+}
+// 找出這幾筆成品材/保留料屬於看板上的哪些工程區,再逐區檢查
+function prodAutoDoneAfter(key,rows){
+  if(key!=='product'&&key!=='reserved') return;
+  const list=(Array.isArray(rows)?rows:[rows]).filter(Boolean); if(!list.length) return;
+  const zones=prodGroupZones(prodBuildUnits()), seen=new Set(); let n=0;
+  zones.forEach(z=>{
+    const hit=list.some(r=>key==='reserved'
+      ? ((!String(r.proj_no||'').trim()||!z.proj||String(r.proj_no).trim()===z.proj) && String(r.zone||'').trim()===z.zone)
+      : (prodProductProjMatch(r.proj_no,z.proj) && pmZoneMatch(r,z.zone)));
+    if(!hit) return;
+    const k=z.proj+'|'+z.zone; if(seen.has(k)) return; seen.add(k);
+    n+=prodAutoDoneZone(z.proj,z.zone);
+  });
+  if(!n) return;
+  if(typeof spxRender==='function'){ spxRender('track'); if(document.getElementById('spxBody-detail')) spxRender('detail'); }
+  prodRenderBoard(); if(prodDetailCtx.proj||prodDetailCtx.zone) prodRenderDetail();
+  spxHint('✓ 已自動把 '+n+' 筆 SP 項目標為完成');
+}
+
 function prodRenderDetailHeader(){
   const {proj,zone}=prodDetailCtx;
   const m=prodZoneMatched(proj,zone);
@@ -32906,36 +32997,101 @@ function prodRenderDetailHeader(){
   const b=document.getElementById('pdBadges'); if(b) b.innerHTML='<span class="chip '+ov.cls+'">'+esc(ov.label)+'</span>'+
     '<span class="pd-frac">'+m.us.length+' 個 CP編號 · '+ready+'/'+m.us.length+' 完成</span>';
 }
+// ── 詳情頁「領取狀態」就地編輯 ──
+// 改的是同一份陣列(prodReserved/prodProduct/prodManual),再交給 spxMarkDirty 走
+// 與各分頁完全相同的自動儲存路徑,不另外寫一套 PATCH。
+function pdRowOf(key,k){ return prodArr(key).find(r=>Number(r._key)===Number(k))||null; }
+function pdCommit(key,row){
+  const i=prodArr(key).indexOf(row);
+  if(i>=0) spxMarkDirty(key,i);
+  prodRenderDetail();
+  if(typeof spxRender==='function') spxRender(key);
+}
+// 保留料:有領取日期 = 已領取(與保留料分頁「顯示已領取」的判定一致)
+function pdResTake(k,on){ const r=pdRowOf('reserved',k); if(!r) return; r.take_date=on?(r.take_date||spxToday()):null; pdCommit('reserved',r); }
+function pdResDate(k,v){ const r=pdRowOf('reserved',k); if(!r) return; r.take_date=prodDate(v); pdCommit('reserved',r); }
+// 成品材:is_picked 是否領料 + pickup_date 領料日期
+function pdProdPick(k,on){ const r=pdRowOf('product',k); if(!r) return; r.is_picked=!!on; r.pickup_date=on?(r.pickup_date||spxToday()):null; pdCommit('product',r); }
+function pdProdDate(k,v){ const r=pdRowOf('product',k); if(!r) return; r.pickup_date=prodDate(v); if(r.pickup_date&&r.is_picked!==true) r.is_picked=true; pdCommit('product',r); }
+// 保留料的退還登記:需不需要退還 + 退了沒
+function pdResNeed(k,v){ const r=pdRowOf('reserved',k); if(!r) return;
+  r.need_return=(v==='是')?true:(v==='否'?false:null);
+  if(r.need_return!==true) r.return_date=null;   // 不需退還就沒有退還日期
+  pdCommit('reserved',r); }
+function pdResReturn(k,on){ const r=pdRowOf('reserved',k); if(!r) return; r.return_date=on?(r.return_date||spxToday()):null; pdCommit('reserved',r); }
+function pdResReturnDate(k,v){ const r=pdRowOf('reserved',k); if(!r) return; r.return_date=prodDate(v); pdCommit('reserved',r); }
+// 退還:徽章 / 是否退還下拉 / 已退還勾選 / 退還日期,各自一格
+function pdResReturnBox(r,k){
+  const need=r.need_return===true, no=r.need_return===false, done=prodResReturned(r);
+  const cur=need?'是':(no?'否':'');
+  const sel='<select class="pdr-sel" title="是否需要退還" onchange="pdResNeed('+k+',this.value)">'+
+    [['','未設定'],['是','需退還'],['否','不需退還']].map(o=>'<option value="'+o[0]+'"'+(cur===o[0]?' selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select>';
+  const badge=need?('<span class="chip '+(done?'st-ok':'st-count')+'">'+(done?'已退還':'待退還')+'</span>')
+    :(no?'<span class="pd-tag">不需退還</span>':'');
+  // 退還日期需先跑 reserved_return_migration.sql;未跑時後兩格留空,不會送出不存在的欄位
+  const editable=need&&spxOptional.reserved_return;
+  return '<span class="pdr-cell pdr-gstart">'+badge+'</span>'+
+    '<span class="pdr-cell">'+sel+'</span>'+
+    '<span class="pdr-cell">'+(editable?'<label class="pdr-chk"><input type="checkbox" '+(done?'checked ':'')+'onchange="pdResReturn('+k+',this.checked)">已退還</label>':'')+'</span>'+
+    '<span class="pdr-cell">'+(editable?'<input type="date" title="退還日期" value="'+esc(String(r.return_date||'').slice(0,10))+'" onchange="pdResReturnDate('+k+',this.value)">':'')+'</span>';
+}
+// 手工單:勾選沿用 prodToggleManual(已含自動帶今天/失敗回滾);這裡只補日期可改
+function pdManualToggle(k,on){ const r=pdRowOf('manual',k); if(!r) return;
+  if(r.id!=null){ prodToggleManual(Number(r.id),!!on); return; }
+  r.completed=!!on; r.take_date=on?(r.take_date||spxToday()):null; pdCommit('manual',r); }
+function pdManualDate(k,v){ const r=pdRowOf('manual',k); if(!r) return; r.take_date=prodDate(v); if(r.take_date&&!r.completed) r.completed=true; pdCommit('manual',r); }
+// 成品材的流水編號格:有細項時整個編號可點(取代原本每列一顆的「查看細項」按鈕)
+function pdSerialCell(p){
+  const n=pmMeta(p.remark)?.details?.length||0, no=esc(p.serial||'—'), k=Number(p._key||0);
+  if(!n) return '<span class="pdr-k pdr-serial">'+no+'</span>';
+  return '<span class="pdr-k pdr-serial pdr-link" role="button" tabindex="0" title="查看 '+n+' 筆領料細項"'+
+    ' onclick="pmOpenDetails('+k+')"'+
+    ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();pmOpenDetails('+k+')}">'+
+    no+'<span class="pdr-cnt">'+n+'項</span></span>';
+}
+// 狀態徽章 / 勾選 / 日期,各自一格(showDate=false 時日期格留空,例如 DB 尚未加日期欄)
+function pdTakeBox(k,on,label,onLabel,offLabel,fnChk,fnDate,date,showDate){
+  return '<span class="pdr-cell pdr-gstart"><span class="chip '+(on?'st-ok':'st-none')+'">'+esc(on?onLabel:offLabel)+'</span></span>'+
+    '<span class="pdr-cell"><label class="pdr-chk"><input type="checkbox" '+(on?'checked ':'')+'onchange="'+fnChk+'('+k+',this.checked)">'+esc(label)+'</label></span>'+
+    '<span class="pdr-cell">'+(showDate===false?'':'<input type="date" title="'+esc(label)+'日期" value="'+esc(String(date||'').slice(0,10))+'" onchange="'+fnDate+'('+k+',this.value)">')+'</span>';
+}
+
 function prodRenderDetail(){
   const {proj,zone}=prodDetailCtx;
+  ['reserved','product','manual'].forEach(k=>spxKeyRows(k));   // 就地編輯要靠 _key 對回資料列
   prodRenderDetailHeader();
   const m=prodZoneMatched(proj,zone);
-  // 保留料(唯讀)
+  // 保留料(領取狀態可就地編輯)
   const rc=document.getElementById('pdResCount'); if(rc) rc.textContent=m.reserved.length+' 筆';
   const rl=document.getElementById('pdReserved');
   if(rl) rl.innerHTML=m.reserved.length? m.reserved.map(r=>{
-    const ret=r.need_return===true?'<span class="chip st-count">需退還</span>':(r.need_return===false?'<span class="pd-tag">不退</span>':'');
-    return '<div class="pd-row"><span class="pdr-k">'+esc(r.order_no||'—')+'</span>'+
-      '<span class="pdr-m">'+esc([r.mat_no,r.spec].filter(Boolean).join(' '))+'</span>'+
-      (r.qty!=null&&r.qty!==''?'<span class="pdr-s">數量 '+esc(r.qty)+'</span>':'')+
-      ret+
-      (r.remark?'<span class="pdr-s">'+esc(r.remark)+'</span>':'')+'</div>';
+    const k=Number(r._key||0);
+    return '<div class="pd-row">'+
+      '<span class="pdr-k">'+esc(r.order_no||'—')+'</span>'+
+      '<span class="pdr-m">'+esc([r.mat_no,r.spec].filter(Boolean).join(' ')||'—')+'</span>'+
+      '<span class="pdr-s">'+(r.qty!=null&&r.qty!==''?'數量 '+esc(r.qty):'')+'</span>'+
+      '<span class="pdr-s">'+esc(r.remark||'')+'</span>'+
+      pdTakeBox(k,prodResTaken(r),'已領取','已領取','未領取','pdResTake','pdResDate',r.take_date)+
+      pdResReturnBox(r,k)+'</div>';
   }).join(''):'<div class="pd-empty">此工程區無保留料。</div>';
-  // 成品材(唯讀)
+  // 成品材(領料狀態可就地編輯)
   const pc=document.getElementById('pdProdCount'); if(pc) pc.textContent=m.product.length+' 筆';
   const pl=document.getElementById('pdProduct');
   if(pl) pl.innerHTML=m.product.length? m.product.slice().sort((a,b)=>String(b.pick_date||'').localeCompare(String(a.pick_date||''))).map(p=>
-    '<div class="pd-row"><span class="pdr-k">'+esc(p.serial||'—')+'</span>'+
-      (p.pick_date?'<span class="pdr-s">'+esc(String(p.pick_date).slice(0,10))+'</span>':'')+
-      '<span class="pdr-m">'+esc(p.reason||'')+'</span>'+
-      (pmPlainRemark(p.remark)?'<span class="pdr-s">'+esc(pmPlainRemark(p.remark))+'</span>':'')+
-      (pmMeta(p.remark)?.details?.length?'<button class="spx-detail-btn" onclick="pmOpenDetails('+p._key+')">查看細項</button>':'')+'</div>'
+    '<div class="pd-row">'+
+      pdSerialCell(p)+
+      '<span class="pdr-s">'+esc(p.pick_date?String(p.pick_date).slice(0,10):'')+'</span>'+
+      '<span class="pdr-m">'+esc([p.reason||'',pmPlainRemark(p.remark)||''].filter(Boolean).join(' · '))+'</span>'+
+      pdTakeBox(Number(p._key||0),p.is_picked===true,'已領料','已領料','未領料','pdProdPick','pdProdDate',p.pickup_date)+'</div>'
   ).join(''):'<div class="pd-empty">此工程區無成品材領用。</div>';
   const psb=document.getElementById('pdProdSumBtn');
   if(psb) psb.style.display=m.product.some(p=>pmMeta(p.remark)?.details?.length)?'':'none';
   const mc=document.getElementById('pdManualCount'); if(mc) mc.textContent=m.manual.length+' 筆';
   const ml=document.getElementById('pdManual');
-  if(ml) ml.innerHTML=m.manual.length?m.manual.map(r=>'<label class="pd-row" style="cursor:pointer"><input type="checkbox" '+(r.completed?'checked ':'')+'onchange="prodToggleManual('+Number(r.id||0)+',this.checked)"><span class="pdr-k">'+esc(r.manual_no||'—')+'</span><span class="pdr-s">'+esc(r.issue_date||'')+'</span><span class="pdr-m">'+(r.completed?'完成':'未完成')+'</span>'+(prodManualTakeText(r)?'<span class="pdr-s">'+esc(prodManualTakeText(r))+'</span>':'')+'</label>').join(''):'<div class="pd-empty">此工程區無手工單。</div>';
+  if(ml) ml.innerHTML=m.manual.length?m.manual.map(r=>'<div class="pd-row">'+
+    '<span class="pdr-k">'+esc(r.manual_no||'—')+'</span><span class="pdr-s">開單 '+esc(r.issue_date||'—')+'</span><span class="pdr-m"></span>'+
+    pdTakeBox(Number(r._key||0),r.completed===true,'完成/已領取','完成','未完成','pdManualToggle','pdManualDate',r.take_date,spxOptional.manual_take_date)+
+    '</div>').join(''):'<div class="pd-empty">此工程區無手工單。</div>';
 }
 // 詳情頁「＋新增SP列」:直接建一列已帶入本工程區的資料列(略過空白輸入列機制)
 function prodDetailAddSP(){
@@ -32960,6 +33116,7 @@ function prodGroupZones(units){
 
 function prodRenderBoard(){
   const body=document.getElementById('prodBoardBody'); if(!body) return;
+  prodRenderBoardHead();
   prodCountCache=Object.create(null);   // 小卡摘要筆數:每次重繪重算一次就好
   const view=(document.getElementById('prodViewMode')||{}).value||'list';
   if(view!=='mini') prodMiniProj=null;
@@ -33034,7 +33191,7 @@ function prodRenderBoard(){
     if(kw)   zones=zones.filter(z=>(z.proj+' '+z.zone).toLowerCase().includes(kw) || z.us.some(u=>u.doc.toLowerCase().includes(kw)));
     zones.sort((a,b)=>a.proj.localeCompare(b.proj,'zh-Hant')||a.zone.localeCompare(b.zone,'zh-Hant'));
     document.getElementById('prodBoardCount').textContent=zones.length+' 個工程區';
-    if(!zones.length){ body.innerHTML='<tr><td colspan="13" class="prod-empty">尚無資料。請到「SP狀態表」或「手工單」分頁新增。</td></tr>'; return; }
+    if(!zones.length){ body.innerHTML='<tr><td colspan="'+PROD_BOARD_COLS+'" class="prod-empty">尚無資料。請到「SP狀態表」或「手工單」分頁新增。</td></tr>'; return; }
     body.innerHTML=zones.map(z=>{
       const open=prodExpanded.has(z.key);
       const ready=z.us.filter(u=>['完成','已送工地'].includes(prodOverall(u.items).label)).length;
@@ -33067,7 +33224,7 @@ function prodRenderBoard(){
   if(kw)   units=units.filter(u=>(u.proj+' '+u.zone+' '+u.doc).toLowerCase().includes(kw));
   units.sort((a,b)=> a.proj.localeCompare(b.proj,'zh-Hant') || a.zone.localeCompare(b.zone,'zh-Hant') || a.doc.localeCompare(b.doc,'zh-Hant'));
   document.getElementById('prodBoardCount').textContent=units.length+' 個生產單位';
-  if(!units.length){ body.innerHTML='<tr><td colspan="13" class="prod-empty">尚無資料。請到「SP狀態表」或「手工單」分頁新增。</td></tr>'; return; }
+  if(!units.length){ body.innerHTML='<tr><td colspan="'+PROD_BOARD_COLS+'" class="prod-empty">尚無資料。請到「SP狀態表」或「手工單」分頁新增。</td></tr>'; return; }
   body.innerHTML=units.map(u=>
     '<tr><td class="prod-doc" style="color:var(--text2)">'+esc(u.proj||'')+'</td><td class="prod-zone">'+esc(u.zone)+'</td><td class="prod-doc">'+esc(u.doc)+'</td>'+prodUnitCells(u)+'</tr>'
   ).join('');
@@ -33089,7 +33246,7 @@ const PROD_GRID={
   track:{ tbl:'sp_track', head:'prodTrackHead', body:'prodTrackBody', count:'prodTrackCount', search:'prodTrackSearch',
     cols:[
       {k:'proj_no',h:'工程編號',t:'text'},{k:'zone',h:'工程區',t:'text'},{k:'dwg_no',h:'編號',t:'text'},{k:'order_no',h:'單號',t:'text'},
-      {k:'item',h:'項目',t:'sel',opts:['SP','L','FB','P','Q','Z']},{k:'make',h:'製造者',t:'sel',opts:['','D棟','外包']},
+      {k:'item',h:'項目',t:'sel',opts:PROD_ITEMS.slice()},{k:'make',h:'製造者',t:'sel',opts:['','D棟','外包']},
       {k:'status',h:'狀態',t:'sel',opts:['-','清點中','OK','送工地','轉包'],def:'-',chip:true},{k:'remark',h:'備註',t:'text'}
     ],
     sort:(a,b)=>(a.proj_no||'').localeCompare(b.proj_no||'','zh-Hant')||(a.zone||'').localeCompare(b.zone||'','zh-Hant')||(a.order_no||'').localeCompare(b.order_no||'') },
@@ -33279,11 +33436,18 @@ function pmZonesOfRow(p){
 // 顯示用儲存格:沿用一般欄位的 input 外觀(唯讀),但寬度依內容縮放,不占大格
 function pmZoneText(p){ const z=pmZonesOfRow(p); return '<input type="text" class="lt-edit spx-vcell" readonly value="'+esc(z.join('.'))+'" title="由領料明細/事由自動判定的工程區"/>'; }
 function pmWeldingText(p){ const z=pmZonesOfRow(p); return '<input type="text" class="lt-edit spx-vcell" readonly value="'+esc(z.join('.'))+'" title="由領料明細/細目自動判定的焊材"/>'; }
+// 事由的區域不一定寫在最前面(例:「F187(NP*2) B21C」是品名在前、工程區在後),
+// 所以比對時把整段事由拆成詞,逐一比對是否有等於工程區的詞。
+function pmReasonTokens(reason){
+  return [...new Set(String(reason||'').toUpperCase().split(/[、,，/／;；+＋&＆\s]+/)
+    .map(t=>t.replace(/^[^0-9A-Z]+/,'').replace(/[^0-9A-Z]+$/,'').trim()).filter(Boolean))];
+}
 function pmZoneMatch(p,zone){
   const target=String(zone||'').trim().toUpperCase(); if(!target) return true;
   const zones=pmZonesOfRow(p);
-  if(zones.length) return zones.includes(target);
-  return String(p&&p.reason||'').includes(zone);   // 最後才退回舊的文字包含比對
+  if(zones.includes(target)) return true;
+  if(pmReasonTokens(p&&p.reason).includes(target)) return true;   // 工程區寫在事由後面時也找得到
+  return zones.length?false:String(p&&p.reason||'').includes(zone);   // 最後才退回舊的文字包含比對
 }
 // 焊材領料:與成品材同一張表,依事由/品名關鍵字分流到獨立分頁(不需領料,僅記錄)
 const PM_WELD_RE=/焊材|銲材|焊條|銲條|焊線|銲線|焊絲|銲絲|藥芯|CO2線/i;
@@ -33550,7 +33714,7 @@ const SPX={
   track:{ tbl:'sp_track', sort:spxNewestFirst,
     cols:[
       {k:'proj_no',h:'工程編號'},{k:'zone',h:'工程區'},{k:'cp_no',h:'CP編號',combo:['dwg_no','order_no']},
-      {k:'item',h:'項目',sel:['-','SP','L','FB','P','Q','Z'],def:'-',noData:true},
+      {k:'item',h:'項目',sel:['-'].concat(PROD_ITEMS),labels:PROD_ITEM_LABEL,def:'-',noData:true},
       {k:'make',h:'製造者',sel:['','D棟','外包'],noData:true},
       {k:'status',h:'狀態',sel:['-','清點中','OK','送工地','轉包'],status:true,def:'-',noData:true},
       // 應備/已備數量:需先跑 sp_qty_migration.sql;未跑時自動隱藏,不影響既有功能
@@ -33563,7 +33727,9 @@ const SPX={
       {k:'order_no',h:'單號'},{k:'proj_no',h:'工程編號'},{k:'zone',h:'工程區'},{k:'source',h:'單據來源'},
       {k:'mat_no',h:'餘料編號'},{k:'spec',h:'規格',wide:true},{k:'qty',h:'數量',num:true},{k:'work_form',h:'施作長度'},
       {k:'comp_no',h:'構件編號'},{k:'issue_date',h:'給單日期'},{k:'take_date',h:'領取日期'},
-      {k:'need_return',h:'是否退還',sel:['','是','否','已退還'],bool:true,noData:true},{k:'remark',h:'備註',wide:true}
+      {k:'need_return',h:'是否退還',sel:['','是','否'],bool:true,noData:true},
+      // 退了沒:需先跑 reserved_return_migration.sql;未跑時整欄自動隱藏
+      {k:'return_date',h:'退還日期',date:true,noData:true,optional:'reserved_return'},{k:'remark',h:'備註',wide:true}
     ]},
   product:{ tbl:'product_material', sort:spxNewestFirst,
     cols:[
@@ -33584,13 +33750,16 @@ SPX.detail={ tbl:SPX.track.tbl, sort:SPX.track.sort, cols:SPX.track.cols, noBlan
 // 狀態下拉的「顯示名稱」對照:DB 仍存 OK(sp_progress view 依賴此值),畫面一律顯示「完成」
 const SPX_STATUS_LABEL={'OK':'完成'};
 // 選用欄位:DB 尚未加欄時整欄自動隱藏(也不會送出),跑完 migration 後自動出現
-const spxOptional={sp_qty:false,manual_content:true,manual_take_date:true};
+const spxOptional={sp_qty:false,manual_content:true,manual_take_date:true,reserved_return:false};
 function spxDetectOptional(){
   const r=(typeof prodTrack!=='undefined'&&prodTrack||[]).find(x=>x&&x.id!=null);
   if(r) spxOptional.sp_qty=('qty_need' in r);
   // 手工單「內容／細項」需 manual_order_content_migration.sql;未跑時自動隱藏
   const m=(typeof prodManual!=='undefined'&&prodManual||[]).find(x=>x&&x.id!=null);
   if(m){ spxOptional.manual_content=('content' in m); spxOptional.manual_take_date=('take_date' in m); }
+  // 保留料「退還日期」需 reserved_return_migration.sql;未跑時整欄自動隱藏
+  const rv=(typeof prodReserved!=='undefined'&&prodReserved||[]).find(x=>x&&x.id!=null);
+  if(rv) spxOptional.reserved_return=('return_date' in rv);
 }
 function spxCols(key){ const cfg=SPX[key]||{}; return (cfg.cols||[]).filter(c=>!c.optional||spxOptional[c.optional]); }
 const SPX_ARROWS=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
@@ -33608,8 +33777,14 @@ function spxSetCombo(r,c,val){ const s=String(val==null?'':val).trim(), i=s.inde
 function spxColStr(r,c){ if(c.virtual) return ''; if(c.combo) return spxComboStr(r,c);
   /* 欄位篩選/搜尋也用顯示名(OK→完成) */
   if(c.status){ const sv=String(r[c.k]||c.def||'-'); return SPX_STATUS_LABEL[sv]||sv; }
-  if(c.check) return r[c.k]===true?'完成':'未完成'; if(c.bool) return r[c.k]===true?'是':r[c.k]===false?'否':''; const v=r[c.k]; return (c.k==='remark'||c.meta)?pmPlainRemark(v):(v==null?'':String(v)); }
-function spxCoerce(c,v){ if(c.bool) return v===true?true:v===false?false:(v==='是'?true:v==='否'?false:null); if(c.num){ const n=parseFloat(String(v==null?'':v).replace(/,/g,'')); return isNaN(n)?null:n; } if(c.date) return prodDate(v); return v==null?'':String(v); }
+  if(c.check) return r[c.k]===true?'完成':'未完成'; if(c.bool) return r[c.k]===true?'是':r[c.k]===false?'否':'';
+  /* 欄位層級的顯示名稱(例:項目值 FB → 顯示「扁鐵FB」),篩選/搜尋也用顯示名 */
+  if(c.labels){ const cv=r[c.k]==null?'':String(r[c.k]); return c.labels[cv]||cv; }
+  const v=r[c.k]; return (c.k==='remark'||c.meta)?pmPlainRemark(v):(v==null?'':String(v)); }
+function spxCoerce(c,v){
+  // 貼上的若是顯示名稱(扁鐵FB),還原回 DB 代碼(FB);下拉選單送進來的本來就是代碼,原樣通過
+  if(c.labels){ const t=String(v==null?'':v).trim(); for(const k in c.labels){ if(c.labels[k]===t) return k; } return t; }
+  if(c.bool) return v===true?true:v===false?false:(v==='是'?true:v==='否'?false:null); if(c.num){ const n=parseFloat(String(v==null?'':v).replace(/,/g,'')); return isNaN(n)?null:n; } if(c.date) return prodDate(v); return v==null?'':String(v); }
 function spxIsMetaField(key,field){ return ((key==='product'||key==='welding')&&field==='remark')||(key==='manual'&&field==='content'); }
 function spxToday(){ const d=new Date(), p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
 function spxBlankObj(cfg){ const o={}; cfg.cols.forEach(c=>{ o[c.k]=c.defFn?c.defFn():(c.def!=null?c.def:(c.bool?null:'')); }); o._key=++spxSeq; return o; }
@@ -33642,7 +33817,7 @@ async function spxFlush(key){
       else { const r=await sbFetch('/rest/v1/'+cfg.tbl,{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)}); if(r.ok&&r.data&&r.data[0]){const localKey=row._key;Object.assign(row,r.data[0]);row._key=localKey;row._dirty=false;saved++;} else if(r.status===401||r.status===403){ spxHint('需登入才能儲存',true); break; } }
     }
   } finally { s.busy=false; if(s.again){ s.again=false; spxFlush(key); } }
-  if(saved){ spxAfterChange(key); spxHint('✓ 已自動儲存'); }
+  if(saved){ spxAfterChange(key); spxHint('✓ 已自動儲存'); if(typeof prodAutoDoneAfter==='function') prodAutoDoneAfter(key,dirty); }
 }
 function spxHint(msg,err){ if(typeof layoutSaveHint==='function' && !err){ layoutSaveHint(); return; }
   let el=document.getElementById('layout-save-hint'); if(!el){ el=document.createElement('div'); el.id='layout-save-hint'; el.style.cssText='position:fixed;bottom:20px;right:20px;color:#fff;font-weight:600;font-family:var(--mono);font-size:12px;padding:6px 14px;border-radius:8px;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:opacity .3s'; document.body.appendChild(el); }
@@ -33654,12 +33829,13 @@ function spxRowVisible(key,r,kw){ const cfg=SPX[key];
   if(spxRowIsBlank(cfg,r)) return true;
   if(key==='track' && !prodShowCompleted.track && String(r.status||'').trim()==='OK') return false;
   if(key==='track' && !prodTrackShowSubcontract && String(r.status||'').trim()==='轉包') return false;
-  if(key==='reserved' && !prodShowCompleted.reserved && String(r.take_date||'').trim()!=='') return false;
+  if(key==='reserved' && !prodShowCompleted.reserved && prodResDone(r)) return false;   // 已領但還沒退還的不算完成,留在清單裡
   if(key==='product' && pmIsWelding(r)) return false;    // 焊材移到「焊材領料」分頁
   if(key==='welding' && !pmIsWelding(r)) return false;   // 焊材分頁只顯示焊材紀錄
   if(key==='product' && !prodShowCompleted.product && r.is_picked===true) return false;
   if(key==='manual' && !prodManualShowCompleted && r.completed===true) return false;
   if(!rowPassesColFilters(key, ck=>{ const c=spxCols(key).find(x=>x.k===ck); return c?spxColStr(r,c):''; })) return false;
+  if((key==='product'||key==='welding') && prodProductProjFilter && !prodProductProjMatch(r.proj_no,prodProductProjFilter)) return false;   // 成品材/焊材:工程編號寬鬆比對
   if((key==='product'||key==='welding') && prodProductZoneReason && !pmZoneMatch(r,prodProductZoneReason)) return false;   // 成品材/焊材:依剖析出的工程區篩選
   if(key==='manual' && prodManualZoneFilter && !prodManualZones(r).includes(String(prodManualZoneFilter).trim().toUpperCase())) return false;
   if(kw) return spxCols(key).map(c=>spxColStr(r,c)).join(' ').toLowerCase().indexOf(kw)>=0;
@@ -33719,8 +33895,8 @@ function spxRowHtml(key,i){ const cfg=SPX[key], arr=prodArr(key), r=arr[i], blan
       // 顯示名稱可與 DB 值不同(例:值 OK → 顯示「完成」),避免動到既有資料與 sp_progress view
       const opts=c.sel.map(o=>'<option value="'+esc(o)+'"'+((cur===o)?' selected':'')+'>'+esc(SPX_STATUS_LABEL[o]||o)+'</option>').join('');
       h+=td+'<select class="lt-edit-sel stcell-'+esc(cur)+'" onchange="this.className=\'lt-edit-sel stcell-\'+this.value;spxEdit(\''+key+'\','+i+',\''+c.k+'\',this.value)">'+opts+'</select></td>';
-    } else if(c.sel){ const cur=spxColStr(r,c);
-      const opts=c.sel.map(o=>'<option value="'+esc(o)+'"'+((cur===o)?' selected':'')+'>'+esc(o||'—')+'</option>').join('');
+    } else if(c.sel){ const cur=c.labels?(r[c.k]==null?'':String(r[c.k])):spxColStr(r,c);
+      const opts=c.sel.map(o=>'<option value="'+esc(o)+'"'+((cur===o)?' selected':'')+'>'+esc((c.labels&&c.labels[o])||o||'—')+'</option>').join('');
       h+=td+'<select class="lt-edit-sel" onchange="spxEdit(\''+key+'\','+i+',\''+c.k+'\',this.value)">'+opts+'</select></td>';
     } else {
       h+=td+'<input type="text" class="lt-edit"'+RO+' value="'+esc(spxColStr(r,c))+'" placeholder="'+esc(c.h)+'" oninput="spxEditText(\''+key+'\','+i+',\''+c.k+'\',this)" onblur="spxCompletionCommit(\''+key+'\','+i+',\''+c.k+'\')" autocomplete="off"/></td>';
@@ -33747,6 +33923,7 @@ async function spxBulkSetCheck(key,field,rows,checked){
   }
   rows.filter(r=>!r.id).forEach(r=>{r[field]=val;if(key==='product'&&field==='is_picked')r.pickup_date=val?spxToday():'';});
   spxRender(key); spxAfterChange(key); spxHint('✓ 已批次更新 '+okCount+' 筆');
+  if(typeof prodAutoDoneAfter==='function') prodAutoDoneAfter(key,rows);
   return okCount;
 }
 async function spxCompleteBeforeDate(key){
@@ -33759,7 +33936,7 @@ async function spxCompleteBeforeDate(key){
   await spxBulkSetCheck(key,'is_picked',rows,true);
 }
 function spxEditText(key,i,field,el){ const r=prodArr(key)[i]; if(!r) return; const c=SPX[key].cols.find(x=>x.k===field); spxSnapshot(key); if(c&&c.combo) spxSetCombo(r,c,el.value); else if(spxIsMetaField(key,field)) r[field]=pmPackRemark(el.value,pmMeta(r[field])); else r[field]=el.value; spxMarkDirty(key,i); }
-function spxCompletionCommit(key,i,field){ if(key==='reserved'&&field==='take_date'&&!prodShowCompleted.reserved){ const r=prodArr(key)[i]; if(r&&String(r.take_date||'').trim()){spxRender(key);spxAfterChange(key);} } }
+function spxCompletionCommit(key,i,field){ if(key==='reserved'&&(field==='take_date'||field==='return_date')&&!prodShowCompleted.reserved){ const r=prodArr(key)[i]; if(prodResDone(r)){spxRender(key);spxAfterChange(key);} } }
 function spxAddRow(key){ spxSnapshotNow(key); spxEnsureBlank(key); spxRender(key); }
 function spxDelRow(key,i){ const cfg=SPX[key], arr=prodArr(key), row=arr[i]; if(!row) return; spxSnapshotNow(key); if(row.id) sbFetch('/rest/v1/'+cfg.tbl+'?id=eq.'+row.id,{method:'DELETE'}); arr.splice(i,1); spxRender(key); spxAfterChange(key); }
 
@@ -36958,6 +37135,10 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     {key:'ALL',label:'全部'},
     {key:'BH',label:'BH'},
     {key:'RH',label:'RH'},
+    {key:'BHRH',label:'托樑BH&RH'},
+    {key:'BOX',label:'BOX'},
+    {key:'BT',label:'BT'},
+    {key:'U',label:'槽鐵 U'},
     {key:'Q',label:'帷幕 Q'},
     {key:'H',label:'水電 H'},
     {key:'FB',label:'FB'},
@@ -36965,8 +37146,10 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     {key:'成品材',label:'成品材'},
     {key:'SP',label:'SP'}
   ];
-  var MA_PART_ORDER=['BH','RH','Q','H','FB','L','成品材','SP'];
-  var MA_PART_SHEET={BH:'BH',RH:'RH',Q:'帷幕Q',H:'水電H',FB:'FB',L:'角鐵L','成品材':'成品材',SP:'SP'};
+  var MA_PART_ORDER=['BH','RH','BOX','BT','U','Q','H','FB','L','成品材','SP'];
+  var MA_PART_SHEET={BH:'BH',RH:'RH',BOX:'BOX',BT:'BT',U:'槽鐵U',Q:'帷幕Q',H:'水電H',FB:'FB',L:'角鐵L','成品材':'成品材',SP:'SP'};
+  // 複合分頁:不是 maPartCategory 會回傳的分類,只是把數個分類併在同一個分頁看
+  var MA_CAT_GROUP={BHRH:['BH','RH']};
   var maPartsCat='ALL',maPartsMode='grouped';
   var maPdfDoc=null;
   var maPdfFileName='';
@@ -36998,12 +37181,24 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     if(item.code==='Q')return 'Q';
     if(item.code==='H')return 'H';
     var s=String(item.specification||'').trim().toUpperCase();
+    if(s.indexOf('BOX')===0)return 'BOX';
     if(s.indexOf('BH')===0)return 'BH';
     if(s.indexOf('RH')===0)return 'RH';
+    if(s.indexOf('BT')===0)return 'BT';
     if(s.indexOf('FB')===0)return 'FB';
+    if(s.indexOf('U')===0)return 'U';
     if(s.indexOf('L')===0)return 'L';
-    if(s.indexOf('M')===0||s.indexOf('D')===0)return '成品材';
+    // 成品材:比照 S/P 板厚分析「成品類別統計表」(品名不是鋼板即成品),另加規格 M/D/Z/# 開頭
+    if(/^[MDZ#＃]/.test(s))return '成品材';
+    var name=String(item.description||'').trim();
+    if(name!==''&&name.indexOf('鋼板')<0)return '成品材';
     return 'SP';
+  }
+  // 分頁篩選:支援 MA_CAT_GROUP 的複合分頁(例:托樑BH&RH)
+  function maCatMatch(item,key){
+    if(key==='ALL')return true;
+    var cat=maPartCategory(item),g=MA_CAT_GROUP[key];
+    return g?g.indexOf(cat)>=0:cat===key;
   }
   // 規格與構件規格相同的列視為母件本體，整筆排除（不顯示、不統計、不下載）
   function maPartItems(c){
@@ -37080,12 +37275,13 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     if(headerIndex<0)return null;
     function col(name){return headers.indexOf(name);}
     var hi=col('階層'),pi=col('工程'),ci=col('構件編號'),coi=col('共通編號'),si=col('規格'),qi=col('BOM數量'),di=col('圖號');
+    var ni=col('品名'); if(ni<0)ni=col('零件名稱'); if(ni<0)ni=col('名稱');
     var components=[],current=null,seq=0,projectNo='',zoneCode='',zi=col('分區');
     for(var n=headerIndex+1;n<lines.length;n++){
       if(!lines[n].trim())continue;
       var row=lines[n].split('\t'),get=function(idx){return idx>=0?String(row[idx]||'').trim():'';};
       var level=get(hi); if(!/^\*+$/.test(level))continue;
-      var number=get(ci)||get(coi),spec=get(si),qty=get(qi),drawing=get(di);
+      var number=get(ci)||get(coi),spec=get(si),qty=get(qi),drawing=get(di),name=get(ni);
       if(!projectNo)projectNo=get(pi);
       if(!zoneCode)zoneCode=get(zi);
       if(level==='*'){
@@ -37093,7 +37289,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
         current={componentNo:number,drawingNo:drawing,componentSpec:spec,items:[]};
         components.push(current);seq=0;
       }else if(level==='**'&&current&&number){
-        current.items.push({sequence:++seq,partNo:number,description:'',specification:spec,material:'',unit:'',quantity:qty===''?'':Number(qty),code:''});
+        current.items.push({sequence:++seq,partNo:number,description:name,specification:spec,material:'',unit:'',quantity:qty===''?'':Number(qty),code:''});
       }
       // *** 及更深階層不是第一層零件，依既有分析規則忽略。
     }
@@ -37170,7 +37366,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   function maPartCatCount(key){
     var comps=0,rows=0;
     maComponents.forEach(function(c){
-      var n=maPartItems(c).filter(function(i){return key==='ALL'||maPartCategory(i)===key;}).length;
+      var n=maPartItems(c).filter(function(i){return maCatMatch(i,key);}).length;
       if(n){comps++;rows+=n;}
     });
     return {comps:comps,rows:rows};
@@ -37188,7 +37384,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     maRenderPartsView();
   }
   function maRenderPartsView(){
-    var groups=maComponents.map(function(c){return {c:c,items:maPartItems(c).filter(function(i){return maPartsCat==='ALL'||maPartCategory(i)===maPartsCat;})};}).filter(function(g){return g.items.length;});
+    var groups=maComponents.map(function(c){return {c:c,items:maPartItems(c).filter(function(i){return maCatMatch(i,maPartsCat);})};}).filter(function(g){return g.items.length;});
     var componentCount=groups.length,detailTotal=groups.reduce(function(sum,g){return sum+g.items.length;},0);
     var detailCount=document.getElementById('ma-parts-detail-count');if(detailCount)detailCount.textContent=componentCount+' 支構件 · '+detailTotal+' 筆明細';
     document.querySelectorAll('#ma-parts-cat-tabs [data-ma-cat]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-ma-cat')===maPartsCat);});
@@ -37204,7 +37400,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       return;
     }
     if(maPartsMode==='grouped'){
-      body.innerHTML=groups.map(function(g,i){return maComponentBlock(g.c,g.items,maPartsCat==='ALL',i===0);}).join('')+'<div class="ma-total-line">數量加總：'+totalQty+'</div>';
+      body.innerHTML=groups.map(function(g,i){return maComponentBlock(g.c,g.items,maPartsCat==='ALL'||!!MA_CAT_GROUP[maPartsCat],i===0);}).join('')+'<div class="ma-total-line">數量加總：'+totalQty+'</div>';
     }else{
       body.innerHTML='<div class="ma-flat-title">第一層零件完整明細 · '+allItems.length+' 筆</div><div class="ma-table-wrap"><table class="ma-table ma-flat-table"><thead><tr><th>構件編號</th><th>圖號</th><th>項次</th><th>零件編號</th><th>品名</th><th>規格</th><th>材質</th><th>單位</th><th>數量</th><th>分類</th></tr></thead><tbody>'+allItems.map(function(row){var i=row.item,c=row.c;return '<tr><td class="code">'+maEsc(c.componentNo)+'</td><td class="code">'+maEsc(c.drawingNo||'—')+'</td><td>'+maEsc(i.sequence)+'</td><td class="code">'+maEsc(i.partNo)+'</td><td>'+maEsc(i.description)+'</td><td class="code">'+maEsc(maSpecDisplay(i,c))+'</td><td>'+maEsc(i.material)+'</td><td>'+maEsc(i.unit)+'</td><td>'+maEsc(i.quantity)+'</td><td>'+maCatTag(maPartCategory(i))+'</td></tr>';}).join('')+'</tbody><tfoot><tr class="ma-total-row"><td colspan="8">數量加總</td><td>'+totalQty+'</td><td></td></tr></tfoot></table></div>';
     }
