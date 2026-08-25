@@ -2999,6 +2999,9 @@ window.normalizeFullWidth=function(value){
 .ma-stat.q .ma-stat-value{color:var(--purple)}
 .ma-stat.h .ma-stat-value{color:var(--accent3)}
 .ma-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.ma-result-search{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg)}
+.ma-result-search .search-input{flex:1;max-width:none;min-width:0}
+.ma-search-status{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap}
 .ma-tab{padding:8px 15px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text2);font-family:var(--mono);font-size:12px;cursor:pointer}
 .ma-tab:hover{border-color:var(--border-hi);color:var(--text)}
 .ma-tab.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
@@ -3123,6 +3126,11 @@ window.normalizeFullWidth=function(value){
       </div>
 
       <div id="ma-workspace" style="display:none">
+        <div class="ma-result-search ma-no-print">
+          <input type="search" class="search-input" id="ma-result-search" placeholder="模糊搜尋構件、圖號、零件、品名、規格、材質…" oninput="maSetResultSearch(this.value)"/>
+          <span class="ma-search-status" id="ma-search-status">全部資料</span>
+          <button type="button" class="btn btn-add-row" onclick="maClearResultSearch()">清除</button>
+        </div>
         <div class="ma-tabs ma-no-print">
           <button class="ma-tab active" data-ma-tab="parts" onclick="maSwitchTab('parts')">第一層零件表 <span class="ma-tab-count" id="ma-tab-parts-count">0 支構件</span></button>
           <button class="ma-tab" data-ma-tab="curtain" onclick="maSwitchTab('curtain')">帷幕明細 Q <span class="ma-tab-count" id="ma-tab-curtain-count">0 支構件</span></button>
@@ -3552,6 +3560,7 @@ window.normalizeFullWidth=function(value){
           
           <div class="insp-field"><label>受檢日期</label><input type="text" id="insp-recv-date" placeholder="例 6/11"/></div>
           <div class="insp-field"><label>受檢時間</label><input type="text" id="insp-recv-time" value="08:00" placeholder="例 08:00"/></div>
+          <div class="insp-field"><label>製造 Key in 日期</label><input type="date" id="insp-keyin-date" onchange="inspValidateKeyinDate(this)"/><div class="section-label" style="margin-top:4px;line-height:1.45">禁止使用每月 15 號；選到 15 號會自動順延至 16 號（遇週日再順延至週一），其他日期可手動修改</div></div>
         </div>
       </div>
 
@@ -10346,11 +10355,6 @@ const ADMIN_PAGES=new Set(['output','pricing','cost','accounts','notify','audit'
 const HR_PAGES=new Set(['emp','leave','payroll','payslip','payrollcfg']);
 // 訪客固定可見(唯讀):主頁、長榮系統、BOM工程列表、工具整區。其餘一律隱藏。
 const GUEST_PERMS={dashboard:'read','evergreen-sys':'read',bom:'read',multilevel:'read',bomtool:'read',sp:'read',dxf:'read',hazard:'read',selfcheck:'read',namelabels:'read'};
-// 手機導覽只放現場最常用功能；管理員與桌機維持完整選單。
-const MOBILE_NAV_PAGES=new Set([
-  'dashboard','mypage','hardware','bom','layout','daily','drawingsearch','attendance'
-]);
-
 // ── 每位使用者的常用功能與側邊欄偏好 ──
 const DEFAULT_FAVORITES=[
   'dashboard','evergreen-sys','hardware','drawingsearch','bom','layout',
@@ -10442,12 +10446,9 @@ function saveFavoriteSettings(){
   renderFavoriteNav();
   closeModal('favorite-settings-modal');
 }
-function mobileNavLimited(){
-  return window.innerWidth<=768 && (!(currentUser&&currentUser.isAdmin&&!isGuest) || adminPreviewMode);
-}
-
 function navItemVisible(k){
-  return pagePerm(k)!=='hide' && (!mobileNavLimited() || MOBILE_NAV_PAGES.has(k));
+  // 手機與桌機共用同一份使用者權限；手機從「更多」可進入所有已授權功能。
+  return pagePerm(k)!=='hide';
 }
 // 解析某頁面對「目前使用者」的權限
 function pagePerm(k){
@@ -18940,6 +18941,7 @@ async function inspInit() {
   document.getElementById('insp-template-status').innerHTML = '<div class="empty-state" style="padding:16px">請先選擇工程</div>';
   inspTemplateBuffer = null;
   inspSetDefaultRecv();
+  inspSetDefaultKeyin();
   renderPreInspPanel();   // 載入預報構件暫存區
 }
 
@@ -18950,6 +18952,32 @@ function inspSetDefaultRecv() {
   const tEl = document.getElementById('insp-recv-time');
   if (dEl) dEl.value = recv.date;
   if (tEl) tEl.value = recv.time;
+}
+
+// 製造 Key in 日期預設依報驗日自動換算，但保留頁面欄位供臨時狀況手動覆寫。
+function inspSetDefaultKeyin() {
+  const el = document.getElementById('insp-keyin-date');
+  if (!el) return;
+  const d = nextKeyinDate(new Date());
+  el.value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function inspValidateKeyinDate(el) {
+  const raw = (el?.value || '').trim();
+  if (!raw) return true;
+  const parts = raw.split('-').map(Number);
+  if (parts.length !== 3 || parts[2] !== 15) return true;
+  const d = nextKeyinDate(new Date(parts[0], parts[1]-1, parts[2]));
+  el.value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  setInspStatus('製造 Key in 日期禁止使用 15 號，已自動順延為 ' + el.value, false);
+  return false;
+}
+
+function inspKeyinDateValue(today) {
+  const el = document.getElementById('insp-keyin-date');
+  inspValidateKeyinDate(el); // 產單前再防呆，避免以程式或舊畫面帶入 15 號。
+  const raw = (el?.value || '').trim();
+  return raw ? raw.replace(/-/g, '.') : westDot(nextKeyinDate(today));
 }
 
 async function inspLoadZones() {
@@ -20883,6 +20911,7 @@ async function generateInspection() {
   let docNo = (document.getElementById('insp-docno').value || '').trim();
   const recvDate = (document.getElementById('insp-recv-date').value || '').trim();
   const recvTime = (document.getElementById('insp-recv-time').value || '').trim();
+  const keyinDate = inspKeyinDateValue(today);
   const expectedDocPrefix = String(docBaseForCompany(company) + 1).slice(0, 3);
   // 沒有手動改號時，在真正產單前重抓一次最新號碼，避免頁面開著期間被其他人先用掉。
   // 手動選擇既有號碼才保留原值，供追加構件至同一流水號。
@@ -20906,7 +20935,7 @@ async function generateInspection() {
         proj_name: projName, proj_no: proj ? proj.proj_num : '',
         owner: proj ? (proj.client || '') : '', companyUnit,
         zoneCode, procCode, workLoc, person, docNo,
-        recvDate, recvTime, today, inspectDay, keyinDate: westDot(nextKeyinDate(today))
+        recvDate, recvTime, today, inspectDay, keyinDate
       });
     }
     // (2) 寫入每日產量 — 實報 + 預報「全部」都要計入產量(流水編號同一個 docNo)
@@ -20914,6 +20943,7 @@ async function generateInspection() {
       await saveDailyOutput(checkedAll, {
         proj_num: proj ? proj.proj_num : '',
         zone_code: zoneCode, doc_no: docNo, proc_code: procCode, sub_code: zoneSub,
+        keyin_date: keyinDate,
         output_date: inspExistingBatchDate || '',
         inspect_time: (function(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');})(),
         company: company
@@ -20926,7 +20956,7 @@ async function generateInspection() {
         const pr = await preInspInsert(preChecked, {
           proj_id: pid, zone_id: zid, proj_num: proj ? proj.proj_num : '', proj_name: projName,
           client: proj ? (proj.client || '') : '', zoneCode, zoneSub, procCode,
-          docNo, company, companyUnit, workLoc, keyinDate: westDot(nextKeyinDate(today)), person
+          docNo, company, companyUnit, workLoc, keyinDate, person
         });
         preOk = !!(pr && pr.ok);
       } catch(e) { console.error('預報構件暫存失敗', e); preOk = false; }
@@ -22825,6 +22855,7 @@ function exportDaily() {
 // save checked components to daily_output when generating 申驗單
 async function saveDailyOutput(checked, ctx) {
   const outputDate = ctx.output_date || inspTodayStr();
+  const keyinDate = String(ctx.keyin_date || '').trim().replace(/\./g, '-');
   const recs = [];
   checked.forEach(c => {
     const n = Math.max(1, parseInt(c._inspQty) || 1);   // 報驗支數
@@ -22840,6 +22871,7 @@ async function saveDailyOutput(checked, ctx) {
         net_weight: perW,
         drawing_no: c.drawing_no || '',
         serial_no: ctx.doc_no || '',
+        keyin_date: keyinDate || null,
         spec: c.spec || '',
         proc_code: ctx.proc_code || '',
         sub_code: ctx.sub_code || '',
@@ -22849,6 +22881,12 @@ async function saveDailyOutput(checked, ctx) {
     }
   });
   if (!recs.length) return;
+  // 追加既有批次時，同一日期＋流水號必須共用這次選定的 Key-in 日期。
+  if (keyinDate && ctx.doc_no) {
+    await sbFetch('/rest/v1/daily_output?date=eq.' + encodeURIComponent(outputDate) + '&serial_no=eq.' + encodeURIComponent(ctx.doc_no), {
+      method:'PATCH', headers:{'Prefer':'return=minimal'}, body:JSON.stringify({keyin_date:keyinDate})
+    });
+  }
   await sbFetch('/rest/v1/daily_output', { method:'POST', headers:{'Prefer':'return=minimal'}, body: JSON.stringify(recs) });
 }
 // 單據編號自動帶號：先取該號段的最新日期，再依該日流水號往下一號。
@@ -23143,7 +23181,7 @@ async function a202LoadInner() {
     if (Array.isArray(pr.data)) allBOM = pr.data;
   }
   const [dr, rr, zr] = await Promise.all([
-    sbFetchAll('/rest/v1/daily_output?select=date,proj_num,zone_code,proc_code,serial_no,part_no,company'),
+    sbFetchAll('/rest/v1/daily_output?select=date,keyin_date,proj_num,zone_code,proc_code,serial_no,part_no,company'),
     sbFetchAll('/rest/v1/a202_records?select=*'),
     sbFetchAll('/rest/v1/zones?select=project_id,zone_code,proc_code,sub_code')
   ]);
@@ -23163,7 +23201,8 @@ async function a202LoadInner() {
     if (!r.date || !r.serial_no) return;
     const serial = String(r.serial_no).trim();
     const k = r.date + '|' + serial;
-    if (!groups[k]) groups[k] = { date: r.date, serial, qty: 0, parts: [], projs: new Set(), zones: new Set(), procs: new Set(), subs: new Set(), company: '' };
+    if (!groups[k]) groups[k] = { date: r.date, keyin_date: '', serial, qty: 0, parts: [], projs: new Set(), zones: new Set(), procs: new Set(), subs: new Set(), company: '' };
+    if (r.keyin_date) groups[k].keyin_date = String(r.keyin_date).slice(0,10);
     groups[k].qty += 1;   // 每日產量一列 = 一支
     if (r.part_no) groups[k].parts.push(r.part_no);
     if (r.proj_num) groups[k].projs.add(r.proj_num);
@@ -23177,7 +23216,7 @@ async function a202LoadInner() {
     if (r.company) groups[k].company = r.company;
   });
   a202Groups = Object.values(groups).map(g => ({
-    date: g.date, serial: g.serial, qty: g.qty, parts: g.parts,
+    date: g.date, keyin_date: g.keyin_date, serial: g.serial, qty: g.qty, parts: g.parts,
     proj: [...g.projs].join(' '), zone: [...g.zones].join(' '), proc: [...g.procs].join(' '), sub: [...g.subs].join(' '),
     company: axxCompanyOfSerial(g.serial, g.company)
   })).sort((a,b) => b.date.localeCompare(a.date) || b.serial.localeCompare(a.serial, undefined, {numeric:true}));
@@ -23201,9 +23240,9 @@ function a202Render() {
   body.innerHTML = rows.map(g => {
     const r = recOf[g.date+'|'+g.serial];
     const arg = "'" + g.date + "','" + g.serial.replace(/'/g,'') + "'";
-    const kd = a202KeyinDate(g.date);   // keyin 日期:只有 15 號 +1(遇週日跳週一)
+    const kd = a202KeyinDate(g.date, g.keyin_date); // 新資料採報驗頁選定值；舊資料才依 15 號規則換算
     const kdCell = (kd !== g.date)
-      ? '<td class="axx-num" style="color:var(--accent2);font-weight:600" title="15 號順延自 ' + esc(g.date) + '">' + axxMD(kd) + '</td>'
+      ? '<td class="axx-num" style="color:var(--accent2);font-weight:600" title="報驗日期 ' + esc(g.date) + '；Key-in 日期 ' + esc(kd) + '">' + axxMD(kd) + '</td>'
       : '<td class="axx-num">' + axxMD(kd) + '</td>';
     return '<tr>' +
       '<td class="axx-time">' + esc((r && r.done_time) || '') + '</td>' +
@@ -23224,7 +23263,9 @@ function a202Render() {
 }
 // A202 keyin 日期:規則同報驗——只有每月 15 號 +1 天(遇週日跳週一,週六照常 key in),其餘日期不變。
 // 輸入/輸出皆 'YYYY-MM-DD';沿用報驗的 nextKeyinDate,顯示與送出 Forms 共用同一份換算。
-function a202KeyinDate(dateStr) {
+function a202KeyinDate(dateStr, savedKeyinDate) {
+  const saved = String(savedKeyinDate || '').slice(0,10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(saved) && saved.slice(8,10) !== '15') return saved;
   if (!dateStr) return dateStr;
   const t = new Date(dateStr + 'T12:00:00');
   if (isNaN(t.getTime())) return dateStr;
@@ -23244,7 +23285,7 @@ async function a202KeyIn(date, serial) {
   const g = a202Groups.find(x => x.date === date && String(x.serial) === String(serial));
   if (!g) { alert('找不到該列資料'); return; }
   const parts = a202PartsWithQty(g.parts);
-  const keyinDate = a202KeyinDate(g.date);   // keyin 日期:只有 15 號 +1(遇週日跳週一,週六照常),其餘同 g.date
+  const keyinDate = a202KeyinDate(g.date, g.keyin_date); // 優先採報驗頁選定的 Key-in 日期
   const payload = {
     date: keyinDate,         // ← 送進 Forms 的日期(15 號自動 +1);agent 端轉成 2026/07/22
     serial: g.serial,        // 單據編號＝流水編號
@@ -23255,7 +23296,7 @@ async function a202KeyIn(date, serial) {
     company: g.company,      // 鎮山/麗生 → agent 端對到外包商代號
     parts: parts             // [{part, qty}, ...]
   };
-  const dateLine = (keyinDate !== g.date) ? ('keyin日期 ' + keyinDate + '（原 ' + g.date + '，15 號順延）') : ('日期 ' + keyinDate);
+  const dateLine = (keyinDate !== g.date) ? ('keyin日期 ' + keyinDate + '（報驗日期 ' + g.date + '）') : ('日期 ' + keyinDate);
   const summary = dateLine + '　單據 ' + g.serial + '\n工程 ' + g.proj + '　副號 ' + g.sub + '　分區 ' + g.zone + '　加工 ' + g.proc +
     '\n構件 ' + parts.map(p => p.qty > 1 ? p.part + '*' + p.qty : p.part).join(' ') +
     '\n\n確定要自動鍵入 Oracle Forms 嗎？（打完不會自動送出，請自行核對後確認）';
@@ -37150,7 +37191,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   var MA_PART_SHEET={BH:'BH',RH:'RH',BOX:'BOX',BT:'BT',U:'槽鐵U',Q:'帷幕Q',H:'水電H',FB:'FB',L:'角鐵L','成品材':'成品材',SP:'SP'};
   // 複合分頁:不是 maPartCategory 會回傳的分類,只是把數個分類併在同一個分頁看
   var MA_CAT_GROUP={BHRH:['BH','RH']};
-  var maPartsCat='ALL',maPartsMode='grouped';
+  var maPartsCat='ALL',maPartsMode='grouped',maSearchQuery='';
   var maPdfDoc=null;
   var maPdfFileName='';
   var maPdfHash='';
@@ -37235,6 +37276,31 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   }
   function maPartCount(){return maComponents.reduce(function(n,c){return n+maPartItems(c).length;},0);}
   function maCodeCount(code){return maComponents.reduce(function(n,c){return n+c.items.filter(function(i){return i.code===code;}).length;},0);}
+  function maSearchTokens(){return String(maSearchQuery||'').toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);}
+  function maSearchText(c,item){
+    return [maProject.工程編號,maProject.工程區,maProject.母件編號,c.componentNo,c.drawingNo,c.componentSpec,
+      item&&item.sequence,item&&item.partNo,item&&item.description,item&&item.specification,item&&item.material,
+      item&&item.unit,item&&item.quantity,item&&item.code,item&&maPartCategory(item)].join(' ').toLocaleLowerCase();
+  }
+  function maFilterGroups(groups){
+    var tokens=maSearchTokens();if(!tokens.length)return groups;
+    return groups.map(function(g){
+      var componentHit=tokens.every(function(t){return maSearchText(g.c,null).indexOf(t)>=0;});
+      var items=componentHit?g.items:g.items.filter(function(item){var text=maSearchText(g.c,item);return tokens.every(function(t){return text.indexOf(t)>=0;});});
+      return {c:g.c,items:items};
+    }).filter(function(g){return g.items.length;});
+  }
+  function maUpdateSearchStatus(groups){
+    var el=document.getElementById('ma-search-status');if(!el)return;
+    if(!maSearchTokens().length){el.textContent='全部資料';return;}
+    var rows=(groups||[]).reduce(function(n,g){return n+g.items.length;},0);
+    el.textContent='找到 '+(groups||[]).length+' 支構件 · '+rows+' 筆';
+  }
+  window.maSetResultSearch=function(value){
+    maSearchQuery=String(value||'');
+    maRenderParts();maRenderCategory('Q','ma-curtain-result','帷幕');maRenderCategory('H','ma-mep-result','水電');
+  };
+  window.maClearResultSearch=function(){var el=document.getElementById('ma-result-search');if(el)el.value='';window.maSetResultSearch('');};
   function maSelectedComponent(){
     var el=document.getElementById('ma-component-select');
     return maComponents.find(function(c){return c.componentNo===(el?el.value:'');})||null;
@@ -37334,6 +37400,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     if(mMother)maProject.母件編號=mMother[1];
     if(tabular){maProject.工程編號=tabular.projectNo||'';maProject.工程區=tabular.zoneCode||'';}
     maComponents=components;
+    maSearchQuery='';var searchEl=document.getElementById('ma-result-search');if(searchEl)searchEl.value='';
     maPdfMap={};maRenderedCrops={};
     document.getElementById('ma-summary').style.display='grid';
     document.getElementById('ma-workspace').style.display='block';
@@ -37384,7 +37451,8 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     maRenderPartsView();
   }
   function maRenderPartsView(){
-    var groups=maComponents.map(function(c){return {c:c,items:maPartItems(c).filter(function(i){return maCatMatch(i,maPartsCat);})};}).filter(function(g){return g.items.length;});
+    var groups=maFilterGroups(maComponents.map(function(c){return {c:c,items:maPartItems(c).filter(function(i){return maCatMatch(i,maPartsCat);})};}).filter(function(g){return g.items.length;}));
+    maUpdateSearchStatus(groups);
     var componentCount=groups.length,detailTotal=groups.reduce(function(sum,g){return sum+g.items.length;},0);
     var detailCount=document.getElementById('ma-parts-detail-count');if(detailCount)detailCount.textContent=componentCount+' 支構件 · '+detailTotal+' 筆明細';
     document.querySelectorAll('#ma-parts-cat-tabs [data-ma-cat]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-ma-cat')===maPartsCat);});
@@ -37409,7 +37477,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   window.maSetPartsMode=function(mode){maPartsMode=mode;maRenderPartsView();};
   window.maTogglePartsDetails=function(open){document.querySelectorAll('#ma-parts-body details.ma-component').forEach(function(d){d.open=!!open;});};
   function maRenderCategory(code,targetId,label){
-    var groups=maComponents.map(function(c){return {c:c,items:c.items.filter(function(i){return i.code===code;})};}).filter(function(g){return g.items.length;});
+    var groups=maFilterGroups(maComponents.map(function(c){return {c:c,items:c.items.filter(function(i){return i.code===code;})};}).filter(function(g){return g.items.length;}));
     var componentCount=new Set(groups.map(function(g){return g.c.componentNo;})).size,kind=code==='Q'?'curtain':'mep';
     var tabCount=document.getElementById('ma-tab-'+kind+'-count');if(tabCount)tabCount.textContent=componentCount+' 支構件';
     var detailCount=document.getElementById('ma-'+kind+'-detail-count');if(detailCount)detailCount.textContent=componentCount+' 支構件 · '+groups.reduce(function(sum,g){return sum+g.items.length;},0)+' 筆明細';
@@ -37588,8 +37656,9 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   };
 
   window.maClearAll=function(){
-    maComponents=[];maProject={工程編號:'',工程區:'',母件編號:''};maPartsCat='ALL';maPartsMode='grouped';
+    maComponents=[];maProject={工程編號:'',工程區:'',母件編號:''};maPartsCat='ALL';maPartsMode='grouped';maSearchQuery='';
     var raw=document.getElementById('ma-raw-input');if(raw)raw.value='';
+    var search=document.getElementById('ma-result-search');if(search)search.value='';var searchStatus=document.getElementById('ma-search-status');if(searchStatus)searchStatus.textContent='全部資料';
     var summary=document.getElementById('ma-summary');if(summary)summary.style.display='none';
     var workspace=document.getElementById('ma-workspace');if(workspace)workspace.style.display='none';
     var excel=document.getElementById('ma-excel-btn');if(excel)excel.disabled=true;
