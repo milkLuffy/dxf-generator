@@ -3446,6 +3446,8 @@ window.normalizeFullWidth=function(value){
     .sc-films:empty{display:none}
     .sc-films .fp{position:relative;flex:none;cursor:pointer;text-align:center}
     .sc-films .fp img{height:54px;border:2px solid transparent;border-radius:4px;background:#fff;display:block}
+    .sc-films .fp .ph{width:42px;height:54px;border:2px solid transparent;border-radius:4px;background:#eef1f5;display:block}
+    .sc-films .fp.on .ph{border-color:var(--accent2)}
     .sc-films .fp.on img{border-color:var(--accent2)}
     .sc-films .fp .pn{position:absolute;left:2px;top:2px;background:rgba(0,0,0,.62);color:#fff;font-size:10px;padding:0 4px;border-radius:3px}
     .sc-films .fp .dw{display:block;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--text3);font-family:var(--mono);line-height:1.5}
@@ -35389,6 +35391,7 @@ let scPages=[], scPi=0, scDisp=1, scForms=[], scSeq=0, scSelId=null, scZones=[],
 let scTplB64=null;                                   // 換範本:自選 .docx(未換則用內建 SC_TPL_B64)
 let scMeta={projNum:'',zoneCode:''};                 // 產生自檢表時記住工程編號/工程區(匯出檔名用)
 let scDrawingFiles=[], scDrawingRows=[], scDrawingBusy=false;
+let scPdfDocs=[], scPageRenderJobs=new Map(), scLoadGeneration=0;
 const scStatus=m=>{ const e=scEl('sc-status'); if(e) e.textContent=m; };
 const scLoadMsg=m=>{ const e=scEl('sc-loadmsg'); if(e) e.textContent=m; };
 
@@ -35507,7 +35510,10 @@ async function scFiles(inp){
 }
 
 function scReleasePages(){
+  scLoadGeneration++;
   scPages.forEach(p=>{ try{ if(p.img?.src?.startsWith('blob:')) URL.revokeObjectURL(p.img.src); }catch(_){} });
+  scPdfDocs.forEach(doc=>{ try{ doc.destroy(); }catch(_){} });
+  scPdfDocs=[]; scPageRenderJobs.clear();
   scPages=[]; scPi=0;
 }
 
@@ -35521,23 +35527,49 @@ async function scLoadStoredDrawing(file){
   try{
     scReleasePages(); await scEnsurePdfjs();
     const map=new Map(scDrawingRows.filter(r=>String(r.file_id)===String(file.id)).map(r=>[Number(r.page_no),String(r.drawing_no||'')]));
-    const parts=dsPartsForFile(file); let globalPage=0;
+    const parts=dsPartsForFile(file); let globalPage=0, shown=false;
     for(let pi=0;pi<parts.length;pi++){
       const part=parts[pi]; scLoadMsg('下載共用圖面 '+(pi+1)+' / '+parts.length+'…');
       const response=await dsStorageDownload(part.storage_key);
       if(!response.ok) throw new Error((await response.text())||('HTTP '+response.status));
       const doc=await pdfjsLib.getDocument({data:await response.arrayBuffer()}).promise;
+      scPdfDocs.push(doc);
       for(let p=1;p<=doc.numPages;p++){
         globalPage=part.page_start+p-1;
-        scLoadMsg('轉換 '+file.original_name+' 第 '+globalPage+'/'+file.page_count+' 頁…');
-        await scPdfPageToScPage(await doc.getPage(p),file.original_name.replace(/\.pdf$/i,'')+' p'+String(globalPage).padStart(3,'0'),map.get(globalPage)||'');
+        const page=await doc.getPage(p), vp=page.getViewport({scale:1});
+        scPages.push({name:file.original_name.replace(/\.pdf$/i,'')+' p'+String(globalPage).padStart(3,'0'),img:null,
+          w:Math.round(vp.width*Math.min(SC_PAGE_W/vp.width,8)),h:Math.round(vp.height*Math.min(SC_PAGE_W/vp.width,8)),
+          dwg:map.get(globalPage)||'',ocr:'done',pdfPage:page});
+        if(!shown){
+          shown=true; scEl('sc-empty').hidden=true; scEl('sc-wrap').hidden=false; scFilms();
+          await scShowPage(0);
+        }
       }
-      try{ await doc.destroy(); }catch(_){}
     }
     scLoadMsg('已載入共用圖面 '+file.original_name+'，共 '+scPages.length+' 頁');
     if(scPages.length){ scEl('sc-empty').hidden=true; scEl('sc-wrap').hidden=false; scFilms(); scShowPage(0); }
   }catch(err){ console.error(err); alert('載入共用圖面失敗：'+err.message); }
   finally{ scDrawingBusy=false; }
+}
+
+async function scEnsurePageRendered(index){
+  const pg=scPages[index]; if(!pg||pg.img) return pg;
+  if(scPageRenderJobs.has(pg)) return scPageRenderJobs.get(pg);
+  const generation=scLoadGeneration;
+  const job=(async()=>{
+    const page=pg.pdfPage; if(!page) return pg;
+    let vp=page.getViewport({scale:1}); vp=page.getViewport({scale:Math.min(SC_PAGE_W/vp.width,8)});
+    const cv=document.createElement('canvas'); cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
+    await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.85));
+    if(!blob) throw new Error('頁面轉圖失敗');
+    const url=URL.createObjectURL(blob), img=await scLoadImg(url);
+    if(generation!==scLoadGeneration){ URL.revokeObjectURL(url); return pg; }
+    pg.img=img; pg.w=img.naturalWidth; pg.h=img.naturalHeight;
+    try{ page.cleanup(); }catch(_){} cv.width=cv.height=0;
+    scFilms(); return pg;
+  })().finally(()=>scPageRenderJobs.delete(pg));
+  scPageRenderJobs.set(pg,job); return job;
 }
 
 async function scPdfPageToScPage(page,name,dwg){
@@ -35595,7 +35627,19 @@ async function scUploadSharedDrawing(file){
     if(saved){
       scEl('sc-drawing-file').value=id; scEl('sc-load-existing').disabled=false;
       scDrawingBusy=false;
-      await scLoadStoredDrawing(saved);
+      scLoadMsg('上傳完成；直接載入本機檔案，不再重複下載…');
+      scReleasePages();
+      const map=new Map(pageRows.map(r=>[Number(r.page_no),String(r.drawing_no||'')]));
+      for(const part of uploadParts){
+        const doc=await pdfjsLib.getDocument({data:await part.file.arrayBuffer()}).promise; scPdfDocs.push(doc);
+        for(let p=1;p<=doc.numPages;p++){
+          const globalPage=part.page_start+p-1, page=await doc.getPage(p), vp=page.getViewport({scale:1}), scale=Math.min(SC_PAGE_W/vp.width,8);
+          scPages.push({name:file.name.replace(/\.pdf$/i,'')+' p'+String(globalPage).padStart(3,'0'),img:null,
+            w:Math.round(vp.width*scale),h:Math.round(vp.height*scale),dwg:map.get(globalPage)||'',ocr:'done',pdfPage:page});
+        }
+      }
+      scEl('sc-empty').hidden=true; scEl('sc-wrap').hidden=false; scFilms(); await scShowPage(0);
+      scLoadMsg('上傳並載入完成，共 '+scPages.length+' 頁（其餘頁面將在切換時載入）');
     }
   }catch(error){
     console.error(error);
@@ -35634,14 +35678,15 @@ function scFilms(){
   scPages.forEach((p,i)=>{
     const d=document.createElement('div'); d.className='fp'+(i===scPi?' on':''); d.onclick=()=>scShowPage(i);
     const st=p.ocr==='wait'||p.ocr==='run'?'…辨識中':(p.dwg||'—');
-    d.innerHTML='<img src="'+p.img.src+'"/><span class="pn">'+(i+1)+'</span><span class="dw">'+esc(st)+'</span>';
+    d.innerHTML=(p.img?'<img src="'+p.img.src+'"/>':'<span class="ph"></span>')+'<span class="pn">'+(i+1)+'</span><span class="dw">'+esc(st)+'</span>';
     box.appendChild(d);
   });
 }
-function scShowPage(n){
+async function scShowPage(n){
   if(!scPages.length) return;
   scPi=Math.max(0,Math.min(n,scPages.length-1));
-  const p=scPages[scPi];
+  const wanted=scPi, p=await scEnsurePageRendered(wanted);
+  if(wanted!==scPi||!p?.img) return;
   const avail=Math.max(scEl('sc-stage').clientWidth-26,200);
   scDisp=Math.min(avail/p.w,1);
   const cv=scEl('sc-view');
