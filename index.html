@@ -20922,6 +20922,18 @@ async function generateInspection() {
     inspSetAutoDocNo(docNo, company);
   }
 
+  // 真正寫入前再交叉檢查一次 A201 / A202。只有使用者明確選擇「追加既有批次」
+  // 才能沿用同日同號；其餘碰號一律從目前號碼往後找下一個空號。
+  if (!inspExistingBatchDate && await axxSerialUsedOnDate(inspTodayStr(), docNo)) {
+    const base = docBaseForCompany(company), firstNo = base + 1, upper = base + 99;
+    const used = await axxUsedSerialsOnDate(inspTodayStr(), company);
+    let candidate = parseInt(docNo, 10);
+    if (isNaN(candidate) || candidate < firstNo || candidate > upper) candidate = firstNo;
+    else candidate = axxIncSerial(candidate, firstNo, upper);
+    docNo = String(axxNextFreeSerial(candidate, used, firstNo, upper));
+    inspSetAutoDocNo(docNo, company);
+  }
+
   try {
     let fname = '';
     let wordChecked = realChecked;
@@ -22898,7 +22910,46 @@ function docBaseForCompany(company) {
   const s = String(company || '').trim();
   return /麗|li\s*sheng|lisheng|818/i.test(s) ? 81800 : 72200;
 }
-async function nextDocNo(company) {
+function axxIncSerial(n, firstNo, upper) {
+  return n >= upper ? firstNo : n + 1;
+}
+// A201 / A202 共用防重：同一天內，兩張表出現過的流水號都視為已使用。
+// daily_output 同一批會有多支構件，因此以 Set 去重；A201 則一個工程群組一筆。
+async function axxUsedSerialsOnDate(date, company) {
+  const base = docBaseForCompany(company), firstNo = base + 1, upper = base + 99;
+  const q = 'select=serial_no&' +
+    'serial_no=gte.' + firstNo + '&serial_no=lte.' + upper;
+  const [daily, a201] = await Promise.all([
+    sbFetchAll('/rest/v1/daily_output?' + q + '&date=eq.' + encodeURIComponent(date)),
+    sbFetchAll('/rest/v1/a201_records?' + q + '&work_date=eq.' + encodeURIComponent(date))
+  ]);
+  const used = new Set();
+  [daily, a201].forEach(res => (Array.isArray(res.data) ? res.data : []).forEach(row => {
+    const n = parseInt(row.serial_no, 10);
+    if (!isNaN(n) && n >= firstNo && n <= upper) used.add(n);
+  }));
+  return used;
+}
+async function axxSerialUsedOnDate(date, serial) {
+  const value = String(serial || '').trim();
+  if (!date || !value) return false;
+  const [daily, a201] = await Promise.all([
+    sbFetch('/rest/v1/daily_output?select=id&date=eq.' + encodeURIComponent(date) + '&serial_no=eq.' + encodeURIComponent(value) + '&limit=1'),
+    sbFetch('/rest/v1/a201_records?select=id&work_date=eq.' + encodeURIComponent(date) + '&serial_no=eq.' + encodeURIComponent(value) + '&limit=1')
+  ]);
+  return (Array.isArray(daily.data) && daily.data.length > 0) ||
+    (Array.isArray(a201.data) && a201.data.length > 0);
+}
+function axxNextFreeSerial(candidate, used, firstNo, upper) {
+  let n = candidate;
+  // 一個號段只有 99 號；最多掃一圈，避免資料異常時無限迴圈。
+  for (let i = 0; i < 99; i++) {
+    if (!used.has(n)) return n;
+    n = axxIncSerial(n, firstNo, upper);
+  }
+  throw new Error('當日流水號已全部使用（' + firstNo + '～' + upper + '）');
+}
+async function nextDocNo(company, targetDate) {
   const base = docBaseForCompany(company);       // 72200 / 81800
   const upper = base + 99;                        // 72299 / 81899
   const firstNo = base + 1;                        // 72201 / 81801
@@ -22913,8 +22964,11 @@ async function nextDocNo(company) {
     if (isNaN(n) || n < firstNo || n > upper) return;
     if (nums[nums.length - 1] !== n) nums.push(n); // 同張申驗單多支構件只算一次
   });
-  if (!nums.length) return String(firstNo);
-  const inc = n => n >= upper ? firstNo : n + 1;
+  if (!nums.length) {
+    const used = await axxUsedSerialsOnDate(targetDate || inspTodayStr(), company);
+    return String(axxNextFreeSerial(firstNo, used, firstNo, upper));
+  }
+  const inc = n => axxIncSerial(n, firstNo, upper);
   let lastAuto = nums[0];
   // 最新一筆若比前一筆倒退，視為手動追加舊號；正常的 99→01 循環不算倒退。
   if (nums.length > 1 && nums[0] < nums[1] && !(nums[0] === firstNo && nums[1] === upper)) {
@@ -22923,7 +22977,9 @@ async function nextDocNo(company) {
       if (nums[i] === inc(nums[i + 1])) { lastAuto = nums[i]; break; }
     }
   }
-  return String(inc(lastAuto));
+  const candidate = inc(lastAuto);
+  const used = await axxUsedSerialsOnDate(targetDate || inspTodayStr(), company);
+  return String(axxNextFreeSerial(candidate, used, firstNo, upper));
 }
 
 // ═══════════ A201/A202 長榮登錄統計(獨立頁面)═══════════
@@ -23057,17 +23113,25 @@ async function a201AssignSerials() {
     if (!lastRec[co] || rid > lastRec[co].id) lastRec[co] = { id: rid, serial: parseInt(r.serial_no, 10) };
   });
   const RANGE = A201_RANGE;
-  function nextSerial(co) {
+  const usedByDateCompany = {};
+  await Promise.all([...new Set(news.map(g => g.date + '|' + g.company))].map(async k => {
+    const cut = k.lastIndexOf('|'), date = k.slice(0, cut), co = k.slice(cut + 1);
+    usedByDateCompany[k] = await axxUsedSerialsOnDate(date, co);
+  }));
+  function nextSerial(co, date) {
     const rg = RANGE[co] || RANGE['鎮山'];
     const prev = lastRec[co];
     let n;
     if (!prev || isNaN(prev.serial)) n = rg.base + 1;
     else { n = prev.serial + 1; if (n > rg.upper) n = rg.base + 1; }
+    const used = usedByDateCompany[date + '|' + co] || new Set();
+    n = axxNextFreeSerial(n, used, rg.base + 1, rg.upper);
+    used.add(n); // 同一次批次內的新 A201 也不可互撞
     lastRec[co] = { id: prev ? prev.id : 0, serial: n };
     return n;
   }
   const ins = news.map(g => {
-    const n = nextSerial(g.company);
+    const n = nextSerial(g.company, g.date);
     return { work_date: g.date, proj_num: g.proj, company: g.company, serial_no: String(n), done: false, done_time: null };
   });
   const r = await sbFetch('/rest/v1/a201_records?on_conflict=work_date,proj_num', {
