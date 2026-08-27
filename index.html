@@ -646,6 +646,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .axx-table td.axx-parts{text-align:left;font-family:var(--mono);font-size:12px;line-height:1.7;word-break:break-word;min-width:280px;color:var(--text)}
 .axx-time{color:var(--red);font-family:var(--mono);font-size:12px;white-space:nowrap}
 .axx-num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.axx-serial-input{width:76px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12px;text-align:center;font-variant-numeric:tabular-nums}
+.axx-serial-input:focus{outline:none;border-color:var(--accent2);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent2) 18%,transparent)}
+.axx-serial-input:disabled{opacity:.55;cursor:not-allowed}
 .axx-chk{width:17px;height:17px;accent-color:var(--accent2);cursor:pointer}
 .axx-empty{text-align:center;color:var(--text3);padding:24px !important}
 .dash-ev-flex{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -3339,6 +3342,7 @@ window.normalizeFullWidth=function(value){
     #ds-viewer-part{white-space:nowrap}.ds-viewer-page-input{width:58px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px;text-align:center}
     @media(max-width:600px){#ds-viewer-head{height:92px;align-content:center;flex-wrap:wrap;padding:7px 9px}#ds-viewer-head .ds-viewer-info{width:100%}#ds-viewer-nav{width:100%;justify-content:space-between}#ds-frame,#ds-canvas-wrap{height:calc(100% - 92px)}.ds-viewer-page-input{width:48px}}
     @media(max-width:800px){#page-drawingsearch .ds-top{grid-template-columns:1fr}#page-drawingsearch .ds-card{padding:11px}.ds-code{font-size:16px}#page-drawingsearch .ds-map-row{grid-template-columns:58px minmax(0,1fr) auto}#page-drawingsearch .ds-map-detail{grid-column:2/4}#page-drawingsearch .ds-map-row .btn:last-child{grid-column:auto}#page-drawingsearch .ds-file-name{max-width:100%;flex:1 1 160px}#page-drawingsearch .ds-file-picker{flex:1 1 auto;justify-content:center}#page-drawingsearch .ds-files-head{align-items:stretch}#page-drawingsearch .ds-file-filter{width:100%}}
+    @media(max-width:768px){#page-drawingsearch #ds-upload-panel{display:none!important}#page-drawingsearch .ds-delete-owner-only{display:none!important}}
     #page-drawingsearch .ds-search-card{margin-bottom:12px}
     #page-drawingsearch .ds-upload-details{padding:0;overflow:hidden}
     #page-drawingsearch .ds-upload-details>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;user-select:none}
@@ -4052,7 +4056,7 @@ window.normalizeFullWidth=function(value){
             <input type="date" id="ovr-price-from" onchange="ovrRenderStat('price')"/>
             <span style="color:var(--text3)">~</span>
             <input type="date" id="ovr-price-to" onchange="ovrRenderStat('price')"/>
-            <button class="btn" id="ovr-price-expand" onclick="ovrExpandTbl('price')" title="攤平整份表格，方便截整頁畫面">展開全部列 ▼</button>
+            <button class="btn active" id="ovr-price-expand" onclick="ovrExpandTbl('price')" title="收合表格，改回固定高度捲動">收合表格 ▲</button>
           </div>
           <div id="ovr-price-content"><div class="empty-state">載入中...</div></div>
         </div>
@@ -4067,7 +4071,7 @@ window.normalizeFullWidth=function(value){
             <span class="ovr-seg-sep">月份</span>
             <input type="month" id="ovr-manu-month" onchange="ovrRenderStat('manu')"/>
             <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">(當月 1 日 ～ 月底)</span>
-            <button class="btn" id="ovr-manu-expand" onclick="ovrExpandTbl('manu')" title="攤平整份表格，方便截整頁畫面">展開全部列 ▼</button>
+            <button class="btn active" id="ovr-manu-expand" onclick="ovrExpandTbl('manu')" title="收合表格，改回固定高度捲動">收合表格 ▲</button>
           </div>
           <div id="ovr-manu-content"><div class="empty-state">載入中...</div></div>
         </div>
@@ -4083,7 +4087,7 @@ window.normalizeFullWidth=function(value){
             <input type="date" id="ovr-eg-from" onchange="ovrRenderStat('eg')"/>
             <span style="color:var(--text3)">~</span>
             <input type="date" id="ovr-eg-to" onchange="ovrRenderStat('eg')"/>
-            <button class="btn" id="ovr-eg-expand" onclick="ovrExpandTbl('eg')" title="攤平整份表格，方便截整頁畫面">展開全部列 ▼</button>
+            <button class="btn active" id="ovr-eg-expand" onclick="ovrExpandTbl('eg')" title="收合表格，改回固定高度捲動">收合表格 ▲</button>
           </div>
           <div id="ovr-eg-content"><div class="empty-state">載入中...</div></div>
         </div>
@@ -5393,6 +5397,9 @@ window.normalizeFullWidth=function(value){
           <span class="prod-count" id="spxCount-reserved"></span>
         </div>
         <div id="prodBanner-reserved" class="prod-filter-banner" style="display:none"></div>
+        <div id="reserved-complete-rule" class="section-label" style="margin:0 0 8px;line-height:1.7">
+          完成隱藏規則：填有「領取日期」，且未設定為「需退還」時即視為完成；若選擇「需退還」，還必須勾選「已退還」或填入退還日期才算完成。完成資料預設隱藏，可按「顯示已完成」查看。
+        </div>
         <div class="spx-wrap">
           <table id="spx-reserved" class="layout-table spx-table">
             <thead id="spxHead-reserved"></thead>
@@ -9597,7 +9604,7 @@ function clearSavedSession() {
   try { localStorage.removeItem(SESSION_KEY); } catch(e) {}
 }
 
-// ── 記住目前所在頁面 (重新整理/書籤回到原頁) + 支援瀏覽器上一頁/下一頁 + 網址 hash 路由 ──
+// ── 記住目前所在頁面（僅真正重新整理時還原）+ 支援瀏覽器上一頁/下一頁 + 網址 hash 路由 ──
 const PAGE_KEY = 'zhenshan_view';
 let _applyingPop = false;   // 正在還原「上一頁/下一頁」時,避免又推入新的歷史紀錄
 // view -> 網址 hash (一律以 #/ 開頭,絕不含 access_token,不會干擾 Google 登入)
@@ -9651,7 +9658,7 @@ async function applyView(v) {
   } catch(e) { /* 還原失敗就維持在目前畫面 */ }
   _applyingPop = false;
 }
-// 登入後還原上次頁面:優先用網址 hash (書籤/分享網址),其次用上次記錄;再把目前狀態設為歷史起點
+// 真正重新整理後還原頁面：優先用網址 hash，其次用上次記錄；瀏覽器重新開啟不會呼叫此函式。
 async function restoreLastView() {
   const hashed = hashToView(location.hash), saved = getView();
   // 相容舊版只寫入 #/prod 的網址：同頁時保留 localStorage 中的子分頁／詳情位置。
@@ -22930,13 +22937,19 @@ async function axxUsedSerialsOnDate(date, company) {
   }));
   return used;
 }
-async function axxSerialUsedOnDate(date, serial) {
+async function axxSerialUsedOnDate(date, serial, excludeA201Id, failClosed) {
   const value = String(serial || '').trim();
   if (!date || !value) return false;
+  const exclude = excludeA201Id == null ? '' : '&id=neq.' + encodeURIComponent(excludeA201Id);
   const [daily, a201] = await Promise.all([
     sbFetch('/rest/v1/daily_output?select=id&date=eq.' + encodeURIComponent(date) + '&serial_no=eq.' + encodeURIComponent(value) + '&limit=1'),
-    sbFetch('/rest/v1/a201_records?select=id&work_date=eq.' + encodeURIComponent(date) + '&serial_no=eq.' + encodeURIComponent(value) + '&limit=1')
+    sbFetch('/rest/v1/a201_records?select=id&work_date=eq.' + encodeURIComponent(date) + '&serial_no=eq.' + encodeURIComponent(value) + exclude + '&limit=1')
   ]);
+  // 防重查詢本身失敗時採「禁止儲存」，不可把連線／權限錯誤誤判成沒有重號。
+  if (daily.ok === false || a201.ok === false) {
+    if (failClosed) throw new Error('duplicate-check-failed');
+    return false;
+  }
   return (Array.isArray(daily.data) && daily.data.length > 0) ||
     (Array.isArray(a201.data) && a201.data.length > 0);
 }
@@ -23171,12 +23184,56 @@ function a201Render() {
       '<td class="axx-num">' + esc(g.zone || '—') + '</td>' +
       '<td class="axx-num">' + esc(g.proc || '—') + '</td>' +
       '<td class="axx-num">' + esc(g.sub || '—') + '</td>' +
-      '<td class="axx-num">' + esc(r ? r.serial_no : '—') + '</td>' +
+      '<td class="axx-num">' + (r
+        ? '<input class="axx-serial-input" type="text" inputmode="numeric" maxlength="5" value="' + esc(r.serial_no || '') + '" data-original="' + esc(r.serial_no || '') + '" title="可手動修正；儲存時會檢查同日期的 A201／A202 流水號不可重複" onkeydown="a201SerialKeydown(event,this)" onchange="a201SerialEdit(' + r.id + ',this)"/>'
+        : '—') + '</td>' +
       '<td class="axx-num">' + g.qty + '</td>' +
       '<td class="axx-parts">' + esc(axxPartsStr(g.parts)) + '</td>' +
       '<td><button class="btn" style="padding:2px 8px;font-size:11px" ' + (r ? '' : 'disabled title="尚未建立紀錄(需登入)" ') + 'onclick="a201KeyIn(' + arg + ')">鍵入系統</button></td>' +
     '</tr>';
   }).join('');
+}
+function a201SerialKeydown(e, el) {
+  if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+  else if (e.key === 'Escape') { el.value = el.dataset.original || ''; el.blur(); }
+}
+async function a201SerialEdit(id, el) {
+  const rec = a201Recs.find(r => String(r.id) === String(id));
+  if (!rec) { a201Render(); return; }
+  const oldValue = String(rec.serial_no || '').trim();
+  const value = String(el.value || '').trim();
+  if (value === oldValue) { el.value = oldValue; return; }
+  const company = axxCompanyOfSerial(oldValue, rec.company);
+  const rg = A201_RANGE[company] || A201_RANGE['鎮山'];
+  const n = Number(value);
+  if (!/^\d{5}$/.test(value) || !Number.isInteger(n) || n < rg.base + 1 || n > rg.upper) {
+    alert(company + '流水編號必須介於 ' + (rg.base + 1) + '～' + rg.upper + '');
+    el.value = oldValue;
+    return;
+  }
+  el.disabled = true;
+  try {
+    if (await axxSerialUsedOnDate(rec.work_date, value, rec.id, true)) {
+      alert(rec.work_date + ' 的流水編號 ' + value + ' 已存在於 A201 或 A202，請改用其他號碼');
+      el.value = oldValue;
+      return;
+    }
+    const result = await sbFetch('/rest/v1/a201_records?id=eq.' + encodeURIComponent(rec.id), {
+      method:'PATCH', headers:{'Prefer':'return=minimal'}, body:JSON.stringify({serial_no:value})
+    });
+    if (!result.ok) {
+      alert('流水編號儲存失敗，請確認已登入');
+      el.value = oldValue;
+      return;
+    }
+    rec.serial_no = value;
+    el.dataset.original = value;
+  } catch (err) {
+    alert('流水編號檢查或儲存失敗，請稍後再試');
+    el.value = oldValue;
+  } finally {
+    el.disabled = false;
+  }
 }
 async function a201Toggle(id, checked) {
   if (id == null) return;
@@ -23465,6 +23522,14 @@ document.addEventListener('DOMContentLoaded', function recoverMultilevelModuleEa
 addDXFRow(200,300,25);
 addDXFRow(150,250,20);
 
+function isActualPageReload() {
+  try {
+    const entry = performance.getEntriesByType?.('navigation')?.[0];
+    if (entry) return entry.type === 'reload';
+    return performance.navigation?.type === 1; // 舊版瀏覽器 TYPE_RELOAD
+  } catch (e) { return false; }
+}
+
 (async function() {
   // 1. Handle Google OAuth redirect if present
   const hash = window.location.hash;
@@ -23472,10 +23537,10 @@ addDXFRow(150,250,20);
     await checkOAuthCallback();
     return;
   }
-  // 2. Try restore saved session (survives refresh)
+  // 2. 登入憑證可跨瀏覽器重開保留，但頁面位置只有真正重新整理才還原。
   const restored = await restoreSession();
   if (restored) {
-    enterApp(true);   // 重新整理沿用既有 session:還原上次頁面
+    enterApp(isActualPageReload());
   } else {
     // show login only after we know there's no valid session
     document.getElementById('login-screen').style.display = 'flex';
@@ -27846,7 +27911,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
 
   // 展開全部列：拿掉表格的 max-height（.table-scroll 預設 60vh 內捲），
   // 讓整份表格一次攤平，方便截整頁畫面（不再只露出幾列 + 內部滾輪）
-  var ovrExpanded={price:false,manu:false,eg:false};
+  // 三種產值統計預設全部展開；使用者仍可按按鈕暫時收合。
+  var ovrExpanded={price:true,manu:true,eg:true};
   function applyOvrExpand(mode){
     var el=document.getElementById('ovr-'+mode+'-content'); if(!el) return;
     var sc=el.querySelector('.table-scroll'); if(sc) sc.style.maxHeight=ovrExpanded[mode]?'none':'';
@@ -27855,7 +27921,11 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     ovrExpanded[mode]=!ovrExpanded[mode];
     applyOvrExpand(mode);
     var b=document.getElementById('ovr-'+mode+'-expand');
-    if(b){ b.textContent=ovrExpanded[mode]?'收合表格 ▲':'展開全部列 ▼'; b.classList.toggle('active',ovrExpanded[mode]); }
+    if(b){
+      b.textContent=ovrExpanded[mode]?'收合表格 ▲':'展開全部列 ▼';
+      b.title=ovrExpanded[mode]?'收合表格，改回固定高度捲動':'攤平整份表格，方便截整頁畫面';
+      b.classList.toggle('active',ovrExpanded[mode]);
+    }
   };
 
   window.ovrRenderStat=function(mode){
@@ -32498,6 +32568,7 @@ async function prodInit(){
     await prodClearWeldingProjectNumbers();
     prodManual   = (rm.ok&&Array.isArray(rm.data))?rm.data:[];
     prodOnline   = (ro.ok&&Array.isArray(ro.data))?ro.data:[];
+    if(typeof spxDetectOptional==='function') spxDetectOptional();
     prodRebuildOnline();
   }catch(e){ console.error(e); }
   prodBusy=false;
@@ -33127,6 +33198,13 @@ function pdResNeed(k,v){ const r=pdRowOf('reserved',k); if(!r) return;
   pdCommit('reserved',r); }
 function pdResReturn(k,on){ const r=pdRowOf('reserved',k); if(!r) return; r.return_date=on?(r.return_date||spxToday()):null; pdCommit('reserved',r); }
 function pdResReturnDate(k,v){ const r=pdRowOf('reserved',k); if(!r) return; r.return_date=prodDate(v); pdCommit('reserved',r); }
+function pdResReturnCheck(r){
+  const need=r&&r.need_return===true, done=prodResReturned(r), k=Number(r&&r._key||0);
+  const text=need?(done?'已退還':'未退還'):(r&&r.need_return===false?'不需退還':'先設定是否退還');
+  const title=need?'勾選後自動帶入今天為退還日期':'請先在「是否退還」選擇「需退還」';
+  return '<label style="display:flex;align-items:center;justify-content:center;gap:6px;cursor:'+(need?'pointer':'not-allowed')+'" title="'+title+'">'+
+    '<input type="checkbox" style="min-width:0;width:18px;height:18px" '+(done?'checked ':'')+(need?'':'disabled ')+'onchange="pdResReturn('+k+',this.checked)"><span>'+text+'</span></label>';
+}
 // 退還:徽章 / 是否退還下拉 / 已退還勾選 / 退還日期,各自一格
 function pdResReturnBox(r,k){
   const need=r.need_return===true, no=r.need_return===false, done=prodResReturned(r);
@@ -33835,7 +33913,8 @@ const SPX={
       {k:'mat_no',h:'餘料編號'},{k:'spec',h:'規格',wide:true},{k:'qty',h:'數量',num:true},{k:'work_form',h:'施作長度'},
       {k:'comp_no',h:'構件編號'},{k:'issue_date',h:'給單日期'},{k:'take_date',h:'領取日期'},
       {k:'need_return',h:'是否退還',sel:['','是','否'],bool:true,noData:true},
-      // 退了沒:需先跑 reserved_return_migration.sql;未跑時整欄自動隱藏
+      // 退了沒:勾選會自動帶入今天；仍保留日期欄供補登/修正。
+      {k:'_returned',h:'已退還',virtual:true,noData:true,render:pdResReturnCheck,optional:'reserved_return'},
       {k:'return_date',h:'退還日期',date:true,noData:true,optional:'reserved_return'},{k:'remark',h:'備註',wide:true}
     ]},
   product:{ tbl:'product_material', sort:spxNewestFirst,
@@ -34012,7 +34091,20 @@ function spxRowHtml(key,i){ const cfg=SPX[key], arr=prodArr(key), r=arr[i], blan
   h+='<td class="del-col"><button class="btn-del-row" title="刪除整列" onclick="spxDelRow(\''+key+'\','+i+')">✕</button></td></tr>';
   return h;
 }
-function spxEdit(key,i,field,val){ const r=prodArr(key)[i]; if(!r) return; const c=SPX[key].cols.find(x=>x.k===field); spxSnapshot(key); r[field]=c?spxCoerce(c,val):val; if(key==='product'&&field==='is_picked') r.pickup_date=r.is_picked?(r.pickup_date||spxToday()):''; if(key==='manual'&&field==='completed') r.take_date=r.completed?(r.take_date||spxToday()):''; spxMarkDirty(key,i); const hideTrackStatus=key==='track'&&field==='status'&&((r.status==='OK'&&!prodShowCompleted.track)||(r.status==='轉包'&&!prodTrackShowSubcontract)); if((c&&c.check)||hideTrackStatus){spxRender(key);spxAfterChange(key);} if(key==='detail'&&typeof prodRenderDetailHeader==='function') prodRenderDetailHeader(); }
+function spxEdit(key,i,field,val){
+  const r=prodArr(key)[i]; if(!r) return;
+  const c=SPX[key].cols.find(x=>x.k===field);
+  spxSnapshot(key);
+  r[field]=c?spxCoerce(c,val):val;
+  if(key==='product'&&field==='is_picked') r.pickup_date=r.is_picked?(r.pickup_date||spxToday()):'';
+  if(key==='manual'&&field==='completed') r.take_date=r.completed?(r.take_date||spxToday()):'';
+  const resNeedChanged=key==='reserved'&&field==='need_return';
+  if(resNeedChanged&&r.need_return!==true) r.return_date=null;
+  spxMarkDirty(key,i);
+  const hideTrackStatus=key==='track'&&field==='status'&&((r.status==='OK'&&!prodShowCompleted.track)||(r.status==='轉包'&&!prodTrackShowSubcontract));
+  if((c&&c.check)||hideTrackStatus||resNeedChanged){spxRender(key);spxAfterChange(key);}
+  if(key==='detail'&&typeof prodRenderDetailHeader==='function') prodRenderDetailHeader();
+}
 
 // 勾選欄批次更新：一次 PATCH 一批，避免數百列逐筆儲存。
 async function spxBulkSetCheck(key,field,rows,checked){
@@ -36804,7 +36896,9 @@ function dsRenderFiles() {
     const zoneText = [zone?.zone_code, zone?.zone_name].filter(Boolean).join(' ');
     const locationText = [projectText || '未知工程', zoneText || '未知工程區'].join(' · ');
     const uploadedAt = dsUploadedAt(file.created_at);
-    const canManage = currentUser?.isAdmin || file.created_by === currentUser?.id;
+    const isAdmin = !!currentUser?.isAdmin;
+    const isOwner = String(file.created_by || '') === String(currentUser?.id || '');
+    const canManage = isAdmin || isOwner;
     const sameZone = String(file.zone_id) === String(dsZoneId());
     const isActive = file.id === dsActiveFileId;
     return '<div class="ds-item ds-file-card' + (isActive ? ' is-active' : '') + '" role="button" tabindex="0" aria-label="選擇 ' + dsEsc(file.original_name) + ' 進行搜尋" onclick="if(!event.target.closest(\'button\'))dsActivateFile(\'' + file.id + '\')" onkeydown="dsFileCardKeydown(event,\'' + file.id + '\')"><div class="ds-item-main"><div>' + dsEsc(file.original_name) + (isActive ? ' · 搜尋中' : '') + '</div>' +
@@ -36813,7 +36907,7 @@ function dsRenderFiles() {
       (uploadedAt ? ' · ' + dsEsc(uploadedAt) : '') + '</div></div><div class="ds-row">' +
       '<button class="btn" onclick="dsOpenFile(\'' + file.id + '\',1)">開啟</button>' +
       (canManage ? '<button class="btn" onclick="' + (sameZone ? 'dsEditFileMappings' : 'dsSelectFileZone') + '(\'' + file.id + '\')">' + (sameZone ? '編輯標記' : '切換並編輯') + '</button>' : '') +
-      (canManage ? '<button class="btn" onclick="dsDeleteFile(\'' + file.id + '\')">刪除</button>' : '') +
+      (canManage ? '<button class="btn' + (!isAdmin ? ' ds-delete-owner-only' : '') + '" onclick="dsDeleteFile(\'' + file.id + '\')">刪除</button>' : '') +
       '</div></div>';
   }).join('');
 }
@@ -37212,7 +37306,18 @@ async function dsCloseViewer() {
 
 async function dsDeleteFile(id) {
   const file = dsFiles.find(item => item.id === id) || dsAllFiles.find(item => item.id === id);
-  if (!file || !confirm('確定刪除「' + file.original_name + '」及其全部頁碼標記嗎？')) return;
+  if (!file) return;
+  const isAdmin = !!currentUser?.isAdmin;
+  const isOwner = String(file.created_by || '') === String(currentUser?.id || '');
+  if (window.matchMedia('(max-width:768px)').matches && !isAdmin) {
+    alert('手機版只有管理員可以刪除圖面。');
+    return;
+  }
+  if (!isAdmin && !isOwner) {
+    alert('只有管理員或原上傳者可以刪除圖面。');
+    return;
+  }
+  if (!confirm('確定刪除「' + file.original_name + '」及其全部頁碼標記嗎？')) return;
   try {
     const paths = Array.from(new Set([file.storage_key, ...(Array.isArray(file.storage_parts) ? file.storage_parts.map(part => part.storage_key) : [])].filter(Boolean)));
     const storageResult = await dsStorageRemove(paths);
