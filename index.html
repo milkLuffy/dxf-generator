@@ -5116,6 +5116,23 @@ window.normalizeFullWidth=function(value){
     #page-prod tr.prod-child .prod-doc{padding-left:16px;color:var(--text2)}
     #page-prod .prod-frac{font-size:10px;color:var(--text3);font-family:var(--mono);margin-left:4px}
     #page-prod .chip.mini{padding:1px 6px;margin:1px}
+    #page-prod .sp-notion-tags{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+    #page-prod .sp-item-tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:5px;font:11px/1.5 var(--mono);white-space:nowrap;border:1px solid transparent}
+    #page-prod .sp-item-tag.it-0{background:rgba(10,132,255,.15);color:var(--accent2)}
+    #page-prod .sp-item-tag.it-1{background:rgba(255,159,10,.16);color:#d97706}
+    #page-prod .sp-item-tag.it-2{background:rgba(191,90,242,.15);color:var(--purple)}
+    #page-prod .sp-item-tag.it-3{background:rgba(50,215,75,.14);color:var(--green)}
+    #page-prod .sp-item-tag.it-4{background:rgba(255,69,58,.13);color:#ef6a61}
+    #page-prod .sp-item-tag.it-5{background:var(--bg4);color:var(--text2)}
+    #page-prod .sp-item-tag.item-done{position:relative}
+    #page-prod .sp-item-tag.item-done:after{content:'✓';position:absolute;right:-2px;top:-2px;width:11px;height:11px;display:grid;place-items:center;border-radius:50%;background:var(--green);color:#fff;border:1.5px solid var(--bg2);font:700 7px/1 var(--sans);box-sizing:content-box;pointer-events:none}
+    #page-prod .sp-cp-link{display:inline-flex;align-items:center;gap:6px;background:none;border:0;color:var(--text);font:600 12px var(--mono);cursor:pointer;padding:3px 5px;border-radius:5px}
+    #page-prod .sp-cp-link:hover{background:var(--bg4)}
+    #page-prod .sp-zone-tag{display:inline-flex;padding:2px 7px;border-radius:5px;background:rgba(142,142,147,.14);color:var(--text2);font:11px var(--mono)}
+    /* SP 表格的項目固定單行，避免項目多時把整列撐高 */
+    #spx-track td:nth-child(4) .sp-notion-tags,#spx-detail td:nth-child(3) .sp-notion-tags{flex-wrap:nowrap;overflow:hidden}
+    #spx-track td:nth-child(4)>button,#spx-detail td:nth-child(3)>button{display:block;width:100%;max-width:100%;overflow:hidden;white-space:nowrap!important}
+    #spx-track td:nth-child(4),#spx-detail td:nth-child(3){padding-top:5px;padding-bottom:5px}
     #page-prod .prod-projrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
     #page-prod .prod-projrow label{font-size:12px;color:var(--text2);font-weight:500}
     #page-prod .prod-projrow input{padding:6px 10px;border:1px solid var(--accent);border-radius:var(--rad);font-size:12px;color:var(--text);background:var(--bg);outline:none;width:320px;max-width:100%}
@@ -5182,9 +5199,11 @@ window.normalizeFullWidth=function(value){
     #page-prod .pm-status .pm-menu{flex:0 0 auto}
     #page-prod .pm-sub{font-size:11px;color:var(--text3);font-family:var(--mono)}
     /* 摘要列:固定兩行高(內容多少都一樣高),避免卡片參差不齊 */
-    #page-prod .pm-sum{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;height:32px;line-height:16px;word-break:break-all}
+    #page-prod .pm-sum{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;height:16px;line-height:16px;word-break:break-all}
     #page-prod .pm-sum b{color:var(--text2);font-weight:600}
     #page-prod .pm-sum .pms-x{color:var(--text3)}
+    /* 小卡把兩排項目的預留高度放在項目區本身，不再夾在摘要與項目之間形成空白列 */
+    #page-prod .prod-mini>.sp-notion-tags{min-height:45px;align-content:flex-start;overflow:visible}
     /* 看板依整體狀態分區塊(進行中/未開始/完成…各自一段) */
     #page-prod .prod-group-head{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;color:var(--text2);border-top:1px solid var(--border);padding-top:10px;margin-top:4px}
     #page-prod .prod-group-head:first-child,#page-prod .prod-mini-head+.prod-group-head{border-top:0;padding-top:0;margin-top:0}
@@ -5260,6 +5279,21 @@ window.normalizeFullWidth=function(value){
     .spx-table th{text-align:center;padding:7px 9px;position:sticky;top:0;z-index:4;background:var(--bg3);color:var(--text2);font-weight:600;font-size:11.5px;white-space:nowrap;border-bottom:1px solid var(--border)}
     .spx-table td{padding:3px 4px;white-space:nowrap;text-align:center;border-bottom:1px solid var(--border);vertical-align:middle}
     .spx-table tbody tr:hover td{background:var(--bg2)}
+    #spx-track,#spx-detail{width:1030px;table-layout:fixed}
+    #spx-track th:nth-child(1),#spx-track td:nth-child(1){width:155px}
+    #spx-track th:nth-child(2),#spx-track td:nth-child(2){width:125px}
+    #spx-track th:nth-child(3),#spx-track td:nth-child(3){width:170px}
+    #spx-track th:nth-child(4),#spx-track td:nth-child(4){width:285px}
+    #spx-track th:nth-child(5),#spx-track td:nth-child(5){width:105px}
+    #spx-track th:nth-child(6),#spx-track td:nth-child(6){width:150px}
+    #spx-track th:nth-child(7),#spx-track td:nth-child(7){width:40px}
+    #spx-detail th:nth-child(1),#spx-detail td:nth-child(1){width:155px}
+    #spx-detail th:nth-child(2),#spx-detail td:nth-child(2){width:170px}
+    #spx-detail th:nth-child(3),#spx-detail td:nth-child(3){width:285px}
+    #spx-detail th:nth-child(4),#spx-detail td:nth-child(4){width:105px}
+    #spx-detail th:nth-child(5),#spx-detail td:nth-child(5){width:275px}
+    #spx-detail th:nth-child(6),#spx-detail td:nth-child(6){width:40px}
+    #spx-track tbody tr.lt-input-row td,#spx-detail tbody tr.lt-input-row td{position:sticky;top:var(--lt-head-h,34px);z-index:3;background:var(--bg2);box-shadow:0 1px 0 var(--border)}
     /* 儲存格輸入框:比照「點工單－明細登錄」——固定填滿儲存格、大小統一 */
     .spx-table td input,.spx-table td select{box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:12px;padding:4px 8px;outline:none;text-align:center;width:100%;min-width:96px}
     /* 長文欄(事由/備註/規格):整欄統一,預設 400px,更長才成長到 640px 上限 */
@@ -5292,6 +5326,39 @@ window.normalizeFullWidth=function(value){
     .pm-detail-table th{color:var(--text2);background:var(--bg3);position:sticky;top:52px}
     .pm-detail-table td{color:var(--text)}
     .pm-detail-table .num{text-align:right}
+    /* SP 的 CP 詳情：沿用本站卡片、標籤與輸入元件語言 */
+    .pm-sp-modal{width:min(860px,94vw);max-height:min(82vh,760px);background:var(--bg2);border-color:var(--border);overflow:hidden;display:flex;flex-direction:column}
+    .pm-sp-modal .pm-detail-head{flex:0 0 auto;padding:16px 20px;background:var(--bg2)}
+    .pm-sp-modal .pm-detail-title{font-size:17px;letter-spacing:.02em}
+    .pm-sp-modal .pm-detail-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:6px}
+    .pm-sp-modal .pm-sp-meta-dot{color:var(--text3)}
+    .pm-sp-modal .pm-detail-close{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;padding:0;transition:background .12s,color .12s}
+    .pm-sp-modal .pm-detail-close:hover{background:var(--bg4);color:var(--text)}
+    .pm-sp-config{display:grid;grid-template-columns:minmax(230px,.8fr) minmax(360px,1.4fr);gap:12px;padding:14px 16px;background:var(--bg)}
+    .pm-sp-section{min-width:0;padding:13px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px}
+    .pm-sp-section-title{font:600 11px var(--mono);color:var(--text2);letter-spacing:.04em;margin-bottom:10px}
+    .pm-sp-zone-add{display:flex;gap:7px;margin-top:10px}
+    .pm-sp-zone-add .input-modal-field{height:34px;max-width:none!important;padding:6px 10px;font:12px var(--mono);background:var(--bg3)}
+    .pm-sp-zone-add .btn{height:34px;padding:5px 12px}
+    .pm-sp-items{display:flex;align-items:center;gap:5px 12px;flex-wrap:wrap}
+    .pm-sp-items label{margin:0!important;padding:4px 7px!important;border:1px solid transparent;border-radius:6px;color:var(--text2);font:11.5px var(--mono);transition:background .12s,border-color .12s}
+    .pm-sp-items label:hover{background:var(--bg4);border-color:var(--border)}
+    .pm-sp-items input[type=checkbox]{width:14px;height:14px;margin:0;accent-color:var(--accent2)}
+    .pm-sp-table-wrap{overflow:auto;min-height:0;border-top:1px solid var(--border)}
+    .pm-sp-modal .pm-detail-table{table-layout:fixed}
+    .pm-sp-modal .pm-detail-table th{top:0;z-index:1;padding:9px 14px;font-size:11px;letter-spacing:.04em}
+    .pm-sp-modal .pm-detail-table td{padding:7px 14px;height:36px}
+    .pm-sp-modal .pm-detail-table tbody tr:hover td{background:var(--bg3)}
+    .pm-sp-modal .pm-detail-table th:nth-child(1){width:145px}
+    .pm-sp-modal .pm-detail-table th:nth-child(2){width:125px}
+    .pm-sp-modal .pm-detail-table th:nth-child(3){width:135px}
+    .pm-sp-modal .pm-detail-table select,.pm-sp-modal .pm-detail-table input{box-sizing:border-box;width:100%;height:30px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font:12px var(--mono);padding:4px 8px;outline:none}
+    .pm-sp-modal .pm-detail-table select:focus,.pm-sp-modal .pm-detail-table input:focus{border-color:var(--accent2)}
+    .pm-sp-modal .pm-detail-table select.stcell-清點中{background:rgba(255,214,10,.16);color:var(--yellow);border-color:rgba(255,214,10,.28)}
+    .pm-sp-modal .pm-detail-table select.stcell-OK{background:rgba(50,215,75,.14);color:var(--green);border-color:rgba(50,215,75,.25)}
+    .pm-sp-modal .pm-detail-table select.stcell-送工地{background:rgba(10,132,255,.16);color:var(--accent2);border-color:rgba(10,132,255,.28)}
+    .pm-sp-modal .pm-detail-table select.stcell-轉包{background:rgba(191,90,242,.16);color:var(--purple);border-color:rgba(191,90,242,.28)}
+    @media(max-width:720px){.pm-sp-config{grid-template-columns:1fr}.pm-sp-modal{width:96vw;max-height:90vh}.pm-sp-modal .pm-detail-table{min-width:660px}}
     .pm-summary{margin:18px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
     .pm-summary-title{padding:10px 12px;background:var(--bg3);color:var(--text);font:700 13px var(--mono);border-bottom:1px solid var(--border)}
     .pm-summary .pm-detail-table th{position:static}
@@ -5366,7 +5433,7 @@ window.normalizeFullWidth=function(value){
         <div class="prod-toolbar">
           <button class="btn" onclick="spxUndo('track')" title="復原 (Ctrl+Z)">↶ 復原</button>
           <button class="btn" onclick="spxRedoAct('track')" title="重做 (Ctrl+Y)">↷ 重做</button>
-          <button class="btn" onclick="spxAddRow('track')">＋ 新增一列</button>
+          <button class="btn" onclick="spTrackNewCP()">＋ 新增一列</button>
           <button class="btn" onclick="clearColFilters('track')">清除篩選</button>
           <button class="btn" id="trackCompletedToggle" onclick="prodToggleCompleted('track')">顯示已完成</button>
           <button class="btn" id="trackSubcontractToggle" onclick="prodToggleTrackSubcontract()">顯示轉包</button>
@@ -5374,7 +5441,7 @@ window.normalizeFullWidth=function(value){
           <div style="flex:1"></div>
           <span class="prod-count" id="spxCount-track"></span>
         </div>
-        <div class="section-label" style="margin:0 0 8px;font-size:11px">Excel 式：方向鍵漫遊、Enter 進入編輯 / 於最上方空白列 Enter 完成一列、Ctrl+Z/Y 復原重做、Ctrl+C/V 複製貼上，改動自動儲存。</div>
+        <div class="section-label" style="margin:0 0 8px;font-size:11px">每個 CP 顯示一列；項目可多選。點擊 CP 編號可編輯各項目的製造者、狀態與備註。</div>
         <div id="prodBanner-track" class="prod-filter-banner" style="display:none"></div>
         <div class="spx-wrap">
           <table id="spx-track" class="layout-table spx-table">
@@ -5499,7 +5566,7 @@ window.normalizeFullWidth=function(value){
             <div class="pd-tools">
               <button class="btn" onclick="spxUndo('detail')" title="復原 (Ctrl+Z)">↶</button>
               <button class="btn" onclick="spxRedoAct('detail')" title="重做 (Ctrl+Y)">↷</button>
-              <button class="btn btn-primary" onclick="prodDetailAddSP()">＋ 新增 SP 列</button>
+              <button class="btn btn-primary" onclick="prodDetailAddSP()">＋ 新增一列</button>
               <input type="text" id="spxSearch-detail" placeholder="搜尋…" oninput="spxSearchInput('detail')">
               <a class="pd-link" onclick="prodDrillToTab('track', prodDetailCtx.proj, prodDetailCtx.zone)">在完整 SP狀態表 開啟 →</a>
             </div>
@@ -13154,6 +13221,7 @@ function bomRowHTML(p){
     <td>
       <div class="bom-row-actions">
         <button class="btn-icon btn-act edit" onclick="event.stopPropagation();editBOM(${p.id})" aria-label="編輯工程與報驗需求 ${p.proj_num||''}">編輯工程與報驗需求</button>
+        <button class="btn-icon btn-act edit" onclick="event.stopPropagation();bomOpenCloneChoice(${p.id})" aria-label="複製工程 ${p.proj_num||''}">複製</button>
         <button class="btn-icon btn-act del" onclick="event.stopPropagation();deleteBOM(${p.id})" aria-label="刪除工程 ${p.proj_num||''}">刪除</button>
         <span class="bom-row-arrow" aria-hidden="true">›</span>
       </div>
@@ -13186,6 +13254,7 @@ function bomCardHTML(p){
     </div>
     <div class="bom-card-actions" onclick="event.stopPropagation()">
       <button class="btn-icon btn-act edit" onclick="event.stopPropagation();editBOM(${p.id})" aria-label="編輯工程與報驗需求 ${p.proj_num||''}">編輯工程與報驗需求</button>
+      <button class="btn-icon btn-act edit" onclick="event.stopPropagation();bomOpenCloneChoice(${p.id})" aria-label="複製工程 ${p.proj_num||''}">複製</button>
       <button class="btn-icon btn-act del" onclick="event.stopPropagation();deleteBOM(${p.id})" aria-label="刪除工程 ${p.proj_num||''}">刪除</button>
     </div>
   </div>`;
@@ -13481,6 +13550,112 @@ async function saveBOM() {
   filterBOM();           // 立即顯示結果(套用當前篩選)
   loadDashboard();       // 背景更新,不擋畫面
 }
+
+// ── BOM 工程複製 / 工程區轉移 ──────────────────────────────────────────
+function bomOpenCloneChoice(projectId) {
+  const p = (allBOM||[]).find(x => String(x.id) === String(projectId));
+  if (!p) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'input-modal-overlay';
+  overlay.innerHTML = '<div class="input-modal" style="width:440px">' +
+    '<div class="input-modal-title">複製工程 ' + esc(p.proj_num||'') + '</div>' +
+    '<div style="display:flex;flex-direction:column;gap:10px">' +
+      '<button class="dup-choice-btn" data-zones="1"><strong>複製整個工程（包含工程區）</strong><span>複製工程資料、工程區、構件總表、構件附加欄位、托樑與自訂欄位；不複製生產紀錄</span></button>' +
+      '<button class="dup-choice-btn" data-zones="0"><strong>複製整個工程（不含工程區）</strong><span>只複製工程基本資料與報驗需求，建立一個沒有工程區的新工程</span></button>' +
+    '</div><div class="input-modal-actions" style="margin-top:18px"><button class="input-modal-btn cancel">取消</button></div></div>';
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.querySelector('.cancel').onclick = close;
+  overlay.onclick = e => { if (e.target === overlay) close(); };
+  overlay.querySelectorAll('[data-zones]').forEach(btn => btn.onclick = () => {
+    const withZones = btn.dataset.zones === '1'; close();
+    showInputModal('新工程編號', '請輸入複製後的新工程編號', value => bomCloneProject(projectId, value, withZones));
+  });
+}
+
+async function bomPostRows(table, rows) {
+  for (let i = 0; i < rows.length; i += 300) {
+    const r = await sbFetch('/rest/v1/' + table, {
+      method:'POST', headers:{'Prefer':'return=minimal'}, body:JSON.stringify(rows.slice(i, i + 300))
+    });
+    if (!r.ok) throw new Error((r.data && r.data.message) || (table + ' 寫入失敗'));
+  }
+}
+
+async function bomCloneProject(projectId, newProjNum, withZones) {
+  const src = (allBOM||[]).find(x => String(x.id) === String(projectId));
+  const num = upperEN(String(newProjNum||'').trim());
+  if (!src || !num) return;
+  if ((allBOM||[]).some(p => String(p.proj_num||'').trim().toUpperCase() === num)) {
+    alert('工程編號「' + num + '」已存在，請使用其他編號'); return;
+  }
+  if (!await uiConfirm('確定要把「' + (src.proj_num||'') + '」複製成「' + num + '」' + (withZones ? '，並包含全部 BOM 工程區' : '（不含工程區）') + '？')) return;
+  const fields = ['proj_name','client','welding_material','proj_manager','qc_manager','company',
+    'insp_photo_beam','insp_photo_col','insp_sc_form','insp_sc_sign','insp_sc_color','insp_note','inspect_template'];
+  const payload = {proj_num:num, status:'未開始'};
+  fields.forEach(k => { if (Object.prototype.hasOwnProperty.call(src,k)) payload[k] = src[k]; });
+  const created = await sbFetch('/rest/v1/projects', {method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)});
+  const dst = created.ok && Array.isArray(created.data) ? created.data[0] : null;
+  if (!dst) { alert('複製失敗：' + ((created.data&&created.data.message)||'無法建立新工程')); return; }
+  try {
+    if (withZones) {
+      const zr = await sbFetchAll('/rest/v1/zones?select=*&project_id=eq.' + projectId + '&order=id');
+      const zones = Array.isArray(zr.data) ? zr.data : [];
+      for (const z of zones) {
+        const zoneBody = {project_id:dst.id, zone_code:z.zone_code||'', status:'未開始', proc_code:z.proc_code||'', sub_code:z.sub_code||''};
+        const nzr = await sbFetch('/rest/v1/zones', {method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(zoneBody)});
+        const nz = nzr.ok && Array.isArray(nzr.data) ? nzr.data[0] : null;
+        if (!nz) throw new Error('工程區 ' + (z.zone_code||'') + ' 建立失敗');
+        const [cr, er, br, xr] = await Promise.all([
+          sbFetchAll('/rest/v1/components?select=seq,part_no,common_no,spec,qty,net_weight,drawing_no&zone_id=eq.' + z.id),
+          sbFetchAll('/rest/v1/component_ext?select=part_no,extra&zone_id=eq.' + z.id),
+          sbFetchAll('/rest/v1/beam_parts?select=seq,part_no,common_no,spec,qty,net_weight,drawing_no,extra&zone_id=eq.' + z.id),
+          sbFetchAll('/rest/v1/zone_custom_cols?select=table_type,col_name&zone_id=eq.' + z.id)
+        ]);
+        const remap = rows => (Array.isArray(rows) ? rows : []).map(r => Object.assign({zone_id:nz.id}, r));
+        await bomPostRows('components', remap(cr.data));
+        await bomPostRows('component_ext', remap(er.data));
+        await bomPostRows('beam_parts', remap(br.data));
+        await bomPostRows('zone_custom_cols', remap(xr.data));
+      }
+    }
+    await loadBOM();
+    alert('已複製完成：' + num + (withZones ? '（包含工程區）' : '（不含工程區）'));
+  } catch (e) {
+    await loadBOM();
+    alert('工程已建立，但部分資料複製失敗：' + (e.message||e) + '。請先不要再次複製，並檢查新工程內容。');
+  }
+}
+
+function bomOpenMoveZone(zoneId) {
+  const z = (allZones||[]).find(x => String(x.id) === String(zoneId));
+  if (!z) return;
+  const targets = (allBOM||[]).filter(p => String(p.id) !== String(currentProjectId)).slice().sort(bomProjCmp);
+  if (!targets.length) { alert('沒有其他工程可供轉移'); return; }
+  const overlay = document.createElement('div'); overlay.className = 'input-modal-overlay';
+  overlay.innerHTML = '<div class="input-modal" style="width:440px"><div class="input-modal-title">轉移工程區 ' + esc(z.zone_code||'') + '</div>' +
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:10px">構件總表、附加欄位、托樑與自訂欄位會一起保留；上線與報驗紀錄不會改寫。</div>' +
+    '<select class="filter-select" style="width:100%;padding:9px"><option value="">— 選擇目的工程 —</option>' +
+      targets.map(p => '<option value="'+p.id+'">'+esc(p.proj_num||'')+'｜'+esc(p.proj_name||'')+'</option>').join('') + '</select>' +
+    '<div class="input-modal-actions"><button class="input-modal-btn cancel">取消</button><button class="input-modal-btn ok">確定轉移</button></div></div>';
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove(), select = overlay.querySelector('select');
+  overlay.querySelector('.cancel').onclick = close;
+  overlay.onclick = e => { if (e.target === overlay) close(); };
+  overlay.querySelector('.ok').onclick = async () => {
+    const target = targets.find(p => String(p.id) === String(select.value));
+    if (!target) { alert('請先選擇目的工程'); return; }
+    const duplicate = await sbFetch('/rest/v1/zones?select=id&project_id=eq.'+target.id+'&zone_code=eq.'+encodeURIComponent(z.zone_code||'')+'&limit=1');
+    if (Array.isArray(duplicate.data) && duplicate.data.length) { alert('目的工程已經有相同工程區「'+(z.zone_code||'')+'」，無法轉移'); return; }
+    if (!await uiConfirm('確定把工程區「'+(z.zone_code||'')+'」轉移到工程「'+(target.proj_num||'')+'」？')) return;
+    const r = await sbFetch('/rest/v1/zones?id=eq.'+z.id, {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({project_id:target.id})});
+    if (!r.ok) { alert('轉移失敗：'+((r.data&&r.data.message)||'未知錯誤')); return; }
+    close(); await loadZones(currentProjectId); loadDashboard();
+    alert('已將 '+(z.zone_code||'')+' 轉移到 '+(target.proj_num||''));
+  };
+  setTimeout(()=>select.focus(),30);
+}
+
 async function deleteBOM(id) {
   if(!await uiConfirm('確定要刪除這筆工程？')) return;
   const r=await sbFetch(`/rest/v1/projects?id=eq.${id}`,{method:'DELETE'});
@@ -13535,6 +13710,7 @@ function renderZoneGroup(zones){
       <td><span class="status-badge ${z.status}">${z.status}</span></td>
       <td onclick="event.stopPropagation()" style="text-align:right">
         <button class="btn-icon edit" onclick="editZone(${z.id})">✏️</button>
+        <button class="btn-icon edit" onclick="bomOpenMoveZone(${z.id})" title="轉移到其他工程">轉移</button>
         <button class="btn-icon del" onclick="deleteZone(${z.id})">🗑</button>
       </td></tr>`).join('');
     return '<table class="zone-list-table"><thead><tr><th>工程區</th><th>加工代號</th><th>狀態</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
@@ -13546,6 +13722,7 @@ function renderZoneGroup(zones){
       ${z.proc_code?('<span class="proc-badge">'+z.proc_code+'</span>'):''}
       <div class="zone-actions" onclick="event.stopPropagation()">
         <button class="btn-icon edit" onclick="editZone(${z.id})">✏️</button>
+        <button class="btn-icon edit" onclick="bomOpenMoveZone(${z.id})" title="轉移到其他工程">轉移</button>
         <button class="btn-icon del" onclick="deleteZone(${z.id})">🗑</button>
       </div>
     </div>
@@ -32502,9 +32679,25 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 let prodTrack=[], prodReserved=[], prodProduct=[], prodManual=[], prodCurTab='board', prodBusy=false;
 // 項目:DB 存的仍是既有代碼(SP/L/FB/P/Q/Z 不可更動,舊資料與 sp_progress view 依賴),
 // 畫面一律顯示中文全名;後四項沒有現成代碼,直接以名稱本身當值。
-const PROD_ITEMS=['FB','L','P','Q','Z','U','BT','RH&BH','板組托樑','板組BT','SP'];
-const PROD_ITEM_LABEL={FB:'扁鐵 FB',L:'角鐵 L',P:'圓管 P',Q:'方管 Q',Z:'成品材 Z',U:'槽鐵 U',BT:'BT(T-BAR)','RH&BH':'RH & BH'};
+const PROD_ITEMS=['FB','L','P','Q','Z','U','H','BT','RH&BH','板組托樑','板組BT','SP'];
+const PROD_ITEM_LABEL={FB:'扁鐵 FB',L:'角鐵 L',P:'圓管 P',Q:'方管 Q',Z:'成品材 Z',U:'槽鐵 U',H:'水電 H',BT:'BT(T-BAR)','RH&BH':'RH & BH'};
 function prodItemLabel(code){ return PROD_ITEM_LABEL[code]||code; }
+function prodItemTag(code,done){
+  const raw=String(code||'').trim(); if(!raw||raw==='-')return '';
+  const idx=Math.max(0,PROD_ITEMS.indexOf(raw))%6;
+  return '<span class="sp-item-tag it-'+idx+(done?' item-done':'')+'">'+esc(prodItemLabel(raw))+'</span>';
+}
+function prodItemTags(rows){
+  const grouped=new Map();(rows||[]).forEach(r=>{const x=String(r&&r.item||'').trim();if(!x||x==='-')return;if(!grouped.has(x))grouped.set(x,[]);grouped.get(x).push(r);});
+  const tags=[...grouped].map(([x,itemRows])=>prodItemTag(x,itemRows.length>0&&itemRows.every(r=>['OK','送工地'].includes(String(r.status||'').trim()))));
+  return '<span class="sp-notion-tags">'+tags.join('')+'</span>';
+}
+function spTrackZones(value){
+  return [...new Set(String(value||'').trim().toUpperCase().split(/[、,，.。/／;；+＋&＆\s]+/).map(x=>x.trim()).filter(Boolean))];
+}
+function spTrackZoneText(values){ return [...new Set((values||[]).map(x=>String(x||'').trim().toUpperCase()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'})).join('、'); }
+function spTrackZoneHas(row,zone){ return spTrackZones(row&&row.zone).includes(String(zone||'').trim().toUpperCase()); }
+function spTrackZoneTags(value){ const zones=Array.isArray(value)?value:spTrackZones(value);return '<span class="sp-notion-tags">'+zones.map(z=>'<span class="sp-zone-tag">'+esc(z)+'</span>').join('')+'</span>'; }
 // 看板列表的表頭:項目欄由 PROD_ITEMS 產生,日後增減項目表頭與欄數會自動跟著變
 const PROD_BOARD_HEAD=['工程編號','工程區','CP編號'];
 const PROD_BOARD_TAIL=['成品材領用','保留料','手工單','整體狀態'];
@@ -32655,11 +32848,13 @@ function prodProductProjMatch(materialProj, boardProj){
 function prodBuildUnits(){
   const map=new Map();
   prodTrack.forEach(r=>{
-    const proj=(r.proj_no||'').trim(), zone=(r.zone||'').trim(), dwg=(r.dwg_no||'').trim(), ord=(r.order_no||'').trim();
-    if(!proj&&!zone&&!dwg&&!ord) return;   // 略過 SP狀態表 最上方的空白輸入列
-    const key=proj+'|'+zone+'|'+dwg+'|'+ord;
-    if(!map.has(key)) map.set(key,{proj,zone,dwg,ord,doc:(dwg&&ord)?(dwg+'-'+ord):(dwg||ord),items:[]});
-    map.get(key).items.push(r);
+    const proj=(r.proj_no||'').trim(), zones=spTrackZones(r.zone), dwg=(r.dwg_no||'').trim(), ord=(r.order_no||'').trim();
+    if(!proj&&!zones.length&&!dwg&&!ord) return;
+    (zones.length?zones:['']).forEach(zone=>{
+      const key=proj+'|'+zone+'|'+dwg+'|'+ord;
+      if(!map.has(key)) map.set(key,{proj,zone,dwg,ord,doc:(dwg&&ord)?(dwg+'-'+ord):(dwg||ord),items:[]});
+      map.get(key).items.push(r);
+    });
   });
   // 多工程區手工單只建立各自的工程區入口，不建立「5DB.5DG」合併看板。
   prodManual.forEach(r=>{
@@ -32738,7 +32933,7 @@ function prodUnitCells(u){
 // 工程區合併模式:單一項目格的狀態計數
 const PROD_SHORT={'st-none':'未','st-count':'清','st-ok':'完','st-ship':'送','st-sub':'轉'};
 function prodAggItemChips(proj, zone, code){
-  const rows=prodTrack.filter(r=>(r.proj_no||'').trim()===proj && (r.zone||'')===zone && (r.item||'').trim().toUpperCase()===code);
+  const rows=prodTrack.filter(r=>(r.proj_no||'').trim()===proj && spTrackZoneHas(r,zone) && (r.item||'').trim().toUpperCase()===code);
   if(!rows.length) return '';
   const b={}; rows.forEach(r=>{ const m=prodStatusMeta(r.status,r.remark); b[m.cls]=(b[m.cls]||0)+1; });
   const order=['st-none','st-count','st-ok','st-ship','st-sub'];
@@ -32762,12 +32957,12 @@ function prodRenderCards(units, f){
     const pmCell=prodPmCell(p=>!pmIsWelding(p) && prodProductProjMatch(p.proj_no,z.proj) && pmZoneMatch(p,z.zone));
     const rmCell=prodRmCell(r=>pjOk((r.proj_no||'').trim()) && ((r.zone||'')===z.zone || z.us.some(u=>u.doc && (r.order_no||'')===u.doc)));
     const manualCell=prodManualCell(z.proj,z.zone);
-    // 各料件狀態摘要(只列有資料的)
-    const itemTags=PROD_ITEMS.map(code=>{ const chips=prodAggItemChips(z.proj,z.zone,code); return chips?('<span class="pc-itemtag"><b>'+code+'</b>'+chips+'</span>'):''; }).join('');
+    // Notion 式多選標籤：卡片與 SP 總表使用同一份項目名稱／顏色。
+    const itemTags=prodItemTags([].concat(...z.us.map(u=>u.items||[])));
     // 各 CP編號 明細列
     const unitRows=z.us.slice().sort((a,b)=>a.doc.localeCompare(b.doc,'zh-Hant')).map(u=>{
       const byItem={}; u.items.forEach(i=>{ byItem[(i.item||'').trim().toUpperCase()]=i; });
-      const chips=PROD_ITEMS.map(code=>{ const it=byItem[code]; if(!it) return ''; const m=prodStatusMeta(it.status,it.remark); return '<span class="chip mini '+m.cls+'" title="'+esc(code+' '+m.label)+'">'+code+'</span>'; }).join('');
+      const chips=PROD_ITEMS.map(code=>{ const it=byItem[code]; if(!it) return ''; return prodItemTag(code); }).join('');
       const ov=prodOverall(u.items);
       return '<div class="pc-unit"><span class="pu-cp">'+esc(u.doc||'—')+'</span><span class="pu-chips">'+chips+'<span class="chip mini '+ov.cls+'">'+esc(ov.label)+'</span></span></div>';
     }).join('');
@@ -32775,7 +32970,7 @@ function prodRenderCards(units, f){
       '<div class="pc-head"><div><div class="pc-title"><span class="pc-proj">'+esc(z.proj||'—')+'</span>-'+esc(z.zone||'—')+'</div>'+
         '<div class="pc-sub">'+z.us.length+' 個 CP編號 · '+ready+'/'+z.us.length+' 完成</div></div>'+
         '<span class="pc-status">'+prodOnlineBadge(z.proj,z.zone)+prodAlertBadge(z.proj,z.zone)+'<span class="chip '+z.ov.cls+'">'+esc(z.ov.label)+'</span></span></div>'+
-      (itemTags?('<div class="pc-items">'+itemTags+'</div>'):'')+
+      itemTags+
       '<div class="pc-props">'+
         '<div class="pc-prop"><div class="pp-lbl">成品材領用</div><div class="pp-val">'+pmCell+'</div></div>'+
         '<div class="pc-prop"><div class="pp-lbl">保留料</div><div class="pp-val">'+rmCell+'</div></div>'+
@@ -32791,12 +32986,7 @@ function prodRenderCards(units, f){
 function prodStatusColor(cls){ return ({'st-none':'var(--text3)','st-count':'var(--yellow)','st-ok':'var(--green)','st-ship':'var(--accent2)','st-sub':'var(--purple)'})[cls]||'var(--accent)'; }
 function prodBarFoot(o,unitsLen){ return o&&o.byQty ? (o.done+'/'+o.total+' 支備妥') : ((o?o.done:0)+'/'+unitsLen+' 完成'); }
 function prodMiniBar(us){
-  // 已跑 sp_qty_migration 時以「支數」計算真實備料進度;否則沿用「完成的生產單位數」
-  if(typeof spxOptional!=='undefined' && spxOptional.sp_qty){
-    let need=0, done=0;
-    us.forEach(u=>(u.items||[]).forEach(i=>{ const n=parseFloat(i&&i.qty_need); const d=parseFloat(i&&i.qty_done); if(!isNaN(n)&&n>0){ need+=n; done+=Math.min(isNaN(d)?0:d, n); } }));
-    if(need>0) return {done:Math.round(done), total:Math.round(need), pct:Math.round(done/need*100), byQty:true};
-  }
+  // 外層以 CP 完成數計算；「應備／已備」已不再參與畫面與進度。
   const done=us.filter(u=>['完成','已送工地'].includes(prodOverall(u.items).label)).length;
   const pct=us.length?Math.round(done/us.length*100):0; return {done,pct};
 }
@@ -32823,6 +33013,7 @@ function prodRenderMini(units, f){
     return '<div class="prod-mini" data-proj="'+esc(g.proj)+'" onclick="prodMiniOpen(this)" title="點擊 → 看 '+esc(g.proj)+' 各工程區">'+
       '<div class="pm-head"><div class="pm-title">'+esc(g.proj||'—')+'</div><span class="chip '+g.ov.cls+'">'+esc(g.ov.label)+'</span></div>'+
       '<div class="pm-sub pm-sum">'+prodProjSummary(g)+'</div>'+
+      prodItemTags([].concat(...g.us.map(u=>u.items||[])))+
       '<div class="pm-bar"><div class="pm-fill" style="width:'+g.pct+'%;background:'+bar+'"></div></div>'+
       '<div class="pm-foot"><span>'+prodBarFoot(g,g.us.length)+'</span><span class="pm-pct">'+g.pct+'%</span></div>'+
     '</div>';
@@ -32844,6 +33035,7 @@ function prodRenderMiniZones(wrap, units, f){
     return '<div class="prod-mini" data-proj="'+esc(z.proj)+'" data-zone="'+esc(z.zone)+'" onclick="prodOpenZoneDetail(this.dataset.proj,this.dataset.zone)" title="點擊 → 開啟 '+esc(z.proj)+'-'+esc(z.zone)+' 詳情">'+
       '<div class="pm-head"><div class="pm-title">'+esc(z.zone||'—')+'</div><span class="pm-status">'+prodOnlineBadge(z.proj,z.zone)+'<span class="chip '+z.ov.cls+'">'+esc(z.ov.label)+'</span><button class="pm-menu" onclick="prodZoneMenu(event,this)" title="更多操作" aria-label="更多操作">⋯</button></span></div>'+
       '<div class="pm-sub pm-sum">'+prodZoneSummary(z)+'</div>'+
+      prodItemTags([].concat(...z.us.map(u=>u.items||[])))+
       '<div class="pm-bar"><div class="pm-fill" style="width:'+z.pct+'%;background:'+bar+'"></div></div>'+
       '<div class="pm-foot"><span>'+prodBarFoot(z,z.us.length)+'</span><span class="pm-foot-r">'+prodAlertBadge(z.proj,z.zone)+'<span class="pm-pct">'+z.pct+'%</span></span></div>'+
     '</div>';
@@ -32853,7 +33045,7 @@ function prodMiniOpen(el){ prodMiniProj=(el&&el.dataset)?el.dataset.proj:el; pro
 function prodMiniBack(){ prodMiniProj=null; prodRenderBoard(); }
 // 工程區未結項目警示:手工單未完成、保留料未領取 → 整體狀態雖為「完成」仍需注意
 function prodZoneAlerts(proj,zone){
-  const zEq=r=>(r.proj_no||'').trim()===proj && (r.zone||'').trim()===zone;
+  const zEq=r=>(r.proj_no||'').trim()===proj && spTrackZoneHas(r,zone);
   const manual=prodManualForZone(proj,zone).filter(r=>!r.completed).length;
   const rs=prodReserved.filter(r=>zEq(r) && !prodResDone(r));          // 未領 + 已領未退,都算未結
   const resNoTake=rs.filter(r=>!prodResTaken(r)).length;
@@ -32917,7 +33109,7 @@ function prodAlertBadge(proj,zone){
   return '<span class="pm-alert" title="'+esc(tip)+'">⚠'+a.total+'</span>';
 }
 // 小卡右上「⋯」選單:整個工程區「設為轉包 / 刪除」(只動 SP 細項 sp_track)
-function prodZoneTrackRows(proj,zone){ return prodTrack.filter(r=>(r.proj_no||'').trim()===proj && (r.zone||'').trim()===zone); }
+function prodZoneTrackRows(proj,zone){ return prodTrack.filter(r=>(r.proj_no||'').trim()===proj && spTrackZoneHas(r,zone)); }
 function prodZoneMenu(ev, btn){
   ev.stopPropagation();
   const card=btn.closest('.prod-mini'); if(!card) return;
@@ -32948,8 +33140,9 @@ async function prodZoneSetSubcontract(proj,zone){
 }
 // 刪除:三層確認。第二層問是否連同保留料/手工單(依工程區精確比對);成品材無工程區欄,一律不納入
 async function prodZoneDelete(proj,zone){
-  const zEq=(r)=>(r.proj_no||'').trim()===proj && (r.zone||'').trim()===zone;
+  const zEq=(r)=>(r.proj_no||'').trim()===proj && spTrackZoneHas(r,zone);
   const spRows=prodTrack.filter(zEq), resRows=prodReserved.filter(zEq), manRows=prodManual.filter(zEq);
+  const spShared=spRows.filter(r=>spTrackZones(r.zone).length>1), spDelete=spRows.filter(r=>spTrackZones(r.zone).length<=1);
   if(!spRows.length && !resRows.length && !manRows.length){ alert('此工程區沒有可刪除的資料。'); return; }
   const who='「'+proj+'-'+zone+'」';
   // 第一層
@@ -32964,10 +33157,15 @@ async function prodZoneDelete(proj,zone){
   if(!await uiConfirm('最後確認:即將刪除 '+who+' 的 '+summary+'。\n\n刪除後無法復原,確定執行?',{danger:true,okText:'確定刪除'})) return;
   const delBy=async(tbl,rows)=>{ const ids=rows.map(r=>r.id).filter(x=>x!=null); if(ids.length){ const r=await sbFetch('/rest/v1/'+tbl+'?id=in.('+ids.join(',')+')',{method:'DELETE',headers:{'Prefer':'return=minimal'}}); if(!r.ok) throw new Error(tbl+' HTTP '+r.status); } };
   try{
-    await delBy('sp_track', spRows);
+    await delBy('sp_track', spDelete);
+    for(const r of spShared){
+      const next=spTrackZoneText(spTrackZones(r.zone).filter(z=>z!==String(zone||'').trim().toUpperCase()));
+      const pr=await sbFetch('/rest/v1/sp_track?id=eq.'+r.id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({zone:next})});
+      if(!pr.ok)throw new Error('sp_track HTTP '+pr.status);r.zone=next;
+    }
     if(inclOthers){ await delBy('reserved_material', resRows); await delBy('manual_order', manRows); }
   }catch(e){ alert('刪除失敗:'+e.message+'(請確認已登入)'); return; }
-  prodTrack=prodTrack.filter(r=>!zEq(r));
+  const deletedSet=new Set(spDelete);prodTrack=prodTrack.filter(r=>!deletedSet.has(r));
   if(inclOthers){ prodReserved=prodReserved.filter(r=>!zEq(r)); prodManual=prodManual.filter(r=>!zEq(r)); }
   prodRenderBoard();
   if(typeof spxRender==='function'){ spxRender('track'); if(inclOthers){ spxRender('reserved'); spxRender('manual'); } }
@@ -32986,6 +33184,7 @@ function prodRenderMiniZonesFlat(wrap, units, f){
     return '<div class="prod-mini" data-proj="'+esc(z.proj)+'" data-zone="'+esc(z.zone)+'" onclick="prodOpenZoneDetail(this.dataset.proj,this.dataset.zone)" title="點擊 → 開啟 '+esc(z.proj)+'-'+esc(z.zone)+' 詳情">'+
       '<div class="pm-head"><div class="pm-title"><span class="pm-tproj">'+esc(z.proj)+'-</span>'+esc(z.zone||'—')+'</div><span class="pm-status">'+prodOnlineBadge(z.proj,z.zone)+'<span class="chip '+z.ov.cls+'">'+esc(z.ov.label)+'</span><button class="pm-menu" onclick="prodZoneMenu(event,this)" title="更多操作" aria-label="更多操作">⋯</button></span></div>'+
       '<div class="pm-sub pm-sum">'+prodZoneSummary(z)+'</div>'+
+      prodItemTags([].concat(...z.us.map(u=>u.items||[])))+
       '<div class="pm-bar"><div class="pm-fill" style="width:'+z.pct+'%;background:'+bar+'"></div></div>'+
       '<div class="pm-foot"><span>'+prodBarFoot(z,z.us.length)+'</span><span class="pm-foot-r">'+prodAlertBadge(z.proj,z.zone)+'<span class="pm-pct">'+z.pct+'%</span></span></div>'+
     '</div>';
@@ -33139,7 +33338,7 @@ function prodAutoDoneZone(proj,zone){
     const rows=t.pick(m);
     if(!rows.length||!rows.every(t.done)) return;      // 沒資料 或 還有沒結清的 → 不動
     prodTrack.forEach((r,i)=>{
-      if((r.proj_no||'').trim()!==proj||(r.zone||'').trim()!==zone||(r.item||'').trim()!==t.item) return;
+      if((r.proj_no||'').trim()!==proj||!spTrackZoneHas(r,zone)||(r.item||'').trim()!==t.item) return;
       const st=String(r.status||'').trim();
       if(st==='OK'||st==='轉包') return;
       r.status='OK'; spxMarkDirty('track',i); n++;
@@ -33278,15 +33477,10 @@ function prodRenderDetail(){
     pdTakeBox(Number(r._key||0),r.completed===true,'完成/已領取','完成','未完成','pdManualToggle','pdManualDate',r.take_date,spxOptional.manual_take_date)+
     '</div>').join(''):'<div class="pd-empty">此工程區無手工單。</div>';
 }
-// 詳情頁「＋新增SP列」:直接建一列已帶入本工程區的資料列(略過空白輸入列機制)
+// 詳情頁新增 CP：預先帶入目前工程／工程區，再一次選擇多個項目。
 function prodDetailAddSP(){
   const {proj,zone}=prodDetailCtx;
-  spxSnapshotNow('detail');
-  const o=spxBlankObj(SPX.detail); o.proj_no=proj; o.zone=zone;
-  prodTrack.push(o);
-  spxRender('detail'); prodRenderDetailHeader();
-  setTimeout(()=>{ const body=document.getElementById('spxBody-detail'); if(!body) return;
-    const tr=body.querySelector('tr[data-key="'+o._key+'"]'); const f=tr?tr.querySelectorAll('td input,td select')[2]:null; if(f) f.focus(); },10);
+  spTrackNewCP(proj,zone);
 }
 
 // 依 工程編號+工程區 分組(卡片檢視 & 列表「工程區合併」共用)
@@ -33902,9 +34096,6 @@ const SPX={
       {k:'item',h:'項目',sel:['-'].concat(PROD_ITEMS),labels:PROD_ITEM_LABEL,def:'-',noData:true},
       {k:'make',h:'製造者',sel:['','D棟','外包'],noData:true},
       {k:'status',h:'狀態',sel:['-','清點中','OK','送工地','轉包'],status:true,def:'-',noData:true},
-      // 應備/已備數量:需先跑 sp_qty_migration.sql;未跑時自動隱藏,不影響既有功能
-      {k:'qty_need',h:'應備',num:true,noData:true,optional:'sp_qty'},
-      {k:'qty_done',h:'已備',num:true,noData:true,optional:'sp_qty'},
       {k:'remark',h:'備註',wide:true}
     ]},
   reserved:{ tbl:'reserved_material', sort:spxNewestFirst,
@@ -34031,10 +34222,192 @@ function spxOpenFilter(ev,key,colKey){ const cfg=SPX[key];
   const vals=cascadedColValues(key, prodArr(key).filter(r=>!spxRowIsBlank(cfg,r)), (r,ck)=>{ const c=spxCols(key).find(x=>x.k===ck); return c?spxColStr(r,c):''; }, colKey);
   openColFilter(ev,key,colKey,vals);
 }
-function spxSearchInput(key){ const el=document.getElementById('spxSearch-'+key); spxFilterText[key]=(el?el.value:'').trim().toLowerCase(); spxRenderBody(key); }
+function spxSearchInput(key){ const el=document.getElementById('spxSearch-'+key); spxFilterText[key]=(el?el.value:'').trim().toLowerCase(); if(key==='track')spTrackRenderOuter();else if(key==='detail')spTrackRenderDetailOuter();else spxRenderBody(key); }
+
+// SP 狀態外層：相同 工程＋工程區＋CP 合併成一列；底層仍是一個項目一筆。
+let spTrackOuterGroups=[], spTrackModalGroup=null, spTrackDraft=null;
+function spTrackDraftRowHtml(detail){
+  if(!spTrackDraft)return '';
+  const items=[...spTrackDraft.items],chips=items.length?'<span class="sp-notion-tags">'+items.map(prodItemTag).join('')+'</span>':'<span class="prod-no">選擇項目…</span>';
+  const enter="if(event.key==='Enter'){event.preventDefault();spTrackCommitDraft()}";
+  return '<tr class="lt-input-row">'+
+    '<td><input class="lt-edit" value="'+esc(spTrackDraft.cp||'')+'" placeholder="CP編號" oninput="spTrackDraft.cp=this.value" onkeydown="'+enter+'"></td>'+
+    (detail?'':'<td><input class="lt-edit" value="'+esc(spTrackDraft.proj||'')+'" placeholder="工程編號" oninput="spTrackDraft.proj=this.value.toUpperCase()" onkeydown="'+enter+'"></td>')+
+    '<td style="text-align:left"><input class="lt-edit" style="text-align:left" value="'+esc(spTrackDraft.zone||'')+'" placeholder="工程區（多區可用逗號）" oninput="spTrackDraft.zone=this.value.toUpperCase()" onkeydown="'+enter+'"></td>'+
+    '<td style="text-align:left"><button class="spx-detail-btn" style="text-align:left;min-width:150px" onclick="spTrackOpenDraftItems(event)">'+chips+'</button></td>'+ 
+    '<td><span class="chip st-none">未開始</span></td>'+ 
+    '<td style="text-align:left"><input class="lt-edit" style="text-align:left" value="'+esc(spTrackDraft.remark||'')+'" placeholder="備註" oninput="spTrackDraft.remark=this.value"></td>'+ 
+    '<td class="del-col"><button class="btn-del-row" title="建立" onclick="spTrackCommitDraft()">✓</button><button class="btn-del-row" title="清空" onclick="spTrackCancelDraft()">✕</button></td>'+ 
+    '</tr>';
+}
+function spTrackOpenDraftItems(ev){
+  ev.stopPropagation();spTrackCloseItemDropdown();if(!spTrackDraft)return;const d=document.createElement('div');d.id='spTrackItemDrop';d.className='hw-fdrop';d.style.cssText='position:fixed;z-index:10050;min-width:230px;max-height:360px;overflow:auto;padding:7px';
+  d.innerHTML='<div style="font:600 12px var(--mono);padding:5px 7px 8px">項目多選</div>'+PROD_ITEMS.map(item=>'<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer"><input type="checkbox" '+(spTrackDraft.items.has(item)?'checked ':'')+'onchange="spTrackDraftToggleItem(\''+item.replace(/'/g,"\\'")+'\',this.checked)"><span>'+prodItemTag(item)+'</span></label>').join('');
+  document.body.appendChild(d);const r=ev.currentTarget.getBoundingClientRect();let left=r.left,top=r.bottom+4;if(left+d.offsetWidth>innerWidth-8)left=innerWidth-d.offsetWidth-8;if(top+d.offsetHeight>innerHeight-8)top=Math.max(8,r.top-d.offsetHeight-4);d.style.left=Math.max(8,left)+'px';d.style.top=top+'px';setTimeout(()=>document.addEventListener('mousedown',spTrackItemDropOutside,true),0);
+}
+function spTrackDraftToggleItem(item,on){if(!spTrackDraft)return;if(on)spTrackDraft.items.add(item);else spTrackDraft.items.delete(item);spTrackRenderCurrentList();}
+function spTrackCancelDraft(){spTrackDraft=null;spTrackCloseItemDropdown();spTrackRenderCurrentList();}
+async function spTrackCommitDraft(){
+  if(!spTrackDraft)return;const proj=String(spTrackDraft.proj||'').trim().toUpperCase(),zone=spTrackZoneText(spTrackZones(spTrackDraft.zone)),cp=String(spTrackDraft.cp||'').trim(),items=[...spTrackDraft.items];
+  if(!proj||!zone||!cp||!items.length){spxHint('請填工程編號、工程區、CP編號並選擇項目',true);return;}
+  const temp={};spxSetCombo(temp,SPX.track.cols.find(c=>c.combo),cp);
+  if(prodTrack.some(r=>String(r.proj_no||'').trim().toUpperCase()===proj&&String(r.dwg_no||'').trim()===String(temp.dwg_no||'')&&String(r.order_no||'').trim()===String(temp.order_no||''))){alert('這個工程已經有相同 CP 編號，請直接在原 CP 的項目格增加項目');return;}
+  const rows=items.map(item=>({proj_no:proj,zone,dwg_no:temp.dwg_no||'',order_no:temp.order_no||'',item,make:'',status:'-',remark:String(spTrackDraft.remark||'').trim()}));
+  const res=await sbFetch('/rest/v1/sp_track',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(rows)});if(!res.ok||!Array.isArray(res.data)){spxHint('建立 CP 失敗',true);return;}
+  res.data.forEach(r=>{r._key=++spxSeq;prodTrack.push(r);});spTrackDraft=null;spTrackCloseItemDropdown();spTrackRenderCurrentList();prodRenderBoard();spxHint('✓ 已建立 '+cp);
+}
+function spTrackGroupKey(r){ return [r.proj_no||'',r.dwg_no||'',r.order_no||''].map(x=>String(x).trim()).join('\u0001'); }
+function spTrackCP(r){ return [r.dwg_no!=null?r.dwg_no:r.dwg,r.order_no!=null?r.order_no:r.ord].map(x=>String(x||'').trim()).filter(Boolean).join('-'); }
+function spTrackOverall(rows){
+  const rel=rows.filter(r=>String(r.status||'').trim()!=='轉包');
+  if(!rel.length)return {label:'轉包',cls:'st-sub'};
+  const sts=rel.map(r=>String(r.status||'-').trim()||'-');
+  if(sts.every(s=>s==='送工地'))return {label:'已送工地',cls:'st-ship'};
+  if(sts.every(s=>s==='OK'||s==='送工地'))return {label:'完成',cls:'st-ok'};
+  if(sts.every(s=>s==='-'||s===''))return {label:'未開始',cls:'st-none'};
+  return {label:'清點中',cls:'st-count'};
+}
+function spTrackBuildGroups(){
+  const map=new Map();
+  prodTrack.forEach(r=>{
+    if(!r.id&&!spxRowHasData(SPX.track,r))return;
+    const k=spTrackGroupKey(r); if(!map.has(k))map.set(k,{key:k,proj:r.proj_no||'',zone:'',dwg:r.dwg_no||'',ord:r.order_no||'',rows:[]});
+    map.get(k).rows.push(r);
+  });
+  return [...map.values()].map(g=>{g.zones=[...new Set(g.rows.flatMap(r=>spTrackZones(r.zone)))];g.zone=spTrackZoneText(g.zones);g.cp=spTrackCP(g);g.overall=spTrackOverall(g.rows);return g;});
+}
+function spTrackRenderOuter(){
+  const head=document.getElementById('spxHead-track'),body=document.getElementById('spxBody-track'); if(!head||!body)return;
+  if(!spTrackDraft)spTrackDraft={proj:'',zone:'',cp:'',items:new Set(),remark:''};
+  head.innerHTML='<tr><th>CP編號</th><th>工程編號</th><th>工程區</th><th>項目（多選）</th><th>整體狀態</th><th>備註</th><th></th></tr>';
+  const kw=spxFilterText.track||'',filters=colFilterState.track||{};
+  spTrackOuterGroups=spTrackBuildGroups().filter(g=>{
+    if(filters.proj_no&&filters.proj_no.size&&!filters.proj_no.has(g.proj))return false;
+    if(filters.zone&&filters.zone.size&&![...filters.zone].some(z=>g.zones.includes(String(z||'').trim().toUpperCase())))return false;
+    if(!prodShowCompleted.track&&(g.overall.label==='完成'||g.overall.label==='已送工地'))return false;
+    if(!prodTrackShowSubcontract&&g.overall.label==='轉包')return false;
+    if(!kw)return true;
+    return [g.proj,g.zone,g.cp,g.rows.map(r=>prodItemLabel(r.item)).join(' '),g.overall.label,g.rows.map(r=>r.remark||'').join(' ')].join(' ').toLowerCase().includes(kw);
+  }).sort((a,b)=>String(a.proj).localeCompare(String(b.proj),'zh-Hant')||String(a.zone).localeCompare(String(b.zone),'zh-Hant')||String(a.cp).localeCompare(String(b.cp),undefined,{numeric:true}));
+  const dataHtml=spTrackOuterGroups.length?spTrackOuterGroups.map((g,i)=>{
+    const items=[...new Set(g.rows.map(r=>String(r.item||'').trim()).filter(x=>x&&x!=='-'))];
+    const chips=items.length?'<span class="sp-notion-tags">'+items.map(prodItemTag).join('')+'</span>':'<span class="prod-no">尚未選擇</span>';
+    const notes=[...new Set(g.rows.map(r=>String(r.remark||'').trim()).filter(Boolean))].join(' / ');
+    return '<tr><td><button class="sp-cp-link" onclick="spTrackOpenCP('+i+')">'+esc(g.cp||'（未填）')+'</button></td><td>'+esc(g.proj)+'</td><td style="text-align:left"><button class="spx-detail-btn" style="border:0;background:none;padding-left:0" onclick="spTrackOpenCP('+i+')">'+spTrackZoneTags(g.zones)+'</button></td>'+ 
+      '<td style="text-align:left"><button class="spx-detail-btn" style="text-align:left;white-space:normal;border:0;background:none;padding-left:0" onclick="spTrackOpenItemDropdown(event,'+i+')">'+chips+'</button></td>'+ 
+      '<td><span class="chip '+g.overall.cls+'">'+esc(g.overall.label)+'</span></td><td style="text-align:left"><input class="lt-edit" style="text-align:left" value="'+esc(notes)+'" placeholder="備註" oninput="spTrackGroupRemarkEdit('+i+',this.value)"></td>'+ 
+      '<td class="del-col"><button class="btn-del-row" title="刪除整個 CP" onclick="spTrackDeleteCP('+i+')">✕</button></td></tr>';
+  }).join(''):(spTrackDraft?'':'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">尚無資料</td></tr>');
+  body.innerHTML=spTrackDraftRowHtml(false)+dataHtml;
+  const cnt=document.getElementById('spxCount-track');if(cnt)cnt.textContent=spTrackOuterGroups.length+' 個 CP';
+}
+function spTrackRenderDetailOuter(){
+  const head=document.getElementById('spxHead-detail'),body=document.getElementById('spxBody-detail');if(!head||!body)return;
+  const proj=String(prodDetailCtx.proj||'').trim(),zone=String(prodDetailCtx.zone||'').trim().toUpperCase(),kw=spxFilterText.detail||'';
+  if(!spTrackDraft)spTrackDraft={proj:proj.toUpperCase(),zone,cp:'',items:new Set(),remark:''};
+  else{if(!String(spTrackDraft.proj||'').trim())spTrackDraft.proj=proj.toUpperCase();if(!String(spTrackDraft.zone||'').trim())spTrackDraft.zone=zone;}
+  spTrackOuterGroups=spTrackBuildGroups().filter(g=>String(g.proj||'').trim()===proj&&g.zones.includes(zone)&&(!kw||[g.cp,g.proj,g.zone,g.rows.map(r=>prodItemLabel(r.item)).join(' '),g.rows.map(r=>r.remark||'').join(' ')].join(' ').toLowerCase().includes(kw))).sort((a,b)=>String(a.cp).localeCompare(String(b.cp),undefined,{numeric:true}));
+  head.innerHTML='<tr><th>CP編號</th><th>工程區</th><th>項目（多選）</th><th>整體狀態</th><th>備註</th><th></th></tr>';
+  const dataHtml=spTrackOuterGroups.length?spTrackOuterGroups.map((g,i)=>{
+    const items=[...new Set(g.rows.map(r=>String(r.item||'').trim()).filter(x=>x&&x!=='-'))],chips=items.length?'<span class="sp-notion-tags">'+items.map(prodItemTag).join('')+'</span>':'<span class="prod-no">尚未選擇</span>',notes=[...new Set(g.rows.map(r=>String(r.remark||'').trim()).filter(Boolean))].join(' / ');
+    return '<tr><td><button class="sp-cp-link" onclick="spTrackOpenCP('+i+')">'+esc(g.cp||'（未填）')+'</button></td><td style="text-align:left"><button class="spx-detail-btn" style="border:0;background:none;padding-left:0" onclick="spTrackOpenCP('+i+')">'+spTrackZoneTags(g.zones)+'</button></td><td style="text-align:left"><button class="spx-detail-btn" style="text-align:left;white-space:normal;border:0;background:none;padding-left:0" onclick="spTrackOpenItemDropdown(event,'+i+')">'+chips+'</button></td><td><span class="chip '+g.overall.cls+'">'+esc(g.overall.label)+'</span></td><td style="text-align:left"><input class="lt-edit" style="text-align:left" value="'+esc(notes)+'" placeholder="備註" oninput="spTrackGroupRemarkEdit('+i+',this.value)"></td><td class="del-col"><button class="btn-del-row" title="刪除整個 CP" onclick="spTrackDeleteCP('+i+')">✕</button></td></tr>';
+  }).join(''):(spTrackDraft?'':'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">此工程區尚無 CP 資料</td></tr>');
+  body.innerHTML=spTrackDraftRowHtml(true)+dataHtml;
+  const cnt=document.getElementById('spxCount-detail');if(cnt)cnt.textContent=spTrackOuterGroups.length+' 個 CP';
+}
+function spTrackDetailVisible(){const d=document.getElementById('prodview-detail');return !!(d&&d.style.display!=='none');}
+function spTrackRenderCurrentList(){if(spTrackDetailVisible())spTrackRenderDetailOuter();else spTrackRenderOuter();}
+function spTrackItemChecks(rows){
+  const have=new Set(rows.map(r=>String(r.item||'').trim()));
+  return PROD_ITEMS.map(x=>'<label style="display:inline-flex;align-items:center;gap:5px;margin:3px 10px 3px 0;cursor:pointer"><input type="checkbox" '+(have.has(x)?'checked ':'')+'onchange="spTrackToggleItem(\''+x.replace(/'/g,"\\'")+'\',this.checked,this)"><span>'+esc(prodItemLabel(x))+'</span></label>').join('');
+}
+function spTrackCloseItemDropdown(){const d=document.getElementById('spTrackItemDrop');if(d)d.remove();document.removeEventListener('mousedown',spTrackItemDropOutside,true);}
+function spTrackOpenItemDropdown(ev,i){
+  ev.stopPropagation();spTrackCloseItemDropdown();const g=spTrackOuterGroups[i];if(!g)return;spTrackModalGroup=g;
+  const have=new Set(g.rows.map(r=>String(r.item||'').trim())),d=document.createElement('div');d.id='spTrackItemDrop';d.className='hw-fdrop';d.style.cssText='position:fixed;z-index:10050;min-width:230px;max-height:360px;overflow:auto;padding:7px';
+  d.innerHTML='<div style="font:600 12px var(--mono);padding:5px 7px 8px">項目多選</div>'+PROD_ITEMS.map(item=>'<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:6px"><input type="checkbox" '+(have.has(item)?'checked ':'')+'onchange="spTrackToggleItem(\''+item.replace(/'/g,"\\'")+'\',this.checked,this,true)"><span>'+prodItemTag(item)+'</span></label>').join('');
+  document.body.appendChild(d);const r=ev.currentTarget.getBoundingClientRect();let left=r.left,top=r.bottom+4;if(left+d.offsetWidth>innerWidth-8)left=innerWidth-d.offsetWidth-8;if(top+d.offsetHeight>innerHeight-8)top=Math.max(8,r.top-d.offsetHeight-4);d.style.left=Math.max(8,left)+'px';d.style.top=top+'px';
+  setTimeout(()=>document.addEventListener('mousedown',spTrackItemDropOutside,true),0);
+}
+function spTrackItemDropOutside(e){const d=document.getElementById('spTrackItemDrop');if(!d||d.contains(e.target))return;spTrackCloseItemDropdown();document.removeEventListener('mousedown',spTrackItemDropOutside,true);}
+function spTrackOpenCP(i){ const g=spTrackOuterGroups[i];if(!g)return;spTrackModalGroup=g;spTrackRenderCPModal(); }
+function spTrackZoneChecks(g){
+  const all=[...new Set(prodTrack.filter(r=>String(r.proj_no||'').trim()===String(g.proj||'').trim()).flatMap(r=>spTrackZones(r.zone)).concat(g.zones||[]))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  return all.map(z=>'<label style="display:inline-flex;align-items:center;gap:5px;margin:3px 10px 3px 0;cursor:pointer"><input type="checkbox" '+((g.zones||[]).includes(z)?'checked ':'')+'onchange="spTrackToggleZone(\''+z.replace(/'/g,"\\'")+'\',this.checked,this)"><span>'+esc(z)+'</span></label>').join('');
+}
+function spTrackZoneEditor(g){return '<div class="sp-notion-tags">'+(g.zones||[]).map(z=>'<span class="sp-zone-tag" style="gap:5px">'+esc(z)+'<button type="button" title="移除" style="border:0;background:none;color:inherit;cursor:pointer;padding:0" onclick="spTrackRemoveZone(\''+z.replace(/'/g,"\\'")+'\')">×</button></span>').join('')+'</div>';}
+function spTrackRenderCPModal(){
+  const g=spTrackModalGroup,modal=document.getElementById('pmDetailModal');if(!g||!modal)return;
+  const rows=g.rows.slice().sort((a,b)=>PROD_ITEMS.indexOf(a.item)-PROD_ITEMS.indexOf(b.item)).map(r=>{
+    const key=String(r._key),makeOpts=['','D棟','外包'].map(x=>'<option value="'+esc(x)+'"'+(String(r.make||'')===x?' selected':'')+'>'+esc(x||'—')+'</option>').join('');
+    const statusOpts=['-','清點中','OK','送工地','轉包'].map(x=>'<option value="'+esc(x)+'"'+(String(r.status||'-')===x?' selected':'')+'>'+esc(SPX_STATUS_LABEL[x]||x)+'</option>').join('');
+    return '<tr><td>'+prodItemTag(r.item||'-')+'</td><td><select class="lt-edit-sel" onchange="spTrackChildEdit(\''+key+'\',\'make\',this.value)">'+makeOpts+'</select></td>'+ 
+      '<td><select class="lt-edit-sel stcell-'+esc(String(r.status||'-'))+'" onchange="this.className=\'lt-edit-sel stcell-\'+this.value;spTrackChildEdit(\''+key+'\',\'status\',this.value)">'+statusOpts+'</select></td>'+ 
+      '<td><input class="lt-edit" style="min-width:220px" value="'+esc(r.remark||'')+'" oninput="spTrackChildEdit(\''+key+'\',\'remark\',this.value)"></td></tr>';
+  }).join('');
+  const overall=spTrackOverall(g.rows);
+  modal.innerHTML='<div class="pm-detail-backdrop" onclick="if(event.target===this)spTrackCloseCP()"><div class="pm-detail-modal pm-sp-modal">'+
+    '<div class="pm-detail-head"><div><div class="pm-detail-title">'+esc(g.cp||'CP')+'－項目狀態</div><div class="pm-detail-meta"><span>'+esc(g.proj)+'</span><span class="pm-sp-meta-dot">•</span>'+spTrackZoneTags(g.zones)+'<span class="pm-sp-meta-dot">•</span><span class="chip '+overall.cls+'">'+esc(overall.label)+'</span></div></div><button class="pm-detail-close" title="關閉" onclick="spTrackCloseCP()">✕</button></div>'+ 
+    '<div class="pm-sp-config"><section class="pm-sp-section"><div class="pm-sp-section-title">工程區</div>'+spTrackZoneEditor(g)+'<div class="pm-sp-zone-add"><input id="spAddZone" class="input-modal-field" placeholder="輸入後按 Enter" onkeydown="if(event.key===\'Enter\'){event.preventDefault();spTrackAddZone()}"><button class="btn" onclick="spTrackAddZone()">＋ 加入</button></div></section>'+ 
+    '<section class="pm-sp-section"><div class="pm-sp-section-title">項目多選</div><div class="pm-sp-items">'+spTrackItemChecks(g.rows)+'</div></section></div>'+ 
+    '<div class="pm-sp-table-wrap"><table class="pm-detail-table"><thead><tr><th>項目</th><th>製造者</th><th>狀態</th><th>備註</th></tr></thead><tbody>'+rows+'</tbody></table></div></div></div>';
+  modal.style.display='';
+}
+async function spTrackSetGroupZones(zones){
+  const g=spTrackModalGroup;if(!g)return false;const clean=spTrackZones(spTrackZoneText(zones));if(!clean.length){alert('至少要保留一個工程區');return false;}
+  const value=spTrackZoneText(clean),ids=g.rows.map(r=>r.id).filter(Boolean);
+  if(ids.length){const res=await sbFetch('/rest/v1/sp_track?id=in.('+ids.join(',')+')',{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({zone:value})});if(!res.ok){spxHint('工程區儲存失敗',true);return false;}}
+  g.rows.forEach(r=>r.zone=value);g.zones=clean;g.zone=value;spTrackRenderCurrentList();spTrackModalGroup=spTrackBuildGroups().find(x=>x.key===g.key)||g;spTrackRenderCPModal();prodRenderBoard();return true;
+}
+async function spTrackToggleZone(zone,checked,el){const g=spTrackModalGroup;if(!g)return;const zones=new Set(g.zones||[]);if(checked)zones.add(zone);else zones.delete(zone);if(!await spTrackSetGroupZones([...zones]))el.checked=!checked;}
+function spTrackAddZone(){const el=document.getElementById('spAddZone'),vals=spTrackZones(el&&el.value);if(!vals.length)return;spTrackSetGroupZones([...(spTrackModalGroup?.zones||[]),...vals]);}
+function spTrackRemoveZone(zone){const g=spTrackModalGroup;if(!g)return;spTrackSetGroupZones((g.zones||[]).filter(z=>z!==zone));}
+async function spTrackToggleItem(item,checked,el,fromDropdown){
+  const g=spTrackModalGroup;if(!g)return;const existingRows=g.rows.filter(r=>String(r.item||'')===item),existing=existingRows[0];
+  if(checked&&!existing){
+    const payload={proj_no:g.proj,zone:g.zone,dwg_no:g.dwg,order_no:g.ord,item,make:'',status:'-',remark:''};
+    const res=await sbFetch('/rest/v1/sp_track',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)});
+    if(!res.ok||!Array.isArray(res.data)||!res.data[0]){el.checked=false;spxHint('新增項目失敗',true);return;}
+    const row=res.data[0];row._key=++spxSeq;prodTrack.push(row);g.rows.push(row);
+  }else if(!checked&&existing){
+    const progressed=existingRows.some(r=>!['','-'].includes(String(r.status||'')));
+    if(progressed&&!await uiConfirm('「'+prodItemLabel(item)+'」已有進度，確定移除？')){el.checked=true;return;}
+    const ids=existingRows.map(r=>r.id).filter(Boolean);
+    if(ids.length){const res=await sbFetch('/rest/v1/sp_track?id=in.('+ids.join(',')+')',{method:'DELETE'});if(!res.ok){el.checked=true;spxHint('移除項目失敗',true);return;}}
+    const gone=new Set(existingRows);prodTrack=prodTrack.filter(r=>!gone.has(r));g.rows=g.rows.filter(r=>!gone.has(r));
+  }
+  spTrackRenderCurrentList();spTrackModalGroup=spTrackBuildGroups().find(x=>x.key===g.key)||null;
+  if(!fromDropdown){if(spTrackModalGroup)spTrackRenderCPModal();else spTrackCloseCP();}
+  else if(!spTrackModalGroup)spTrackCloseItemDropdown();
+  prodRenderBoard();
+}
+let spTrackEditTimers={};
+function spTrackGroupRemarkEdit(i,value){
+  const g=spTrackOuterGroups[i];if(!g)return;
+  g.rows.forEach(r=>r.remark=value);
+  const timerKey='group-remark|'+g.key;clearTimeout(spTrackEditTimers[timerKey]);
+  spTrackEditTimers[timerKey]=setTimeout(async()=>{
+    const ids=g.rows.map(r=>r.id).filter(Boolean);if(!ids.length)return;
+    const res=await sbFetch('/rest/v1/sp_track?id=in.('+ids.join(',')+')',{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({remark:value})});
+    if(!res.ok)spxHint('備註儲存失敗',true);else{spxHint('✓ 備註已自動儲存');prodRenderBoard();}
+  },350);
+}
+function spTrackChildEdit(rowKey,field,value){
+  const row=prodTrack.find(r=>String(r._key)===String(rowKey));if(!row)return;row[field]=value;
+  clearTimeout(spTrackEditTimers[rowKey+'|'+field]);spTrackEditTimers[rowKey+'|'+field]=setTimeout(async()=>{
+    if(!row.id)return;const body={};body[field]=value;const res=await sbFetch('/rest/v1/sp_track?id=eq.'+row.id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(body)});if(!res.ok)spxHint('儲存失敗',true);else{spxHint('✓ 已自動儲存');spTrackRenderOuter();prodRenderBoard();}
+  },250);
+}
+function spTrackCloseCP(){spTrackModalGroup=null;pmCloseDetails();const d=document.getElementById('prodview-detail');if(d&&d.style.display!=='none')spTrackRenderDetailOuter();else spTrackRenderOuter();}
+async function spTrackDeleteCP(i){const g=spTrackOuterGroups[i];if(!g||!await uiConfirm('確定刪除 CP「'+g.cp+'」及其全部 '+g.rows.length+' 個項目？'))return;const ids=g.rows.map(r=>r.id).filter(Boolean);if(ids.length){const res=await sbFetch('/rest/v1/sp_track?id=in.('+ids.join(',')+')',{method:'DELETE'});if(!res.ok){spxHint('刪除失敗',true);return;}}const gone=new Set(g.rows);prodTrack=prodTrack.filter(r=>!gone.has(r));spTrackRenderOuter();prodRenderBoard();}
+function spTrackNewCP(defaultProj,defaultZone){
+  if(!spTrackDraft)spTrackDraft={proj:String(defaultProj||'').toUpperCase(),zone:String(defaultZone||'').toUpperCase(),cp:'',items:new Set(),remark:''};
+  spTrackRenderCurrentList();
+  setTimeout(()=>{const body=document.getElementById(spTrackDetailVisible()?'spxBody-detail':'spxBody-track');const f=body&&body.querySelector('tr.lt-input-row input');if(f)f.focus();},30);
+}
 
 // ── 渲染 ──
-function spxRender(key){ spxRenderHead(key); spxRenderBody(key); }
+function spxRender(key){ if(key==='track'){spTrackRenderOuter();return;}if(key==='detail'){spTrackRenderDetailOuter();return;} spxRenderHead(key); spxRenderBody(key); }
 function spxRenderHead(key){ const cfg=SPX[key], head=document.getElementById('spxHead-'+key); if(!head) return;
   head.innerHTML='<tr>'+spxCols(key).map(c=>{ const active=colFilterActive(key,c.k)?' active':'';
     return '<th>'+esc(c.h)+'<button class="cf-th-btn'+active+'" title="篩選" onclick="event.stopPropagation();spxOpenFilter(event,\''+key+'\',\''+c.k+'\')">▼</button></th>';
