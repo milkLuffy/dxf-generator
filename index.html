@@ -746,6 +746,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .zone-card-footer{display:flex;align-items:center;justify-content:space-between}
 .zone-actions{display:flex;gap:4px}
 .zone-card .btn-icon{padding:3px 6px;font-size:11px}
+/* 柱工程區(尾字 C)且落在長度回饋節次(#1/#4/#7/#10/#13):只掛一顆低調徽章,外層不上色 */
+.len-fb-badge{display:inline-flex;align-items:center;margin-left:8px;padding:2px 9px;border-radius:12px;font-family:var(--mono);font-size:11px;letter-spacing:.03em;white-space:nowrap;vertical-align:middle;background:rgba(225,29,72,.16);color:#ff92a1;border:1px solid rgba(225,29,72,.38)}
+[data-theme="light"] .len-fb-badge{background:#fdeaec;color:#b02a37;border-color:#eec3c8}
+.lenfb-switch.off{opacity:.55}
 .staff-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:16px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s}
 .staff-card:hover{border-color:var(--border-hi)}
 .staff-card-header{display:flex;align-items:center;gap:10px}
@@ -2375,6 +2379,9 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
           <div class="nav-item" onclick="navTo('mypage')" id="nav-mypage">
             <span class="nav-icon">👤</span><span class="nav-label">個人頁面</span>
           </div>
+          <div class="nav-item" onclick="navTo('sop')" id="nav-sop">
+            <span class="nav-icon">📖</span><span class="nav-label">SOP 工作流程</span>
+          </div>
           <div class="nav-item" onclick="window.open('https://egstpsa.evergreennet.com/dana-na/auth/url_xm52bsJ1cg3szywW/welcome.cgi','_blank')" id="nav-evergreen-sys" title="開啟長榮系統(新分頁)">
             <span class="nav-icon">🌐</span><span class="nav-label">長榮系統</span>
           </div>
@@ -2578,6 +2585,7 @@ window.normalizeFullWidth=function(value){
     var icons={
       'nav-dashboard':'<path d="M4 13h3v7H4zM10.5 4h3v16h-3zM17 9h3v11h-3z"/>',
       'nav-mypage':'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.5 3.5-7 8-7s8 2.5 8 7"/>',
+      'nav-sop':'<path d="M12 7C10.6 5.6 8.6 5 6 5H3v13h3c2.6 0 4.6.6 6 2 1.4-1.4 3.4-2 6-2h3V5h-3c-2.6 0-4.6.6-6 2z"/><path d="M12 7v13"/>',
       'nav-evergreen-sys':'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>',
       'nav-hardware':'<path d="M14.7 6.3a4 4 0 0 0-5-5l2.1 2.1-2.4 2.4-2.1-2.1a4 4 0 0 0 5 5L20 16.4 16.4 20l-7.7-7.7"/>',
       'nav-labor':'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V4h8v3M3 12h18M10 12v2h4v-2"/>',
@@ -2879,7 +2887,10 @@ window.normalizeFullWidth=function(value){
           <div class="page-title" id="detail-title" style="margin-bottom:4px">—</div>
           <div id="detail-subtitle" style="font-family:var(--mono);font-size:12px;color:var(--text3)"></div>
         </div>
-        <button class="btn-add-new" onclick="openBatchZoneModal()">＋ 新增工程區</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-sm btn-export lenfb-switch" id="lenfb-switch" onclick="toggleProjectLenFb()">長度回饋標記：開</button>
+          <button class="btn-add-new" onclick="openBatchZoneModal()">＋ 新增工程區</button>
+        </div>
       </div>
       <div class="zone-grid" id="zone-grid"><div class="empty-state">載入中...</div></div>
     </div>
@@ -6595,6 +6606,113 @@ window.normalizeFullWidth=function(value){
         ※ <b>不含點工單</b>:點工屬外包工資,不計入本頁人事成本;點工金額請看「點工單」與「扣款明細」。<br>
         ※ 五金「採購實付」為實際付款(精確,但進貨當天會跳高);「領用耗用」為領用量 × 該品項最近一次進貨單價(平滑,反映真實消耗,屬估算)。
       </div>
+    </div>
+
+    <style>
+      #page-sop .sop-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+      #page-sop .sop-search-wrap{position:relative;flex:1 1 320px;min-width:240px}
+      #page-sop .sop-search-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;opacity:.6;pointer-events:none}
+      #page-sop .sop-search{width:100%;padding:10px 34px 10px 32px;border-radius:var(--rad);border:1px solid var(--border-hi);background:var(--bg2);color:var(--text);font-family:var(--sans);font-size:14px}
+      #page-sop .sop-search:focus{outline:none;border-color:var(--accent2)}
+      #page-sop .sop-clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:24px;height:24px;border:0;border-radius:50%;background:var(--bg4);color:var(--text2);cursor:pointer;font-size:12px;line-height:1}
+      #page-sop .sop-actions{display:flex;gap:6px;flex-wrap:wrap}
+      #page-sop .sop-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+      #page-sop .sop-chip{padding:5px 12px;border-radius:999px;border:1px solid var(--border-hi);background:var(--bg2);color:var(--text2);font-size:12.5px;cursor:pointer;font-family:var(--sans);transition:all .12s;white-space:nowrap}
+      #page-sop .sop-chip:hover{border-color:var(--accent2);color:var(--text)}
+      #page-sop .sop-chip.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+      #page-sop .sop-chip b{font-family:var(--mono);font-size:11px;opacity:.75;margin-left:4px}
+      #page-sop .sop-status{font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:12px;letter-spacing:.04em}
+      #page-sop .sop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:12px;grid-auto-rows:1fr}   /* 1fr:所有卡片等高 */
+      #page-sop .sop-card{display:flex;gap:11px;align-items:flex-start;width:100%;text-align:left;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:14px 15px;cursor:pointer;color:var(--text);font-family:var(--sans);transition:border-color .12s,background .12s,transform .06s;height:100%}
+      #page-sop .sop-card:hover{border-color:var(--accent2);background:var(--bg3)}
+      #page-sop .sop-card:active{transform:scale(.995)}
+      #page-sop .sop-card[hidden]{display:none}
+      #page-sop .sop-ico{font-size:20px;line-height:1.2;flex:0 0 auto}
+      #page-sop .sop-head-text{flex:1;min-width:0}
+      #page-sop .sop-title{display:block;font-size:15px;font-weight:700;color:var(--text);line-height:1.4}
+      #page-sop .sop-sub{display:block;font-size:12px;color:var(--text3);margin-top:3px;line-height:1.5}
+      #page-sop .sop-badge{display:inline-block;margin-top:7px;padding:2px 8px;border-radius:999px;background:var(--bg4);color:var(--text2);font-family:var(--mono);font-size:10px;letter-spacing:.08em}
+      #page-sop .sop-snip{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);font-size:12px;color:var(--text2);line-height:1.6}
+      #page-sop .sop-caret{flex:0 0 auto;color:var(--text3);font-size:12px;margin-top:3px}
+      #page-sop .sop-empty{grid-column:1/-1;text-align:center;color:var(--text3);font-size:13px;padding:40px 0}
+
+      /* ── 詳細內容彈窗 ── */
+      #sop-modal .sop-modal{max-width:min(880px,94vw);padding:0;gap:0;max-height:88vh;overflow:hidden}
+      #sop-modal .sop-modal-head{display:flex;gap:11px;align-items:flex-start;padding:18px 20px;border-bottom:1px solid var(--border)}
+      #sop-modal .sop-modal-ico{font-size:24px;line-height:1.1;flex:0 0 auto}
+      #sop-modal .sop-modal-titles{flex:1;min-width:0}
+      #sop-modal .sop-modal-title{font-size:17px;font-weight:700;color:var(--text);line-height:1.35}
+      #sop-modal .sop-modal-sub{font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5}
+      #sop-modal .sop-modal-close{flex:0 0 auto;width:30px;height:30px;border:1px solid var(--border-hi);border-radius:var(--rad);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:13px;line-height:1}
+      #sop-modal .sop-modal-close:hover{color:var(--text);border-color:var(--accent2)}
+      #sop-modal .sop-modal-body{padding:16px 20px;overflow-y:auto;flex:1}
+      #sop-modal .sop-modal-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 20px;border-top:1px solid var(--border);background:var(--bg3)}
+      #sop-modal .sop-modal-pos{font-family:var(--mono);font-size:11px;color:var(--text3)}
+      #sop-modal .sop-modal-foot .btn{flex:0 0 auto}   /* .btn-gen 預設 flex:1 會被撐滿,這裡不要 */
+      #sop-modal .sop-modal-hint{font-family:var(--mono);font-size:11px;color:var(--text3);margin-left:auto}
+
+      /* ── 內文排版(卡片摘要與彈窗共用)── */
+      [data-theme="light"] #page-sop,[data-theme="light"] #sop-modal{ --text:#000000; --text2:#000000; --text3:#000000; }   /* 淺色主題:一律純黑 */
+      .sop-body{font-size:13.5px;line-height:1.8;color:var(--text)}   /* 內文一律主色(淺色主題=黑) */
+      .sop-body h4{font-size:13px;color:var(--text);font-weight:700;margin:16px 0 6px;padding-left:8px;border-left:3px solid var(--accent)}
+      .sop-body h4:first-child{margin-top:0}
+      .sop-body p{margin:6px 0}
+      .sop-body ul,.sop-body ol{margin:6px 0 6px 20px}
+      .sop-body li{margin:3px 0}
+      .sop-body b,.sop-note b,.sop-warn b,.sop-gate b,table.sop-tbl b{color:var(--red);font-weight:700}
+      .sop-body b:first-child,.sop-body b.lead,table.sop-tbl td b:first-child{color:var(--accent2)}   /* 項目開頭的標籤 = 深藍 */
+      .sop-body .sop-warn b,.sop-warn b:first-child{color:var(--red)}   /* 警示框內一律維持紅 */   /* 特別要註明的 = 粗體紅 */
+      .sop-body code{font-family:var(--mono);font-size:12px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--accent3);word-break:break-all}
+      .sop-body pre{font-family:var(--mono);font-size:12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);padding:10px 12px;margin:8px 0;overflow-x:auto;color:var(--text);line-height:1.7;white-space:pre-wrap}
+      .sop-note{background:var(--bg3);border-left:3px solid var(--accent);border-radius:0 var(--rad) var(--rad) 0;padding:8px 12px;margin:10px 0;font-size:12.5px;color:var(--text)}
+      .sop-warn{background:rgba(255,159,10,.09);border-left:3px solid var(--yellow);border-radius:0 var(--rad) var(--rad) 0;padding:8px 12px;margin:10px 0;font-size:12.5px;color:var(--text)}
+      .sop-path{display:block;font-family:var(--mono);font-size:11.5px;background:var(--bg3);border:1px dashed var(--border-hi);border-radius:var(--rad);padding:7px 10px;margin:6px 0;color:var(--accent3);word-break:break-all;line-height:1.6}
+      .sop-tblwrap{overflow-x:auto;margin:8px 0;border:1px solid var(--border);border-radius:var(--rad)}
+      table.sop-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+      table.sop-tbl th{background:var(--bg3);color:var(--text);font-family:var(--mono);font-size:11px;font-weight:700;text-align:left;padding:7px 10px;white-space:nowrap;border-bottom:1px solid var(--border)}
+      table.sop-tbl td{padding:7px 10px;border-bottom:1px solid rgba(128,128,128,.14);vertical-align:top;color:var(--text);line-height:1.6}
+      table.sop-tbl tr:last-child td{border-bottom:0}
+      mark.sop-hit{background:var(--yellow);color:#1c1c1a;border-radius:3px;padding:0 2px}
+      /* 產線流程圖 */
+      .sop-flow-phase{margin:16px 0 8px;font-size:13.5px;font-weight:700;color:var(--text);border-left:3px solid var(--accent2);padding-left:8px}
+      .sop-flow-phase:first-child{margin-top:0}
+      .sop-step{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);margin:5px 0}
+      .sop-step-n{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--accent2);color:#fff;font-family:var(--mono);font-size:11px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+      .sop-flow-arrow{text-align:center;color:var(--text3);font-size:11px;line-height:1.2;margin:1px 0}
+      .sop-gate{border:1px dashed var(--accent);background:rgba(255,159,10,.08);border-radius:var(--rad);padding:10px 12px;margin:10px 0;font-size:12.5px;color:var(--text);line-height:1.8}
+      /* 畫面範例截圖 */
+      .sop-shots{display:grid;gap:12px;margin:8px 0}
+      .sop-shot{display:block;border:1px solid var(--border);border-radius:var(--rad);overflow:hidden;background:var(--bg3);text-decoration:none}
+      .sop-shot:hover{border-color:var(--accent2)}
+      .sop-shot img{display:block;width:100%;height:auto}
+      .sop-shot-cap{display:block;padding:7px 10px;border-top:1px solid var(--border);font-size:11.5px;line-height:1.6;color:var(--text2)}
+      /* 窗口編輯 */
+      .sop-edit-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+      .sop-edit-bar .btn{flex:0 0 auto}
+      .sop-edit-hint{font-size:12px;color:var(--text3)}
+      .sop-in{width:100%;padding:6px 8px;border:1px solid var(--border-hi);border-radius:var(--rad);background:var(--bg2);color:var(--text);font-family:var(--sans);font-size:13px}
+      .sop-in:focus{outline:none;border-color:var(--accent2)}
+      .sop-in-s{min-width:70px}
+      .sop-ta{min-height:54px;resize:vertical;line-height:1.6}
+      .sop-del{padding:5px 9px}
+    </style>
+    <div class="page" id="page-sop">
+      <div class="page-header">
+        <div><div class="page-title">📖 SOP 工作流程</div><div class="page-subtitle">新竹廠作業統整手冊 · 辦公室常規／圖面／報驗／SP／成品材／保留料／手工單／焊材／派車／安全衛生</div></div>
+      </div>
+      <div class="sop-bar">
+        <div class="sop-search-wrap">
+          <span class="sop-search-ico">🔎</span>
+          <input id="sop-search" class="sop-search" autocomplete="off" placeholder="搜尋關鍵字，例如：焊材、NDT、派車、預拱、財哥、A16" oninput="sopSearch()">
+          <button type="button" class="sop-clear" id="sop-clear" onclick="sopClearSearch()" hidden aria-label="清除搜尋">✕</button>
+        </div>
+        <div class="sop-actions">
+          <button class="btn btn-gen" onclick="sopPrint()">列印</button>
+        </div>
+      </div>
+      <div class="sop-chips" id="sop-chips"></div>
+      <div class="sop-status" id="sop-status">載入中…</div>
+      <div class="sop-grid" id="sop-grid"></div>
     </div>
 
     </div><!-- /content-body -->
@@ -10589,7 +10707,7 @@ function goHome() {
 // ── 兩欄式導覽:圖示軌(分類) + 子選單面板 ──
 const SECTION_TITLE={favorite:'常用功能',main:'主選單',prod:'產量與報驗',tools:'工具',staff:'人員管理',eg:'長榮專區',hr:'人事薪資',admin:'管理員'};
 const PAGE_SECTION={
-  dashboard:'main', mypage:'main', labor:'main', hardware:'main', deductions:'main',
+  dashboard:'main', mypage:'main', sop:'main', labor:'main', hardware:'main', deductions:'main',
   bom:'prod', layout:'prod', daily:'prod', inspect:'prod', a201a202:'prod', prod:'prod', modparts:'prod',
   multilevel:'tools', bomtool:'tools', sp:'tools', dxf:'tools', hazard:'tools', selfcheck:'tools', namelabels:'tools', drawingsearch:'tools',
   staff:'staff', egstaff:'staff', attend:'staff', attendlog:'staff',
@@ -10605,6 +10723,7 @@ const SECTION_FIRST={main:'dashboard',prod:'bom',tools:'bomtool',staff:'staff',e
 const PAGE_META=[
   {k:'dashboard',    label:'主頁',           sec:'main'},
   {k:'mypage',       label:'個人頁面',       sec:'main'},
+  {k:'sop',          label:'SOP 工作流程',   sec:'main'},
   {k:'evergreen-sys',label:'長榮系統(外部)', sec:'main'},
   {k:'hardware',     label:'五金庫存',       sec:'main'},
   {k:'labor',        label:'點工單',         sec:'main'},
@@ -10648,7 +10767,7 @@ const HR_PAGES=new Set(['emp','leave','payroll','payslip','payrollcfg']);
 const GUEST_PERMS={dashboard:'read','evergreen-sys':'read',bom:'read',multilevel:'read',bomtool:'read',sp:'read',dxf:'read',hazard:'read',selfcheck:'read',namelabels:'read'};
 // ── 每位使用者的常用功能與側邊欄偏好 ──
 const DEFAULT_FAVORITES=[
-  'dashboard','evergreen-sys','hardware','drawingsearch','bom','layout',
+  'dashboard','sop','evergreen-sys','hardware','drawingsearch','bom','layout',
   'daily','inspect','a201a202','attendance','egdaily','prod'
 ];
 const NAV_PREFERENCE_VERSION=1;
@@ -10888,6 +11007,7 @@ function navTo(page, viewState) {
   if(page!=='attend') attendStop(); // 離開打卡機就關相機
   if(page==='dashboard') loadDashboard();
   if(page==='mypage') myPageInit();
+  if(page==='sop') sopInit();
   if(page==='dxf') dxfFillProjNums();
   if(page==='bom') { if(allBOM.length) setBomView(bomView); loadBOM(); }
   if(page==='inspect') inspInit();
@@ -13911,6 +14031,7 @@ async function showProjectDetail(id) {
   // 立即清掉上一個工程殘留的工程區,避免載入時短暫顯示舊資料
   allZones=[];
   document.getElementById('zone-grid').innerHTML='<div class="empty-state">載入中...</div>';
+  await zoneLenFbLoad();   // 各工程的長度回饋開關(雲端共用),只抓1次
   await loadZones(id);
 }
 
@@ -13931,11 +14052,74 @@ function toggleZoneDone() { zoneShowDone = !zoneShowDone; renderZones(); }
 // 依工程區代號 A-Z 排序 (numeric)
 function zoneCodeCmp(a,b){ return String(a.zone_code||'').localeCompare(String(b.zone_code||''), undefined, {numeric:true, sensitivity:'base'})
   || String(a.sub_code||'').localeCompare(String(b.sub_code||''), undefined, {numeric:true, sensitivity:'base'}); }
+// ── 柱工程區的「長度回饋」判定 ──────────────────────────────
+// 工程區尾字 C = 柱子;節次 #1/#4/#7/#10/#13 每三節一次會有長度回饋(要跟工程主辦追蹤)。
+// 節次怎麼看(先去掉尾字 C,剩下的叫 core;字母 A~E = #10~#14):
+//   ① core 只有 2 個字(區碼也只有 1 個字):結尾是數字就取結尾(D7C→7),
+//      結尾是字母就取開頭(1EC→1、AEC→A=#10)
+//   ② core 3 個字以上(區碼 2 個字):一律取最後一個字
+//      (B24C→4、B14C→B1區+節次4、B2AC→B2區+節次A=#10)
+const ZONE_LEN_FB_SECTIONS=new Set([1,4,7,10,13]);
+function zoneIsColumn(code){ return /C$/i.test(String(code||'').trim()); }
+function zoneSectionChar(ch){
+  if(!ch) return null;
+  if(/\d/.test(ch)) return parseInt(ch,10);
+  const i='ABCDE'.indexOf(ch);
+  return i>=0 ? i+10 : null;                       // A~E = #10~#14
+}
+function zoneSectionNo(code){
+  const s=String(code||'').trim().toUpperCase().replace(/C$/,'');
+  if(!s) return null;
+  const last=s[s.length-1];
+  if(s.length<=2 && !/\d/.test(last)) return zoneSectionChar(s[0]);   // 1EC / AEC
+  return zoneSectionChar(last);                                       // D7C / B24C / B14C / B2AC
+}
+// 各工程可自行關閉長度回饋標記(有些案子不用):主存 app_config,localStorage 只當離線快取
+const ZONE_LENFB_KEY='zone_len_feedback_off';
+let zoneLenFbOff=(function(){ try{ const v=JSON.parse(localStorage.getItem(ZONE_LENFB_KEY)||'[]'); return new Set(Array.isArray(v)?v.map(String):[]); }catch(e){ return new Set(); } })();
+let zoneLenFbLoaded=false;
+function zoneLenFbCache(){ try{ localStorage.setItem(ZONE_LENFB_KEY,JSON.stringify([...zoneLenFbOff])); }catch(e){} }
+async function zoneLenFbLoad(){
+  if(zoneLenFbLoaded) return; zoneLenFbLoaded=true;
+  try{
+    const r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+encodeURIComponent(ZONE_LENFB_KEY));
+    const row=(r&&r.ok&&Array.isArray(r.data))?r.data[0]:null;
+    if(row){ let arr=[]; try{ arr=JSON.parse(row.value)||[]; }catch(e){}
+      zoneLenFbOff=new Set(Array.isArray(arr)?arr.map(String):[]); zoneLenFbCache(); }
+  }catch(e){ console.warn('zoneLenFbLoad',e); }
+}
+function zoneLenFbEnabled(projId){ return !zoneLenFbOff.has(String(projId==null?currentProjectId:projId)); }
+async function toggleProjectLenFb(){
+  if(currentProjectId==null) return;
+  const id=String(currentProjectId);
+  if(zoneLenFbOff.has(id)) zoneLenFbOff.delete(id); else zoneLenFbOff.add(id);
+  zoneLenFbCache(); renderZones(); renderLenFbSwitch();
+  const r=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:ZONE_LENFB_KEY,value:JSON.stringify([...zoneLenFbOff])})});
+  if(!r||!r.ok) alert('設定已存到本機,但雲端同步失敗(其他電腦可能看不到);請確認目前帳號有編輯權限。');
+}
+function renderLenFbSwitch(){
+  const b=document.getElementById('lenfb-switch'); if(!b) return;
+  const on=zoneLenFbEnabled();
+  b.classList.toggle('off',!on);
+  b.textContent=on?'長度回饋標記：開':'長度回饋標記：關';
+  b.title=on?'本工程會自動標出柱(尾字C)落在 #1/#4/#7/#10/#13 的工程區;點一下關閉':'本工程目前不標長度回饋;點一下開啟';
+}
+function zoneHasLenFeedback(code){
+  if(!zoneLenFbEnabled()) return false;              // 這個工程關掉了
+  if(!zoneIsColumn(code)) return false;
+  const n=zoneSectionNo(code);
+  return n!=null && ZONE_LEN_FB_SECTIONS.has(n);
+}
+function zoneLenFbBadge(code){
+  return zoneHasLenFeedback(code)
+    ? '<span class="len-fb-badge" title="柱 #'+zoneSectionNo(code)+' 節:每三節一次的長度回饋節次,要跟工程主辦追蹤">長度回饋</span>'
+    : '';
+}
 // 一組工程區 → HTML(依目前檢視模式:卡片/列表)
 function renderZoneGroup(zones){
   if (zoneViewMode === 'list') {
     const rows = zones.map(z=>`<tr onclick="showZoneDetail(${z.id})" style="cursor:pointer">
-      <td>${z.zone_code}</td>
+      <td>${z.zone_code}${zoneLenFbBadge(z.zone_code)}</td>
       <td onclick="event.stopPropagation()"><input type="text" class="zl-proc" value="${(z.proc_code||'').replace(/"/g,'&quot;')}" placeholder="未設定" onchange="saveZoneProcCode(${z.id}, this.value, this)"/></td>
       <td><span class="status-badge ${z.status}">${z.status}</span></td>
       <td onclick="event.stopPropagation()" style="text-align:right">
@@ -13946,7 +14130,7 @@ function renderZoneGroup(zones){
     return '<table class="zone-list-table"><thead><tr><th>工程區</th><th>加工代號</th><th>狀態</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
   }
   const cards = zones.map(z=>`<div class="zone-card" onclick="showZoneDetail(${z.id})">
-    <div class="zone-code">${z.zone_code}</div>
+    <div class="zone-code">${z.zone_code}${zoneLenFbBadge(z.zone_code)}</div>
     <div class="zone-card-footer">
       <span class="status-badge ${z.status}">${z.status}</span>
       ${z.proc_code?('<span class="proc-badge">'+z.proc_code+'</span>'):''}
@@ -13960,6 +14144,7 @@ function renderZoneGroup(zones){
   return '<div class="zone-card-grid">' + cards + '</div>';
 }
 function renderZones() {
+  renderLenFbSwitch();
   const grid=document.getElementById('zone-grid');
   if(!allZones.length){grid.innerHTML='<div class="empty-state">此工程尚無工程區，點右上角新增</div>';return;}
   // view toggle bar
@@ -14167,7 +14352,7 @@ async function showZoneDetail(id) {
   const titleEl = document.getElementById('zone-detail-title');
   const subPart = z.sub_code ? (' / ' + z.sub_code) : '';
   const procPart = z.proc_code ? (' / ' + z.proc_code) : '';
-  titleEl.innerHTML = `<span>${p?.proj_num||''} / ${z.zone_code}${subPart}${procPart}</span>` +
+  titleEl.innerHTML = `<span>${p?.proj_num||''} / ${z.zone_code}${subPart}${procPart}</span>` + zoneLenFbBadge(z.zone_code) +
     `<span class="status-badge ${z.status}" style="margin-left:14px;vertical-align:middle">${z.status}</span>` +
     `<span class="zone-build-date">建立日期：${new Date(z.created_at).toLocaleDateString('zh-TW')}</span>`;
   document.getElementById('zone-detail-grid').innerHTML = '';
@@ -39140,6 +39325,788 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     }catch(e){console.error(e);nlSetStatus('產生失敗：'+(e.message||e),'err');}
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){if(!nlRows.length)window.nlAddRow();});else if(!nlRows.length)window.nlAddRow();
+})();
+</script>
+<!-- SOP 工作流程:主題詳細內容彈窗(ESC 或點背景關閉) -->
+<div class="modal-overlay" id="sop-modal" onclick="if(event.target===this)sopCloseModal()">
+  <div class="modal sop-modal" role="dialog" aria-modal="true" aria-labelledby="sop-modal-title">
+    <div class="sop-modal-head">
+      <span class="sop-modal-ico" id="sop-modal-ico">📖</span>
+      <div class="sop-modal-titles">
+        <div class="sop-modal-title" id="sop-modal-title">—</div>
+        <div class="sop-modal-sub" id="sop-modal-sub"></div>
+      </div>
+      <button type="button" class="sop-modal-close" onclick="sopCloseModal()" title="關閉 (ESC)" aria-label="關閉">✕</button>
+    </div>
+    <div class="sop-modal-body sop-body" id="sop-modal-body"></div>
+    <div class="sop-modal-foot">
+      <button class="btn" id="sop-modal-prev" onclick="sopModalNav(-1)">‹ 上一則</button>
+      <span class="sop-modal-pos" id="sop-modal-pos"></span>
+      <button class="btn" id="sop-modal-next" onclick="sopModalNav(1)">下一則 ›</button>
+      <button class="btn btn-gen" onclick="sopPrintOne()">列印本則</button>
+      <span class="sop-modal-hint">ESC 關閉 · ← → 換主題</span>
+    </div>
+  </div>
+</div>
+<script>
+/* ══════════ SOP 工作流程(新竹廠作業統整手冊)══════════
+   純靜態內容:資料寫在 SOP_DATA,一張卡片一個主題。
+   搜尋 = 標題 + 摘要 + 關鍵字 + 內文純文字全比對,命中即展開並黃底標記。 */
+(function(){
+  const SOP_GROUPS=[
+    {k:'all',      label:'全部'},
+    {k:'flow',     label:'產線總流程'},
+    {k:'routine',  label:'常規排程'},
+    {k:'contact',  label:'對接窗口'},
+    {k:'egsys',    label:'長榮系統'},
+    {k:'drawing',  label:'圖面'},
+    {k:'inspect',  label:'報驗'},
+    {k:'material', label:'材料・SP・焊材'},
+    {k:'ship',     label:'派車出貨'},
+    {k:'safety',   label:'安全衛生'}
+  ];
+
+  const SOP_DATA=[
+  {id:'flow',group:'flow',icon:'🏭',title:'產線總流程（接單 → 出貨）',sub:'從跟長榮談月產量，到派車出貨的完整脈絡',kw:'流程 脈絡 產線 上線 落樣 組立 尺寸檢查 CO2 電焊 植釘 外勞 研磨 整形 變形 報驗 品管 查驗 長榮品管 派車 出貨 一次加工 BH RH 柱子 加工機 新營 外包 A棟',body:`
+    <div class="sop-flow">
+      <div class="sop-flow-phase">① 接單與前置 — 辦公室</div>
+      <div class="sop-step"><span class="sop-step-n">1</span><div><b>與長榮討論當月產量</b>：談這個月要做哪些工程、做多少量。</div></div>
+      <div class="sop-flow-arrow">▼</div>
+      <div class="sop-step"><span class="sop-step-n">2</span><div><b>收到 CP（圖面）</b>：每日上下午送報驗時到二樓鎮山盒子取圖 → 編號寫在所有圖面右下角 → A15 拆裝歸櫃、A16 核對板次並記錄修改構件與細項。</div></div>
+      <div class="sop-flow-arrow">▼</div>
+      <div class="sop-step"><span class="sop-step-n">3</span><div><b>確認材料交期</b>：S/P、成品材（N250 表定 <b>3 天</b>、S250 表定 <b>5 天</b>）、保留料（&lt; 3M 走 RCP，找 {{liu+}}）。</div></div>
+      <div class="sop-flow-arrow">▼</div>
+      <div class="sop-step"><span class="sop-step-n">4</span><div><b>確認一次加工是否完成</b>：BH、RH、柱子 —— 可能是<b>加工機</b>、<b>新營</b>、<b>外包</b>或 <b>A 棟</b>做的，要逐一確認本體到齊。</div></div>
+      <div class="sop-gate"><b>上線閘門：圖面、材料、一次加工三項齊備才上線</b><br><b class="lead">① 圖面</b>：CP 整理完成（安全掛鉤、水電開孔、預拱、削翼、植釘都標好、已蓋章）<br><b class="lead">② 材料</b>：S/P、成品材、保留料到位並點料完畢<br><b class="lead">③ 一次加工</b>：BH／RH／柱本體完成<br>※ 圖面整理與 S/P 拆封點料建議在<b>上線前 2 週</b>做完，缺漏件此時就開手工單補齊。</div>
+      <div class="sop-flow-phase">② 現場製作 — 上線</div>
+      <div class="sop-step"><span class="sop-step-n">5</span><div><b>西工（冷作）</b>：落樣、組立。</div></div>
+      <div class="sop-flow-arrow">▼</div>
+      <div class="sop-step"><span class="sop-step-n">6</span><div><b>辦公室檢查尺寸</b>：西工做完先量尺寸。<b>尺寸不符 → 退回西工修正</b>，通過才往下走。</div></div>
+      <div class="sop-flow-arrow">▼</div>
+      <div class="sop-step"><span class="sop-step-n">7</span><div><b>電焊工</b>：用 <b>CO2</b> 燒焊鈑件。焊材依母材選 —— SM570 用 81TN、SN490 用 71TN。</div></div>
+      <div class="sop-flow-arrow">▼</div>
+      <div class="sop-step"><span class="sop-step-n">8</span><div><b>植釘（條件步驟）</b>：圖面有植釘構件才做，由<b>外勞</b>施作；不需要植釘就直接跳到研磨。</div></div>
+      <div class="sop-flow-arrow">▼</div>
+      <div class="sop-step"><span class="sop-step-n">9</span><div><b>研磨工</b>：研磨、整理構件。</div></div>
+      <div class="sop-flow-arrow">▼</div>
+      <div class="sop-step"><span class="sop-step-n">10</span><div><b>整形（條件步驟）</b>：構件有變形 → 回<b>西工整形</b>；沒變形直接往下走。</div></div>
+      <div class="sop-flow-arrow">▼</div>
+      <div class="sop-step"><span class="sop-step-n">11</span><div><b>等候長榮品管查驗</b>：整形完成後，等長榮品管人員來查驗。<br><b class="lead">報驗的時間點</b>：通常在<b>電焊工燒得差不多</b>的時候就要先判斷 —— 依經驗或與師傅溝通，決定要不要報驗、以及什麼時候報驗。<br><b>查驗完成、或確定不查驗，才能進到出貨。</b></div></div>
+      <div class="sop-flow-arrow">▼</div>
+      <div class="sop-step"><span class="sop-step-n">12</span><div><b>派車出貨</b>：找 {{wu}} → 派車群組，<b>一定要標註柱位</b>；出貨後記得掃描出貨單至公司群組。</div></div>
+      <div class="sop-note">※ 報驗實務：每日<b>上午、下午</b>各送一次報驗；申驗通知單、<b>NDT 判定</b>、自檢表蓋章、品管查驗符號（W／G／P／ACC／Reject）見「<b>報驗</b>」分類。<br>※ 節區<b>吊裝結束</b>後，該區廢料丟棄（保留大片 S 板備緊急切割）。</div>
+    </div>`},
+  {id:'cycle',group:'routine',icon:'🔁',title:'週期性事項總表',sub:'每日／每週／每月固定要做的事',kw:'每日 每週 每月 便當 出勤 進度表 出貨單 焊材 氣體 A202 KEY IN',body:`
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>週期</th><th>事項</th><th>對象／位置</th></tr></thead>
+      <tbody>
+        <tr><td><b>每日 08:30 前</b></td><td>回報出勤人數 ＋ 訂便當（<b>老闆會看</b>）</td><td>公司群組</td></tr>
+        <tr><td><b>每日</b>（上午、下午送報驗時）</td><td>取 CP 圖面</td><td>二樓鎮山盒子</td></tr>
+        <tr><td><b>每日 下班前</b></td><td>回報網頁主頁的<b>進度表</b></td><td>公司群組</td></tr>
+        <tr><td><b>每次出貨</b></td><td>出貨單掃描</td><td>公司群組</td></tr>
+        <tr><td><b>每週</b></td><td>下載 SP 站加工順序表追蹤（注意吊裝時間）</td><td>P 磁碟</td></tr>
+        <tr><td><b>每週四～週五中午前</b></td><td>焊材叫料</td><td>{{chan}}</td></tr>
+        <tr><td><b>每週五</b></td><td>氣體檢查並上傳</td><td>長榮鎮山二次加工群組</td></tr>
+        <tr><td><b>每月底</b></td><td>統計焊材庫存量：G83G／71TN／81TN</td><td>焊材群組</td></tr>
+        <tr><td><b>每月 15 號前</b></td><td>KEY IN 完成 <b>A202</b></td><td>—</td></tr>
+      </tbody>
+    </table></div>
+    <div class="sop-note"><b>焊材到貨參考：</b>廣泰週二～週四會到貨；中鋼不一定（需主動追蹤）。</div>`},
+
+  {id:'timeline',group:'routine',icon:'🗓️',title:'專案時間軸',sub:'以單一工程為單位的關鍵時機',kw:'上線前2週 進料 A16 吊裝 廢料 BOM 單階',body:`
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>時機</th><th>該做的事</th></tr></thead>
+      <tbody>
+        <tr><td><b>上線前 2 週</b></td><td>① 圖面整理完成，核對水電開孔與安全掛鉤<br>② S/P 由 D 棟推至 C 棟，拆封點料、依工程區排放<br>③ 缺漏件盡量於此時補齊（開手工單）</td></tr>
+        <tr><td><b>第一批進料前 1 天</b></td><td>BOM 單階資料表（空白處寫日期）送進現場</td></tr>
+        <tr><td><b>施工中</b></td><td>收到 A16 → 核對板次 → 記錄修改內容 → 交現場師傅</td></tr>
+        <tr><td><b>節區吊裝結束後</b></td><td>該區廢料丟棄（保留部分大片 S 板備緊急切割）</td></tr>
+      </tbody>
+    </table></div>`},
+
+  {id:'office',group:'routine',icon:'🏢',title:'辦公室常規',sub:'出勤時間、每日回報、登記事項、職能要求',kw:'上班時間 08:00 17:00 週六輪班 遲到 打卡 便當 請領五金 採購五金 手工單登記',body:`
+    <h4>出勤</h4>
+    <ul>
+      <li><b>上班時間</b>：08:00 ～ 17:00</li>
+      <li><b>週六輪班</b></li>
+      <li><b>打卡超過 15 分鐘算遲到</b></li>
+      <li><b>08:30 前</b>回報出勤人數並訂便當 → 公司群組（老闆會看）</li>
+    </ul>
+    <h4>每日回報</h4>
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>時間</th><th>回報內容</th><th>去處</th></tr></thead>
+      <tbody>
+        <tr><td>08:30 前</td><td>出勤人數、便當</td><td>公司群組</td></tr>
+        <tr><td>每次出貨後</td><td>出貨單掃描</td><td>公司群組</td></tr>
+        <tr><td>下班前</td><td>網頁主頁的進度表</td><td>公司群組</td></tr>
+      </tbody>
+    </table></div>
+    <h4>登記事項（網頁系統）</h4>
+    <ul>
+      <li><b>請領五金</b>：需登記</li>
+      <li><b>採購五金</b>：需登記</li>
+      <li><b>手工單</b>：每張單據連同細項都要登記</li>
+    </ul>
+    <h4>職能要求（每個人都要會）</h4>
+    <ul><li>了解工程進度</li><li>看圖</li><li>派車進料、出貨</li></ul>`},
+
+  {id:'contacts',group:'contact',icon:'📇',title:'對接窗口一覽',sub:'誰負責什麼 · 可編輯，改了全站跟著變',kw:'窗口 對接 找誰 負責 主辦 聯絡',dyn:'contacts',body:''},
+  {id:'eg-2n',group:'egsys',icon:'↩️',title:'2N 退倉作業（退料）',sub:'MDP0D250 主構件退倉資料維護(2N)',kw:'2N 退倉 退料 MDP0D250 MDP0M001 MDP0 鋼構生產管理系統 主構件退倉 塗裝廠 儲區 N220 N250 AYYY 0722 修改單 單據編號 修改原因 確認碼 累計退倉量',body:`
+    <h4>什麼時候用</h4>
+    <p><b>已完成構件</b>已經出了新竹儲區、到塗裝廠，卻還要退回來修改時，用 <b>2N 退倉</b>把構件退回。</p>
+    <h4>系統路徑</h4>
+    <span class="sop-path">MDP0 鋼構生產管理系統 &gt; MDP0M001 鋼構生產管理畫面 &gt; 〔55〕MDP0D250 主構件退倉資料維護(2N)</span>
+    <h4>表頭怎麼填</h4>
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>欄位</th><th>填什麼</th></tr></thead>
+      <tbody>
+        <tr><td><b>1. 卡別</b></td><td><b>2N</b>（固定）</td></tr>
+        <tr><td><b>2. 日期</b></td><td>當日</td></tr>
+        <tr><td><b>3. 單據編號</b></td><td>系統給，<b>Key in 成功後才會有</b></td></tr>
+        <tr><td><b>4. 工程編號</b></td><td>依修改單</td></tr>
+        <tr><td><b>5. 副號</b></td><td>A、A001、V001……</td></tr>
+        <tr><td><b>6. 退倉單位</b></td><td><b>N220</b></td></tr>
+        <tr><td><b>7. 進料單位</b></td><td><b>N250</b>（自動帶入）</td></tr>
+        <tr><td><b>8. 儲區</b></td><td>AYYY</td></tr>
+        <tr><td><b>9. 包商代號</b></td><td><b>0722</b></td></tr>
+        <tr><td><b>10. 修改原因</b></td><td>依<b>修改單權責</b>選：1 業主變更／2 繪圖錯誤／3 製造錯誤／4 品質異常／5 工地需求／6 設計改進／7 其他</td></tr>
+        <tr><td><b>11. 確認碼</b></td><td>Y</td></tr>
+      </tbody>
+    </table></div>
+    <h4>明細列</h4>
+    <p>一支一列：<b>副號</b>、<b>構件編號</b>、<b>分區</b>、<b>數量</b>、<b>儲區</b>。</p>
+    <h4>Key in 結果怎麼判讀</h4>
+    <ul>
+      <li><b>Key in 不成功</b> → 表示<b>構件還在新竹儲區</b>（根本還沒出去，不需要退倉）。畫面下方會跳：<code>累計退倉量 大於 累計塗裝量 ＋ 累計修改量 － 累計出貨量 ＋ 累計退貨量</code></li>
+      <li><b>Key in 成功</b> → 把系統給的<b>單據編號</b>一併記到修改單上。</li>
+    </ul>
+    <div class="sop-warn"><b>不管 KEY IN 成不成功，都必須把這些資訊記錄到修改單上</b>，並把修改單拿給<b>區域主辦</b>，請區域主辦轉交<b>該工程的管料主辦</b>。<br>（這裡的管料主辦是<b>依工程而定</b>，不是固定同一個人。）</div>
+    <h4>畫面範例</h4>
+    <div class="sop-shots">
+      <a class="sop-shot" href="assets/sop/2n-01-menu.jpg" target="_blank" rel="noopener"><img src="assets/sop/2n-01-menu.jpg" alt="MDP0D250 選單位置" loading="lazy"><span class="sop-shot-cap">① 從 <b>MDP0 鋼構生產管理系統 &gt; MDP0M001</b> 進去，選〔55〕<b>MDP0D250 主構件退倉資料維護(2N)</b>。</span></a>
+      <a class="sop-shot" href="assets/sop/2n-02-form.jpg" target="_blank" rel="noopener"><img src="assets/sop/2n-02-form.jpg" alt="2N 退倉空白畫面" loading="lazy"><span class="sop-shot-cap">② 空白畫面：上半 1~11 是表頭，下半是明細列（副號／構件編號／分區／數量／儲區）。</span></a>
+      <a class="sop-shot" href="assets/sop/2n-03-sample.jpg" target="_blank" rel="noopener"><img src="assets/sop/2n-03-sample.jpg" alt="2N 退倉填寫範例與錯誤訊息" loading="lazy"><span class="sop-shot-cap">③ 填好一筆的樣子。<b>畫面最下方紅框那行就是 Key in 不成功的訊息</b>（累計退倉量 大於 累計塗裝量＋累計修改量－累計出貨量＋累計退貨量）＝ 構件還在新竹儲區。</span></a>
+    </div>`},
+
+  {id:'eg-visitor',group:'egsys',icon:'🚧',title:'非長駐廠商 Key in（入廠施工登記）',sub:'MDI0DM60 非長駐承攬商入廠施工登記(工安)',kw:'非長駐 承攬商 入廠 施工登記 工安 MDI0DM60 MDI0 進廠註記 施工前一日 緊急搶修 N220 新竹廠製造二課 協力商 鎮山工程實業 保險 勞安室',body:`
+    <h4>什麼時候用</h4>
+    <p>外部（非長駐）廠商要進廠施工，<b>施工前一天</b>就要上系統登記；<b>緊急搶修也要即時 KEY-IN</b>。</p>
+    <h4>系統路徑</h4>
+    <span class="sop-path">MDI0 鋼構材料庫存系統 &gt; MDI0DM60 非長駐承攬商入廠施工登記(工安)</span>
+    <h4>欄位怎麼填</h4>
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>欄位</th><th>填什麼</th></tr></thead>
+      <tbody>
+        <tr><td><b>施工日期</b></td><td>實際施工那天（<b>前一日</b>就要登記完）</td></tr>
+        <tr><td><b>KEYIN 人員</b></td><td>系統帶入登錄者工號</td></tr>
+        <tr><td><b>施工單位（全銜）</b></td><td>廠商公司全名，例：正原機械有限公司</td></tr>
+        <tr><td><b>施工項目</b></td><td>例：運送堆高機</td></tr>
+        <tr><td><b>施工地點</b></td><td>例：C 棟</td></tr>
+        <tr><td><b>廠內管理單位</b></td><td><b>N220</b> 新竹廠製造二課</td></tr>
+        <tr><td><b>廠內主辦人員</b></td><td>{{boan}}　<code>{{boan#}}</code><br>代理人：{{fan+}}　<code>{{fan#}}</code>、{{linyx+}}　<code>{{linyx#}}</code></td></tr>
+        <tr><td><b>協力商名稱</b></td><td>鎮山工程實業有限公司</td></tr>
+        <tr><td><b>協力商主辦人員</b></td><td>我方負責這件事的人</td></tr>
+        <tr><td><b>進廠註記</b></td><td>要上 <b>Y</b> 才進得來（登記完通知 {{fan+}} 上 Y）</td></tr>
+      </tbody>
+    </table></div>
+    <h4>系統畫面上的三條提醒</h4>
+    <ol>
+      <li>管理單位主辦人員需於<b>施工前一日 KEY-IN</b>，緊急搶修亦需及時 KEY-IN。</li>
+      <li>請管理單位注意施工單位之<b>保險</b>，及 <code>P:/公佈欄\\HH00勞安室\\6.協力商入廠安衛簽章文件應注意事項</code>。</li>
+      <li><b>進廠註記未上 Y 者，不得進廠。</b></li>
+    </ol>
+    <div class="sop-warn"><b>登記完成 → 通知 {{fan+}} 即可。</b>沒上進廠註記 Y，廠商當天進不來。</div>
+    <h4>畫面範例</h4>
+    <div class="sop-shots">
+      <a class="sop-shot" href="assets/sop/visitor-01-form.jpg" target="_blank" rel="noopener"><img src="assets/sop/visitor-01-form.jpg" alt="MDI0DM60 非長駐承攬商入廠施工登記畫面" loading="lazy"><span class="sop-shot-cap"><b>MDI0DM60</b> 登記畫面：上方三條提醒、施工日期／單位／項目／地點，廠內管理單位 <b>N220 新竹廠製造二課</b>、廠內主辦人員，協力商填鎮山，最後由主辦上<b>進廠註記 Y</b>。</span></a>
+    </div>`},
+
+  {id:'dwg-type',group:'drawing',icon:'📐',title:'圖面類別與圖號對照',sub:'製造圖／S/P／成品材／削翼／水電／通圖',kw:'A15 A16 初版 修改版 S9 削翼 通圖 E004 水電平面圖 詳圖 開孔圖',body:`
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>類別</th><th>子項</th><th>圖號規則</th><th>範例</th></tr></thead>
+      <tbody>
+        <tr><td><b>製造圖</b></td><td>工程製造圖</td><td><code>A15</code> ＝ 初版（R0）<br><code>A16</code> ＝ 修改版（R1~）</td><td>A15-001</td></tr>
+        <tr><td><b>S/P</b></td><td>通常與製造圖一起發</td><td>含 <code>C</code></td><td>A15-C001</td></tr>
+        <tr><td><b>成品材</b></td><td>通常與製造圖或 S/P 單一起發</td><td>含 <code>C</code></td><td>A15-C001</td></tr>
+        <tr><td><b>削翼</b></td><td>韌性切割通圖</td><td>（歸於通圖 E 系列）</td><td>E0XX</td></tr>
+        <tr><td rowspan="3"><b>水電</b></td><td>水電平面圖</td><td><code>S9-0XXX</code>，尾數為樓層</td><td>S9-0101（1F）</td></tr>
+        <tr><td>水電詳圖</td><td><code>S9-1XX</code>，尾數為樓層</td><td>S9-101</td></tr>
+        <tr><td>水電開孔圖</td><td>—</td><td>—</td></tr>
+        <tr><td><b>通圖</b></td><td>吊裝安全措施標準圖<br>電銲標準圖<br>韌性切割詳圖</td><td><code>EXXX</code></td><td>E004</td></tr>
+      </tbody>
+    </table></div>`},
+
+  {id:'dwg-section',group:'drawing',icon:'🔤',title:'節次代碼對照',sub:'#10 起圖面以英文字母顯示',kw:'節次 #10 A B C D E 換算 讀圖',body:`
+    <div class="sop-warn"><b>節次 #10 起，圖面上以英文字母顯示。</b>讀圖時看到單一英文字母的節次標示，要換算回實際節次數；#1～#9 維持數字。</div>
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>節次</th><th>圖面顯示</th></tr></thead>
+      <tbody>
+        <tr><td>#10</td><td><b>A</b></td></tr>
+        <tr><td>#11</td><td><b>B</b></td></tr>
+        <tr><td>#12</td><td><b>C</b></td></tr>
+        <tr><td>#13</td><td><b>D</b></td></tr>
+        <tr><td>#14</td><td><b>E</b></td></tr>
+      </tbody>
+    </table></div>`},
+
+  {id:'dwg-fetch',group:'drawing',icon:'📥',title:'取圖與建檔',sub:'二樓鎮山盒子取 CP 圖 → 編號 → 分流',kw:'CP 圖面 二樓 盒子 右下角 編號 A15 A16 板次 修改構件編號 圖櫃 點工',body:`
+    <ol>
+      <li><b>取圖</b>：每日上下午送報驗時，至二樓鎮山盒子取 CP 圖面</li>
+      <li><b>編號</b>：每份 CP 有專屬編號（如 A15-001），寫至<b>所有圖面的右下角</b></li>
+      <li><b>分流</b>：
+        <ul>
+          <li><b>A15 初版</b> → 直接拆裝、放置圖櫃</li>
+          <li><b>A16 修改版</b> → 核對現有板次 → 記錄<b>修改構件編號</b>與<b>修改細項</b>（增加 S/P、修改長度等）→ 供工程點工</li>
+        </ul>
+      </li>
+    </ol>`},
+
+  {id:'dwg-prep',group:'drawing',icon:'🧾',title:'圖面整理作業（8 步）',sub:'工程上線前 2 週依序執行',kw:'圖號表 安全掛鉤 水電開孔 預拱 削翼 植釘 局部放大 螢光筆 蓋章 BOM 單階資料表 P磁碟',body:`
+    <div class="sop-note">時機：<b>工程上線前 2 週</b>，以下 ①～⑧ 依序執行。</div>
+    <h4>① 圖號表確認</h4>
+    <span class="sop-path">P磁碟 &gt; 公佈欄（承攬商） &gt; 設計一課 or 二課 &gt; 工程圖號表 &gt; ［工程編號］</span>
+    <ul>
+      <li>確認製造圖為最新版本，檢查 A15 及 A16</li>
+      <li>有出入 → 告知<b>區域主辦</b>及<b>工程主辦</b></li>
+      <li>補圖來源：<code>公佈欄（承攬商） &gt; 設計一/二課 &gt; 發圖單（新竹廠） or 工程設計修正單 &gt; ［工程編號］</code></li>
+    </ul>
+    <h4>② 安全掛鉤</h4>
+    <span class="sop-path">P磁碟 &gt; 公佈欄（承攬商） &gt; SB30工務課 &gt; 各工程安全措施（2020.11.12實施） &gt; ［工程編號］ &gt; ［依節次尋找］</span>
+    <p>依平面圖指示繪製。</p>
+    <h4>③ 水電開孔</h4>
+    <span class="sop-path">P磁碟 &gt; 公佈欄（承攬商） &gt; 設計一課 or 二課 &gt; 平立面KEYPLAN &gt; ［工程編號］ &gt; ［依節次尋找］</span>
+    <p>依平面圖指示繪製。</p>
+    <h4>④ 預拱</h4><p>超過 <b>15mm</b> 以上，圈寫預拱資料。</p>
+    <h4>⑤ 削翼</h4><p>特別標記削翼編號及尺寸。</p>
+    <h4>⑥ 植釘構件</h4><p>複寫一遍釘子尺寸及數量。</p>
+    <h4>⑦ 複雜圖面</h4><p>審圖人難以判讀者，列印局部放大圖。</p>
+    <h4>⑧ 施作別標示</h4><p>註明工地施作 or 工廠施作者，用<b>螢光筆</b>標示。</p>
+    <div class="sop-note"><b>完成後：</b>蓋章（鎮山製造圖）→ 列印單階資料表（BOM 表）作明細表 → 空白處寫該日日期 → <b>第一批進料前一天</b>送現場。</div>`},
+
+  {id:'col-box',group:'drawing',icon:'🏛️',title:'製造圖：柱 BOX 專章',sub:'安全措施圖來源、長度回饋、高度基準、斷面位置',kw:'柱 BOX 手足架 TOS 垂直U 安全U 安全母索 長度回饋 節次 400 500 1000 1100 1600 連接鈑',body:`
+    <h4>安全措施圖來源</h4>
+    <ul>
+      <li>位置與樑相同</li>
+      <li>未畫在製造圖上 → 去 P 磁碟找 → 仍無 → 跟<b>工程主辦</b>索取</li>
+    </ul>
+    <h4>長度回饋</h4>
+    <ul>
+      <li><b>節次 #1 / #4 / #7 / #10（圖面顯示 A）/ #13（圖面顯示 D）</b>，每三節一次會有長度回饋</li>
+      <li>有長度回饋須跟<b>工程主辦</b>追蹤</li>
+    </ul>
+    <div class="sop-warn">圖面上看到 <b>A</b> 或 <b>D</b> 的節次，就是長度回饋節次。<br>系統已自動幫忙：<b>BOM 工程區</b>（尾字 C ＝ 柱）若落在這些節次，會標成<b>粉紅底＋「長度回饋」</b>徽章。</div>
+    <h4>高度基準表（由低至高）</h4>
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>高度基準</th><th>構件</th></tr></thead>
+      <tbody>
+        <tr><td>柱底往上 <b>400</b>（含 FB）</td><td>手足架</td></tr>
+        <tr><td>TOS 線往上 <b>500</b></td><td>下手足架</td></tr>
+        <tr><td>TOS 線往上 <b>1000</b></td><td>垂直安全網掛勾（垂直 U）</td></tr>
+        <tr><td>TOS 線往上 <b>1100</b></td><td>柱安全母索掛勾（安全 U）</td></tr>
+        <tr><td>TOS 線往上 <b>1600</b></td><td>上手足架</td></tr>
+      </tbody>
+    </table></div>
+    <div class="sop-note"><b>預設規則：</b>若無特別說明要上手足架，<b>只做下手足架</b>。</div>
+    <h4>斷面位置規則（柱面）</h4>
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>構件</th><th>位置</th></tr></thead>
+      <tbody>
+        <tr><td><b>手足架</b></td><td>連接鈑到柱邊的 <b>1/2</b></td></tr>
+        <tr><td><b>安全 U（柱面 U）</b></td><td>柱邊到連接鈑 <b>500～800</b> → 畫在 <b>1/4</b><br>柱邊到連接鈑 <b>&gt; 800</b> → 畫在<b>柱中心線</b></td></tr>
+        <tr><td><b>垂直 U</b></td><td>同安全 U</td></tr>
+      </tbody>
+    </table></div>
+    <h4>安全 U 判讀</h4>
+    <ul>
+      <li>安全措施圖上<b>僅有一個圓圈且無特別標示</b> → 即為安全 U</li>
+      <li>其他一律<b>依標示為準</b></li>
+    </ul>`},
+
+  {id:'insp-pre',group:'inspect',icon:'📂',title:'報驗：新工程前置',sub:'下載申驗通知單、查看品管注意事項',kw:'品管課 申驗通知單 品管注意事項 P磁碟 公佈欄',body:`
+    <span class="sop-path">P磁碟 &gt; 公佈欄 &gt; 品管課</span>
+    <p>搜尋該工程名稱 → 下載<b>申驗通知單</b>、查看<b>品管注意事項</b>。</p>`},
+
+  {id:'insp-ndt',group:'inspect',icon:'🔬',title:'NDT 判定與報驗單份數',sub:'RH 無板樑 3 張／其餘 4 張',kw:'NDT UT RH 無板樑 報驗單 3張 4張 焊道 填角焊道 CP 托樑',body:`
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>構件條件</th><th>NDT</th><th>報驗單份數</th><th>填寫重點</th></tr></thead>
+      <tbody>
+        <tr><td><b>RH 無板樑</b></td><td>不須</td><td>一份 <b>3 張</b></td><td>—</td></tr>
+        <tr><td>其餘全部</td><td>須</td><td>一份 <b>4 張</b>（多一份 NDT 配圖）</td><td>填〔焊道 填角焊道〕</td></tr>
+        <tr><td>圖面寫 <b>C.P.</b> 及<b>托樑</b></td><td>須</td><td>一份 4 張</td><td>NDT 欄填 <b>UT</b></td></tr>
+      </tbody>
+    </table></div>`},
+
+  {id:'insp-selfcheck',group:'inspect',icon:'✅',title:'自檢表蓋章矩陣',sub:'哪些項目要蓋、什麼條件下蓋',kw:'自檢表 蓋章 腹板曲度 清潔度 孔徑 彎曲度 預拱 組立 焊道 RH 無板樑',body:`
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>蓋章項目</th><th>適用條件</th></tr></thead>
+      <tbody>
+        <tr><td>腹板曲度 &amp; 清潔度</td><td><b>所有板</b>皆需</td></tr>
+        <tr><td>孔徑</td><td><b>所有板</b>皆需</td></tr>
+        <tr><td>彎曲度</td><td>有<b>預拱</b>時</td></tr>
+        <tr><td>組立 &amp; 焊道</td><td><b>除 RH 無板樑外</b>皆需</td></tr>
+      </tbody>
+    </table></div>`},
+
+  {id:'insp-symbol',group:'inspect',icon:'🔠',title:'品管查驗符號',sub:'W／G／P／ACC／R1ACC／R2ACC／Reject',kw:'W 補焊 G 研磨 P 氣孔 ACC UT 過關 R1ACC R2ACC Reject 背鏟',body:`
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>符號</th><th>意義</th></tr></thead>
+      <tbody>
+        <tr><td><b>W</b></td><td>補焊</td></tr>
+        <tr><td><b>G</b></td><td>研磨整理</td></tr>
+        <tr><td><b>P</b></td><td>氣孔補焊</td></tr>
+        <tr><td><b>ACC</b></td><td>UT 過關</td></tr>
+        <tr><td><b>R1ACC</b></td><td>UT 背鏟後第 1 次過關</td></tr>
+        <tr><td><b>R2ACC</b></td><td>UT 背鏟後第 2 次過關</td></tr>
+        <tr><td><b>Reject</b></td><td>UT 未過關</td></tr>
+      </tbody>
+    </table></div>`},
+
+  {id:'weld',group:'material',icon:'🔥',title:'焊材：材質對照與叫料',sub:'E80／E70 系列、叫料時程、月底統計',kw:'焊材 81TN 71TN G83G E80 E70 SM570 SN490 60KG 50KG 廣泰 中鋼 {{chan}} 庫存',body:`
+    <h4>材質對照</h4>
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>系列</th><th>型號</th><th>強度</th><th>對應母材</th></tr></thead>
+      <tbody>
+        <tr><td><b>E80 系列</b></td><td>81TN</td><td>60KG 級</td><td>SM570</td></tr>
+        <tr><td><b>E70 系列</b></td><td>71TN</td><td>50KG 級</td><td>SN490</td></tr>
+      </tbody>
+    </table></div>
+    <div class="sop-note">記法：母材強度越高 → 焊材級數越高。</div>
+    <h4>叫料與庫存</h4>
+    <ul>
+      <li><b>叫料</b>：每週四～週五中午前，窗口 <b>{{chan}}</b></li>
+      <li><b>到貨</b>：廣泰週二～週四；中鋼不一定</li>
+      <li><b>月底統計</b>：G83G、71TN、81TN 庫存量 → 回報焊材群組</li>
+    </ul>`},
+
+  {id:'sp-order',group:'material',icon:'📈',title:'SP 加工順序表（進度追蹤）',sub:'每週下載追蹤，注意吊裝時間',kw:'SP 加工順序表 P磁碟 NP20 製造二課 每週下載 吊裝時間 D棟 外包',body:`
+    <span class="sop-path">P磁碟 &gt; 公布欄 &gt; NP20新竹廠製造部 &gt; 製造二課 &gt; SP加工 &gt; SP站加工順序表</span>
+    <ul>
+      <li><b>每週下載追蹤</b>，注意吊裝時間</li>
+      <li>製作來源（D 棟自製 or 外包）可問主辦</li>
+    </ul>`},
+
+  {id:'sp-qty',group:'material',icon:'💻',title:'SP 數量查詢（長榮鋼鐵資訊系統）',sub:'鋼構 BOM 系統操作序列',kw:'SP 數量查詢 鋼構BOM系統 報表程式 SP構件編號查詢主構件資料 F10 ALT+6 工程副號 工程分區',body:`
+    <span class="sop-path">鋼構BOM系統 &gt; 鋼構BOM報表程式 &gt; SP構件編號查詢主構件資料</span>
+    <h4>操作序列</h4>
+    <pre>KEY IN 工程編號 / 工程副號 / 工程分區 / SP編號
+→ F10（儲存）
+→ ALT+6
+→ S
+→ Enter
+→ 查詢</pre>`},
+
+  {id:'sp-place',group:'material',icon:'📦',title:'SP 擺放方式',sub:'依工程區分類、不同 SP 編號分開',kw:'SP 擺放 工程區 編號 區分',body:`
+    <ul>
+      <li>依<b>不同工程區</b>分類</li>
+      <li>盡可能把<b>不同的 SP 編號區分開來</b></li>
+    </ul>`},
+
+  {id:'sp-cp',group:'material',icon:'🗂️',title:'CP 單號整理（紙本）',sub:'集中 A15／A16、刪減計算、開手工單補缺',kw:'CP 單號 紙本 表頭 A15 A16 數量統整 代用鈑片 缺漏 手工單',body:`
+    <div class="sop-warn">務必注意<b>表頭資料</b>。</div>
+    <ol>
+      <li>將工程分區的 <b>A15、A16 單集中</b>，做數量統整，便於核對現場資料</li>
+      <li>集中後<b>刪減計算數量</b>，統整取消或新增資料 — A15／A16 會有新增、刪除或<b>代用鈑片</b></li>
+      <li>清點完有缺漏 → <b>開手工單</b>，盡量於工程上線前補齊（與各工程主辦開立）</li>
+    </ol>`},
+
+  {id:'sp-pick',group:'material',icon:'🚚',title:'SP 領料實體流程',sub:'下貨區 → D 棟 → C 棟 → 現場',kw:'領料 下貨區 D棟 C棟 現場 簽單 點收 拆封 點料 廢料 S板 緊急切割 長榮發圖單',body:`
+    <div class="sop-note"><b>下貨區 → D 棟 → C 棟 → 現場</b></div>
+    <ol>
+      <li><b>備單</b>：確認即將上線工程單號，取得所有 A15／A16 的 S/P 單（長榮發圖單 ＋ P 磁碟追蹤表）</li>
+      <li><b>簽單點收</b>：長榮知會需簽單時，至下貨區確認<b>所有工程節區、板數、放置位置</b></li>
+      <li><b>移置 D 棟</b>：由長榮或自行推至 D 棟</li>
+      <li><b>上線前 2 週移至 C 棟</b>：拆封、點料、依<b>工程區為單位</b>整齊排放
+        <ul><li>缺料或製作錯誤 → <b>以區為單位彙整</b> → 通報區域主辦開立手工單</li></ul>
+      </li>
+      <li><b>廢料</b>：已完成區集中擺放，該節區吊裝結束即丟棄（保留大片 S 板備緊急切割）</li>
+    </ol>`},
+
+  {id:'finmat',group:'material',icon:'🧱',title:'成品材領料',sub:'領料單作業 ＋ N250／S250 料源交期',kw:'成品材 領料單 Z 註記 複製細項 匯入資料 流水編號 N250 S250 新竹廠 新營廠 3天 5天 {{jao}} LOADING 管料課',body:`
+    <h4>領料單作業</h4>
+    <ol>
+      <li>收到 CP 單後，在單子上<b>註記「Z」</b></li>
+      <li>依內容打領料單</li>
+      <li>在列印頁面，<b>複製細項內容</b> → 貼至「成品材領料」處 → 匯入資料</li>
+      <li>系統自動記錄：工程編號、工程分區、流水編號、細項</li>
+    </ol>
+    <div class="sop-note">領料時間需<b>配合該月 LOADING</b> 進行調配。</div>
+    <h4>料源代碼與交期</h4>
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>代碼</th><th>料在哪</th><th>表定可領收</th><th>注意事項</th></tr></thead>
+      <tbody>
+        <tr><td><b>N250</b></td><td>新竹廠</td><td><b>3 天</b>後</td><td>可與管料主辦（{{jao}}）溝通提早領料</td></tr>
+        <tr><td><b>S250</b></td><td>新營廠</td><td><b>5 天</b>後</td><td>新營廠狀況較不穩定，需<b>常追蹤工程主辦</b>；料到會有出貨單，直接找管料課領</td></tr>
+      </tbody>
+    </table></div>`},
+
+  {id:'reserve',group:'material',icon:'♻️',title:'保留料',sub:'RCP／領料單／退料的長度門檻',kw:'保留料 RCP 3M 1M 退料 領料單 {{liu}} 財哥',body:`
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>單據／情境</th><th>條件</th><th>窗口</th></tr></thead>
+      <tbody>
+        <tr><td><b>RCP</b></td><td>保留料長度 <b>&lt; 3M</b></td><td>{{liu+}}</td></tr>
+        <tr><td><b>領料單</b></td><td>保留料長度 <b>&gt; 3M</b></td><td>—</td></tr>
+        <tr><td><b>保留料退料</b></td><td>通常 <b>&gt; 1M</b> 才要退料</td><td>需與{{liu}}確認</td></tr>
+      </tbody>
+    </table></div>`},
+
+  {id:'manual-order',group:'material',icon:'✍️',title:'手工單',sub:'登記、製作期 3 天、急迫性溝通',kw:'手工單 登記 細項 製作期 3天 急迫性 {{liao}} 工程主辦 {{linyj}} 領料 清點',body:`
+    <ul>
+      <li>每張單據都需<b>登記在網頁的「手工單」</b>，細項也要記錄</li>
+      <li><b>製作期通常 3 天</b></li>
+      <li>可評估急迫性 → 與<b>{{liao}}</b>及<b>工程主辦</b>溝通優先製作</li>
+      <li>完成後領料與清點 → 找<b>{{linyj}}</b></li>
+    </ul>`},
+
+  {id:'special-mat',group:'material',icon:'🧰',title:'托樑／BT／斜撐等特殊材料',sub:'先確認 BOM 或多階表，再依製作方式找人',kw:'托樑 BT 斜撐 多階表 加工機 {{linyx}} 自行組立 {{liao}} {{linyj}} 保留料 {{liu}}',body:`
+    <div class="sop-note"><b>第一步：</b>確認 BOM 或多階表（多階表可向區域主辦或工程主辦索取）。</div>
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>製作方式</th><th>窗口／取料處</th></tr></thead>
+      <tbody>
+        <tr><td><b>加工機製作</b></td><td>{{linyx}}</td></tr>
+        <tr><td><b>自行組立</b></td><td>通常在 CP 的 SP 裡面 → 找料找{{linyj}}／{{liao}}／工程主辦</td></tr>
+        <tr><td><b>保留料製作</b></td><td>{{liu+}}</td></tr>
+      </tbody>
+    </table></div>`},
+
+  {id:'dispatch',group:'ship',icon:'🚛',title:'派車（進料／出貨）',sub:'窗口分流、必備資訊、訊息範本',kw:'派車 進料 出貨 {{wu}} A棟大哥 區域主辦 柱位 訊息範本 派車群組 出貨單掃描',body:`
+    <h4>窗口分流</h4>
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>情境</th><th>找誰</th></tr></thead>
+      <tbody>
+        <tr><td><b>出貨</b>（一律）</td><td>{{wu}} → 派車群組</td></tr>
+        <tr><td><b>進料</b>（一般材料）</td><td>{{wu}} → 派車群組</td></tr>
+        <tr><td><b>進料柱</b></td><td>A 棟大哥 or 區域主辦</td></tr>
+      </tbody>
+    </table></div>
+    <div class="sop-warn"><b>派車一定要標註柱位。</b></div>
+    <h4>訊息範本</h4>
+    <p><b>進料</b></p>
+    <pre>@{{wu}} C棟D08需進料B820-8BG 一疊 麻煩安排 謝謝</pre>
+    <p><b>出貨樑</b></p>
+    <pre>@{{wu}} C棟D08需出一車 麻煩安排 謝謝</pre>
+    <p><b>出貨柱</b></p>
+    <pre>@{{wu}} C棟D08需出一支柱子 麻煩安排 謝謝</pre>
+    <div class="sop-note">格式：<code>@窗口 ［棟別］［柱位］ 需［動作］［品項/數量］ 麻煩安排 謝謝</code><br>出貨後記得<b>掃描出貨單至公司群組</b>。</div>`},
+
+  {id:'gas',group:'safety',icon:'🧯',title:'每週氣體檢查',sub:'每週五固定檢查並上傳',kw:'氣體檢查 每週五 上傳 長榮鎮山二次加工群組',body:`
+    <p>每週五固定檢查一次，並上傳至<b>長榮鎮山二次加工群組</b>。</p>`},
+
+  {id:'six-s',group:'safety',icon:'🧹',title:'6S 協議',sub:'整理／整頓／清潔／標準化／自律／安全',kw:'6S 5S Sort Set in order Shine Standardize Sustain Safety 整理 整頓 清潔 標準化 自律 安全',body:`
+    <p>源自日本 5S，加入第 6 個 S（Safety）。</p>
+    <div class="sop-tblwrap"><table class="sop-tbl">
+      <thead><tr><th>S</th><th>中文</th><th>內容</th></tr></thead>
+      <tbody>
+        <tr><td>Sort</td><td><b>整理</b></td><td>去除工作區域內不需要的物品，只保留必要工具與材料</td></tr>
+        <tr><td>Set in order</td><td><b>整頓</b></td><td>需要的物品按工作流程擺放，每一項都有固定位置</td></tr>
+        <tr><td>Shine</td><td><b>清潔</b></td><td>定期清潔工作區域，保持環境清潔</td></tr>
+        <tr><td>Standardize</td><td><b>標準化</b></td><td>制定標準化工作流程，讓每位員工都明白如何進行</td></tr>
+        <tr><td>Sustain</td><td><b>自律</b></td><td>養成良好習慣，持續保持整齊、清潔、有序</td></tr>
+        <tr><td>Safety</td><td><b>安全</b></td><td>確保工作環境安全，減少工作相關意外與傷害</td></tr>
+      </tbody>
+    </table></div>
+    <div class="sop-note">對照本手冊：SP 依工程區與編號分類排放 ＝ 整頓；廢料集中與定期丟棄 ＝ 整理 ＋ 清潔；本 SOP 本身 ＝ 標準化。</div>`}
+  ];
+
+  let sopGroup='all', sopBuilt=false, sopOpenId=null, sopContactsLoaded=false;
+
+  function sopNorm(s){ return String(s==null?'':s).toLowerCase(); }
+  function sopEsc(s){ return String(s==null?'':s).replace(/[&<>]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+  function sopAttr(s){ return sopEsc(s).replace(/"/g,'&quot;'); }
+  function sopStrip(html){ const d=document.createElement('div'); d.innerHTML=html; return (d.textContent||'').replace(/\s+/g,' ').trim(); }
+  function sopGroupLabel(k){ const g=SOP_GROUPS.find(x=>x.k===k); return g?g.label:k; }
+
+  /* ── 對接窗口:可編輯,主存 app_config.key='sop_contacts'(全公司共用),localStorage 只當離線快取。
+        SOP 其他卡片用 {{key}} / {{key+}}(含別名)代入,改名字全站跟著變。 ── */
+  const SOP_CONTACT_KEY='sop_contacts';
+  const SOP_CONTACT_DEFAULT=[
+    {k:'liao', name:'廖世文', nick:'', duty:'調整交期、急單、製作順序討論；手工單急迫性評估；自行組立找料'},
+    {k:'huang',name:'黃小妘', nick:'', duty:'外包的進度、交期、狀況'},
+    {k:'linyj',name:'林育槿', nick:'', duty:'現場找 SP 等材料；手工單；手工單完成後領料與清點'},
+    {k:'jao',  name:'饒坤鴻', nick:'', duty:'管料主辦 — N250 提早領料溝通'},
+    {k:'liu',  name:'劉定財', nick:'財哥', duty:'保留料全項：RCP（< 3M）、退料、保留料製作'},
+    {k:'linyx',name:'林郁翔', nick:'翔翔', code:'O459578', duty:'加工機製作（托樑／BT／斜撐等）；非長駐廠商 Key in 代理人'},
+    {k:'chan', name:'詹丞立', nick:'', duty:'焊材叫料接口'},
+    {k:'wu',   name:'巫文雄', nick:'', duty:'所有出貨派車、進料派車（柱除外）'},
+    {k:'adong',name:'A 棟大哥／區域主辦', nick:'', duty:'進料柱'},
+    {k:'owner',name:'區域主辦／工程主辦', nick:'', duty:'圖面版次出入通報、開立手工單、索取多階表、長度回饋追蹤'},
+    {k:'boan', name:'謝博安', nick:'', code:'O466419', duty:'長榮系統・非長駐廠商 Key in：廠內主辦人員（N220 新竹廠製造二課）'},
+    {k:'fan',  name:'范揚欽', nick:'老范', code:'O455518', duty:'長榮系統・非長駐廠商 Key in：代理人；登記完成通知他上進廠註記 Y'}
+  ];
+  // SOP 內文真正引用到的代號:這些一定要存在,否則畫面會出現 {{代號}}
+  const SOP_TOKEN_KEYS=(function(){
+    const set=new Set(), re=/\{\{([A-Za-z0-9_]+)[+#]?\}\}/g;
+    SOP_DATA.forEach(d=>{ const t=(d.body||'')+' '+(d.kw||''); let m; re.lastIndex=0; while((m=re.exec(t))) set.add(m[1]); });
+    return set;
+  })();
+  // 舊資料(雲端或本機)只有當時那幾筆;之後新增的內建窗口要補進來,不然代號代不出來
+  function sopContactsMerge(list){
+    const out=(Array.isArray(list)?list:[]).filter(c=>c&&c.k);
+    const have=new Set(out.map(c=>c.k));
+    SOP_CONTACT_DEFAULT.forEach(d=>{ if(!have.has(d.k)&&SOP_TOKEN_KEYS.has(d.k)) out.push({...d}); });
+    // 工號是後來才加的欄位:舊資料沒有這個屬性就補上預設值(使用者自己填過/清空過的不動)
+    out.forEach(c=>{ const d=SOP_CONTACT_DEFAULT.find(x=>x.k===c.k); if(d&&d.code&&c.code===undefined) c.code=d.code; });
+    return out;
+  }
+  let sopContacts=(function(){
+    try{ const v=JSON.parse(localStorage.getItem(SOP_CONTACT_KEY)||'null');
+      if(Array.isArray(v)&&v.length) return sopContactsMerge(v);
+    }catch(e){}
+    return SOP_CONTACT_DEFAULT.map(c=>({...c}));
+  })();
+  let sopContactsDraft=[];
+  function sopContactsCache(){ try{ localStorage.setItem(SOP_CONTACT_KEY,JSON.stringify(sopContacts)); }catch(e){} }
+  async function sopContactsLoad(){
+    if(typeof sbFetch!=='function') return;
+    try{
+      const r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+encodeURIComponent(SOP_CONTACT_KEY));
+      const row=(r&&r.ok&&Array.isArray(r.data))?r.data[0]:null;
+      if(row){
+        let arr=[]; try{ arr=JSON.parse(row.value)||[]; }catch(e){ arr=[]; }
+        if(Array.isArray(arr)&&arr.length){ sopContacts=sopContactsMerge(arr); sopContactsCache(); }
+      }
+    }catch(e){ console.warn('sopContactsLoad',e); }
+  }
+  async function sopContactsSaveCloud(){
+    sopContactsCache();
+    if(typeof sbFetch!=='function') return false;
+    try{
+      const r=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:SOP_CONTACT_KEY,value:JSON.stringify(sopContacts)})});
+      if(!r||!r.ok){ alert('窗口已存到本機，但雲端同步失敗（其他電腦可能看不到）；請確認目前帳號有編輯權限。'); return false; }
+      return true;
+    }catch(e){ console.warn('sopContactsSaveCloud',e); alert('窗口已存到本機，但雲端同步失敗（其他電腦可能看不到）。'); return false; }
+  }
+  function sopCanEdit(){ try{ return typeof pagePerm==='function' ? pagePerm('sop')==='edit' : true; }catch(e){ return true; } }
+  // {{key}} → 姓名;{{key+}} → 姓名（別名）
+  function sopFill(s){
+    return String(s==null?'':s).replace(/\{\{([A-Za-z0-9_]+)([+#]?)\}\}/g,function(m,k,sfx){
+      const c=sopContacts.find(x=>x.k===k)||SOP_CONTACT_DEFAULT.find(x=>x.k===k);
+      if(!c) return '';
+      if(sfx==='#') return c.code||'';                       // 工號
+      return (sfx==='+'&&c.nick)?(c.name+'（'+c.nick+'）'):c.name;
+    });
+  }
+  function sopContactsHtml(){
+    const rows=sopContacts.map(c=>'<tr><td><b>'+sopEsc(c.name)+(c.nick?'（'+sopEsc(c.nick)+'）':'')+'</b>'
+      +(c.code?'<br><code>'+sopEsc(c.code)+'</code>':'')+'</td><td>'+sopEsc(c.duty)+'</td></tr>').join('');
+    return (sopCanEdit()
+        ? '<div class="sop-edit-bar"><button type="button" class="btn" onclick="sopContactsEdit()">✏ 編輯窗口</button><span class="sop-edit-hint">改了姓名，SOP 其他卡片提到這個人的地方會一起變。</span></div>'
+        : '')
+      +'<div class="sop-tblwrap"><table class="sop-tbl"><thead><tr><th>窗口</th><th>負責事項</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  }
+  function sopBodyOf(d){ return sopFill(d.dyn==='contacts'?sopContactsHtml():d.body); }
+
+  window.sopContactsEdit=function(){
+    sopContactsDraft=sopContacts.map(c=>({...c}));
+    sopRenderContactsEdit();
+  };
+  function sopRenderContactsEdit(){
+    const body=document.getElementById('sop-modal-body'); if(!body) return;
+    body.innerHTML='<div class="sop-edit-bar">'
+      +'<button type="button" class="btn btn-gen" onclick="sopContactsSave()">💾 儲存</button>'
+      +'<button type="button" class="btn" onclick="sopContactsCancel()">取消</button>'
+      +'<button type="button" class="btn" onclick="sopContactsAdd()">＋ 新增窗口</button>'
+      +'</div>'
+      +'<div class="sop-tblwrap"><table class="sop-tbl"><thead><tr><th>姓名</th><th>別名</th><th>工號</th><th>負責事項</th><th></th></tr></thead><tbody>'
+      +sopContactsDraft.map((c,i)=>'<tr>'
+        +'<td><input class="sop-in" value="'+sopAttr(c.name)+'" oninput="sopContactsSet('+i+',\'name\',this.value)"></td>'
+        +'<td><input class="sop-in sop-in-s" value="'+sopAttr(c.nick||'')+'" placeholder="例：財哥" oninput="sopContactsSet('+i+',\'nick\',this.value)"></td>'
+        +'<td><input class="sop-in sop-in-s" value="'+sopAttr(c.code||'')+'" placeholder="例：O466419" oninput="sopContactsSet('+i+',\'code\',this.value)"></td>'
+        +'<td><textarea class="sop-in sop-ta" oninput="sopContactsSet('+i+',\'duty\',this.value)">'+sopEsc(c.duty||'')+'</textarea></td>'
+        +'<td><button type="button" class="btn sop-del" onclick="sopContactsDel('+i+')" title="刪除這個窗口">🗑</button></td>'
+        +'</tr>').join('')
+      +'</tbody></table></div>'
+      +'<div class="sop-note">姓名一改，SOP 其他卡片（焊材叫料、派車、手工單、保留料、成品材…）提到這個人的地方會<b>同步更新</b>。別名是像「財哥」這種暱稱，填了會顯示成「劉定財（財哥）」。</div>';
+  }
+  window.sopContactsSet=function(i,k,v){ if(sopContactsDraft[i]) sopContactsDraft[i][k]=v; };
+  window.sopContactsAdd=function(){
+    sopContactsDraft.push({k:'c'+Date.now().toString(36),name:'',nick:'',code:'',duty:''});
+    sopRenderContactsEdit();
+  };
+  window.sopContactsDel=function(i){
+    const c=sopContactsDraft[i]; if(!c) return;
+    if(c.name && !confirm('確定刪除窗口「'+c.name+'」？\n（SOP 其他卡片若有引用，會顯示原本的代號）')) return;
+    sopContactsDraft.splice(i,1); sopRenderContactsEdit();
+  };
+  window.sopContactsCancel=function(){ sopContactsDraft=[]; window.sopOpen('contacts'); };
+  window.sopContactsSave=async function(){
+    const rows=sopContactsDraft.map(c=>({k:c.k,name:String(c.name||'').trim(),nick:String(c.nick||'').trim(),code:String(c.code||'').trim(),duty:String(c.duty||'').trim()})).filter(c=>c.name);
+    if(!rows.length){ alert('至少要留一位窗口'); return; }
+    sopContacts=rows;
+    await sopContactsSaveCloud();
+    sopContactsDraft=[];
+    sopReindex();            // 姓名改了 → 重建搜尋索引與卡片摘要
+    window.sopOpen('contacts');
+  };
+
+  function sopBuild(){
+    const counts={};
+    SOP_DATA.forEach(d=>{ counts[d.group]=(counts[d.group]||0)+1; });
+    const chips=document.getElementById('sop-chips');
+    if(chips) chips.innerHTML=SOP_GROUPS.map(g=>{
+      const n=(g.k==='all')?SOP_DATA.length:(counts[g.k]||0);
+      return '<button type="button" class="sop-chip'+(g.k===sopGroup?' active':'')+'" data-g="'+g.k+'" onclick="sopSetGroup(\''+g.k+'\')">'+g.label+'<b>'+n+'</b></button>';
+    }).join('');
+    const grid=document.getElementById('sop-grid');
+    if(grid) grid.innerHTML=SOP_DATA.map(d=>
+      '<button type="button" class="sop-card" id="sop-card-'+d.id+'" data-g="'+d.group+'" onclick="sopOpen(\''+d.id+'\')">'+
+        '<span class="sop-ico">'+d.icon+'</span>'+
+        '<span class="sop-head-text">'+
+          '<span class="sop-title">'+d.title+'</span>'+
+          '<span class="sop-sub">'+d.sub+'</span>'+
+          '<span class="sop-badge">'+sopGroupLabel(d.group)+'</span>'+
+          '<span class="sop-snip" id="sop-snip-'+d.id+'" hidden></span>'+
+        '</span>'+
+        '<span class="sop-caret">▸</span>'+
+      '</button>').join('');
+    sopReindex();
+  }
+  // 內文純文字 = 搜尋索引 + 卡片摘要來源;窗口姓名改動後要重算
+  function sopReindex(){
+    SOP_DATA.forEach(d=>{
+      d._plain=sopStrip(sopBodyOf(d));
+      d._text=sopNorm(d.title+' '+d.sub+' '+sopFill(d.kw||'')+' '+d._plain);
+    });
+    sopApply();
+  }
+
+  // 在已渲染的內文中把關鍵字包成 <mark>,不動標籤本身
+  function sopHighlight(root,q){
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null), hits=[];
+    let node;
+    while((node=walker.nextNode())){ if(sopNorm(node.nodeValue).indexOf(q)>=0) hits.push(node); }
+    hits.forEach(n=>{
+      const txt=n.nodeValue, low=sopNorm(txt), frag=document.createDocumentFragment();
+      let i=0,p;
+      while((p=low.indexOf(q,i))>=0){
+        if(p>i) frag.appendChild(document.createTextNode(txt.slice(i,p)));
+        const m=document.createElement('mark'); m.className='sop-hit'; m.textContent=txt.slice(p,p+q.length);
+        frag.appendChild(m); i=p+q.length;
+      }
+      if(i<txt.length) frag.appendChild(document.createTextNode(txt.slice(i)));
+      n.parentNode.replaceChild(frag,n);
+    });
+  }
+
+  // 卡片上的命中前後文:內文沒中(只中標題或關鍵字)就不顯示
+  function sopSnippet(d,q){
+    const idx=sopNorm(d._plain).indexOf(q);
+    if(idx<0) return '';
+    const a=Math.max(0,idx-28), b=Math.min(d._plain.length, idx+q.length+46);
+    return (a>0?'…':'')+sopEsc(d._plain.slice(a,idx))
+      +'<mark class="sop-hit">'+sopEsc(d._plain.slice(idx,idx+q.length))+'</mark>'
+      +sopEsc(d._plain.slice(idx+q.length,b))+(b<d._plain.length?'…':'');
+  }
+
+  function sopApply(){
+    const input=document.getElementById('sop-search');
+    const raw=(input&&input.value||'').trim(), q=sopNorm(raw);
+    const clr=document.getElementById('sop-clear'); if(clr) clr.hidden=!q;
+    let shown=0;
+    SOP_DATA.forEach(d=>{
+      const card=document.getElementById('sop-card-'+d.id); if(!card) return;
+      const okG=(sopGroup==='all'||d.group===sopGroup), okQ=(!q||d._text.indexOf(q)>=0);
+      const vis=okG&&okQ;
+      card.hidden=!vis;
+      const snip=document.getElementById('sop-snip-'+d.id);
+      if(snip){
+        const html=(vis&&q)?sopSnippet(d,q):'';
+        snip.innerHTML=html; snip.hidden=!html;
+      }
+      if(vis) shown++;
+    });
+    const st=document.getElementById('sop-status');
+    if(st) st.textContent = q
+      ? ('搜尋「'+raw+'」 · 命中 '+shown+' / '+SOP_DATA.length+' 張卡片'+(shown?'':' — 換個關鍵字試試'))
+      : (sopGroup==='all' ? ('共 '+SOP_DATA.length+' 張卡片 · 點卡片看完整內容') : (sopGroupLabel(sopGroup)+' · '+shown+' 張卡片'));
+  }
+
+  // 目前畫面上還看得到的卡片(供彈窗上一則/下一則)
+  function sopVisibleIds(){
+    return SOP_DATA.filter(d=>{ const c=document.getElementById('sop-card-'+d.id); return c&&!c.hidden; }).map(d=>d.id);
+  }
+
+  window.sopInit=function(){
+    if(!sopBuilt){ sopBuild(); sopBuilt=true; } else sopApply();
+    if(!sopContactsLoaded){                       // 首次進頁才向雲端要一次共用窗口
+      sopContactsLoaded=true;
+      sopContactsLoad().then(function(){ sopReindex(); if(sopOpenId==='contacts') window.sopOpen('contacts'); });
+    }
+  };
+  window.sopSearch=function(){ sopApply(); };
+  window.sopClearSearch=function(){ const i=document.getElementById('sop-search'); if(i){ i.value=''; i.focus(); } sopApply(); };
+  window.sopSetGroup=function(k){
+    sopGroup=k;
+    document.querySelectorAll('#sop-chips .sop-chip').forEach(c=>c.classList.toggle('active',c.dataset.g===k));
+    sopApply();
+  };
+
+  // ── 彈窗 ──
+  window.sopOpen=function(id){
+    const d=SOP_DATA.find(x=>x.id===id); if(!d) return;
+    sopOpenId=id;
+    document.getElementById('sop-modal-ico').textContent=d.icon;
+    document.getElementById('sop-modal-title').textContent=d.title;
+    document.getElementById('sop-modal-sub').textContent=d.sub+' · '+sopGroupLabel(d.group);
+    const body=document.getElementById('sop-modal-body');
+    body.innerHTML=sopBodyOf(d); body.scrollTop=0;
+    const raw=(document.getElementById('sop-search')||{}).value||'';
+    const q=sopNorm(raw.trim());
+    if(q) sopHighlight(body,q);                       // 搜尋中打開:內文一樣標黃
+    const ids=sopVisibleIds(), i=ids.indexOf(id);
+    document.getElementById('sop-modal-pos').textContent=(i>=0?(i+1)+' / '+ids.length:'');
+    document.getElementById('sop-modal-prev').disabled=(i<=0);
+    document.getElementById('sop-modal-next').disabled=(i<0||i>=ids.length-1);
+    document.getElementById('sop-modal').classList.add('show');
+    setTimeout(function(){ const c=document.querySelector('#sop-modal .sop-modal-close'); if(c) c.focus(); },0);
+  };
+  window.sopCloseModal=function(){
+    const m=document.getElementById('sop-modal'); if(m) m.classList.remove('show');
+    sopOpenId=null; sopContactsDraft=[];
+  };
+  window.sopModalNav=function(step){
+    const ids=sopVisibleIds(), i=ids.indexOf(sopOpenId);
+    if(i<0) return;
+    const n=i+step; if(n<0||n>=ids.length) return;
+    window.sopOpen(ids[n]);
+  };
+  // ESC 關閉、左右鍵換上一則/下一則(用捕獲階段,搶在全域 ESC 收側欄之前)
+  document.addEventListener('keydown',function(e){
+    const m=document.getElementById('sop-modal');
+    if(!m||!m.classList.contains('show')) return;
+    if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); window.sopCloseModal(); }
+    else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
+      const t=e.target;
+      if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable)) return;   // 編輯窗口時左右鍵要能移動游標
+      e.preventDefault(); window.sopModalNav(e.key==='ArrowLeft'?-1:1);
+    }
+  },true);
+
+  function sopPrintList(list,title){
+    if(!list.length){ alert('沒有可列印的內容'); return; }
+    const css='body{font-family:"Noto Sans TC",sans-serif;color:#000;margin:24px;line-height:1.7;font-size:13px}'
+      +'h1{font-size:20px;margin:0 0 4px}.meta{font-size:11px;color:#666;margin-bottom:18px}'
+      +'section{break-inside:avoid;page-break-inside:avoid;border:1px solid #ccc;border-radius:6px;padding:12px 14px;margin-bottom:10px}'
+      +'h2{font-size:15px;margin:0 0 2px;color:#000;font-weight:700}.sub{font-size:11px;color:#666;margin-bottom:8px}'
+      +'h4{font-size:12px;margin:10px 0 4px;border-left:3px solid #888;padding-left:6px;color:#000;font-weight:700}'
+      +'b{color:#c00}b:first-child,b.lead{color:#1a5fa8}.sop-warn b{color:#c00}'
+      +'table{width:100%;border-collapse:collapse;font-size:11.5px;margin:6px 0}'
+      +'th,td{border:1px solid #bbb;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eee;color:#000;font-weight:700}'
+      +'pre{background:#f4f4f4;border:1px solid #ddd;padding:7px 9px;font-size:11px;white-space:pre-wrap}'
+      +'code{background:#f4f4f4;padding:0 3px}ul,ol{margin:4px 0 4px 18px}'
+      +'.sop-note,.sop-warn,.sop-gate{background:#f6f6f6;border-left:3px solid #888;padding:6px 9px;margin:8px 0;font-size:11.5px}'
+      +'.sop-step{border:1px solid #ddd;border-radius:5px;padding:5px 8px;margin:4px 0}'
+      +'.sop-step-n{display:inline-block;min-width:18px;font-weight:700;color:#c00}'
+      +'.sop-flow-phase{font-weight:700;margin:10px 0 4px}.sop-flow-arrow{color:#999;font-size:10px}'
+      +'.sop-path{display:block;font-family:monospace;background:#f4f4f4;border:1px dashed #bbb;padding:5px 7px;margin:5px 0;font-size:11px}';
+    const body=list.map(d=>'<section><h2>'+d.icon+' '+d.title+'</h2><div class="sub">'+d.sub+'</div>'+sopBodyOf(d)+'</section>').join('');
+    const w=window.open('','_blank'); if(!w){ alert('瀏覽器阻擋了新視窗，請允許彈出視窗後再試'); return; }
+    w.document.write('<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>'+(title||'新竹廠作業統整手冊')+'</title><style>'+css+'</style></head><body>'
+      +'<h1>新竹廠 作業統整手冊</h1><div class="meta">列印 '+new Date().toLocaleString('zh-TW')+' · 共 '+list.length+' 個主題</div>'+body+'</body></html>');
+    w.document.close();
+    setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){} },400);
+  }
+  window.sopPrint=function(){ sopPrintList(SOP_DATA.filter(d=>{ const c=document.getElementById('sop-card-'+d.id); return c&&!c.hidden; })); };
+  window.sopPrintOne=function(){ const d=SOP_DATA.find(x=>x.id===sopOpenId); if(d) sopPrintList([d],d.title); };
 })();
 </script>
 </body>
