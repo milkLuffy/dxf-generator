@@ -37166,6 +37166,7 @@ function scCard(f,i){
   el.innerHTML=
     '<div class="top"><span class="no">'+(i+1)+'</span><span class="pn">'+esc(f.partNo||'(未填構件)')+'</span>'+
     '<span class="meta">'+esc(f.dwg||'')+(f.spec?' · '+esc(f.spec):'')+'</span>'+
+    (f.png?'<button class="btn-sm" data-act="delshot" title="保留自檢表，只移除這張截圖">刪除截圖</button>':'')+
     '<button class="btn-sm" data-act="del" style="color:var(--danger)">刪除</button></div>'+
     (f.png?'<img class="thumb" src="'+f.url+'" data-act="big"/>'
           :'<div class="thumbph">未截圖 — 點此卡片後到左圖框選</div>')+
@@ -37192,6 +37193,14 @@ function scCard(f,i){
     inp.classList.toggle('hasval',!!inp.value.trim()); }; });
   const big=el.querySelector('[data-act="big"]');
   if(big) big.onclick=()=>{ scEl('sc-bigimg').src=f.url; scEl('sc-big').showModal(); };
+  const delshot=el.querySelector('[data-act="delshot"]');
+  if(delshot) delshot.onclick=async()=>{
+    if(!await uiConfirm('刪除第 '+(i+1)+' 張自檢表的截圖？構件資料會保留，可重新框選。')) return;
+    scGcUrl(f,null); f.png=null; f.w=0; f.h=0;
+    scSelId=f.id;
+    scRender();
+    scStatus('已刪除 '+(f.partNo||'第 '+(i+1)+' 張')+' 的截圖，請在左圖重新框選。');
+  };
   el.querySelector('[data-act="del"]').onclick=async()=>{
     if(!await uiConfirm('刪除第 '+(i+1)+' 張自檢表('+(f.partNo||'未填構件')+')?')) return;
     scGcUrl(f,null); f.png=null;
@@ -37222,6 +37231,30 @@ function scSetText(doc,tc,text){
   if(rPr) r.appendChild(rPr.cloneNode(true));
   const t=scWEl(doc,'w:t'); t.setAttribute('xml:space','preserve');
   t.appendChild(doc.createTextNode(text)); r.appendChild(t); p.appendChild(r);
+}
+function scStylePartNoCell(doc,tc){
+  if(!tc) return;
+  let tcPr=scKids(tc,'w:tcPr')[0];
+  if(!tcPr){ tcPr=scWEl(doc,'w:tcPr'); tc.insertBefore(tcPr,tc.firstChild); }
+  let vAlign=scKids(tcPr,'w:vAlign')[0];
+  if(!vAlign){ vAlign=scWEl(doc,'w:vAlign'); tcPr.appendChild(vAlign); }
+  vAlign.setAttributeNS(SC_W_NS,'w:val','center');
+  scKids(tc,'w:p').forEach(p=>{
+    let pPr=scKids(p,'w:pPr')[0];
+    if(!pPr){ pPr=scWEl(doc,'w:pPr'); p.insertBefore(pPr,p.firstChild); }
+    let jc=scKids(pPr,'w:jc')[0];
+    if(!jc){ jc=scWEl(doc,'w:jc'); pPr.appendChild(jc); }
+    jc.setAttributeNS(SC_W_NS,'w:val','center');
+    scKids(p,'w:r').forEach(r=>{
+      let rPr=scKids(r,'w:rPr')[0];
+      if(!rPr){ rPr=scWEl(doc,'w:rPr'); r.insertBefore(rPr,r.firstChild); }
+      ['w:sz','w:szCs'].forEach(tag=>{
+        let size=scKids(rPr,tag)[0];
+        if(!size){ size=scWEl(doc,tag); rPr.appendChild(size); }
+        size.setAttributeNS(SC_W_NS,'w:val','24');
+      });
+    });
+  });
 }
 function scDrawing(doc,rid,f,idx){
   const scale=Math.min(SC_BOX_W/f.w,SC_BOX_H/f.h);
@@ -37314,7 +37347,11 @@ async function scExport(){
       const d=scKids(rows[4],'w:tc');
       SC_COLS.forEach((c,k)=>scSetText(doc,d[2+k],f.dims[c]||''));
       const parts=String(f.partNo||'').split(/[\s,、;\/]+/).filter(Boolean).slice(0,SC_MAX_PARTS);
-      for(let k=0;k<SC_MAX_PARTS;k++) scSetText(doc,scKids(rows[5+k*2],'w:tc')[0],parts[k]||'');
+      for(let k=0;k<SC_MAX_PARTS;k++){
+        const partCell=scKids(rows[5+k*2],'w:tc')[0];
+        scSetText(doc,partCell,parts[k]||'');
+        scStylePartNoCell(doc,partCell);
+      }
       u.forEach(n=>body.appendChild(n));
     }
     body.appendChild(sectPr);
@@ -37398,7 +37435,15 @@ async function dsStorageUpload(path, file, onProgress) {
       headers: dsStorageHeaders({ 'Content-Type': 'application/pdf', 'x-upsert': 'false' }),
       body: file
     });
-    if (!response.ok) throw new Error((await response.text()) || ('Storage HTTP ' + response.status));
+    if (!response.ok) {
+      const raw = await response.text();
+      let detail = raw;
+      try { const data = JSON.parse(raw); detail = data.message || data.error || raw; } catch (_) {}
+      if (response.status === 403 && /row-level security|unauthorized|accessdenied/i.test(raw)) {
+        detail = 'Supabase Storage 未允許登入者上傳 drawing-pdfs；請在 Supabase SQL Editor 執行 drawing_index_migration.sql';
+      }
+      throw new Error(detail || ('Storage HTTP ' + response.status));
+    }
     onProgress?.(file.size, file.size);
     return;
   }
