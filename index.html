@@ -3219,7 +3219,7 @@ window.normalizeFullWidth=function(value){
               <div class="ma-prompt-head">
                 <div>
                   <div class="ma-prompt-title">帷幕 Word 匯出 Prompt</div>
-                  <div class="ma-prompt-note">只處理 Q 帷幕圖面；可提供 PDF、DWG 或 DXF，且只需其中一種。Q 編號組合相同的多支構件會合併成同一頁。</div>
+                  <div class="ma-prompt-note">只處理 Q 帷幕圖面；可提供 PDF、DWG 或 DXF，且只需其中一種；DWG／DXF 會要求轉成白底黑字再置入。Q 編號組合相同的多支構件會合併成同一頁。</div>
                 </div>
                 <div class="ma-detail-actions">
                   <button class="btn btn-gen" onclick="maCopyWordPrompt('Q')">複製帷幕 Prompt</button>
@@ -3233,7 +3233,7 @@ window.normalizeFullWidth=function(value){
               <div class="ma-prompt-head">
                 <div>
                   <div class="ma-prompt-title">水電 Word 匯出 Prompt</div>
-                  <div class="ma-prompt-note">只處理 H 水電圖面；可提供 PDF、DWG 或 DXF，且只需其中一種。H 編號組合相同的多支構件會合併成同一頁。</div>
+                  <div class="ma-prompt-note">只處理 H 水電圖面；可提供 PDF、DWG 或 DXF，且只需其中一種；DWG／DXF 會要求轉成白底黑字再置入。H 編號組合相同的多支構件會合併成同一頁。</div>
                 </div>
                 <div class="ma-detail-actions">
                   <button class="btn btn-gen" onclick="maCopyWordPrompt('H')">複製水電 Prompt</button>
@@ -38865,7 +38865,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     return '<span class="ma-tag sp">'+maEsc(cat)+'</span>';
   }
   function maProjectFileBase(){
-    var base=[String(maProject.工程編號||'').trim(),String(maProject.工程區||'').trim(),String(maProject.母件編號||'').trim()].filter(Boolean).join('-');
+    var base=[String(maProject.工程編號||'').trim(),String(maProject.工程區||maProject.母件編號||'').trim()].filter(Boolean).join('-');
     base=base.replace(/[\\/:*?"<>|]/g,'').trim();
     return base||'第一層零件明細';
   }
@@ -38992,7 +38992,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var mProj=raw.match(/工程編號\s*[:：]\s*(\S+)/);
     if(mProj)maProject.工程編號=mProj[1];
     var mMother=raw.match(/母件編號\s*[:：]\s*(\S+)/);
-    if(mMother)maProject.母件編號=mMother[1];
+    if(mMother){maProject.母件編號=mMother[1];maProject.工程區=mMother[1];}
     if(tabular){maProject.工程編號=tabular.projectNo||'';maProject.工程區=tabular.zoneCode||'';}
     maComponents=components;
     maSearchQuery='';var searchEl=document.getElementById('ma-result-search');if(searchEl)searchEl.value='';
@@ -39136,15 +39136,66 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     if(pane)pane.classList.add('active');
   };
 
-  function maPrompt(code,label){
+  function maPromptRows(code){
     var rows=[];
     maComponents.forEach(function(c){
-      var nums=c.items.filter(function(i){return i.code===code;}).map(function(i){return i.partNo;}).filter(Boolean);
-      if(nums.length)rows.push(c.componentNo+'（圖號 '+(c.drawingNo||'未提供')+'）：'+nums.join('、'));
+      var hits=c.items.filter(function(i){return i.code===code&&i.partNo;});
+      if(!hits.length)return;
+      var nums=[],seen={};
+      hits.forEach(function(i){if(!seen[i.partNo]){seen[i.partNo]=true;nums.push(i.partNo);}});
+      rows.push({componentNo:c.componentNo,drawingNo:c.drawingNo||'未提供',nums:nums,rawCount:hits.length});
     });
-    return '請依據提供的 PDF、DWG 或 DXF 圖面，製作「'+label+'」Word 明細。\n'+
-      '工程編號：'+(maProject.工程編號||'未提供')+'\n工程區：'+(maProject.工程區||'未提供')+'\n母件編號：'+(maProject.母件編號||'未提供')+'\n\n'+
-      (rows.length?rows.join('\n'):'目前沒有 '+code+' 類別資料。');
+    return rows;
+  }
+
+  function maPrompt(code,label){
+    var rows=maPromptRows(code);
+    var rowCount=rows.reduce(function(s,r){return s+r.rawCount;},0);
+    var list=rows.length?rows.map(function(r){
+      return '* 構件編號 '+r.componentNo+'｜圖號 '+r.drawingNo+'｜'+label+'編號：'+r.nums.join('、');
+    }).join('\n'):'（目前沒有 '+code+' 類別資料，請先完成多階資料分析）';
+    var sample='';
+    if(rows.length){
+      var sig=rows[0].drawingNo+'|'+rows[0].nums.join(',');
+      var same=rows.filter(function(r){return r.drawingNo+'|'+r.nums.join(',')===sig;}).map(function(r){return r.componentNo;});
+      sample='，例如「構件編號：'+same.join('、')+'　｜　圖號：'+rows[0].drawingNo+'」';
+    }
+    var layout=[
+      '頁面尺寸必須固定為 A3 橫向（寬 42 公分、高 29.7 公分），上下左右邊界均不超過 1.27 公分；不得改成 A4、Letter、自訂尺寸或直向。圖片必須保持原比例與清晰度。',
+      '每一支構件獨立成頁；若多支構件的圖號與 '+code+' 編號組合完全相同，則合併為同一頁，並在頁首同時列出這些構件編號。',
+      '頁首只有一行，深藍底白字，格式為「構件編號：◯◯◯、◯◯◯　｜　圖號：◯◯◯」'+sample+'，多支構件以「、」相連。不要出現「多階資料分析」之類的標題行、副標、說明文字、日期或頁碼。',
+      '每張圖片正上方加一條藍底白字標題列，格式為「'+label+' '+code+'編號」，標題列寬度與該格圖片同寬。',
+      '每頁固定使用一個不可跨頁的 2×2 四格容器，順序為左上、右上、左下、右下；一頁最多且只能承載這 4 個格位，禁止任何一格、標題列或圖片被推到下一頁。超過 4 張時，必須在第 4 格後手動分頁，下一頁重新建立完整的 2×2 容器並重複相同的構件編號與圖號。最後一頁不足 4 張時，保留未使用格位為空白，不得把已有圖面移到下一頁。',
+      '請用固定寬度的 2×2 表格或等效的固定定位容器排版，關閉「允許列跨頁分割」，並將頁首、四格標題列、圖片與儲存格內距納入 A3 單頁可用高度計算；不得使用浮動圖片、文字環繞或連續空白段落撐版。四格容器必須整體留在同一頁。',
+      '一般頁面盡量減少空白：頁首與第一列、上下兩列、左右兩格之間的間距壓到最小；在不裁切、不變形且四格不跨頁的前提下，各張圖片等比例放大至各自格位可容納的最大尺寸。',
+      '圖片不得變形、模糊或只放縮圖；以能閱讀尺寸與文字為優先。',
+      '圖面一律以「白底黑字」置入：若來源是 DWG／DXF，請先把 CAD 深色背景改成白色、所有圖層與線條（含文字、標註、剖面線）轉為黑色，再輸出圖片；線寬需保持可辨識，不可因轉色而變細或消失。若來源 PDF 是黑底白線，也要一併反轉成白底黑線後再截圖。文件中不得出現黑底或深色底的圖面。'
+    ];
+    layout.push('特殊放大規則：逐張辨識是否含有「開孔規格：OOOXOOO」或同義尺寸標註（例如「開孔規格：700X200」、「開孔規格：700×450」）。若某一頁有這類截圖，該頁只放大含「開孔規格」文字的截圖，使規格文字與數字對現場年長人員清楚可讀；同頁其餘不含該文字的截圖必須同步、等比例縮小，且縮小尺度保持一致，不得搶占放大圖的閱讀空間。此調整仍須維持同一頁的 2×2 四格邊界與順序，不得合併格位、跨格、跨頁或改變頁面尺寸。若放大後仍不清楚，可在該截圖自己的格位內加入開孔規格局部放大區，但不得因此把其他格推至下一頁。');
+    layout.push('文件最後加入摘要表：構件編號、圖號、'+code+' 編號、來源圖面頁碼、配對狀態。');
+    layout.push('完成後請以列印版面逐頁檢查 Word：每頁都必須是 A3 橫向；每個非末頁必須維持 2×2 四格且四格均在同一頁；最後一頁即使不足 4 張也不得跳頁；不得有標題與圖片分離、表格列跨頁、裁切、重疊、空白頁、圖片失真或殘留深色底。任何一項不合格都要先修正並重新檢查，再交付 .docx。');
+    layout=layout.map(function(t,i){return (i+1)+'. '+t;}).join('\n');
+    return [
+      '請使用我隨附的「多階資料剖析結果」、'+label+'圖面檔（PDF、DWG 或 DXF 擇一即可）與參考排版圖片，製作一份可編輯的 Word（.docx）圖面整合文件。',
+      '',
+      '工程編號：'+(maProject.工程編號||'未提供')+'｜工程區：'+(maProject.工程區||maProject.母件編號||'未提供'),
+      '',
+      '【資料對應原則】',
+      '1. 以剖析結果中的構件編號、圖號，以及 '+code+' 零件編號為唯一對應清單。',
+      '2. 本份文件只處理 '+code+' 開頭的'+label+'圖面，請到相對應圖面檔中逐張找出相同圖號。',
+      '3. 必須直接查看圖框標題及圖面內容進行視覺核對，不可只依賴 OCR；OCR 找不到時仍要逐頁檢查。',
+      '4. 截圖需包含完整圖框內容，不可裁掉圖號、零件編號、規格、材質、數量、尺寸及剖面。',
+      '5. 若同一頁面有左右兩張圖，只截取與目標 '+code+' 編號相符的那一張。',
+      '6. 不得自行猜測配對。無法確認的項目請列在文件最後的「待確認清單」。',
+      '',
+      '【Word 排版規格】',
+      layout,
+      '',
+      '【本次剖析清單】'+label+'（'+rows.length+' 支構件／'+rowCount+' 筆）：',
+      list,
+      '',
+      '請直接開始讀取附件、擷取圖面並產出 Word，不要只提供操作步驟或文字說明。'
+    ].join('\n');
   }
 
   function maUpdateWordPrompt(){
