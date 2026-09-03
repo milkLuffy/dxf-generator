@@ -1882,7 +1882,7 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
 
 <!-- ── 帳號頁面權限 modal ── -->
 <div class="modal-overlay" id="perm-modal">
-  <div class="modal" style="max-width:440px">
+  <div class="modal" style="max-width:600px">
     <div class="modal-title">頁面權限 — <span id="perm-modal-acc" style="color:var(--accent2)">—</span></div>
     <div id="perm-modal-note" style="font-size:12px;color:var(--text3);margin:4px 0 10px;line-height:1.6"></div>
     <div style="max-height:52vh;overflow:auto;border:1px solid var(--border,#e5e7eb);border-radius:8px">
@@ -2106,6 +2106,26 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
     <div class="modal-actions">
       <button class="btn-modal-cancel" onclick="closeModal('pr-att-modal')">取消</button>
       <button class="btn-modal-ok" onclick="payrollAttSave()">套用</button>
+    </div>
+  </div>
+</div>
+
+<!-- 薪資計算:加班費 / 假日加班費 逐日明細(可勾選哪天不算加班) -->
+<div class="modal-overlay" id="pr-ot-modal">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-title" id="pr-ot-title">加班明細</div>
+    <div style="font-size:12px;color:var(--text3);margin:-4px 0 10px" id="pr-ot-sub">—</div>
+    <div style="max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:8px">
+      <table class="data-table" style="margin:0"><thead><tr>
+        <th>日期</th><th style="text-align:center">上班 ~ 下班</th><th>類別</th><th>加班費</th><th>假日加班費</th>
+        <th style="text-align:center">不算加班<br><label style="font-weight:400;font-size:11px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="pr-ot-all" onchange="payrollOtToggleAll(this)"> 全選</label></th>
+      </tr></thead><tbody id="pr-ot-body"></tbody></table>
+    </div>
+    <div id="pr-ot-total" style="font-size:13px;font-weight:700;margin-top:10px;text-align:right"></div>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px">勾選「不算加班」:當天的<b>加班費、假日加班費、加班天數</b>一律不計(出勤天數、底薪、遲退扣不受影響)。套用後記得按「💾 儲存草稿」或「🔒 鎖定本月」才會存進資料庫。</div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal('pr-ot-modal')">關閉</button>
+      <button class="btn-modal-ok" id="pr-ot-save" onclick="payrollOtSave()">套用</button>
     </div>
   </div>
 </div>
@@ -3007,12 +3027,26 @@ window.normalizeFullWidth=function(value){
 .ma-file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .ma-rule-box{margin-top:auto;padding:10px 12px;background:var(--bg3);border-radius:var(--rad);font-size:11px;line-height:1.7;color:var(--text3)}
 .ma-rule-box b{color:var(--text2)}
-.ma-summary{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:10px;margin-bottom:16px}
-.ma-stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:13px 15px}
+.ma-summary{display:grid;grid-template-columns:repeat(6,minmax(105px,1fr));gap:9px;margin-bottom:14px}
+.ma-stat{min-width:0;background:linear-gradient(180deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:var(--rad-lg);padding:10px 13px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
 .ma-stat-label{font-size:11px;color:var(--text3);margin-bottom:4px}
-.ma-stat-value{font-family:var(--mono);font-size:23px;font-weight:600;color:var(--text)}
+.ma-stat-value{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:19px;font-weight:650;color:var(--text)}
 .ma-stat.q .ma-stat-value{color:var(--purple)}
 .ma-stat.h .ma-stat-value{color:var(--accent3)}
+.ma-result-topbar{display:none;align-items:center;gap:14px;margin-bottom:12px;padding:13px 15px;border:1px solid var(--border);border-radius:var(--rad-lg);background:var(--bg2);box-shadow:0 5px 16px rgba(0,0,0,.08);scroll-margin-top:calc(var(--appbar-h) + 8px)}
+.ma-result-back{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px}
+.ma-result-heading{min-width:0;flex:1}
+.ma-result-kicker{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--text3);margin-bottom:3px}
+.ma-result-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text)}
+.ma-result-help{font-size:11px;color:var(--text3);margin-top:4px}
+.ma-result-topbar .btn-gen{background:var(--bg3);border-color:var(--border-hi);color:var(--text);box-shadow:none}
+.ma-result-topbar .btn-gen:hover{background:var(--bg4);border-color:var(--text3)}
+#page-multilevel.ma-results-mode>.page-title,#page-multilevel.ma-results-mode>.ma-entry-only{display:none!important}
+#page-multilevel.ma-results-mode .ma-result-topbar{display:flex}
+#page-multilevel.ma-entry-mode .ma-result-topbar,#page-multilevel.ma-entry-mode #ma-summary,#page-multilevel.ma-entry-mode #ma-workspace{display:none!important}
+.ma-results-nav{position:sticky;top:var(--appbar-h);z-index:35;margin-bottom:14px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--rad-lg);box-shadow:0 9px 22px rgba(0,0,0,.18)}
+.ma-results-nav .ma-tabs{margin-bottom:8px}
+.ma-results-nav .ma-result-search{margin-bottom:0;padding:8px 10px;background:var(--bg3)}
 .ma-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .ma-result-search{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg)}
 .ma-result-search .search-input{flex:1;max-width:none;min-width:0}
@@ -3020,7 +3054,7 @@ window.normalizeFullWidth=function(value){
 .ma-tab{padding:8px 15px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text2);font-family:var(--mono);font-size:12px;cursor:pointer}
 .ma-tab:hover{border-color:var(--border-hi);color:var(--text)}
 .ma-tab.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
-.ma-tab-pane{display:none}.ma-tab-pane.active{display:block}
+.ma-tab-pane{display:none;scroll-margin-top:calc(var(--appbar-h) + 132px)}.ma-tab-pane.active{display:block}
 .ma-detail-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;margin-bottom:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg)}
 .ma-detail-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .ma-mode-btn.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
@@ -3046,7 +3080,8 @@ window.normalizeFullWidth=function(value){
 .ma-prompt-card.h{border-top:3px solid var(--accent3)}
 @media(max-width:1150px){.ma-prompt-grid{grid-template-columns:1fr}}
 .ma-component{border:1px solid var(--border);border-radius:var(--rad-lg);background:var(--bg2);margin-bottom:10px;overflow:hidden}
-.ma-component summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:14px;padding:12px 15px;background:var(--bg3);font-size:12px}
+.ma-component summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:14px;padding:10px 14px;background:var(--bg3);font-size:12px;transition:background .15s,border-color .15s}
+.ma-component summary:hover{background:var(--bg4)}
 .ma-component summary::-webkit-details-marker{display:none}
 .ma-component summary:before{content:'›';font-family:var(--mono);font-size:20px;color:var(--accent2);transition:transform .15s}
 .ma-component[open] summary:before{transform:rotate(90deg)}
@@ -3082,19 +3117,23 @@ window.normalizeFullWidth=function(value){
 .ma-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:#17365d;color:#fff;border-radius:var(--rad) var(--rad) 0 0;margin-top:12px}
 .ma-sheet-head b{font-family:var(--mono);font-size:14px}.ma-sheet-head span{font-size:11px;color:#d9eaf7}
 .ma-save-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px}.ma-save-status{font-size:11px;color:var(--text3)}
-.ma-history-list{display:grid;gap:8px}.ma-history-item{display:grid;grid-template-columns:minmax(180px,1fr) auto auto;gap:10px;align-items:center;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad)}
-.ma-history-main{min-width:0}.ma-history-title{font-family:var(--mono);font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ma-history-meta{font-size:11px;color:var(--text3);margin-top:3px}.ma-history-counts{font-family:var(--mono);font-size:11px;color:var(--text2);white-space:nowrap}.ma-history-actions{display:flex;gap:6px}
-@media(max-width:720px){.ma-history-item{grid-template-columns:1fr}.ma-history-counts{white-space:normal}}
-@media(max-width:900px){.ma-input-grid,.ma-pdf-grid{grid-template-columns:1fr}.ma-summary{grid-template-columns:repeat(2,1fr)}.ma-sheet{grid-template-columns:1fr}.ma-component-meta{display:none}}
+.ma-history-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:7px;padding:2px}.ma-history-item{display:grid;grid-template-columns:minmax(130px,1fr) auto;gap:7px;align-items:center;min-width:0;min-height:42px;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,background .16s ease}
+.ma-history-item:hover{transform:translateY(-2px);border-color:var(--border-hi);background:var(--bg2);box-shadow:0 7px 18px rgba(0,0,0,.14)}
+.ma-history-item:focus-visible{outline:2px solid var(--accent2);outline-offset:2px;border-color:transparent}
+.ma-history-main{min-width:0}.ma-history-title{font-family:var(--mono);font-size:12px;line-height:1.25;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ma-history-meta{font-size:10px;line-height:1.2;color:var(--text3);margin-top:2px}.ma-history-actions{display:flex;gap:5px}.ma-history-actions .btn{min-height:28px;padding:3px 9px;font-size:11px;border-radius:7px}
+@media(max-width:720px){.ma-history-item{grid-template-columns:minmax(0,1fr) auto}}
+@media(max-width:1100px){.ma-summary{grid-template-columns:repeat(3,minmax(110px,1fr))}}
+@media(max-width:900px){.ma-input-grid,.ma-pdf-grid{grid-template-columns:1fr}.ma-sheet{grid-template-columns:1fr}.ma-component-meta{display:none}.ma-results-nav{top:var(--appbar-h)}}
+@media(max-width:620px){.ma-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.ma-result-topbar{align-items:flex-start;flex-wrap:wrap}.ma-result-heading{flex-basis:calc(100% - 130px)}.ma-result-title{white-space:normal}.ma-result-help{display:none}.ma-results-nav{margin-left:-8px;margin-right:-8px}.ma-results-nav .ma-tab{flex:1 1 calc(50% - 6px);text-align:center}.ma-result-search{flex-wrap:wrap}.ma-result-search .search-input{flex-basis:100%}}
 @media print{#page-multilevel .ma-no-print,.sidebar,.appbar{display:none!important}#page-multilevel{padding:0!important}.ma-sheet{grid-template-columns:repeat(3,1fr)}.ma-drawing-card{break-inside:avoid}}
 #page-multilevel.perm-ro input,#page-multilevel.perm-ro textarea,#page-multilevel.perm-ro select{pointer-events:auto!important;opacity:1!important}
     </style>
 
     <!-- 多階資料分析 -->
-    <div class="page" id="page-multilevel">
+    <div class="page ma-entry-mode" id="page-multilevel">
       <div class="page-title">多階資料分析</div>
 
-      <div class="ma-intro ma-no-print">
+      <div class="ma-intro ma-no-print ma-entry-only">
         <div>
           <div class="ma-intro-title">構件零件、帷幕與水電，一次整理</div>
           <p>貼入 MDB0R070 多階資料後，系統會以單星號辨識構件、保留雙星號第一層零件、忽略三星號拆解列，再依最右側代碼將 Q 分為帷幕、H 分為水電，並產生可搭配 PDF 或 CAD 圖面的 Word 匯出 Prompt。</p>
@@ -3102,7 +3141,7 @@ window.normalizeFullWidth=function(value){
         <div class="ma-local-badge">分析在本機 · 按儲存才上傳</div>
       </div>
 
-      <div class="ma-panel ma-no-print">
+      <div class="ma-panel ma-no-print ma-entry-only">
         <div class="ma-panel-head">
           <div>
             <div class="ma-panel-title">① 匯入多階資料</div>
@@ -3123,12 +3162,22 @@ window.normalizeFullWidth=function(value){
         </div>
       </div>
 
-      <div class="ma-panel ma-no-print">
+      <div class="ma-panel ma-no-print ma-entry-only">
         <div class="ma-panel-head">
           <div><div class="ma-panel-title">歷史分析紀錄</div><div class="ma-panel-note">登入後可載入過去儲存的結果</div></div>
           <button class="btn btn-add-row" onclick="maLoadHistory(true)">↻ 重新整理</button>
         </div>
         <div class="ma-history-list" id="ma-history-list"><div class="ma-empty">載入中…</div></div>
+      </div>
+
+      <div class="ma-result-topbar ma-no-print" id="ma-result-topbar">
+        <button type="button" class="btn btn-add-row ma-result-back" onclick="maShowEntryView()">← 返回匯入／歷史</button>
+        <div class="ma-result-heading">
+          <div class="ma-result-kicker">MULTILEVEL ANALYSIS · 分析結果</div>
+          <div class="ma-result-title" id="ma-result-title">尚未載入工程</div>
+          <div class="ma-result-help">結果已依構件收合；使用下方頁籤查看零件、帷幕、水電或 Word Prompt。</div>
+        </div>
+        <button type="button" class="btn btn-gen" onclick="maDownloadExcel()">⬇ 下載 Excel</button>
       </div>
 
       <div class="ma-summary" id="ma-summary" style="display:none">
@@ -3141,16 +3190,18 @@ window.normalizeFullWidth=function(value){
       </div>
 
       <div id="ma-workspace" style="display:none">
-        <div class="ma-result-search ma-no-print">
-          <input type="search" class="search-input" id="ma-result-search" placeholder="模糊搜尋構件、圖號、零件、品名、規格、材質…" oninput="maSetResultSearch(this.value)"/>
-          <span class="ma-search-status" id="ma-search-status">全部資料</span>
-          <button type="button" class="btn btn-add-row" onclick="maClearResultSearch()">清除</button>
-        </div>
-        <div class="ma-tabs ma-no-print">
-          <button class="ma-tab active" data-ma-tab="parts" onclick="maSwitchTab('parts')">第一層零件表 <span class="ma-tab-count" id="ma-tab-parts-count">0 支構件</span></button>
-          <button class="ma-tab" data-ma-tab="curtain" onclick="maSwitchTab('curtain')">帷幕明細 Q <span class="ma-tab-count" id="ma-tab-curtain-count">0 支構件</span></button>
-          <button class="ma-tab" data-ma-tab="mep" onclick="maSwitchTab('mep')">水電明細 H <span class="ma-tab-count" id="ma-tab-mep-count">0 支構件</span></button>
-          <button class="ma-tab" data-ma-tab="wordprompt" onclick="maSwitchTab('wordprompt')">帷幕／水電 Word Prompt</button>
+        <div class="ma-results-nav ma-no-print" id="ma-results-nav">
+          <div class="ma-tabs">
+            <button class="ma-tab active" data-ma-tab="parts" onclick="maSwitchTab('parts')">第一層零件表 <span class="ma-tab-count" id="ma-tab-parts-count">0 支構件</span></button>
+            <button class="ma-tab" data-ma-tab="curtain" onclick="maSwitchTab('curtain')">帷幕明細 Q <span class="ma-tab-count" id="ma-tab-curtain-count">0 支構件</span></button>
+            <button class="ma-tab" data-ma-tab="mep" onclick="maSwitchTab('mep')">水電明細 H <span class="ma-tab-count" id="ma-tab-mep-count">0 支構件</span></button>
+            <button class="ma-tab" data-ma-tab="wordprompt" onclick="maSwitchTab('wordprompt')">帷幕／水電 Word Prompt</button>
+          </div>
+          <div class="ma-result-search">
+            <input type="search" class="search-input" id="ma-result-search" placeholder="模糊搜尋構件、圖號、零件、品名、規格、材質…" oninput="maSetResultSearch(this.value)"/>
+            <span class="ma-search-status" id="ma-search-status">全部資料</span>
+            <button type="button" class="btn btn-add-row" onclick="maClearResultSearch()">清除</button>
+          </div>
         </div>
 
         <div class="ma-tab-pane active" id="ma-pane-parts">
@@ -3219,7 +3270,7 @@ window.normalizeFullWidth=function(value){
               <div class="ma-prompt-head">
                 <div>
                   <div class="ma-prompt-title">帷幕 Word 匯出 Prompt</div>
-                  <div class="ma-prompt-note">只處理 Q 帷幕圖面；可提供 PDF、DWG 或 DXF，且只需其中一種。Q 編號組合相同的多支構件會合併成同一頁。</div>
+                  <div class="ma-prompt-note">只處理 Q 帷幕圖面；可提供 PDF、DWG 或 DXF，且只需其中一種；DWG／DXF 會要求轉成白底黑字再置入。Q 編號組合相同的多支構件會合併成同一頁。</div>
                 </div>
                 <div class="ma-detail-actions">
                   <button class="btn btn-gen" onclick="maCopyWordPrompt('Q')">複製帷幕 Prompt</button>
@@ -3233,7 +3284,7 @@ window.normalizeFullWidth=function(value){
               <div class="ma-prompt-head">
                 <div>
                   <div class="ma-prompt-title">水電 Word 匯出 Prompt</div>
-                  <div class="ma-prompt-note">只處理 H 水電圖面；可提供 PDF、DWG 或 DXF，且只需其中一種。H 編號組合相同的多支構件會合併成同一頁。</div>
+                  <div class="ma-prompt-note">只處理 H 水電圖面；可提供 PDF、DWG 或 DXF，且只需其中一種；DWG／DXF 會要求轉成白底黑字再置入。H 編號組合相同的多支構件會合併成同一頁。</div>
                 </div>
                 <div class="ma-detail-actions">
                   <button class="btn btn-gen" onclick="maCopyWordPrompt('H')">複製水電 Prompt</button>
@@ -4525,7 +4576,7 @@ window.normalizeFullWidth=function(value){
         </div>
       </div>
       <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:10px;line-height:1.7">
-        ※ 加班規則:部門含「辦公」→ 勞基法平日加班(前2h×1.34、3h起×1.67);其餘(本工/外勞)→ 現場慣例(半薪/全薪)。<br>
+        ※ 加班規則:部門含「辦公」→ 勞基法平日加班(前2h×1.34、3h起×1.67);現場/外勞依下班卡時間分級：19:15~19:45 計17:30~20:30的2/3、20:15~20:45 計1、22:45~23:15 計17:30~23:00的1。<br>
         ※ 特休依到職日、勞基法38條自動估算(滿6月3天…10年以上逐年+1、上限30)。<br>
         ※ 投保方式「公會」= 員工向職業工會自行投保,公司不代扣勞健保。
       </div>
@@ -4550,9 +4601,9 @@ window.normalizeFullWidth=function(value){
         <button class="btn" onclick="payrollSaveDraft()" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">💾 儲存草稿</button>
         <button class="btn" onclick="payrollLock()" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">🔒 鎖定本月</button>
         <button class="btn" id="pr-unlock-btn" onclick="payrollUnlock()" style="display:none;padding:7px 14px;border-radius:var(--rad);border:1px solid var(--danger);background:var(--bg3);color:var(--danger);cursor:pointer">🔓 解鎖</button>
-        <button class="btn" onclick="payrollExportExcel()" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--accent2);background:var(--bg3);color:var(--accent2);cursor:pointer">⬇ 薪資 Excel</button>
+        <button class="btn" id="pr-btn-excel" onclick="payrollExportExcel()" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--accent2);background:var(--bg3);color:var(--accent2);cursor:pointer">⬇ 薪資 Excel</button>
         <button class="btn" onclick="payrollExportCsv()" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">⬇ 薪資 CSV</button>
-        <button class="btn" onclick="payrollExportInsuranceCsv()" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">🏦 投保申報 CSV</button>
+        <button class="btn" id="pr-btn-inscsv" onclick="payrollExportInsuranceCsv()" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">🏦 投保申報 CSV</button>
       </div>
       <div id="pr-warn" style="font-size:12px;color:var(--danger);margin-bottom:8px"></div>
       <div id="pr-punchwarn" style="display:none;font-size:12px"></div>
@@ -4592,7 +4643,7 @@ window.normalizeFullWidth=function(value){
       <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:10px;line-height:1.7">
         ※ 出勤來源:<b>已上傳打卡xlsx → 以真實打卡計算</b>;<b>未上傳 → 沿用「出勤回報」att_report</b>。上班 08:00~17:00(午休12:00~13:00)。<br>
         ※ <b>遲到</b>(08:15起,含08:15):08:15~08:45 扣0.5h、08:46~09:00 扣1h,之後每15分再+0.5h。<b>早退</b>(下班早於16:45才算,16:45~17:00視同正常):(17:00−打卡下班)×時薪;下班 ≤13:00 算半天。加班 17:30 起。遲到/早退扣款日薪、月薪皆扣(僅打卡計薪能判時刻)。<b>出勤天數＝實際出勤天數−未免扣的遲到/早退時數÷8</b>；勾選免扣後會補回出勤天數。<b>辦公室人員於周六、星期日、國定假日可早退且不扣款</b>；<b>「早退免計」</b>員工(主管等,於員工薪資設定)平日早退也不扣、遲到仍照計。<br>
-        ※ <b>週六、星期日及國定假日不採固定加給</b>：週六依休息日倍率計算；星期日及國定假日於 8 小時內加發一日工資，超過 8 小時再依法定延長工時倍率計算。國定假日自動判斷(每年自動更新)。<br>
+        ※ <b>假日加班費僅辦公室人員與外勞計算</b>：本工(現場/日)已計入出勤天，不另計、不顯示假日加班費；辦公室人員依法定倍率；外勞的週六/國定假日與星期日依「費率設定」固定金額計算。<br>
         ※ 設「保障底薪」者,含加班費未達該金額時自動補足,差額計入「職務津貼」(外勞免設)。<br>
         ※ 未在「員工薪資設定」設定薪別者不列入計算(見上方紅字提醒)。<br>
         ※ 雇主成本 = 勞保雇主 + 健保雇主 + 勞退6% + 職災(非員工扣款,供成本估算),見「② 保費‧雇主成本」分頁。<br>
@@ -4601,6 +4652,12 @@ window.normalizeFullWidth=function(value){
         ※ <b>半天班</b>(下班 ≤13:00)會在「遲退扣/半天」欄以 <span style="color:var(--yellow)">⚠</span> 提醒,可點入判斷是否為颱風假/特殊假而免扣補足。<br>
         ※ <b>打卡缺漏</b>:某天只刷一次卡時,計算後會在上方 <span style="color:var(--yellow)">🕐 打卡缺漏提醒</span> 區列出,並依打卡時間判定為上班或下班(上午=上班缺下班、下午=下班缺上班;<b>長榮外勞</b>晚上那筆視為加班上班、缺加班下班);補齊另一筆時間按「補登」自動重算(補登只存本機,重新上傳打卡檔會覆蓋)。<br>
         ※ <b>便當代墊</b>:自動加總「出勤回報」中<b>老闆列</b>每日登記的便當金額，但只支付並顯示於<b>鄭季豪</b>；加入實發但不併入應發薪資、餐補或投保薪資。<br>
+        ※ <b>哪天不算加班</b>:點薪資表的「<b>加班費</b>」或「<b>假日加班費</b>」欄可展開該員<b>逐日加班明細</b>,勾選的日期當天<b>加班費、假日加班費、加班天數一律不計</b>(出勤天數、底薪、遲退扣不受影響)。<b>只有管理員可以勾選</b>,其他帳號為唯讀。設定後記得按「💾 儲存草稿」或「🔒 鎖定本月」。<br>
+        ※ <b>薪資可見範圍(三層,於「帳號管理 → 🔑 設定」逐一設定)</b>:<b>①頁面</b>——人事薪資四頁(員工薪資設定/薪資計算/請假特休/費率設定)各自可設 隱藏‧唯讀‧可編輯。<b>②可視員工</b>——全部 / 只辦公人員 / 只現場外勞 / <b>指定名單(逐一勾選)</b>,範圍外的人整列不會出現。<b>③機密欄位</b>——「底薪‧應發‧實發」「加班費‧假日加班費」「勞健保‧雇主成本」三組,各組再分「<b>對辦公人員</b>」與「<b>對現場/外勞</b>」兩格,各設 全部看得到 / 只看自己 / 完全看不到(辦公人員的加班費沒有「全部看得到」)。底薪另有固定例外:管理員與名冊職稱「老闆/主管」一律看得到辦公人員底薪。看不到的顯示 <span style="color:var(--text3)">***</span>,只要有一個人被遮,該欄<b>合計也會一起遮</b>(否則可反推),明細單與「⬇ 薪資 CSV」同步遮蔽。<br>
+        ※ <b>辦公人員的加班費 / 假日加班費</b>:別人的<b>只有管理員</b>看得到 —— 帳號權限最多只能設到「只看自己」,沒有「全部看得到」這個選項。<br>
+        ※ <b>薪資 Excel 的辦公人員列(硬規則)</b>:管理員以外的帳號匯出時,辦公人員那幾列<b>只留</b> R~U(伙食津貼數量/單價/便當代墊/合計)、AA(所得 = 只算伙食津貼)、AQ~AS(匯款方式/備註),月薪、加班、假日出勤、津貼、保費、扣款、實發、雇主負擔<b>整格空白</b>,權限設定放寬不了。<br>
+        ※ <b>匯出</b>:「<b>⬇ 薪資 Excel</b>」與「<b>⬇ 薪資 CSV</b>」都會<b>依帳號權限逐格遮蔽</b> —— 看不到的欄位整格空白,<b>合計也只加總看得到的部分</b>(所以無法用相減反推被遮的金額),Excel 標題會標註「部分欄位依權限遮蔽」並在下載後提示遮了幾個人。「<b>🏦 投保申報 CSV</b>」含身分證字號,<b>只有管理員</b>看得到按鈕。<br>
+        ※ <b>指定名單</b>需先在 Supabase 執行 <code>hr_perm_granular_migration.sql</code>,資料庫端才擋得住(未執行時只有畫面在擋)。<br>
         ※ <b>借支</b>:可在薪資表直接輸入員工當月預先借支金額，從實發扣除但不影響應發薪資與投保薪資；隨草稿/鎖定資料保存。<br>
         ※ <b>勞退</b>:雇主強制提繳 6%(列於「② 保費‧雇主成本」,不從薪資扣);員工可設「勞退自願提繳率 0~6%」(於員工薪資設定),依投保薪資×% 從實發扣,列於「勞退(自願)」欄與明細單代扣(外勞不適用)。<br>
         ※ 本次新增功能(假日加班費/便當補餐/匯費/退休/遲到早退扣款/勞退自願提繳)需先於 Supabase 執行 <code>payroll_extras_migration.sql</code>;勞退自願提繳需新增欄位 <code>employee_pay.pension_vol_rate</code>(見下方 SQL)。
@@ -10007,6 +10064,7 @@ function viewToHash(v) {
   if (!v) return '#/dashboard';
   if (v.proj) return v.zone ? ('#/proj/'+v.proj+'/zone/'+v.zone) : ('#/proj/'+v.proj);
   if (v.page === 'layout' && v.tab === 'chart') return '#/layout/chart';
+  if (v.page === 'multilevel' && v.ma === 'results') return '#/multilevel/results';
   if (v.page === 'prod') {
     if (v.cphome) return '#/prod/receipt/status/'+encodeURIComponent(v.cpstatus||'all');
     if (v.preceipt) return '#/prod/receipt/'+encodeURIComponent(v.pproj||'')+'/'+encodeURIComponent(v.cpgroup||'all')+'/'+encodeURIComponent(v.cpstatus||'all');
@@ -10027,6 +10085,7 @@ function hashToView(h) {
     return v;
   }
   if (p[0] === 'layout' && p[1] === 'chart') return { page:'layout', tab:'chart' };
+  if (p[0] === 'multilevel' && p[1] === 'results') return { page:'multilevel', ma:'results' };
   if (p[0] === 'prod' && p[1] === 'receipt' && p[2] === 'status') return {page:'prod',ptab:'receipt',cphome:1,cpstatus:decodeURIComponent(p[3]||'all')};
   if (p[0] === 'prod' && p[1] === 'receipt' && p[2]) return {page:'prod',ptab:'receipt',preceipt:1,pproj:decodeURIComponent(p[2]||''),cpgroup:decodeURIComponent(p[3]||'all'),cpstatus:decodeURIComponent(p[4]||'all')};
   if (p[0] === 'prod' && p[1] === 'detail') return {page:'prod',pdetail:1,pproj:decodeURIComponent(p[2]||''),pzone:decodeURIComponent(p[3]||'')};
@@ -10572,9 +10631,14 @@ async function loadProfile() {
   const staffId=r.data?.[0]?.staff_id||null;
   let status=r.data?.[0]?.status||'approved';   // 舊資料/資料庫尚未加欄位時,預設視為已核准,避免既有帳號被擋
   // 兩者結合: 顯示名稱留空時,改用綁定的公司名冊姓名
-  if(!name && staffId){
-    const sr=await sbFetch(`/rest/v1/staff?id=eq.${staffId}&select=name`);
-    if(sr.data?.[0]?.name) name=sr.data[0].name;
+  let staffRole='', staffDept='';
+  if(staffId){
+    const sr=await sbFetch(`/rest/v1/staff?id=eq.${staffId}&select=name,role,department`);
+    const me=sr.data?.[0];
+    if(me){
+      if(!name && me.name) name=me.name;      // 顯示名稱留空時改用名冊姓名
+      staffRole=me.role||''; staffDept=me.department||'';   // 薪資機密欄位的「老闆/主管」例外要用
+    }
   }
   if(!name) name=account;
   if(!r.data?.[0]) {
@@ -10588,7 +10652,7 @@ async function loadProfile() {
   const googleIdentity=(currentSession.user?.identities||[]).find(x=>x.provider==='google');
   const identityMeta=googleIdentity?.identity_data||{};
   const avatarUrl=meta.avatar_url||meta.picture||identityMeta.avatar_url||identityMeta.picture||'';
-  currentUser={id:uid,name,account,isAdmin,perms,disabled,avatarUrl,status,staffId};
+  currentUser={id:uid,name,account,isAdmin,perms,disabled,avatarUrl,status,staffId,staffRole,staffDept};
 }
 // 呼叫 Edge Function 通知管理員有新帳號待審核(見 supabase/functions/notify-new-account)
 async function notifyAdminNewAccount(name,account){
@@ -10763,6 +10827,8 @@ const PAGE_META=[
 const ADMIN_PAGES=new Set(['output','pricing','cost','accounts','notify','audit']);   // 一般帳號預設隱藏的管理頁
 // 人事薪資專區:整區用單一 perms 鍵 'payroll' 控管(與資料庫 is_hr() 一致),未授權一律隱藏
 const HR_PAGES=new Set(['emp','leave','payroll','payslip','payrollcfg']);
+// 人事薪資四頁各自一把鑰匙;未設定時沿用舊的整區鍵 perms.payroll(舊帳號行為不變)
+const HR_PAGE_KEY={emp:'hr_emp', payroll:'hr_payroll', payslip:'hr_payroll', leave:'hr_leave', payrollcfg:'hr_payrollcfg'};
 // 訪客固定可見(唯讀):主頁、長榮系統、BOM工程列表、工具整區。其餘一律隱藏。
 const GUEST_PERMS={dashboard:'read','evergreen-sys':'read',bom:'read',multilevel:'read',bomtool:'read',sp:'read',dxf:'read',hazard:'read',selfcheck:'read',namelabels:'read'};
 // ── 每位使用者的常用功能與側邊欄偏好 ──
@@ -10866,7 +10932,11 @@ function pagePerm(k){
   const u=currentUser; if(!u) return 'hide';
   if(u.isAdmin&&!adminPreviewMode) return 'edit';      // 管理員正常模式:全部可編輯
   const p=u.perms||{};
-  if(HR_PAGES.has(k)){ const pv=p.payroll; return (pv==='read'||pv==='edit')?pv:'hide'; } // 人事薪資:未授權隱藏
+  if(HR_PAGES.has(k)){                                  // 人事薪資:先看該頁自己的鍵,沒設才沿用整區鍵;未授權隱藏
+    const own=p[HR_PAGE_KEY[k]];
+    const pv=(own==='hide'||own==='read'||own==='edit')?own:p.payroll;
+    return (pv==='read'||pv==='edit')?pv:'hide';
+  }
   if(p[k]==='hide'||p[k]==='read'||p[k]==='edit') return p[k];   // 帳號自訂
   return ADMIN_PAGES.has(k)?'hide':'edit';             // 未設定:管理頁隱藏、其餘可編輯
 }
@@ -11015,7 +11085,7 @@ function navTo(page, viewState) {
   if(page==='layout') layoutInit();
   if(page==='daily') loadDaily();
   if(page==='hazard') hazardInit();
-  if(page==='multilevel') maInit();
+  if(page==='multilevel') maInit(viewState&&viewState.page===page?viewState:null);
   if(page==='selfcheck') selfcheckInit();
   if(page==='drawingsearch') drawingSearchInit();
   if(page==='pricing') pricingInit();
@@ -15029,28 +15099,6 @@ function compExtEdit(input) {
     clearTimeout(_compStatusTimer);
     _compStatusTimer = setTimeout(() => applyCurrentZoneStatus(), 400);
   }
-  // 加工機 = 二次製作 時,大多數情況料早就在廠內了,不用再一支一支登記進料回廠日期,
-  // 直接把「進料」補到當天全數到廠(不足的支數才會補登記,已經登記過的不會重複疊加)
-  if (col === '加工機' && input.value.trim() === '二次製作') {
-    compAutoFillSecondaryMat(part);
-  }
-}
-// 加工機=二次製作 的自動進料登記:補到 BOM 應進數量,日期為今天
-async function compAutoFillSecondaryMat(part) {
-  const comp = zoneComponents.find(c => c.part_no === part);
-  const need = comp ? (parseInt(comp.qty)||0) : 0;
-  const got = (zoneReceipts[part]||[]).reduce((s,x) => s + (parseInt(x.qty)||0), 0);
-  const left = need>0 ? Math.max(0, need-got) : 0;
-  if (left <= 0) return;   // 已經登記滿了,不用再補
-  const proj = allBOM.find(x => x.id === currentProjectId);
-  const today = (typeof dashTodayStr === 'function') ? dashTodayStr() : new Date().toISOString().slice(0,10);
-  const body = { proj_num: proj?proj.proj_num:'', zone_id: parseInt(currentZoneId), part_no: part, date: today, qty: left, note: '二次製作(自動登記進料)' };
-  const res = await sbFetch('/rest/v1/material_receipts', {method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify(body)});
-  if (res.ok) {
-    const rec = Array.isArray(res.data) ? res.data[0] : res.data;
-    (zoneReceipts[part] = zoneReceipts[part] || []).push(rec);
-    renderCompTable();
-  }
 }
 
 function compAddCol() {
@@ -16475,7 +16523,7 @@ async function loadAccounts(silent) {
   if(!silent) body.innerHTML='<tr><td colspan="9" class="empty-state">載入中...</td></tr>';
   const [pRes,sRes]=await Promise.all([
     sbFetchAll('/rest/v1/profiles?select=id,name,account,is_admin,staff_id,perms,disabled,status,applied_at&order=account'),
-    sbFetchAll('/rest/v1/staff?select=id,name&order=name')
+    sbFetchAll('/rest/v1/staff?select=id,name,department,resign_date&order=name')
   ]);
   allAccounts=Array.isArray(pRes.data)?pRes.data:[];
   accStaffList=Array.isArray(sRes.data)?sRes.data:[];
@@ -16540,9 +16588,31 @@ function renderAccounts(list){
       ? `<button class="btn" style="padding:4px 10px;color:#b91c1c;border-color:#f1c0c0" onclick="toggleAccountDisabled('${jid}',false)">已停用·點擊啟用</button>`
       : `<button class="btn" style="padding:4px 10px" onclick="toggleAccountDisabled('${jid}',true)">停用</button>`}</td>
     <td style="text-align:center"><button class="btn" style="padding:4px 10px;color:#b45309;border-color:#fcd34d" onclick="forceLogoutAccount('${jid}')" title="強制將此帳號目前所有裝置踢出登入">🚪 強制登出</button></td>
-    <td style="text-align:center"><button class="btn" style="padding:4px 10px" onclick="openPermModal('${jid}')">🔑 設定</button></td>
+    <td style="text-align:center"><button class="btn" style="padding:4px 10px" onclick="openPermModal('${jid}')">🔑 設定</button>${permHrNote(a)}</td>
     <td style="text-align:center"><button class="btn" style="padding:4px 10px;color:#b91c1c;border-color:#f1c0c0" onclick="deleteAccount('${jid}')">🗑 刪除</button></td>
   </tr>`;}).join('');
+}
+// ── 帳號列表上的「人事薪資看得到什麼」註記(一眼看出這個帳號的薪資可視範圍)──
+// 只是把 perms 翻成人話,規則本身寫在 openPermModal 的說明與 payroll 頁的判斷式。
+function permHrNote(a){
+  const st=(x,c)=>`<div style="font-size:10px;margin-top:3px;color:${c};line-height:1.4">${x}</div>`;
+  if(a.is_admin) return st('👑 管理員 · 薪資全部可見','#15803d');
+  const p=a.perms||{};
+  const L={hr_emp:'設定',hr_payroll:'薪資',hr_leave:'請假',hr_payrollcfg:'費率'};
+  const on=Object.keys(L).filter(k=>{ const v=p[k]||p.payroll; return v==='read'||v==='edit'; });
+  if(!on.length) return st('💼 人事薪資:看不到','var(--text3)');
+  const sc = Array.isArray(p.payroll_staff) ? `指定 ${p.payroll_staff.length} 人`
+           : ({all:'全部人員',office:'只辦公人員',field:'只現場/外勞'}[p.payroll_scope||'all']||'全部人員');
+  // 機密欄位:新鍵優先,沒設就用舊的單一鍵換算(與權限視窗同一套對照)
+  const LG={pay_field_base:{'default':['none','all'],all:['all','all'],self:['self','self'],none:['none','none']},
+            pay_field_ot:{self:['self','self'],all:['self','all'],none:['none','none']}};
+  const S={all:'全',self:'己',none:'✕'};
+  const two=(k,legacyKey,def)=>{
+    const lg=(LG[legacyKey]||{})[p[legacyKey]]||def;
+    const o=p['pay_'+k+'_office']||lg[0], f=p['pay_'+k+'_field']||lg[1];
+    return `辦${S[o]||'?'}/現${S[f]||'?'}`;
+  };
+  return st(`💼 ${on.map(k=>L[k]).join('/')} · ${sc}<br>底薪 ${two('base','pay_field_base',['none','all'])} · 加班 ${two('ot','pay_field_ot',['self','self'])}`,'#b45309');
 }
 // ── 通過 / 拒絕 待審核帳號(即時 PATCH,直接寫 status,不需要 Edge Function)──
 async function reviewAccount(id,newStatus){
@@ -16623,21 +16693,98 @@ function openPermModal(id){
           ${opt('hide','🚫 隱藏')}${opt('read','👁 唯讀')}${opt('edit','✏️ 可編輯')}
         </select></td></tr>`;
   };
-  // 人事薪資是「整區」用單一 key=payroll 控管 → 個別 HR 頁不各自列出,合併成一列
   const pageRows = PAGE_META.filter(pm=>!HR_PAGES.has(pm.k)).map(rowFor).join('');
-  const hrCur = isAdmin ? 'edit' : (perms.payroll || 'hide');
-  const hopt=(v,t)=>`<option value="${v}"${hrCur===v?' selected':''}>${t}</option>`;
-  const hrRow = `<tr>
-    <td style="padding:4px 8px">💼 人事薪資（整區）<div style="font-size:11px;color:var(--text3)">員工薪資設定/薪資計算/請假特休</div></td>
-    <td style="padding:4px 8px;text-align:right"><select class="perm-sel" data-k="payroll" ${isAdmin?'disabled':''} style="padding:4px 8px;min-width:110px">
-      ${hopt('hide','🚫 隱藏')}${hopt('read','👁 唯讀')}${hopt('edit','✏️ 可編輯')}</select></td></tr>`;
-  // 薪資可視範圍(scope):限制此帳號在人事薪資頁能看到誰的薪資
-  const scope = isAdmin ? 'all' : (perms.payroll_scope||'all');
+  // ── 人事薪資:四個頁面各自一把鑰匙(未個別設定時沿用舊的整區鍵 perms.payroll)──
+  const HR_ROWS=[
+    {k:'hr_emp',       label:'員工薪資設定', hint:'薪別/底薪/投保薪資/眷屬設定'},
+    {k:'hr_payroll',   label:'薪資計算',     hint:'月薪資表、明細單、匯出'},
+    {k:'hr_leave',     label:'請假・特休',   hint:'特休台帳、折現登記'},
+    {k:'hr_payrollcfg',label:'費率設定',     hint:'勞健保費率、加班倍率、投保級距'}
+  ];
+  const hrRows = '<tr><td colspan="2" style="padding:8px 8px 2px;border-top:2px solid var(--border)"><b>💼 人事薪資（四頁各自設定）</b>'
+    + '<div style="font-size:11px;color:var(--text3)">四頁全設「隱藏」時,側欄不會出現人事薪資整區</div></td></tr>'
+    + HR_ROWS.map(hr=>{
+        const cur = isAdmin ? 'edit' : (perms[hr.k] || perms.payroll || 'hide');
+        const o=(v,t)=>`<option value="${v}"${cur===v?' selected':''}>${t}</option>`;
+        return `<tr>
+          <td style="padding:4px 8px 4px 20px">${hr.label}<div style="font-size:11px;color:var(--text3)">${hr.hint}</div></td>
+          <td style="padding:4px 8px;text-align:right"><select class="perm-sel perm-hr-page" data-k="${hr.k}" ${isAdmin?'disabled':''} onchange="permHrSummary()" style="padding:4px 8px;min-width:110px">
+            ${o('hide','🚫 隱藏')}${o('read','👁 唯讀')}${o('edit','✏️ 可編輯')}</select></td></tr>`;
+      }).join('');
+  // ── 可視員工:分類自動 或 逐一勾選指定名單 ──
+  const useList = !isAdmin && Array.isArray(perms.payroll_staff);          // 有名單=指定名單模式
+  const scope = isAdmin ? 'all' : (useList ? 'custom' : (perms.payroll_scope||'all'));
   const sopt=(v,t)=>`<option value="${v}"${scope===v?' selected':''}>${t}</option>`;
-  const scopeRow = `<tr style="background:var(--bg3)">
-    <td style="padding:6px 8px"><b>💼 薪資可視範圍</b><div style="font-size:11px;color:var(--text3)">「人事薪資」各頁只顯示此範圍的員工薪資</div></td>
-    <td style="padding:4px 8px;text-align:right"><select id="perm-scope-sel" ${isAdmin?'disabled':''} style="padding:4px 8px;min-width:130px">
-      ${sopt('all','全部')}${sopt('office','只辦公人員')}${sopt('field','只現場/外勞')}</select></td></tr>`;
+  const allowIds=(Array.isArray(perms.payroll_staff)?perms.payroll_staff:[]).map(String);
+  // 指定名單模式下,舊的分類設定先幫忙勾好,方便從分類改成逐一微調
+  const preChecked=id=>{
+    const st=(accStaffList||[]).find(x=>String(x.id)===String(id)); if(!st) return false;
+    if(scope==='custom') return allowIds.indexOf(String(id))>=0;
+    if(scope==='all') return true;
+    return (String(st.department||'').indexOf('辦公')>=0?'office':'field')===scope;
+  };
+  const staffPick=(accStaffList||[]).filter(st=>!st.resign_date).map(st=>
+    `<label class="perm-staff-item" style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;margin:2px;border:1px solid var(--border);border-radius:20px;font-size:11.5px;cursor:pointer;background:var(--bg2)">
+      <input type="checkbox" class="perm-staff-cb" value="${st.id}" data-dept="${(st.department||'').replace(/"/g,'')}"${preChecked(st.id)?' checked':''}${isAdmin?' disabled':''} onchange="permHrSummary()">
+      ${(st.name||'').replace(/</g,'&lt;')}<span style="color:var(--text3)">${(st.department||'').replace(/</g,'&lt;')}</span>
+    </label>`).join('');
+  const scopeRow = `<tr class="perm-hr-dep" style="background:var(--bg3)">
+    <td style="padding:6px 8px"><b>👥 可視員工</b><div style="font-size:11px;color:var(--text3)">人事薪資各頁只會出現這些人;範圍外的人整列不顯示</div></td>
+    <td style="padding:4px 8px;text-align:right"><select id="perm-scope-sel" ${isAdmin?'disabled':''} onchange="permScopeChanged()" style="padding:4px 8px;min-width:150px">
+      ${sopt('all','全部員工')}${sopt('office','只辦公人員')}${sopt('field','只現場/外勞')}${sopt('custom','✔ 指定名單（自己勾）')}</select></td></tr>
+    <tr id="perm-staff-row" class="perm-hr-dep" style="background:var(--bg3);display:${scope==='custom'?'':'none'}"><td colspan="2" style="padding:0 8px 8px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;font-size:11px">
+        <button type="button" class="btn" style="padding:3px 9px;font-size:11px" onclick="permStaffPick('all')">全選</button>
+        <button type="button" class="btn" style="padding:3px 9px;font-size:11px" onclick="permStaffPick('none')">全部取消</button>
+        <button type="button" class="btn" style="padding:3px 9px;font-size:11px" onclick="permStaffPick('office')">只辦公人員</button>
+        <button type="button" class="btn" style="padding:3px 9px;font-size:11px" onclick="permStaffPick('field')">只現場/外勞</button>
+        <span id="perm-staff-count" style="margin-left:auto;color:var(--text3);align-self:center"></span>
+      </div>
+      <div style="max-height:180px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:5px;background:var(--bg)">${staffPick||'<div style="color:var(--text3);font-size:11px;padding:6px">讀不到名冊</div>'}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:5px">⚠ 指定名單是<b>固定名單</b>:之後新進的員工<b>不會</b>自動加入,要回來這裡補勾。需先在 Supabase 執行 <code>hr_perm_granular_migration.sql</code>,資料庫端才擋得住。</div>
+    </td></tr>`;
+  // ── 三個機密欄位開關:對「辦公人員」與「現場/外勞」分開設 ──
+  // 舊帳號若只有單一鍵 pay_field_*,這裡用 HR_LEGACY_MAP 同一套對照換算成兩欄的預設選取值。
+  const LEGACY={ pay_field_base:{'default':['none','all'],all:['all','all'],self:['self','self'],none:['none','none']},
+                 pay_field_ot:{self:['self','self'],all:['self','all'],none:['none','none']},
+                 pay_field_ins:{all:['all','all'],self:['self','self'],none:['none','none']} };
+  const FIELD_ROWS=[
+    {k:'base', label:'💰 底薪・應發・實發', legacy:'pay_field_base', def:['none','all'],
+     officeOpts:[['none','🚫 完全看不到'],['self','👤 只看自己'],['all','✅ 全部看得到']],
+     fieldOpts:[['all','✅ 全部看得到'],['self','👤 只看自己'],['none','🚫 完全看不到']],
+     hint:'固定例外:管理員與名冊職稱「老闆 / 主管」一律看得到辦公人員的底薪'},
+    {k:'ot',   label:'⏱ 加班費・假日加班費', legacy:'pay_field_ot', def:['self','self'],
+     officeOpts:[['self','👤 只看自己'],['none','🚫 完全看不到']],
+     fieldOpts:[['self','👤 只看自己'],['all','✅ 全部看得到'],['none','🚫 完全看不到']],
+     hint:'⚠ 辦公人員這一欄沒有「全部看得到」——別人的加班費只有管理員能看;薪資 Excel 裡辦公人員的加班費與假日出勤一律不匯出'},
+    {k:'ins',  label:'🏥 勞健保・雇主成本', legacy:'pay_field_ins', def:['all','all'],
+     officeOpts:[['all','✅ 全部看得到'],['self','👤 只看自己'],['none','🚫 完全看不到']],
+     fieldOpts:[['all','✅ 全部看得到'],['self','👤 只看自己'],['none','🚫 完全看不到']],
+     hint:'表②保費‧雇主成本、明細單代扣與雇主負擔、投保薪資'}
+  ];
+  const fieldRows = '<tr class="perm-hr-dep"><td colspan="2" style="padding:8px 8px 2px;border-top:2px solid var(--border)"><b>🔐 薪資機密欄位</b>'
+    + '<div style="font-size:11px;color:var(--text3)">在看得到的員工裡,再決定哪些金額欄位看得到 —— <b>辦公人員</b>與<b>現場/外勞</b>可以分開設</div></td></tr>'
+    + FIELD_ROWS.map(f=>{
+        const lg=(LEGACY[f.legacy]||{})[perms[f.legacy]] || f.def;   // 舊鍵換算
+        const cur=side=>{
+          if(isAdmin) return 'all';
+          const v=perms['pay_'+f.k+'_'+side];
+          return (v==='all'||v==='self'||v==='none') ? v : (side==='office'?lg[0]:lg[1]);
+        };
+        const sel=(side,opts)=>{
+          const c=cur(side);
+          const has=opts.some(x=>x[0]===c);
+          return `<select class="perm-field-sel" data-k="pay_${f.k}_${side}" ${isAdmin?'disabled':''} onchange="permHrSummary()" style="padding:4px 6px;min-width:132px">
+            ${opts.map(x=>`<option value="${x[0]}"${c===x[0]?' selected':''}>${x[1]}</option>`).join('')}
+            ${has?'':`<option value="${c}" selected>${c}</option>`}</select>`;
+        };
+        return `<tr class="perm-hr-dep">
+          <td style="padding:4px 8px 4px 20px">${f.label}<div style="font-size:11px;color:var(--text3)">${f.hint}</div></td>
+          <td style="padding:4px 8px;text-align:right;white-space:nowrap">
+            <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;margin-bottom:3px"><span style="font-size:11px;color:var(--text3)">🏢 辦公人員</span>${sel('office',f.officeOpts)}</div>
+            <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center"><span style="font-size:11px;color:var(--text3)">🏗 現場/外勞</span>${sel('field',f.fieldOpts)}</div>
+          </td></tr>`;
+      }).join('');
   // 產值金額:控制「產值 → 歷史總覽」是否看得到金額(噸數不受影響);管理員一律看得到
   const ovv = isAdmin ? 'show' : (perms.output_value||'show');
   const vopt=(v,t)=>`<option value="${v}"${ovv===v?' selected':''}>${t}</option>`;
@@ -16645,17 +16792,108 @@ function openPermModal(id){
     <td style="padding:6px 8px"><b>📊 產值金額</b><div style="font-size:11px;color:var(--text3)">設為隱藏時,「歷史總覽」只看得到噸數,也切不出金額</div></td>
     <td style="padding:4px 8px;text-align:right"><select id="perm-outval-sel" ${isAdmin?'disabled':''} style="padding:4px 8px;min-width:130px">
       ${vopt('show','💲 可看金額')}${vopt('hide','🚫 只看噸數')}</select></td></tr>`;
-  document.getElementById('perm-modal-body').innerHTML=pageRows+hrRow+scopeRow+valRow;
+  // 薪資可視範圍摘要:把上面的設定 + 系統固定規則翻成「這個帳號到底看得到什麼」,改設定會即時更新
+  const sumRow = `<tr><td colspan="2" style="padding:8px">
+    <div id="perm-hr-summary" style="border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:8px;background:var(--bg3);padding:8px 10px;font-size:11.5px;line-height:1.75"></div></td></tr>`;
+  document.getElementById('perm-modal-body').innerHTML=pageRows+hrRows+scopeRow+fieldRows+valRow+sumRow;
+  window._permIsAdmin=isAdmin;
+  permHrSummary();
   document.getElementById('perm-modal-note').innerHTML = isAdmin
-    ? '⚠ 此帳號為<b>管理員</b>,一律擁有全部頁面的編輯權與全部薪資範圍;要限制請先取消其管理員身分並儲存。'
-    : '未設定的頁面預設:管理頁(產值/計價/帳號管理)隱藏,其餘可編輯。「人事薪資」需設可編輯/唯讀才會出現,並受「薪資可視範圍」限制。';
+    ? '⚠ 此帳號為<b>管理員</b>,一律擁有全部頁面的編輯權、全部員工與全部金額欄位;要限制請先取消其管理員身分並儲存。'
+    : '未設定的頁面預設:管理頁(產值/計價/帳號管理)隱藏,其餘可編輯。人事薪資四頁預設隱藏,要逐頁開;開了之後還會再受「可視員工」與「薪資機密欄位」兩層限制。';
   openModal('perm-modal');
+}
+// 可視員工:切到「指定名單」才展開勾選清單
+function permScopeChanged(){
+  const sel=document.getElementById('perm-scope-sel'), row=document.getElementById('perm-staff-row');
+  if(row) row.style.display=(sel&&sel.value==='custom')?'':'none';
+  permHrSummary();
+}
+// 快速勾選:全選 / 全部取消 / 只辦公人員 / 只現場外勞
+function permStaffPick(kind){
+  document.querySelectorAll('#perm-staff-row .perm-staff-cb').forEach(cb=>{
+    if(cb.disabled) return;
+    const isOffice=String(cb.dataset.dept||'').indexOf('辦公')>=0;
+    cb.checked = kind==='all' ? true : kind==='none' ? false : (kind==='office' ? isOffice : !isOffice);
+  });
+  permHrSummary();
+}
+function permCheckedStaff(){
+  return [...document.querySelectorAll('#perm-staff-row .perm-staff-cb')].filter(cb=>cb.checked).map(cb=>cb.value);
+}
+// 權限視窗:即時顯示「這個帳號在人事薪資實際看得到什麼」。
+// 三層限制:①四頁各自的頁面權限 ②可視員工 ③機密欄位;下方另列出仍然寫死、設定改不動的規則。
+function permHrSummary(){
+  const box=document.getElementById('perm-hr-summary'); if(!box) return;
+  const isAdmin=!!window._permIsAdmin;
+  const li=(icon,txt)=>`<div>${icon} ${txt}</div>`;
+  // 四頁全隱藏 → 「可視員工」「薪資機密欄位」通通沒有作用的舞台,直接收起來不要干擾
+  const pv0={}; document.querySelectorAll('.perm-hr-page').forEach(sl=>{ pv0[sl.dataset.k]=sl.value; });
+  const anyHr = isAdmin || Object.keys(pv0).some(k=>pv0[k]==='read'||pv0[k]==='edit');
+  const scopeCustom = ((document.getElementById('perm-scope-sel')||{}).value==='custom');
+  document.querySelectorAll('#perm-modal-body .perm-hr-dep').forEach(tr=>{
+    tr.style.display = !anyHr ? 'none' : (tr.id==='perm-staff-row' ? (scopeCustom?'':'none') : '');
+  });
+  const fixed='<div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);color:var(--text3)">'
+    +'<b>以下仍是系統固定規則,這裡改不動:</b>'
+    +li('🔒','「<b>哪天不算加班</b>」的勾選只有<b>管理員</b>能改,其他帳號點開是唯讀。')
+    +li('🔒','<b>辦公人員</b>的<b>加班費 / 假日加班費</b> → 別人的<b>只有管理員</b>看得到,上面最多只能設到「只看自己」。')
+    +li('🔒','<b>薪資 Excel 的辦公人員列</b> → 管理員以外<b>只留</b> R~U(伙食津貼)、AA(所得=只算伙食津貼)、AQ~AS(匯款方式/備註),其餘欄位<b>整格空白</b>。')
+    +li('🔒','「<b>🏦 投保申報 CSV</b>」(含身分證字號)<b>只有管理員</b>看得到按鈕。')
+    +li('📄','「<b>⬇ 薪資 Excel</b>」與「<b>⬇ 薪資 CSV</b>」<b>依上面的權限逐格遮蔽</b>:看不到的欄位整格空白,<b>合計也只加總看得到的部分</b>(所以推不出被遮的金額),Excel 標題會標註「部分欄位依權限遮蔽」。')
+    +'</div>';
+  if(isAdmin){
+    box.innerHTML='<b style="color:#15803d">👑 管理員</b> — 人事薪資四頁全可編輯,看得到<b>所有員工</b>的所有金額,能勾「哪天不算加班」,也能匯出整份總表與投保申報。'+fixed;
+    return;
+  }
+  const pv={}; document.querySelectorAll('.perm-hr-page').forEach(sl=>{ pv[sl.dataset.k]=sl.value; });
+  const L={hr_emp:'員工薪資設定',hr_payroll:'薪資計算',hr_leave:'請假・特休',hr_payrollcfg:'費率設定'};
+  const shown=Object.keys(L).filter(k=>pv[k]==='read'||pv[k]==='edit');
+  if(!shown.length){
+    box.innerHTML='<b style="color:var(--text3)">🚫 看不到人事薪資</b> — 四頁全設隱藏,側欄不會出現人事薪資整區,資料庫端也會拒絕讀取,'
+      +'連「產值 → 成本分析」的人事成本也會是 0。因此<b>「可視員工」與「薪資機密欄位」已收起</b>(設了也不會生效);'
+      +'之後只要把任何一頁改成唯讀/可編輯,那兩區就會再出現,<b>記得回來確認一下</b>。'+fixed;
+    return;
+  }
+  const pageTxt=shown.map(k=>`${L[k]}<span style="color:var(--text3)">(${pv[k]==='edit'?'可編輯':'唯讀'})</span>`).join('、');
+  const hidden=Object.keys(L).filter(k=>shown.indexOf(k)<0).map(k=>L[k]);
+  const sc=(document.getElementById('perm-scope-sel')||{}).value||'all';
+  const nPick=permCheckedStaff().length;
+  const scTxt={all:'<b>全部員工</b>',office:'<b>只有辦公人員</b>',field:'<b>只有現場 / 外勞</b>',
+               custom:`<b>指定的 ${nPick} 位員工</b>`}[sc]||'<b>全部員工</b>';
+  const fv={}; document.querySelectorAll('.perm-field-sel').forEach(sl=>{ fv[sl.dataset.k]=sl.value; });
+  const V={all:'✅ 全看',self:'👤 只看自己',none:'🚫 看不到'};
+  const two=k=>`🏢 辦公人員 <b>${V[fv['pay_'+k+'_office']]||'—'}</b>　·　🏗 現場/外勞 <b>${V[fv['pay_'+k+'_field']]||'—'}</b>`;
+  box.innerHTML='<b style="color:#b45309">👁 這個帳號在「人事薪資」看得到:</b>'
+    +li('📄',`頁面:${pageTxt}`+(hidden.length?`<span style="color:var(--text3)">;看不到 ${hidden.join('、')}</span>`:''))
+    +li('👥',`員工:${scTxt}(範圍外的人整列不會出現)`)
+    +li('💰',`底薪・應發・實發:${two('base')}`)
+    +li('⏱',`加班費・假日加班費:${two('ot')}`)
+    +li('🏥',`勞健保・雇主成本:${two('ins')}`)
+    +li('✔','一律看得到:出勤天數、加班天數、遲退扣、請假扣、餐補、便當。')
+    +fixed;
 }
 async function savePermModal(){
   const acc=allAccounts.find(a=>String(a.id)===String(_permEditId)); if(!acc){ closeModal('perm-modal'); return; }
-  const perms={};
+  const perms=Object.assign({}, acc.perms||{});   // 以現有設定為基底,避免弄丟這個視窗沒呈現的鍵
   document.querySelectorAll('#perm-modal-body .perm-sel').forEach(s=>{ perms[s.dataset.k]=s.value; });
-  const sc=document.getElementById('perm-scope-sel'); if(sc) perms.payroll_scope=sc.value;   // 薪資可視範圍
+  document.querySelectorAll('#perm-modal-body .perm-field-sel').forEach(s=>{ perms[s.dataset.k]=s.value; });   // 機密欄位:辦公/現場各一
+  ['pay_field_base','pay_field_ot','pay_field_ins'].forEach(k=>{ delete perms[k]; });   // 舊的單一鍵已換算進新鍵,不再保留
+  const sc=document.getElementById('perm-scope-sel');
+  if(sc){
+    if(sc.value==='custom'){
+      // 指定名單:payroll_scope 仍存 'all' 讓資料庫既有政策放行,名單過濾由 payroll_staff + restrictive policy 負責
+      perms.payroll_scope='all';
+      perms.payroll_staff=permCheckedStaff().map(v=>parseInt(v,10)).filter(v=>!isNaN(v));
+      if(!perms.payroll_staff.length && !await uiConfirm('「可視員工」選了指定名單但一個人都沒勾,這個帳號在人事薪資會看不到任何員工。\n確定要這樣存嗎?')) return;
+    } else { perms.payroll_scope=sc.value; delete perms.payroll_staff; }
+  }
+  // 資料庫的 is_hr() 只認整區鍵 payroll → 回寫成四頁中最寬鬆的那一個,
+  // 否則四頁開了但 DB 仍判定非 HR,會變成前端進得去、讀寫全被擋(403)。
+  const RANK={hide:0,read:1,edit:2}, RNAME=['hide','read','edit'];
+  let hrTop=0;
+  document.querySelectorAll('#perm-modal-body .perm-hr-page').forEach(s=>{ hrTop=Math.max(hrTop, RANK[s.value]||0); });
+  perms.payroll=RNAME[hrTop];
   const ov=document.getElementById('perm-outval-sel'); if(ov) perms.output_value=ov.value;   // 產值金額可視性
   const btn=document.getElementById('perm-modal-save'); btn.disabled=true; btn.textContent='儲存中...';
   const r=await sbFetch(`/rest/v1/profiles?id=eq.${_permEditId}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({perms})});
@@ -30657,6 +30895,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   // 現場本工的 17:30~20:30 數量，以三小時為 1 單位，打卡時間先依既有規則四捨五入到半小時。
   function localTier1Qty(att){
     if(num(att.ot_tier)!==1)return 0;
+    if(att.ot_qty!=null)return Math.min(1,Math.max(0,num(att.ot_qty)));
     const m=String(att.punch_out||'').match(/^(\d{1,2}):(\d{2})/);
     if(m){
       const out=(+m[1])*60+(+m[2]), rounded=Math.round(out/30)*30;
@@ -30693,30 +30932,16 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     }
     return 0;
   }
-  // 外勞平日加班仍沿用既有級距；週六、星期日與國定假日改由 statutoryHolidayPay 統一計算。
+  // 外勞平日加班依下班卡時間級距；週六/國定假日與星期日分別使用費率設定的固定金額。
   function foreignOtTier(att){
-    let tier=num(att.ot_tier);
-    // 國定假日正常給付只到 17:00；打卡下班超過 17:00 即另算外勞加班級距。
-    if(att.is_holiday&&att.punch_out){
-      const m=String(att.punch_out).match(/^(\d{1,2}):(\d{2})/);
-      if(m){
-        const out=(+m[1])*60+(+m[2]);
-        tier=out>17*60?(out<=20*60+30?1:2):0;
-      }
-    }
-    return tier;
+    return num(att.ot_tier);
   }
   function foreignOtPay(emp,att,cfg){
     const r=(cfg.foreign&&cfg.foreign[emp.foreign_type]); if(!r)return 0;
     const tier=foreignOtTier(att);
-    if(att.is_holiday){
-      if(tier===2)return num(r.tier2);
-      if(tier===1)return num(r.tier1);
-      return 0;
-    }
-    if(att.weekday===0)return num(r.sunday);
+    if(att.is_holiday||att.weekday===0||att.weekday===6)return 0;
     if(tier===2)return num(r.tier2);
-    if(tier===1)return num(r.tier1);
+    if(tier===1)return num(r.tier1)*localTier1Qty(att);
     return 0;
   }
   function calcPayslip(emp,monthAtt,cfg,period){
@@ -30731,29 +30956,39 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     const workHours=monthAtt.reduce((s,a)=>s+hourVal(a),0);
     // 底薪仍以實際出勤天數計算，遲到/早退於 attendDeduct 扣一次，避免重複扣薪。
     const base=emp.pay_type==='monthly'?num(emp.base_salary):num(emp.daily_wage)*rawWorkDays;
-    const otItems=monthAtt.map(a=>{const wd=a.weekday!=null?a.weekday:(a.work_date?new Date(a.work_date).getDay():-1);const isSpecial=!!a.is_holiday||wd===0||wd===6;return{date:a.work_date,pay:isSpecial?0:(isForeign?foreignOtPay(emp,a,cfg):overtimePay(emp,a,cfg))};});
-    const ot=otItems.reduce((s,x)=>s+x.pay,0);
-    // 加班明細數量:17:30~20:30(tier1)、17:30~23:00(tier2)、國定假日、星期日。
-    // 外勞國定假日可同時計入「國定假日」及 17:30 後的普通加班級距，但加班費只計算一次。
-    const otCat={t1:0,t2:0,holiday:0,sunday:0,t1Pay:0,t2Pay:0,holidayPay:0,sundayPay:0};
-    monthAtt.forEach((a,i)=>{
+    const isOffice=emp.emp_type==='office';
+    // 每日加班明細:先算出「原本會有多少加班」,再看當天是否被標記「不算加班」(ot_excluded)決定是否計入。
+    // ot_excluded 由薪資頁「加班費 / 假日加班費」欄點入逐日勾選,存於 payroll_run.adjustments[sid].ot_exclude。
+    // 分類規則(與原邏輯相同):外勞週日=sunday、外勞週六/國定=holiday(固定金額);本工假日出勤已納入出勤天不另計;
+    //                        其餘依打卡下班時刻分 t1(17:30~20:30) / t2(17:30~23:00)。
+    const otItems=monthAtt.map(a=>{
       const wd=a.weekday!=null?a.weekday:(a.work_date?new Date(a.work_date).getDay():-1);
-      const pay=otItems[i]?otItems[i].pay:0, worked=num(a.work_hours)>0||num(a.ot_hours)>0;
+      const isSpecial=!!a.is_holiday||wd===0||wd===6;
+      const worked=num(a.work_hours)>0||num(a.ot_hours)>0;
+      const excluded=!!a.ot_excluded;
+      const rawPay=isSpecial?0:(isForeign?foreignOtPay(emp,a,cfg):overtimePay(emp,a,cfg));
       const tier=isForeign?foreignOtTier(a):a.ot_tier;
-      if(isForeign&&a.is_holiday&&worked){
-        otCat.holiday++;
-        if(tier===2){ otCat.t2++; otCat.t2Pay+=pay; }
-        else if(tier===1){ otCat.t1++; otCat.t1Pay+=pay; }
-        return;
+      const fr=(isForeign&&cfg.foreign&&cfg.foreign[emp.foreign_type])||{};
+      let cat=null,qty=0,catPay=0;
+      if(isForeign&&worked&&wd===0){ cat='sunday'; qty=1; catPay=num(fr.sunday); }
+      else if(isForeign&&worked&&(a.is_holiday||wd===6)){ cat='holiday'; qty=1; catPay=num(fr.holiday); }
+      else if(!isForeign&&!isOffice&&worked&&isSpecial){ /* 本工假日出勤已計入出勤天,不另計加班 */ }
+      else {
+        if(a.is_holiday&&worked)cat='holiday'; else if(wd===0&&worked)cat='sunday';
+        else if(tier===2)cat='t2'; else if(tier===1)cat='t1';
+        if(cat){ qty=(cat==='t1')?localTier1Qty(a):1; catPay=rawPay; if(!(qty>0)) cat=null; }
       }
-      let cat=null;
-      if(a.is_holiday&&worked)cat='holiday'; else if(wd===0&&worked)cat='sunday';
-      else if(tier===2)cat='t2'; else if(tier===1)cat='t1';
-      if(cat){
-        const qty=(!isForeign&&cat==='t1')?localTier1Qty(a):1;
-        if(qty>0){ otCat[cat]+=qty; otCat[cat+'Pay']+=pay; }
-      }
+      // 假日加班費(辦公室依法定倍率;外勞於下方由分類金額彙總,本工不計)
+      let hDays=0,hPay=0;
+      if(isOffice&&isSpecial&&worked){ hDays=(a.work_day!=null?num(a.work_day):1); hPay=statutoryHolidayPay(emp,a); }
+      return {date:a.work_date,weekday:wd,punch_in:a.punch_in||'',punch_out:a.punch_out||'',work_hours:num(a.work_hours),ot_hours:num(a.ot_hours),is_holiday:!!a.is_holiday,
+              excluded:excluded,pay:excluded?0:rawPay,raw_pay:rawPay,cat:cat,cat_qty:qty,cat_pay:catPay,holiday_days:hDays,holiday_pay:hPay};
     });
+    const ot=otItems.reduce((s,x)=>s+x.pay,0);
+    // 加班明細數量:17:30~20:30(tier1)、17:30~23:00(tier2)、假日(外勞含週六/國定假日)、星期日。被排除的日期不計。
+    const otCat={t1:0,t2:0,holiday:0,sunday:0,t1Pay:0,t2Pay:0,holidayPay:0,sundayPay:0};
+    otItems.forEach(x=>{ if(x.excluded||!x.cat)return; otCat[x.cat]+=x.cat_qty; otCat[x.cat+'Pay']+=x.cat_pay; });
+    const otExcludedDates=otItems.filter(x=>x.excluded&&(num(x.raw_pay)>0||x.cat||num(x.holiday_pay)>0)).map(x=>x.date);
     const leaveItems=monthAtt.filter(a=>num(a.leave_hours)>0).map(a=>{const rate=cfg.leaveRate[a.leave_type]!=null?cfg.leaveRate[a.leave_type]:1;return{date:a.work_date,type:a.leave_type,hours:num(a.leave_hours),deduct:hourlyBase(emp)*num(a.leave_hours)*rate};});
     const leaveDeduct=emp.pay_type==='monthly'?leaveItems.reduce((s,x)=>s+x.deduct,0):0;
     // 外勞平日不打白天卡、只在 17:00 後打加班卡,打卡時刻不代表遲到/早退 → 一律不計遲到早退(加班仍依打卡下班判分段)
@@ -30777,14 +31012,14 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     let guaranteeTopup=0;
     if(gmin>0){const totalForGuarantee=base+ot+jobBase;if(totalForGuarantee<gmin)guaranteeTopup=gmin-totalForGuarantee;}
     const jobAllowance=jobBase+guaranteeTopup;
-    // 假日加班費：所有員工均依日期性質與實際工時套用法定倍率，不再採固定金額。
+    // 假日加班費：本工(現場/日)已納入出勤天，不另計；辦公室依法定倍率；外勞依固定設定。
     let holidayDays=0,holidayPay=0;
-    monthAtt.forEach(a=>{
-      const wd=a.weekday!=null?a.weekday:(a.work_date?new Date(a.work_date).getDay():-1);
-      if(!(a.is_holiday||wd===0||wd===6)||(num(a.work_hours)<=0&&num(a.ot_hours)<=0))return;
-      holidayDays+=(a.work_day!=null?num(a.work_day):1);
-      holidayPay+=statutoryHolidayPay(emp,a);
-    });
+    if(isForeign){
+      holidayDays=otCat.holiday+otCat.sunday;
+      holidayPay=otCat.holidayPay+otCat.sundayPay;
+    }else if(isOffice){
+      otItems.forEach(x=>{ if(x.excluded)return; holidayDays+=x.holiday_days; holidayPay+=x.holiday_pay; });
+    }
     // 便當/補餐:出勤一天一便當;不訂便當者補現金(非課稅伙食費,不併投保薪資)。預設:辦公不訂、其餘訂。
     // 鄭季豪固定為「不訂便當、照出勤天數領餐補」，另有便當代墊返還；兩者不可互相取代。
     const bentoAdvanceRecipient=!!emp.boss_bento_advance_only;
@@ -30820,7 +31055,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     // 各項先四捨五入成整數再相減,確保「應發 − 各扣款 = 實發」帳面對得起來
     const grossR=round(gross),leaveR=round(leaveDeduct),attR=round(attendDeduct),laborR=round(laborEmp),healthR=round(healthEmp),h2R=round(health2nd),pvR=round(pensionVolEmp);
     const net=grossR-leaveR-attR-laborR-healthR-h2R-pvR;
-    return {period,emp_id:emp.id,work_days:workDays,work_hours:workHours,ot_pay:round(ot),gross:grossR,labor_ins_emp:laborR,health_ins_emp:healthR,health_2nd:h2R,pension_vol_emp:pvR,leave_deduct:leaveR,attend_deduct:attR,net:net,employer_cost:{labor:round(employer.labor||0),laborCombined:round((employer.labor||0)+(employer.occ||0)),health:round(employer.health||0),pension:round(employer.pension||0),occ:round(employer.occ||0),dormRent:emp.emp_type==='office'?0:round(num(emp.dorm_rent))},breakdown:{base:round(base),raw_work_days:rawWorkDays,insBase,otItems,leaveItems,job_allowance:round(jobAllowance),guarantee_topup:round(guaranteeTopup),late_count:lateCount,late_hours:lateHours,early_hours:earlyHours,early_exempt:earlyExempt,attend_deduct:round(attendDeduct),attend_hourly:hourlyBase(emp),attItems:attItems,half_days:halfDays,is_foreign:isForeign,ot_counts:{t1:otCat.t1,t2:otCat.t2,holiday:otCat.holiday,sunday:otCat.sunday},ot_cat_pay:{t1:round(otCat.t1Pay),t2:round(otCat.t2Pay),holiday:round(otCat.holidayPay),sunday:round(otCat.sundayPay)},holiday_days:holidayDays,holiday_pay:round(holidayPay),meal_days:rawWorkDays,meal_boxes:mealBoxes,meal_subsidy:round(mealSubsidy),orders_bento:ordersBento,boss_meal_advance_only:bentoAdvanceRecipient,retired:!!emp.retired,pension_vol_rate:(isForeign?0:num(emp.pension_vol_rate)),pension_vol_emp:pvR}};
+    return {period,emp_id:emp.id,work_days:workDays,work_hours:workHours,ot_pay:round(ot),gross:grossR,labor_ins_emp:laborR,health_ins_emp:healthR,health_2nd:h2R,pension_vol_emp:pvR,leave_deduct:leaveR,attend_deduct:attR,net:net,employer_cost:{labor:round(employer.labor||0),laborCombined:round((employer.labor||0)+(employer.occ||0)),health:round(employer.health||0),pension:round(employer.pension||0),occ:round(employer.occ||0),dormRent:emp.emp_type==='office'?0:round(num(emp.dorm_rent))},breakdown:{base:round(base),raw_work_days:rawWorkDays,insBase,otItems,leaveItems,job_allowance:round(jobAllowance),guarantee_topup:round(guaranteeTopup),late_count:lateCount,late_hours:lateHours,early_hours:earlyHours,early_exempt:earlyExempt,attend_deduct:round(attendDeduct),attend_hourly:hourlyBase(emp),attItems:attItems,half_days:halfDays,is_foreign:isForeign,ot_counts:{t1:otCat.t1,t2:otCat.t2,holiday:otCat.holiday,sunday:otCat.sunday},ot_cat_pay:{t1:round(otCat.t1Pay),t2:round(otCat.t2Pay),holiday:round(otCat.holidayPay),sunday:round(otCat.sundayPay)},holiday_days:holidayDays,holiday_pay:round(holidayPay),ot_excluded_dates:otExcludedDates,meal_days:rawWorkDays,meal_boxes:mealBoxes,meal_subsidy:round(mealSubsidy),orders_bento:ordersBento,boss_meal_advance_only:bentoAdvanceRecipient,retired:!!emp.retired,pension_vol_rate:(isForeign?0:num(emp.pension_vol_rate)),pension_vol_emp:pvR}};
   }
   function monthsBetween(from,to){const a=new Date(from),b=new Date(to);let m=(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth());if(b.getDate()<a.getDate())m-=1;return Math.max(m,0);}
   function annualLeaveDays(hireDate,asOf){const m=monthsBetween(hireDate,asOf);if(m<6)return 0;if(m<12)return 3;const y=Math.floor(m/12);if(y===1)return 7;if(y===2)return 10;if(y<5)return 14;if(y<10)return 15;return Math.min(15+(y-9),30);}
@@ -30850,7 +31085,82 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   window.hrScope=function(){ try{ if(currentUser&&currentUser.isAdmin) return 'all'; var s=currentUser&&currentUser.perms&&currentUser.perms.payroll_scope; return s||'all'; }catch(e){ return 'all'; } };
   // 依範圍判斷是否可見某員工的薪資
   window.hrInScope=function(dep){ var sc=window.hrScope(); return sc==='all'||window.deptClass(dep)===sc; };
-  window.hrScopeLabel=function(){ var sc=window.hrScope(); return sc==='office'?'（範圍:只辦公人員）':(sc==='field'?'（範圍:只現場/外勞）':''); };
+  // 指定可視員工名單:perms.payroll_staff 是陣列就代表「只看這幾個人」(此時 payroll_scope 一律存 all,
+  // 資料庫既有的 hr_scope() 政策才放行,真正的名單過濾交給 hr_can_see_staff() 的 restrictive policy)。
+  // 沒有這個鍵時 → 回 null,代表照分類(all/office/field)走。
+  window.hrStaffAllow=function(){ try{ var a=currentUser&&currentUser.perms&&currentUser.perms.payroll_staff; return Array.isArray(a)?a.map(String):null; }catch(e){ return null; } };
+  // 依可視範圍判斷是否看得到某位員工的薪資(傳整個 staff 物件)
+  window.hrCanSeeStaff=function(st){
+    try{
+      if(currentUser&&currentUser.isAdmin) return true;
+      var list=window.hrStaffAllow();
+      if(list) return list.indexOf(String(st&&st.id))>=0;
+      var sc=window.hrScope();
+      return sc==='all'||window.deptClass(st&&st.department)===sc;
+    }catch(e){ return false; }
+  };
+  window.hrScopeLabel=function(){
+    var list=window.hrStaffAllow();
+    if(list) return '（範圍:指定 '+list.length+' 人）';
+    var sc=window.hrScope();
+    return sc==='office'?'（範圍:只辦公人員）':(sc==='field'?'（範圍:只現場/外勞）':'');
+  };
+  // 這位員工是不是登入者本人(帳號綁定名冊 staff_id 優先,其次同名)
+  window.hrIsSelfStaff=function(st){
+    try{
+      if(!st||!currentUser||isGuest) return false;
+      if(currentUser.staffId!=null&&String(currentUser.staffId)===String(st.id)) return true;
+      return !!(currentUser.name&&st.name&&String(currentUser.name).trim()===String(st.name).trim());
+    }catch(e){ return false; }
+  };
+  // 名冊職稱是老闆/主管(底薪 default 模式的例外)
+  window.hrIsBoss=function(){ try{ var r=currentUser&&currentUser.staffRole; return r==='老闆'||r==='主管'; }catch(e){ return false; } };
+  // 看不看得到這位員工的「底薪類」金額(底薪/日薪/應發/實發):可視員工 → 再看 base 欄位權限。
+  // 薪資計算頁、員工薪資設定頁、成本頁的人事成本共用同一套規則。
+  window.hrCanSeeWageOf=function(st){
+    try{
+      if(currentUser&&currentUser.isAdmin) return true;
+      if(!st||!window.hrCanSeeStaff(st)) return false;
+      var office=window.deptClass(st.department)==='office';
+      if(office && window.hrIsBoss()) return true;   // 名冊職稱老闆/主管:辦公人員底薪的固定例外
+      var m=window.hrFieldMode('base', office);
+      if(m==='all') return true;
+      if(m==='none') return false;
+      return window.hrIsSelfStaff(st);
+    }catch(e){ return false; }
+  };
+  // ── 機密欄位可視模式(逐帳號設定,管理員一律 all)──
+  //   base 底薪/應發/實發   :default(辦公人員遮蔽=舊規則,預設) | all | self | none
+  //   ot   加班費/假日加班費 :self(只看自己,預設) | all | none
+  //   ins  勞健保/雇主成本   :all(預設) | self | none
+  // 機密欄位權限:每個欄位對「辦公人員」與「現場/外勞」分開設,值為 all(全部看得到) | self(只看自己) | none(完全看不到)
+  // 新鍵:pay_base_office / pay_base_field / pay_ot_office / pay_ot_field / pay_ins_office / pay_ins_field
+  // 舊鍵 pay_field_* 仍讀得懂(舊帳號不用重設),對照表如下。
+  var HR_FIELD_DEFAULT={ base:{office:'none', field:'all'},   // 舊 default:辦公人員遮蔽、現場看得到
+                         ot:  {office:'self', field:'self'},
+                         ins: {office:'all',  field:'all'} };
+  var HR_LEGACY_MAP={
+    base:{ 'default':{office:'none',field:'all'}, all:{office:'all',field:'all'},
+            self:{office:'self',field:'self'},     none:{office:'none',field:'none'} },
+    ot:  { self:{office:'self',field:'self'},      all:{office:'self',field:'all'},   // 舊 all=除了辦公人員都看得到
+            none:{office:'none',field:'none'},     'default':{office:'self',field:'all'} },
+    ins: { all:{office:'all',field:'all'},         self:{office:'self',field:'self'},
+            none:{office:'none',field:'none'} }
+  };
+  window.hrFieldMode=function(field, isOffice){
+    var side=isOffice?'office':'field';
+    try{
+      if(isGuest) return 'none';
+      if(currentUser&&currentUser.isAdmin) return 'all';
+      var perms=(currentUser&&currentUser.perms)||{};
+      var v=perms['pay_'+field+'_'+side];
+      if(v==='all'||v==='self'||v==='none') return v;
+      var legacy=(HR_LEGACY_MAP[field]||{})[perms['pay_field_'+field]];   // 沒設新鍵 → 用舊鍵推導
+      if(legacy) return legacy[side];
+      return (HR_FIELD_DEFAULT[field]||{})[side]||'none';
+    }catch(e){ return (HR_FIELD_DEFAULT[field]||{})[side]||'none'; }
+  };
+  window.HR_FIELD_DEFAULT=HR_FIELD_DEFAULT;
   function tenure(hire){
     if(!hire) return '—';
     var m=Payroll.monthsBetween(hire, today());
@@ -30860,6 +31170,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   function money(n){ n=Math.round(num(n)); return n?('$'+n.toLocaleString('en-US')):'—'; }
   // 只有管理員能看/改辦公人員底薪(request:機密)
   function isAdminUser(){ try{ return !!(currentUser&&currentUser.isAdmin)&&!isGuest; }catch(e){ return false; } }
+  // 看不看得到這位員工的底薪/投保薪資 → 用全站共用規則(可視員工 + 底薪欄位權限)
+  function canSeeWageOf(st){ return window.hrCanSeeWageOf(st); }
 
   window.empInit=async function(){
     var body=document.getElementById('emp-body');
@@ -30884,7 +31196,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var q=(document.getElementById('emp-search').value||'').trim().toLowerCase();
     var onlyActive=document.getElementById('emp-only-active').checked;
     var rows=empStaff.filter(function(s){
-      if(!window.hrInScope(s.department)) return false;   // 薪資可視範圍
+      if(!window.hrCanSeeStaff(s)) return false;   // 薪資可視範圍(分類或指定名單)
       if(onlyActive && s.status==='離職') return false;
       if(!q) return true;
       return [s.name,s.department,s.role].some(function(v){ return String(v||'').toLowerCase().indexOf(q)>=0; });
@@ -30902,11 +31214,11 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var payLabel = pay.pay_type==='monthly'?'月薪':(pay.pay_type==='daily'?'日薪':'—');
       var insLabel = {company:'公司',union:'公會',none:'未保'}[pay.insure_via]||'—';
       var set = pay.pay_type ? '' : ' style="color:var(--danger)"';
-      // 辦公人員底薪機密:非管理員看不到金額,也不能開設定
-      var lockWage = (window.deptClass(s.department)==='office') && !isAdminUser();
-      var amtCell = lockWage ? '<span title="辦公人員底薪僅管理員可見" style="color:var(--text3)">***</span>' : amt;
+      // 底薪機密:看不到金額的帳號也不能開設定(預設=只遮辦公人員且僅管理員可見,可於帳號權限逐一放寬)
+      var lockWage = !canSeeWageOf(s);
+      var amtCell = lockWage ? '<span title="此帳號沒有看這位員工底薪的權限(帳號管理 → 底薪‧應發實發)" style="color:var(--text3)">***</span>' : amt;
       var setCell = lockWage
-        ? '<button class="btn-icon" disabled title="辦公人員薪資僅管理員可設定" style="border:1px solid var(--border);opacity:.45;cursor:not-allowed">🔒</button>'
+        ? '<button class="btn-icon" disabled title="沒有看這位員工底薪的權限,不能設定" style="border:1px solid var(--border);opacity:.45;cursor:not-allowed">🔒</button>'
         : '<button class="btn-icon edit" onclick="empOpenModal('+s.id+')" style="border:1px solid var(--border)">⚙️ 設定</button>';
       return '<tr>'
         +'<td>'+esc(s.name||'—')+(pay.retired?' <span title="已退休續聘:勞保停,只留職災+健保" style="font-size:11px;color:var(--accent2)">🏖️退休</span>':'')+'</td>'
@@ -30927,7 +31239,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 
   window.empOpenModal=function(sid){
     var s=empStaff.filter(function(x){ return String(x.id)===String(sid); })[0]; if(!s) return;
-    if((window.deptClass(s.department)==='office') && !isAdminUser()){ alert('辦公人員薪資僅管理員可設定/檢視。'); return; }
+    if(!canSeeWageOf(s)){ alert('此帳號沒有檢視/設定這位員工底薪的權限。\n(可請管理員到「帳號管理 → 🔑 設定 → 底薪‧應發實發」調整)'); return; }
     empEditSid=s.id;
     var pay=empPayMap[s.id]||{};
     var otRule=Payroll.empTypeFromDept(s.department)==='office'?'辦公(勞基法加班)':'現場(半薪/全薪)';
@@ -31049,17 +31361,18 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   // 舊薪資設定可能尚未填 foreign_type；名冊部門與既有外勞名單作為相容判定，避免阿路瓦等人誤判成本工。
   var PAYROLL_FOREIGN_NAMES=PAYROLL_NAME_ORDER.slice(PAYROLL_NAME_ORDER.indexOf('和松朋'));
   var prPunchByKey=null, prPunchMeta=null, prHolidays=null;   // 打卡資料(員編/姓名為 key)、國定假日集合
-  var prAdjust={};              // 當月調整 {staff_id:{att_waive:[日期]}} + 特殊鍵 __typhoon / __typhoonFull(全體颱風假日期)
+  var prAdjust={};              // 當月調整 {staff_id:{att_waive:[日期], ot_exclude:[日期], advance_payment:n}} + 特殊鍵 __typhoon(全體颱風假日期)
   var prLastNoset=[], prLastPeriod='';   // 供局部重繪(改調整後不需重新載入)
   function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
   function money(n){ n=num(n); return '$'+Math.round(n).toLocaleString('en-US'); }
   // 全體颱風假日期(當月):當天有打卡者免扣遲早退、半天補足整天;未打卡者不補(沒上班不計薪)。存於 payroll_run.adjustments.__typhoon
   function prTyphoonDates(){ var t=prAdjust&&prAdjust.__typhoon; return Array.isArray(t)?t:[]; }
-  // 由基礎出勤(打卡/回報)產生有效出勤:併入免扣日期(個人手動 + 全體颱風假)
-  function buildEffectiveAtt(baseAtt, personalWaive){
+  // 由基礎出勤(打卡/回報)產生有效出勤:併入免扣日期(個人手動 + 全體颱風假)與「不算加班」日期
+  function buildEffectiveAtt(baseAtt, personalWaive, otExclude){
     var waive=Array.isArray(personalWaive)?personalWaive.slice():[];
     prTyphoonDates().forEach(function(d){ if(waive.indexOf(d)<0) waive.push(d); });
-    return (baseAtt||[]).map(function(a){ return Object.assign({}, a, { att_waived: waive.indexOf(a.work_date)>=0 }); });
+    var noOt=Array.isArray(otExclude)?otExclude:[];
+    return (baseAtt||[]).map(function(a){ return Object.assign({}, a, { att_waived: waive.indexOf(a.work_date)>=0, ot_excluded: noOt.indexOf(a.work_date)>=0 }); });
   }
   // 只有管理員能看辦公人員底薪/應發(機密)
   function isPayAdmin(){ try{ return !!(currentUser&&currentUser.isAdmin)&&!isGuest; }catch(e){ return false; } }
@@ -31068,6 +31381,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     try{
       if(isPayAdmin()) return true;
       if(!currentUser||isGuest) return false;
+      if(window.hrIsBoss()) return true;   // 名冊職稱老闆/主管(登入時已記錄)
       var me=prStaff.filter(function(s){
         return (currentUser.staffId!=null&&String(s.id)===String(currentUser.staffId))
           || (currentUser.name&&String(s.name)===String(currentUser.name));
@@ -31075,6 +31389,37 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       return !!(me&&(me.role==='老闆'||me.role==='主管'));
     }catch(e){ return false; }
   }
+  // 這一列是不是「登入者本人」?(帳號綁定名冊 staff_id 優先,其次同名)
+  function isSelfRow(p){
+    try{
+      if(!p||!currentUser||isGuest) return false;
+      if(currentUser.staffId!=null&&String(currentUser.staffId)===String(p.emp_id)) return true;
+      return !!(currentUser.name&&p._name&&String(currentUser.name).trim()===String(p._name).trim());
+    }catch(e){ return false; }
+  }
+  // ── 三個機密欄位的可視判斷:對「辦公人員」與「現場/外勞」分開設定(見 window.hrFieldMode)──
+  // 底薪 / 應發 / 實發:辦公人員另有固定例外 —— 管理員與名冊職稱老闆/主管一律看得到
+  function canViewBase(p){
+    if(p._office && canViewOfficePay()) return true;
+    var mode=window.hrFieldMode('base', !!p._office);
+    if(mode==='all') return true;
+    if(mode==='none') return false;
+    return isSelfRow(p);
+  }
+  // 加班費 / 假日加班費
+  // ⚠ 硬規則:辦公人員的加班費/假日加班費**只有管理員與本人**看得到,任何權限設定都放寬不了
+  //    (畫面、明細單、薪資 CSV、薪資 Excel 一致;名冊職稱老闆/主管在這一項也沒有例外)
+  function canViewOt(p){
+    if(isPayAdmin()) return true;
+    if(p._office && !isSelfRow(p)) return false;
+    var m=window.hrFieldMode('ot', !!p._office);
+    if(m==='all') return true;
+    if(m==='none') return false;
+    return isSelfRow(p);
+  }
+  // 勞健保 / 二代 / 勞退 / 雇主成本:預設全部看得到
+  function canViewIns(p){ var m=window.hrFieldMode('ins', !!p._office); return m==='all'?true:(m==='none'?false:isSelfRow(p)); }
+  window.prCanViewOt=canViewOt;
   // 非薪資加扣項套用到已算好的薪資單:
   // 鄭季豪便當代墊加入實發但不併入 gross/投保薪資；借支、匯款費用由實發扣除。
   function applyExtras(ps, remit, bossBentoAdvance, bossBentoItems, advancePayment){
@@ -31101,10 +31446,9 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   // 解析與「手動補登」共用同一套規則,行為才一致。times=["HH:MM(:SS)", ...]。
   function derivePunchDay(times, dd, period, y, mo){
     if(!times || !times.length) return null;
-    var OT_START=toMin('17:30'), LATE=toMin('08:15'), T1=toMin('20:30'), HALF=toMin('13:00'), OFF=toMin('17:00'), EARLY_OK=toMin('16:45');
+    var OT_START=toMin('17:30'), LATE=toMin('08:15'), HALF=toMin('13:00'), OFF=toMin('17:00'), EARLY_OK=toMin('16:45');
     var single=times.length<2;   // 只有一筆打卡,無法判下班,視為全天不扣早退
     var inMin=toMin(times[0]), outMin=toMin(times[times.length-1]);
-    var rndOut=Math.round(outMin/30)*30;
     var isHalf=!single && outMin<=HALF;   // 下班 ≤13:00(午休界)→ 半天
     // 早退:下班早於 16:45 才算(16:45~17:00 視同正常下班,不扣);提早時數以正常下班 17:00 計
     var earlyHours=(!single && !isHalf && outMin<EARLY_OK) ? Math.round((OFF-outMin)/60*100)/100 : 0;
@@ -31112,14 +31456,20 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var lateHours = inMin<LATE ? 0 : (inMin<=toMin('08:45') ? 0.5 : 1+0.5*Math.ceil(Math.max(0,inMin-toMin('09:00'))/15));
     var hasOt=!single && outMin>OT_START;
     var otMin=hasOt?Math.max(0,outMin-OT_START):0;
-    var tier=0; if(hasOt){ tier=(rndOut<=T1)?1:2; }
+    // 現場/外勞只採認指定的下班卡容許窗，避免 20:45 因四捨五入被誤判為 23:00 級距。
+    var tier=0, otQty=0;
+    if(hasOt){
+      if(outMin>=toMin('19:15')&&outMin<=toMin('19:45')){ tier=1; otQty=2/3; }
+      else if(outMin>=toMin('20:15')&&outMin<=toMin('20:45')){ tier=1; otQty=1; }
+      else if(outMin>=toMin('22:45')&&outMin<=toMin('23:15')){ tier=2; otQty=1; }
+    }
     return {
       work_date: period+'-'+pad2(dd), weekday: new Date(y,mo-1,dd).getDay(),
       punch_in: times[0].slice(0,5), punch_out: single?'':times[times.length-1].slice(0,5),
       late: inMin>=LATE, late_hours: lateHours, early_hours: earlyHours,
       work_hours: isHalf?4:8, work_day: isHalf?0.5:1, half_day: isHalf,
       ot_hours: +(otMin/60).toFixed(2), night_hours: tier===2?+(otMin/60).toFixed(2):0,
-      ot_tier: tier
+      ot_tier: tier, ot_qty: otQty
     };
   }
 
@@ -31127,14 +31477,27 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   // 日期表頭為垂直合併儲存格(sheet_to_json 讀不到),故改以「內容為打卡時間或 -」偵測日欄,
   // 日序=日欄由左到右順序,星期由計薪月份推算。
   function parsePunchXlsx(arrayBuffer, fallbackPeriod){
-    var wb=XLSX.read(arrayBuffer,{type:'array'});
-    // 選對工作表:新版匯出含「考勤匯總表/異常表/詳細表/打卡記錄表」多張,打卡表不一定在第一張。
-    // ① 優先取名稱含「打卡」的分頁(記/紀皆可);② 否則取「時間格(HH:MM)最多」的分頁;③ 再退回第一張。
+    // 多工作表檔案可能含很寬的「考勤詳細表」。先只讀分頁清單，再單獨載入打卡表，
+    // 避免在選到第 4 張「打卡記錄表」前就因其他大型分頁解析失敗。
+    var bookInfo=XLSX.read(arrayBuffer,{type:'array',bookSheets:true});
+    var sheetNames=(bookInfo&&bookInfo.SheetNames)||[];
+    if(!sheetNames.length) throw new Error('檔案內沒有可讀取的工作表');
+    // 選對工作表:多工作表時優先精準取「打卡紀錄表/打卡記錄表」，避免誤取異常或匯總分頁。
     var pickName=null;
-    for(var si=0;si<wb.SheetNames.length;si++){ if(/打卡/.test(wb.SheetNames[si])){ pickName=wb.SheetNames[si]; break; } }
+    var normSheet=function(n){ return String(n||'').replace(/[\s_\-]/g,''); };
+    for(var si=0;si<sheetNames.length;si++){
+      if(/^打卡[紀記]錄表$/.test(normSheet(sheetNames[si]))){ pickName=sheetNames[si]; break; }
+    }
+    var wb;
+    if(pickName){
+      wb=XLSX.read(arrayBuffer,{type:'array',sheets:[pickName]});
+    }else{
+      // 名稱不標準時才載入全部分頁，以「姓名+員編表頭且時間格最多」找出打卡表。
+      wb=XLSX.read(arrayBuffer,{type:'array'});
+    }
     if(!pickName){
       var best=-1;
-      wb.SheetNames.forEach(function(nm){
+      sheetNames.forEach(function(nm){
         var s=wb.Sheets[nm]; if(!s) return;
         var rs=XLSX.utils.sheet_to_json(s,{header:1,raw:false,defval:''});
         var hasHdr=rs.some(function(r){ var j=(r||[]).map(function(v){return String(v||'').trim();}); return j.indexOf('姓名')>=0 && (j.indexOf('員編')>=0||j.indexOf('員工編號')>=0); });
@@ -31143,7 +31506,21 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         if(cnt>best){ best=cnt; pickName=nm; }
       });
     }
-    var ws=wb.Sheets[pickName||wb.SheetNames[0]];
+    var selectedName=pickName||sheetNames[0];
+    var ws=wb.Sheets[selectedName];
+    if(!ws) throw new Error('無法讀取「'+selectedName+'」工作表');
+    // 某些考勤匯出檔將 dimension 錯寫成 A1:C8，但實際儲存格已到 AI41。
+    // xlsx-js-style 會相信錯誤範圍，導致 sheet_to_json 只看到表頭。依實際儲存格重算 !ref。
+    var minR=Infinity,minC=Infinity,maxR=-1,maxC=-1;
+    Object.keys(ws).forEach(function(addr){
+      if(!addr||addr.charAt(0)==='!') return;
+      try{
+        var pos=XLSX.utils.decode_cell(addr);
+        if(pos.r<minR)minR=pos.r; if(pos.c<minC)minC=pos.c;
+        if(pos.r>maxR)maxR=pos.r; if(pos.c>maxC)maxC=pos.c;
+      }catch(e){}
+    });
+    if(maxR>=0&&maxC>=0) ws['!ref']=XLSX.utils.encode_range({s:{r:minR,c:minC},e:{r:maxR,c:maxC}});
     var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
     // 找表頭列(含 姓名/員編/部門)
     var hr=-1,nameCol=-1,idCol=-1,deptCol=-1;
@@ -31190,7 +31567,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       if(name){ byKey[name]=days; names.push(name); }
       if(empId){ byKey[empId]=days; }
     }
-    return { byKey:byKey, meta:{ period:period, count:names.length, names:names, dayCount:dayCols.length } };
+    return { byKey:byKey, meta:{ period:period, count:names.length, names:names, dayCount:dayCols.length, sheetName:selectedName } };
   }
 
   window.payrollLoadPunch=async function(input){
@@ -31203,10 +31580,20 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       prPunchByKey=res.byKey; prPunchMeta=res.meta;
       if(res.meta.period){ if(mi) mi.value=res.meta.period; try{ localStorage.setItem('punch_'+res.meta.period, JSON.stringify(res)); }catch(e){} }
       var info=document.getElementById('pr-punch-info');
-      if(info) info.textContent='📎 已載入打卡 '+res.meta.period+' · '+res.meta.count+' 人(按「計算」以打卡計薪)';
+      if(res.meta.count>0){
+        if(info) info.textContent='📎 已載入「'+res.meta.sheetName+'」 '+res.meta.period+' · '+res.meta.count+' 人(按「計算」以打卡計薪)';
+      }else{
+        if(info) info.textContent='⚠️ 「'+res.meta.sheetName+'」無法辨識任何打卡人員';
+        var useReport=await uiConfirm('目前打卡 XLSX 無法辨識任何人員（已讀取工作表：'+res.meta.sheetName+'）。\n\n可能是檔案格式不符或選錯檔案。是否改用「出勤回報」資料計算薪資？');
+        if(useReport) await window.payrollCalc(true);
+      }
     }catch(e){
       console.warn('parse punch failed',e);
-      alert('打卡檔解析失敗:'+(e&&e.message?e.message:e));
+      prPunchByKey={}; prPunchMeta={period:fallback,count:0,names:[],dayCount:0,sheetName:'',parseError:(e&&e.message?e.message:String(e))};
+      var info2=document.getElementById('pr-punch-info');
+      if(info2) info2.textContent='⚠️ 打卡 XLSX 解析失敗：'+prPunchMeta.parseError;
+      var fallbackOk=await uiConfirm('目前打卡 XLSX 無法辨識。\n\n原因：'+prPunchMeta.parseError+'\n\n是否改用「出勤回報」資料計算薪資？');
+      if(fallbackOk) await window.payrollCalc(true);
     }finally{ input.value=''; }
   };
 
@@ -31255,9 +31642,21 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     bi.style.border=pay?off:on; bi.style.background=pay?offBg:onBg; bi.style.color=pay?'var(--text)':'#fff';
   };
 
-  window.payrollCalc=async function(){
+  window.payrollCalc=async function(fallbackConfirmed){
     var period=document.getElementById('pr-month').value;
     if(!period){ alert('請先選擇計薪月份'); return; }
+    // 若該月曾上傳過打卡檔，重整後先嘗試還原。
+    if(!prPunchByKey || !Object.keys(prPunchByKey).length){
+      try{ var pc=localStorage.getItem('punch_'+period); if(pc){ var pj=JSON.parse(pc); prPunchByKey=pj.byKey; prPunchMeta=pj.meta; } }catch(e){}
+    }
+    var usePunch=!!(prPunchByKey && Object.keys(prPunchByKey).length);
+    if(!usePunch&&!fallbackConfirmed){
+      var invalid=!!prPunchMeta;
+      var prompt=invalid
+        ? '目前打卡 XLSX 無法辨識任何人員。\n\n是否改用「出勤回報」資料計算薪資？'
+        : '目前尚未上傳打卡 XLSX。\n\n是否直接改用「出勤回報」資料計算薪資？';
+      if(!await uiConfirm(prompt)) return;
+    }
     var r=monthRange(period);
     var body=document.getElementById('pr-body-pay');
     body.innerHTML='<tr><td colspan="18" class="empty-state">計算中...</td></tr>';
@@ -31278,13 +31677,10 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 
     // 國定假日(外勞費率用),失敗回 null 則僅用星期日判斷
     prHolidays=await window.payrollLoadHolidays(+period.slice(0,4));
-    // 若記憶體無打卡但本月 localStorage 有,還原(重整後仍可用)
-    if(!prPunchByKey || !Object.keys(prPunchByKey).length){
-      try{ var pc=localStorage.getItem('punch_'+period); if(pc){ var pj=JSON.parse(pc); prPunchByKey=pj.byKey; prPunchMeta=pj.meta; } }catch(e){}
-    }
-    var usePunch=!!(prPunchByKey && Object.keys(prPunchByKey).length);
-
     prStaff.sort(function(a,b){
+      // 先按人員類別排序，再排類別內的舊名單；新進人員自動接在所屬類別最後。
+      var ar=window.hrDeptRank(a.department), br=window.hrDeptRank(b.department);
+      if(ar!==br) return ar-br;
       var ai=PAYROLL_NAME_ORDER.indexOf(String(a.name||'').trim());
       var bi=PAYROLL_NAME_ORDER.indexOf(String(b.name||'').trim());
       if(ai>=0||bi>=0){
@@ -31292,13 +31688,14 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         if(bi<0) return -1;
         return ai-bi;
       }
-      return window.hrDeptRank(a.department)-window.hrDeptRank(b.department)
-        || String(a.name||'').localeCompare(String(b.name||''),'zh-Hant');
+      return String(a.name||'').localeCompare(String(b.name||''),'zh-Hant');
     });
     prRows=[]; var noset=[];
     prStaff.forEach(function(s){
-      if(!window.hrInScope(s.department)) return;   // 薪資可視範圍:範圍外不計算也不顯示
+      if(!window.hrCanSeeStaff(s)) return;   // 薪資可視範圍:範圍外不計算也不顯示
       if(String(s.name||'').trim()==='鄭寓守') return;   // 老闆不列入薪資計算及任何薪資匯出
+      var hireDate=String(s.hire_date||'').slice(0,10);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(hireDate)&&hireDate>r.last) return;   // 尚未到職：不出現在該月網頁、CSV 及 Excel
       var pay=prPayMap[s.id];
       if(!pay||!pay.pay_type){ if(s.status!=='離職') noset.push(s.name); return; }
       var staffName=String(s.name||'').trim();
@@ -31320,7 +31717,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         // 出勤回報:補上國定假日旗標(供辦公人員假日出勤加給判斷;週六由 work_date 自動判)
         baseAtt=(prAttByName[s.name]||[]).map(function(a){ return Object.assign({}, a, { is_holiday: prHolidays?prHolidays.has(a.work_date):false }); });
       }
-      var att=buildEffectiveAtt(baseAtt, adj.att_waive||[]);   // 併入免扣(個人手動+全體颱風假)
+      var att=buildEffectiveAtt(baseAtt, adj.att_waive||[], adj.ot_exclude||[]);   // 併入免扣(個人手動+全體颱風假)與「不算加班」日期
       var ps=Payroll.calcPayslip(emp, att, prCfg, period);
       ps._name=s.name; ps._idnum=s.id_number||'';   // 補登缺卡時比對 prPunchByKey 用(員編/身分證號)
       ps._dept=s.department; ps._role=s.role||''; ps._office=(window.deptClass(s.department)==='office');
@@ -31419,8 +31816,13 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 
   function payrollRender(noset, period){
     payrollPunchWarnRender();   // 缺下班卡警示 + 補登
-    var officePayVisible=canViewOfficePay();
-    var mask='<span title="辦公人員底薪/應發/實發僅主管或管理員可見" style="color:var(--text3)">***</span>';
+    var mask='<span title="此帳號沒有看這個人底薪/應發/實發的權限" style="color:var(--text3)">***</span>';
+    var otMask='<span title="此帳號只看得到自己的加班費/假日加班費" style="color:var(--text3)">***</span>';
+    var insMask='<span title="此帳號沒有看這個人勞健保/雇主成本的權限" style="color:var(--text3)">***</span>';
+    // 合計會反推出被遮的人的金額 → 只要有一個人被遮,該欄合計就一起遮
+    var baseTotalVisible=prRows.every(function(p){ return canViewBase(p); });
+    var otTotalVisible=prRows.every(function(p){ return canViewOt(p); });
+    var insTotalVisible=prRows.every(function(p){ return canViewIns(p); });
     var bodyPay=document.getElementById('pr-body-pay'), footPay=document.getElementById('pr-foot-pay');
     var bodyIns=document.getElementById('pr-body-ins'), footIns=document.getElementById('pr-foot-ins');
     var dash=function(v){ return num(v)?money(v):'<span style="color:var(--text3)">—</span>'; };
@@ -31434,10 +31836,10 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var sumEc=function(k){ return prRows.reduce(function(a,p){ return a+num((p.employer_cost||{})[k]); },0); };
       var sumOc=function(k){ return prRows.reduce(function(a,p){ return a+num(p.breakdown&&p.breakdown.ot_counts&&p.breakdown.ot_counts[k]); },0); };
       var ocFoot=function(v){ var shown=Math.round(num(v)*100)/100; return shown?('<span style="text-align:center">'+shown+'</span>'):'—'; };
-      var hasHiddenOffice=!officePayVisible && prRows.some(function(p){ return p._office; });
+      var hasHiddenOffice=!baseTotalVisible;
       // ── 表① 出勤‧給付 ──
       bodyPay.innerHTML=prRows.map(function(p){
-        var bd=p.breakdown||{}; var hideW=p._office && !officePayVisible;
+        var bd=p.breakdown||{}; var hideW=!canViewBase(p);
         var attItems=bd.attItems||[];
         // 需要判斷的異常:遲到、早退、半天(半天班可能是颱風假,需人工判斷是否補足整天)
         var hasAttEvent=attItems.some(function(a){ return num(a.late_hours)>0||num(a.early_hours)>0||a.half_day; });
@@ -31458,7 +31860,16 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
           +' style="width:82px;padding:4px 6px;text-align:right;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text)"'
           +((prRun&&prRun.status==='locked')?' disabled title="本月已鎖定"':'')+'>';
         var oc=bd.ot_counts||{}, ocp=bd.ot_cat_pay||{};
-        var cnt=function(v,pay){ var shown=Math.round(num(v)*100)/100; return shown?('<span style="text-align:center"'+(num(pay)?(' title="'+money(pay)+'"'):'')+'>'+shown+'</span>'):'<span style="color:var(--text3)">—</span>'; };
+        // 加班費/假日加班費:非管理員只看得到自己的金額,其餘遮成 ***(天數仍可見)
+        var otVis=canViewOt(p);
+        var otItemsAll=(bd.otItems||[]).filter(function(x){ return num(x.raw_pay)>0||x.cat||num(x.holiday_pay)>0||x.excluded; });
+        var otExN=otItemsAll.filter(function(x){ return x.excluded; }).length;
+        var otLink=function(inner,mode){
+          if(!otVis||!otItemsAll.length) return inner;
+          return '<a href="#" onclick="payrollOtOpen(\''+p.emp_id+'\',\''+mode+'\');return false" style="text-decoration:none" title="點擊逐日檢視加班,可勾選哪一天不算加班(僅管理員可調整)">'+inner+'</a>';
+        };
+        var otBadge=otExN?(' <span style="font-size:10px;color:var(--text3)" title="有 '+otExN+' 天已設為不算加班">✎'+otExN+'不計</span>'):'';
+        var cnt=function(v,pay){ var shown=Math.round(num(v)*100)/100; return shown?('<span style="text-align:center"'+((otVis&&num(pay))?(' title="'+money(pay)+'"'):'')+'>'+shown+'</span>'):'<span style="color:var(--text3)">—</span>'; };
         return '<tr>'
           +'<td>'+esc(p._name)+'</td><td>'+esc(p._type)+'</td>'
           +'<td style="text-align:center">'+p.work_days+'</td>'
@@ -31468,8 +31879,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
           +'<td style="text-align:center">'+cnt(oc.t2,ocp.t2)+'</td>'
           +'<td style="text-align:center">'+cnt(oc.holiday,ocp.holiday)+'</td>'
           +'<td style="text-align:center">'+cnt(oc.sunday,ocp.sunday)+'</td>'
-          +'<td>'+dash(p.ot_pay)+'</td>'
-          +'<td>'+dash(bd.holiday_pay)+'</td>'
+          +'<td>'+(otVis?otLink(dash(p.ot_pay)+otBadge,'ot'):otMask)+'</td>'
+          +'<td>'+(otVis?otLink(dash(bd.holiday_pay),'holiday'):otMask)+'</td>'
           +'<td>'+dash(bd.meal_subsidy)+'</td>'
           +'<td>'+dash(bd.boss_bento_advance)+'</td>'
           +'<td>'+attCell+'</td>'
@@ -31485,12 +31896,16 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         +'<td colspan="4">合計 '+prRows.length+' 人</td>'
         +'<td>'+money(sumBd('job_allowance'))+'</td>'
         +'<td style="text-align:center">'+ocFoot(sumOc('t1'))+'</td><td style="text-align:center">'+ocFoot(sumOc('t2'))+'</td><td style="text-align:center">'+ocFoot(sumOc('holiday'))+'</td><td style="text-align:center">'+ocFoot(sumOc('sunday'))+'</td>'
-        +'<td>'+money(sum('ot_pay'))+'</td><td>'+money(sumBd('holiday_pay'))+'</td><td>'+money(sumBd('meal_subsidy'))+'</td><td>'+money(sumBd('boss_bento_advance'))+'</td>'
+        +'<td>'+(otTotalVisible?money(sum('ot_pay')):otMask)+'</td><td>'+(otTotalVisible?money(sumBd('holiday_pay')):otMask)+'</td><td>'+money(sumBd('meal_subsidy'))+'</td><td>'+money(sumBd('boss_bento_advance'))+'</td>'
         +'<td>'+money(sumBd('attend_deduct'))+'</td><td>'+money(sum('leave_deduct'))+'</td><td>'+money(sumBd('advance_payment'))+'</td><td>'+money(sumBd('remit_fee'))+'</td>'
         +'<td>'+(hasHiddenOffice?mask:money(sum('gross')))+'</td><td>'+(hasHiddenOffice?mask:money(sum('net')))+'</td><td></td></tr>';
       // ── 表② 保費‧雇主成本 ──
       bodyIns.innerHTML=prRows.map(function(p){
         var bd=p.breakdown||{}, ec=p.employer_cost||{}; var ecTot=num(ec.labor)+num(ec.health)+num(ec.pension)+num(ec.occ)+num(ec.dormRent);
+        if(!canViewIns(p)){   // 保費/雇主成本無權限:除了姓名類別,整列 10 欄遮蔽
+          var mCells=''; for(var mi=0;mi<10;mi++) mCells+='<td>'+insMask+'</td>';
+          return '<tr><td>'+esc(p._name)+'</td><td>'+esc(p._type)+'</td>'+mCells+'</tr>';
+        }
         return '<tr>'
           +'<td>'+esc(p._name)+'</td><td>'+esc(p._type)+'</td>'
           +'<td>'+money(bd.insBase)+'</td>'
@@ -31500,13 +31915,16 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
           +'</tr>';
       }).join('');
       var ecSum=sumEc('labor')+sumEc('health')+sumEc('pension')+sumEc('occ')+sumEc('dormRent');
+      var insM=function(v){ return insTotalVisible?money(v):insMask; };
       footIns.innerHTML='<tr style="font-weight:700;background:var(--bg3)">'
         +'<td colspan="3">合計 '+prRows.length+' 人</td>'
-        +'<td>'+money(sum('labor_ins_emp'))+'</td><td>'+money(sum('health_ins_emp'))+'</td><td>'+money(sum('health_2nd'))+'</td><td>'+money(sum('pension_vol_emp'))+'</td>'
-        +'<td>'+money(sumEc('labor'))+'</td><td>'+money(sumEc('health'))+'</td><td>'+money(sumEc('pension'))+'</td><td>'+money(sumEc('occ'))+'</td>'
-        +'<td>'+money(ecSum)+'</td></tr>';
+        +'<td>'+insM(sum('labor_ins_emp'))+'</td><td>'+insM(sum('health_ins_emp'))+'</td><td>'+insM(sum('health_2nd'))+'</td><td>'+insM(sum('pension_vol_emp'))+'</td>'
+        +'<td>'+insM(sumEc('labor'))+'</td><td>'+insM(sumEc('health'))+'</td><td>'+insM(sumEc('pension'))+'</td><td>'+insM(sumEc('occ'))+'</td>'
+        +'<td>'+insM(ecSum)+'</td></tr>';
     }
     document.getElementById('pr-count').textContent=prRows.length+' 人 · '+period+' '+window.hrScopeLabel();
+    // 投保申報(含身分證字號)只有管理員能下載;薪資 Excel/CSV 改為依權限逐格遮蔽,人人可下載
+    var bIns=document.getElementById('pr-btn-inscsv'); if(bIns) bIns.style.display=isPayAdmin()?'':'none';
     // 便當統計:訂便當者便當數、不訂便當者補餐人數與金額
     var mealInfo=document.getElementById('pr-meal-info');
     if(mealInfo){
@@ -31569,7 +31987,11 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 
   // 依「空.xlsx」版型輸出薪資總表。數值取自目前畫面已完成的 prRows，
   // 讓出勤、借支、便當代墊與保費等調整都和畫面上的本次試算一致。
+  // 依帳號權限逐格遮蔽:看不到的欄位整格清空,下方合計是逐格加總已寫入的值,
+  // 所以合計自然只含看得到的部分 —— 不會被「合計減去其他人」反推出被遮的金額。
+  var xlsMaskedRows=0;
   window.payrollExportExcel=function(){
+    xlsMaskedRows=0;
     if(!prRows.length){ alert('尚未計算，請先按「計算」'); return; }
     if(typeof XLSX==='undefined'){ alert('Excel 元件尚未載入，請稍後再試'); return; }
     if(!PAYROLL_XLSX_TEMPLATE_B64||PAYROLL_XLSX_TEMPLATE_B64.indexOf('__PAYROLL_')===0){
@@ -31737,9 +32159,14 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var r=5+index, bd=p.breakdown||{}, ec=p.employer_cost||{}, oc=bd.ot_counts||{}, ocp=bd.ot_cat_pay||{};
       var pay=prPayMap[p.emp_id]||{}, emp=p._emp||{};
       var isForeign=!!bd.is_foreign, isOffice=!!p._office;
+      // 這一列在這個帳號眼中看不看得到(與畫面上的遮罩同一套規則)
+      var seeBase=canViewBase(p), seeOt=canViewOt(p), seeIns=canViewIns(p);
+      // ⚠ 硬規則:辦公人員這一列,只有管理員能看到完整內容;其他帳號連自己那一列也一樣受限
+      var officeHardMask=isOffice && !isPayAdmin();
+      if(officeHardMask || !(seeBase&&seeOt&&seeIns)) xlsMaskedRows++;
       var daily=emp.pay_type==='daily'||String(p._type||'').indexOf('/日')>=0;
-      var holidayCount=isForeign?num(bd.holiday_days):num(oc.holiday);
-      var holidayAmount=isForeign?num(bd.holiday_pay):num(ocp.holiday);
+      var holidayCount=num(oc.holiday);
+      var holidayAmount=num(ocp.holiday);
       var officeHolidayCount=isOffice?num(bd.holiday_days):0;
       var officeHolidayAmount=isOffice?num(bd.holiday_pay):0;
       var mealAmount=Math.round(num(bd.meal_subsidy));
@@ -31776,8 +32203,9 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var foreignRate=(prCfg&&prCfg.foreign&&prCfg.foreign[emp.foreign_type])||{};
       var t1Rate=isOffice?'':(avg(ocp.t1,oc.t1)||(isForeign?num(foreignRate.tier1):Math.round(num(p._perDay)/2)));
       var t2Rate=isOffice?'':(avg(ocp.t2,oc.t2)||(isForeign?num(foreignRate.tier2):Math.round(num(p._perDay))));
-      var holidayRate=isOffice?'':(avg(holidayAmount,holidayCount)||(isForeign?num(foreignRate.holiday):''));
-      var sundayRate=isOffice?'':(avg(ocp.sunday,oc.sunday)||(isForeign?num(foreignRate.sunday):''));
+      // 外勞固定單價直接取費率設定，不得再用假日總金額反推平均單價。
+      var holidayRate=isOffice?'':(isForeign?num(foreignRate.holiday):avg(holidayAmount,holidayCount));
+      var sundayRate=isOffice?'':(isForeign?num(foreignRate.sunday):avg(ocp.sunday,oc.sunday));
       put('I'+r,t1Rate||'');
       put('J'+r,num(oc.t2)||'');
       put('K'+r,t2Rate||'');
@@ -31834,7 +32262,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 
       var leftNotes=[], holidayList=holidayDates(p);
       if(bentoAdvance) leftNotes.push('老闆餐費:$'+bentoAdvance.toLocaleString('en-US'));
-      if(holidayList.length) leftNotes.push('國定假日出勤:'+holidayList.join('、'));
+      if(holidayList.length) leftNotes.push('國定假日出勤:'+holidayList.join('、'));   // 只有日期沒有金額,依使用者要求保留
       put('AR'+r,leftNotes.join('\n'),'s');
       var rightNotes=[];
       if(p._name==='鄭季豪'){
@@ -31843,6 +32271,25 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       }
       if(String(pay.note||'').trim()) rightNotes.push(String(pay.note).trim());
       put('AS'+r,rightNotes.join('\n'),'s');
+
+      // ── 權限遮蔽:看不到的欄位整格清空 ──
+      if(!seeOt){                     // 加班天數/單價/加班費(H~P) + 假日出勤天數/單價/金額(V~X)
+        ['H','I','J','K','L','M','N','O','P','V','W','X'].forEach(function(c){ clear(c+r); });
+      }
+      if(!seeBase) ['F','G'].forEach(function(c){ clear(c+r); });      // 日薪、月薪(底薪)
+      if(!seeIns) ['AB','AC','AD','AE','AK','AL','AM','AN','AO','AP'].forEach(function(c){ clear(c+r); });   // 勞健保、雇主負擔
+      if(!seeBase||!seeOt) clear('AA'+r);              // 所得(應發):少了任一組成就不能顯示,否則相減即可反推
+      if(!seeBase||!seeOt||!seeIns) clear('AJ'+r);     // 實發:同上
+
+      // ── 辦公人員硬規則(管理員以外一律套用)──
+      // 只保留:A~D(序號/姓名/項目/月日)、R~U(伙食津貼:數量/單價/便當代墊/合計)、AA(所得=只算伙食津貼)、AQ~AS(匯款方式/備註)
+      // 其餘欄位(月薪、加班、假日出勤、津貼、保費、扣款、實發、雇主負擔)一律清空,權限設定放寬不了。
+      if(officeHardMask){
+        ['E','F','G','H','I','J','K','L','M','N','O','P','Q','V','W','X','Y','Z',
+         'AB','AC','AD','AE','AF','AG','AH','AI','AJ','AK','AL','AM','AN','AO','AP']
+          .forEach(function(c){ clear(c+r); });
+        formula('AA'+r,'U'+r,mealInTemplate);   // 所得只計伙食津貼(=U 欄)
+      }
     });
 
     var last=4+prRows.length, totalRow=5+prRows.length;
@@ -31852,6 +32299,9 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       for(var sr=5;sr<=last;sr++) total+=num(ws[col+sr]&&ws[col+sr].v);
       formula(col+totalRow,'SUM('+col+'5:'+col+last+')',total);
     });
+
+    // 有遮蔽時在標題標註,避免被當成完整薪資總表拿去對帳
+    if(xlsMaskedRows) put('A1','鎮山-長榮新竹廠'+rocYear+'年'+month+'月人員薪資總表（部分欄位依權限遮蔽）','s');
 
     wb.Workbook=wb.Workbook||{};
     var oldSheetName=wb.SheetNames[0], newSheetName=String(rocYear)+month;
@@ -32067,6 +32517,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     }
     try{
       exportFromFormattedTemplate();
+      if(xlsMaskedRows) alert('已匯出。\n\n其中 '+xlsMaskedRows+' 位員工的部分欄位依你的權限遮蔽(整格空白),\n合計也只加總看得到的部分,因此這份檔案不是完整薪資總表。');
     }catch(exportError){
       console.error(exportError);
       alert('格式版 Excel 匯出失敗：'+(exportError&&exportError.message?exportError.message:exportError));
@@ -32076,15 +32527,18 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   window.payrollExportCsv=function(){
     if(!prRows.length){ alert('尚未計算'); return; }
     var period=document.getElementById('pr-month').value;
-    var officePayVisible=canViewOfficePay();
     var head=['姓名','類別','出勤天','遲到次','底薪','加班17:30~20:30(天)','加班17:30~23:00(天)','國定假日(天)','星期日(天)','加班費','職務津貼','假日加班費','便當數','補餐費','便當代墊','應發','勞保','健保','二代健保','勞退自願提繳','遲到時數','早退時數','遲退扣','請假扣','借支','匯款費用','實發','雇主成本','退休'];
     var lines=[head.join(',')];
     prRows.forEach(function(p){
       var ec=p.employer_cost||{}; var ecTot=num(ec.labor)+num(ec.health)+num(ec.pension)+num(ec.occ)+num(ec.dormRent); var bd=p.breakdown||{};
-      var hideW=p._office && !officePayVisible;   // 辦公人員底薪/應發/實發:非主管匯出留空
+      var hideW=!canViewBase(p);                  // 底薪/應發/實發:看不到的就留空
       var baseV=hideW?'':Math.round(num(bd.base)), grossV=hideW?'':p.gross, netV=hideW?'':p.net;
+      var otVis=canViewOt(p);                     // 加班費/假日加班費:預設只匯出自己的
+      var otV=otVis?p.ot_pay:'', hpV=otVis?Math.round(num(bd.holiday_pay)):'';
+      var insVis=canViewIns(p);                   // 勞健保/勞退/雇主成本
+      var iv=function(v){ return insVis?v:''; };
       var oc=bd.ot_counts||{};
-      lines.push([p._name,p._type,p.work_days,num(bd.late_count),baseV,num(oc.t1),num(oc.t2),num(oc.holiday),num(oc.sunday),p.ot_pay,Math.round(num(bd.job_allowance)),Math.round(num(bd.holiday_pay)),num(bd.meal_boxes),Math.round(num(bd.meal_subsidy)),Math.round(num(bd.boss_bento_advance)),grossV,p.labor_ins_emp,p.health_ins_emp,p.health_2nd,Math.round(num(p.pension_vol_emp)),num(bd.late_hours),num(bd.early_hours),Math.round(num(bd.attend_deduct)),p.leave_deduct,Math.round(num(bd.advance_payment)),Math.round(num(bd.remit_fee)),netV,Math.round(ecTot),(bd.retired?'是':'')].join(','));
+      lines.push([p._name,p._type,p.work_days,num(bd.late_count),baseV,num(oc.t1),num(oc.t2),num(oc.holiday),num(oc.sunday),otV,Math.round(num(bd.job_allowance)),hpV,num(bd.meal_boxes),Math.round(num(bd.meal_subsidy)),Math.round(num(bd.boss_bento_advance)),grossV,iv(p.labor_ins_emp),iv(p.health_ins_emp),iv(p.health_2nd),iv(Math.round(num(p.pension_vol_emp))),num(bd.late_hours),num(bd.early_hours),Math.round(num(bd.attend_deduct)),p.leave_deduct,Math.round(num(bd.advance_payment)),Math.round(num(bd.remit_fee)),netV,iv(Math.round(ecTot)),(bd.retired?'是':'')].join(','));
     });
     var blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
     var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='薪資_'+period+'.csv';
@@ -32116,9 +32570,14 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var bd=p.breakdown||{}, ec=p.employer_cost||{};
     var m=function(n){ return '$'+Math.round(num(n)).toLocaleString('en-US'); };
     var _detDept=String(p._dept||''), _detIsCR=(!!(p._emp&&p._emp.foreign_type)||/外勞/.test(_detDept))&&/長榮/.test(_detDept);   // 長榮外勞:單筆打卡視為加班上下班
-    var hideW=p._office && !canViewOfficePay();   // 辦公人員底薪/應發/實發:非主管遮蔽
-    var otRows=(bd.otItems||[]).filter(function(x){ return num(x.pay)>0; })
-      .map(function(x){ return '<tr><td>加班 '+esc(x.date)+'</td><td>'+m(x.pay)+'</td></tr>'; }).join('');
+    var hideW=!canViewBase(p);                   // 底薪/應發/實發:依帳號的欄位權限
+    var otVis=canViewOt(p);                      // 加班費/假日加班費:預設只看得到自己的
+    var insVis=canViewIns(p);                    // 勞健保/勞退/雇主成本
+    var otMaskTxt='<span title="沒有檢視此人加班費的權限">***</span>';
+    var insMaskTxt='<span title="沒有檢視此人勞健保/雇主成本的權限">***</span>';
+    var mi=function(v){ return insVis?m(v):insMaskTxt; };   // 保費類金額
+    var otRows=otVis?((bd.otItems||[]).filter(function(x){ return num(x.pay)>0; })
+      .map(function(x){ return '<tr><td>加班 '+esc(x.date)+'</td><td>'+m(x.pay)+'</td></tr>'; }).join('')):'';
     var lvRows=(bd.leaveItems||[]).map(function(x){ return '<tr><td>請假 '+esc(x.date)+' '+esc(x.type||'')+' '+num(x.hours)+'時</td><td>-'+m(x.deduct)+'</td></tr>'; }).join('');
     // 打卡明細:逐日出勤記錄,遲到/早退標紅(僅打卡計薪有時刻)
     var wkn=['日','一','二','三','四','五','六'];
@@ -32144,7 +32603,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var _oc=bd.ot_counts||{}, _ocp=bd.ot_cat_pay||{};
     var otCatRows=[['加班 17:30~20:30',_oc.t1,_ocp.t1],['加班 17:30~23:00',_oc.t2,_ocp.t2],['國定假日出勤',_oc.holiday,_ocp.holiday],['星期日出勤',_oc.sunday,_ocp.sunday]]
       .filter(function(r){ return num(r[1])>0; })
-      .map(function(r){ return '<tr><td style="padding-left:18px;color:var(--text2)">└ '+r[0]+' '+num(r[1])+' 天</td><td>'+(num(r[2])?m(r[2]):'')+'</td></tr>'; }).join('');
+      .map(function(r){ return '<tr><td style="padding-left:18px;color:var(--text2)">└ '+r[0]+' '+num(r[1])+' 天</td><td>'+(num(r[2])?(otVis?m(r[2]):otMaskTxt):'')+'</td></tr>'; }).join('');
     var rawDays=bd.raw_work_days!=null?num(bd.raw_work_days):num(p.work_days);
     var dayLabel=(rawDays!==num(p.work_days))?(rawDays+'個出勤日 / 計薪'+p.work_days+'天'):(p.work_days+'天');
     document.getElementById('payslip-print').innerHTML=''
@@ -32154,12 +32613,13 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       +'<div class="ps-sec">給付</div><table>'
       +'<tr><td>底薪('+dayLabel+' / '+num(p.work_hours)+'時'+(num(bd.half_days)?(' · 半天'+num(bd.half_days)+'次'):'')+(num(bd.late_count)?(' · 遲到'+num(bd.late_count)+'次'):'')+')</td><td>'+(hideW?'***':m(bd.base))+'</td></tr>'
       +otRows
-      +'<tr><td>加班費 小計'+(bd.is_foreign?'(外勞固定)':'')+'</td><td>'+m(p.ot_pay)+'</td></tr>'
+      +'<tr><td>加班費 小計'+(bd.is_foreign?'(外勞固定)':'')+'</td><td>'+(otVis?m(p.ot_pay):otMaskTxt)+'</td></tr>'
       +otCatRows
-      +(num(bd.holiday_pay)?('<tr><td>假日加班費('+num(bd.holiday_days)+'天)</td><td>'+m(bd.holiday_pay)+'</td></tr>'):'')
+      +(num(bd.holiday_pay)?('<tr><td>假日加班費('+num(bd.holiday_days)+'天)</td><td>'+(otVis?m(bd.holiday_pay):otMaskTxt)+'</td></tr>'):'')
       +(num(bd.job_allowance)?('<tr><td>職務津貼'+(num(bd.guarantee_topup)?('(含保障補足 '+m(bd.guarantee_topup)+')'):'')+'</td><td>'+m(bd.job_allowance)+'</td></tr>'):'')
       +(num(bd.meal_subsidy)?('<tr><td>伙食津貼補助(不訂便當 '+num(bd.meal_days!=null?bd.meal_days:rawDays)+'天,免稅)</td><td>'+m(bd.meal_subsidy)+'</td></tr>'):'')
       +'</table>'
+      +((otVis&&(bd.ot_excluded_dates||[]).length)?('<div class="ps-sec">不算加班的日期</div><table><tr><td>'+(bd.ot_excluded_dates||[]).map(esc).join('、')+'</td><td>不計加班</td></tr></table>'):'')
       +(lvRows?('<div class="ps-sec">請假扣款</div><table>'+lvRows+'<tr><td>小計</td><td>-'+m(p.leave_deduct)+'</td></tr></table>'):'')
       +((num(bd.late_hours)||num(bd.early_hours))?('<div class="ps-sec">遲到/早退扣款</div><table>'
         +(num(bd.late_hours)?('<tr><td>遲到 '+num(bd.late_hours)+' 小時</td><td></td></tr>'):'')
@@ -32168,24 +32628,26 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       +'<table><tr><td><b>應發合計</b></td><td><b>'+(hideW?'***':m(p.gross))+'</b></td></tr></table>'
       +(num(bd.boss_bento_advance)?('<div class="ps-sec">非薪資代墊返還</div><table><tr><td>便當代墊</td><td>+'+m(bd.boss_bento_advance)+'</td></tr></table>'):'')
       +'<div class="ps-sec">代扣</div><table>'
-      +'<tr><td>勞保(員工)</td><td>-'+m(p.labor_ins_emp)+'</td></tr>'
-      +'<tr><td>健保(員工)</td><td>-'+m(p.health_ins_emp)+'</td></tr>'
-      +'<tr><td>二代健保補充保費</td><td>-'+m(p.health_2nd)+'</td></tr>'
-      +(num(p.pension_vol_emp)?('<tr><td>勞退自願提繳('+num(bd.pension_vol_rate)+'%)</td><td>-'+m(p.pension_vol_emp)+'</td></tr>'):'')
+      +'<tr><td>勞保(員工)</td><td>-'+mi(p.labor_ins_emp)+'</td></tr>'
+      +'<tr><td>健保(員工)</td><td>-'+mi(p.health_ins_emp)+'</td></tr>'
+      +'<tr><td>二代健保補充保費</td><td>-'+mi(p.health_2nd)+'</td></tr>'
+      +(num(p.pension_vol_emp)?('<tr><td>勞退自願提繳('+num(bd.pension_vol_rate)+'%)</td><td>-'+mi(p.pension_vol_emp)+'</td></tr>'):'')
       +(num(bd.advance_payment)?('<tr><td>借支</td><td>-'+m(bd.advance_payment)+'</td></tr>'):'')
       +(num(bd.remit_fee)?('<tr><td>匯款費用</td><td>-'+m(bd.remit_fee)+'</td></tr>'):'')+'</table>'
       +'<table class="ps-net"><tr><td>實發金額</td><td>'+(hideW?'***':m(p.net))+'</td></tr></table>'
       +'<div class="ps-sec">雇主負擔(參考,不從薪資扣)</div><table>'
-      +'<tr><td>勞保雇主</td><td>'+m(ec.labor)+'</td></tr>'
-      +'<tr><td>健保雇主</td><td>'+m(ec.health)+'</td></tr>'
-      +'<tr><td>勞退提繳(雇主 6%)</td><td>'+m(ec.pension)+'</td></tr>'
-      +'<tr><td>職災保險</td><td>'+m(ec.occ)+'</td></tr></table>'
-      +'<div class="ps-sub">投保薪資 '+m(bd.insBase)+'</div>';
+      +'<tr><td>勞保雇主</td><td>'+mi(ec.labor)+'</td></tr>'
+      +'<tr><td>健保雇主</td><td>'+mi(ec.health)+'</td></tr>'
+      +'<tr><td>勞退提繳(雇主 6%)</td><td>'+mi(ec.pension)+'</td></tr>'
+      +'<tr><td>職災保險</td><td>'+mi(ec.occ)+'</td></tr></table>'
+      +'<div class="ps-sub">投保薪資 '+mi(bd.insBase)+'</div>';
     openModal('payslip-modal');
   };
 
   // 投保申報 CSV(含身分證、投保薪資、勞健保勞退各負擔)
+  // ⚠ 含身分證字號與投保薪資 → 只有管理員能匯出
   window.payrollExportInsuranceCsv=function(){
+    if(!isPayAdmin()){ alert('「投保申報 CSV」含身分證字號與投保薪資,只有管理員可以匯出。'); return; }
     if(!prRows.length){ alert('尚未計算'); return; }
     var period=document.getElementById('pr-month').value;
     var byId={}; prStaff.forEach(function(s){ byId[s.id]=s; });
@@ -32216,11 +32678,14 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 
   var WKN=['日','一','二','三','四','五','六'];
   // 依「個人免扣日期」對單一員工就地重算(颱風假日期/停班補全薪自動併入),取代 prRows 中該列
-  function payrollRecalcOne(emp_id, personalWaive){
+  function payrollRecalcOne(emp_id, personalWaive, otExclude){
     var i=-1; for(var k=0;k<prRows.length;k++){ if(String(prRows[k].emp_id)===String(emp_id)){ i=k; break; } }
     if(i<0) return;
     var old=prRows[i];
-    var att=buildEffectiveAtt(old._baseAtt||old._att||[], personalWaive);
+    var adj=prAdjust[String(emp_id)]||{};
+    var waive=(personalWaive!=null)?personalWaive:(adj.att_waive||[]);
+    var noOt=(otExclude!=null)?otExclude:(adj.ot_exclude||[]);
+    var att=buildEffectiveAtt(old._baseAtt||old._att||[], waive, noOt);
     var ps=Payroll.calcPayslip(old._emp, att, prCfg, prLastPeriod);
     ps._name=old._name; ps._dept=old._dept; ps._office=old._office; ps._type=old._type;
     ps._perDay=old._perDay; ps._baseAtt=old._baseAtt; ps._att=att; ps._emp=old._emp; ps._remitFee=old._remitFee; ps._bossBentoAdvance=old._bossBentoAdvance; ps._bossBentoItems=old._bossBentoItems; ps._advancePayment=old._advancePayment;
@@ -32337,6 +32802,78 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     payrollRender(prLastNoset, prLastPeriod);
     document.getElementById('pr-status').textContent='狀態:草稿(調整尚未儲存,請按「儲存草稿」)';
   };
+
+  // ③ 加班費 / 假日加班費 逐日明細:點薪資表「加班費」或「假日加班費」欄開啟。
+  //    勾選=當天不算加班(該日加班費、假日加班費、加班天數全部不計),存於 adjustments[sid].ot_exclude。
+  //    可視性:管理員可看全部並可調整;其他帳號只能看「自己那一列」且唯讀。
+  var prOtSid=null, prOtEdit=false;
+  var OT_CAT_LABEL={t1:'加班 17:30~20:30',t2:'加班 17:30~23:00',holiday:'國定假日出勤',sunday:'星期日出勤'};
+  window.payrollOtOpen=function(sid, mode){
+    var p=prRows.filter(function(x){ return String(x.emp_id)===String(sid); })[0];
+    if(!p){ alert('請先計算'); return; }
+    if(!canViewOt(p)){ alert('加班費/假日加班費只有管理員與本人看得到。'); return; }
+    var locked=!!(prRun&&prRun.status==='locked');
+    prOtSid=sid; prOtEdit=isPayAdmin()&&!locked;
+    var bd=p.breakdown||{};
+    var items=(bd.otItems||[]).filter(function(x){ return num(x.raw_pay)>0||x.cat||num(x.holiday_pay)>0||x.excluded; });
+    document.getElementById('pr-ot-title').textContent=(mode==='holiday'?'假日加班費':'加班費')+' — 逐日明細 · '+(p._name||'');
+    document.getElementById('pr-ot-sub').innerHTML=items.length
+      ? ('本月共 '+items.length+' 天有加班。勾選的日期<b>不算加班</b>。'
+         +(prOtEdit?'' : '<span style="color:var(--yellow)">　※ 唯讀'+(locked?'(本月已鎖定,請先解鎖)':'(只有管理員可以調整哪天不算加班)')+'</span>'))
+      : '本月沒有加班紀錄。';
+    document.getElementById('pr-ot-body').innerHTML=(items.map(function(x){
+      var wd=(x.weekday>=0&&x.weekday<=6)?('（'+WKN[x.weekday]+'）'):'';
+      var io=(x.punch_in||x.punch_out)?(esc(x.punch_in||'—')+' ~ '+esc(x.punch_out||'—')):'—';
+      var tags=[];
+      if(x.cat) tags.push('<span style="color:'+((x.cat==='holiday'||x.cat==='sunday')?'var(--yellow)':'var(--accent2)')+'">'+OT_CAT_LABEL[x.cat]+'</span>'+(num(x.cat_qty)?(' '+(Math.round(num(x.cat_qty)*100)/100)+'天'):''));
+      if(num(x.holiday_pay)) tags.push('<span style="color:var(--yellow)">假日加班(法定倍率)'+(num(x.holiday_days)?(' '+(Math.round(num(x.holiday_days)*100)/100)+'天'):'')+'</span>');
+      if(x.is_holiday) tags.push('<span style="color:var(--text3)">國定假日</span>');
+      var amt=Math.round(num(x.raw_pay)), hamt=Math.round(num(x.holiday_pay));
+      var dim=x.excluded?' style="opacity:.5;text-decoration:line-through"':'';
+      return '<tr>'
+        +'<td style="font-family:var(--mono)"'+dim+'>'+esc(x.date)+wd+'</td>'
+        +'<td style="text-align:center;font-family:var(--mono)">'+io+'</td>'
+        +'<td'+dim+'>'+(tags.join(' · ')||'—')+'</td>'
+        +'<td'+dim+'>'+(amt?money(amt):'<span style="color:var(--text3)">—</span>')+'</td>'
+        +'<td'+dim+'>'+(hamt?money(hamt):'<span style="color:var(--text3)">—</span>')+'</td>'
+        +'<td style="text-align:center"><input type="checkbox" class="pr-ot-cb" data-date="'+esc(x.date)+'" data-amt="'+(amt+hamt)+'"'+(x.excluded?' checked':'')+(prOtEdit?'':' disabled')+' onchange="payrollOtPreview()"></td>'
+        +'</tr>';
+    }).join('')) || '<tr><td colspan="6" class="empty-state">本月無加班</td></tr>';
+    var sv=document.getElementById('pr-ot-save'); if(sv) sv.style.display=prOtEdit?'':'none';
+    var ma=document.getElementById('pr-ot-all'); if(ma) ma.disabled=!prOtEdit;
+    payrollOtPreview();
+    openModal('pr-ot-modal');
+  };
+  window.payrollOtToggleAll=function(master){
+    var on=master.checked;
+    document.querySelectorAll('#pr-ot-body .pr-ot-cb').forEach(function(cb){ if(!cb.disabled) cb.checked=on; });
+    payrollOtPreview();
+  };
+  window.payrollOtPreview=function(){
+    var cbs=document.querySelectorAll('#pr-ot-body .pr-ot-cb'), cut=0, chk=0, able=0, checkedN=0;
+    cbs.forEach(function(cb){
+      if(!cb.disabled) able++;
+      if(cb.checked){ checkedN++; if(!cb.disabled) chk++; cut+=num(cb.getAttribute('data-amt')); }
+    });
+    document.getElementById('pr-ot-total').innerHTML=checkedN
+      ? ('不算加班 <span style="color:var(--danger)">'+checkedN+' 天</span>　·　加班費減少 <span style="color:var(--danger)">-'+money(cut)+'</span>')
+      : '<span style="color:var(--text3)">全部照常計算加班</span>';
+    var master=document.getElementById('pr-ot-all');
+    if(master){ master.checked=(able>0&&chk===able); master.indeterminate=(chk>0&&chk<able); }
+  };
+  window.payrollOtSave=function(){
+    if(prOtSid==null) return;
+    if(!prOtEdit){ closeModal('pr-ot-modal'); return; }
+    var dates=[];
+    document.querySelectorAll('#pr-ot-body .pr-ot-cb').forEach(function(cb){ if(cb.checked) dates.push(cb.getAttribute('data-date')); });
+    var cur=prAdjust[String(prOtSid)]||{};
+    if(dates.length) cur.ot_exclude=dates; else delete cur.ot_exclude;
+    if(Object.keys(cur).length) prAdjust[String(prOtSid)]=cur; else delete prAdjust[String(prOtSid)];
+    payrollRecalcOne(prOtSid, null, dates);
+    closeModal('pr-ot-modal');
+    payrollRender(prLastNoset, prLastPeriod);
+    document.getElementById('pr-status').textContent='狀態:草稿(加班調整尚未儲存,請按「儲存草稿」)';
+  };
 })();
 </script>
 
@@ -32395,7 +32932,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var q=(document.getElementById('leave-search').value||'').trim().toLowerCase();
     var onlyActive=document.getElementById('leave-only-active').checked;
     var rows=lvStaff.filter(function(s){
-      if(!window.hrInScope(s.department)) return false;   // 薪資可視範圍
+      if(!window.hrCanSeeStaff(s)) return false;   // 薪資可視範圍(分類或指定名單)
       if(onlyActive && s.status==='離職') return false;
       if(!q) return true;
       return [s.name,s.department].some(function(v){ return String(v||'').toLowerCase().indexOf(q)>=0; });
@@ -32829,7 +33366,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       // ── 正職:工數 × 日薪 ──
       var payBySid={}; pays.forEach(function(p){ payBySid[String(p.staff_id)]=p; });
       var sidByName={}; staff.forEach(function(s){ if(s.name) sidByName[s.name]=s; });
-      var reg={}, regTot=0, noPay={};
+      var reg={}, regTot=0, noPay={}, hiddenWage=0;
       att.forEach(function(a){
         var nm=a.staff_name; if(!nm) return;
         var gong=num(a.work_hours)/8+num(a.ot_hours)/6;      // 與出勤回報 KPI「工數」同一算法
@@ -32837,9 +33374,12 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         var s=sidByName[nm], pay=s?payBySid[String(s.id)]:null;
         var dw=pay?Payroll.dailyWage(pay):0;
         if(!pay||dw<=0) noPay[nm]=1;
-        var r=reg[nm]||(reg[nm]={name:nm,gong:0,dw:dw,amt:0});
-        r.gong+=gong; r.dw=dw; r.amt+=gong*dw; regTot+=gong*dw;
+        // 薪資權限:比照人事薪資頁 —— 看不到這個人日薪的帳號,日薪與金額遮成 ***(工數仍可見,金額照樣併入合計)
+        var see=(typeof window.hrCanSeeWageOf==='function')?(!s||window.hrCanSeeWageOf(s)):true;
+        var r=reg[nm]||(reg[nm]={name:nm,gong:0,dw:dw,amt:0,see:see});
+        r.gong+=gong; r.dw=dw; r.amt+=gong*dw; r.see=see; regTot+=gong*dw;
       });
+      Object.keys(reg).forEach(function(k){ if(!reg[k].see) hiddenWage++; });
       var regRows=Object.keys(reg).map(function(k){return reg[k];}).sort(function(a,b){ return b.amt-a.amt; });
 
       // ── 五金 ──
@@ -32869,7 +33409,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 
       // 沒有薪資資料時要講清楚原因(employee_pay 受 is_hr RLS 保護,非 HR 帳號讀不到)
       var w=[];
-      if(!pays.length) w.push('讀不到員工薪資設定(employee_pay 受 HR 權限保護)→ 正職人事成本會是 0。需要具備 HR 權限(perms.payroll)的帳號才看得到。');
+      if(!pays.length) w.push('讀不到員工薪資設定(employee_pay 受 HR 權限保護)→ 正職人事成本會是 0。需要具備 HR 權限的帳號才看得到。');
+      if(hiddenWage) w.push('有 '+hiddenWage+' 人的日薪/金額因薪資權限遮蔽(仍計入人事成本合計)。');
       else if(Object.keys(noPay).length) w.push('以下人員未設定日薪/月薪,金額以 0 計:'+Object.keys(noPay).slice(0,12).join('、')+(Object.keys(noPay).length>12?' 等':''));
       if(ctHwMode==='use'&&hwNoPrice) w.push('有 '+hwNoPrice+' 筆領用找不到對應的進貨單價,金額以 0 計。');
       if(warn) warn.innerHTML=w.length?('<div class="ct-warn">⚠ '+w.map(esc).join('<br>')+'</div>'):'';
@@ -32882,7 +33423,9 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         +'<div class="ct-card"><span class="lbl">每噸成本</span><span class="big">'+(tons>0?ntd(total/tons):'—')+'</span><span class="sub">總成本 ÷ 噸數</span></div>';
 
       var regB=document.querySelector('#ct-reg-tbl tbody');
+      var wageMask='<span title="此帳號沒有檢視這位員工薪資的權限(帳號管理 → 可視員工 / 底薪‧應發實發)" style="color:var(--text3)">***</span>';
       regB.innerHTML=regRows.length?regRows.map(function(r){
+        if(!r.see) return '<tr><td>'+esc(r.name)+'</td><td class="num">'+n2(r.gong)+'</td><td class="num">'+wageMask+'</td><td class="num">'+wageMask+'</td></tr>';
         return '<tr><td>'+esc(r.name)+'</td><td class="num">'+n2(r.gong)+'</td><td class="num">'+(r.dw>0?money(r.dw):'<span style="color:var(--danger)">未設定</span>')+'</td><td class="num">'+money(r.amt)+'</td></tr>';
       }).join('')+'<tr class="ct-foot"><td>合計 '+regRows.length+' 人</td><td class="num">'+n2(regRows.reduce(function(s,r){return s+r.gong;},0))+'</td><td></td><td class="num">'+money(regTot)+'</td></tr>'
         :'<tr><td colspan="4" class="empty-state">此區間無出勤資料</td></tr>';
@@ -38795,6 +39338,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   var maInitialized=false;
   var maCurrentAnalysisId=null;
   var maHistoryLoaded=false;
+  var maHistoryRows=[];
 
   function maEsc(v){
     return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
@@ -38865,7 +39409,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     return '<span class="ma-tag sp">'+maEsc(cat)+'</span>';
   }
   function maProjectFileBase(){
-    var base=[String(maProject.工程編號||'').trim(),String(maProject.工程區||'').trim(),String(maProject.母件編號||'').trim()].filter(Boolean).join('-');
+    var base=[String(maProject.工程編號||'').trim(),String(maProject.工程區||maProject.母件編號||'').trim()].filter(Boolean).join('-');
     base=base.replace(/[\\/:*?"<>|]/g,'').trim();
     return base||'第一層零件明細';
   }
@@ -38911,9 +39455,15 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     if(el)el.style.width=Math.max(0,Math.min(100,value||0))+'%';
   }
 
-  window.maInit=function(){
+  window.maInit=function(viewState){
     if(!maInitialized){maInitialized=true;maUpdateWordPrompt();}
     window.maLoadHistory(false);
+    var view=viewState||(typeof getView==='function'?getView():null);
+    if(view&&view.page==='multilevel'&&view.ma==='results'&&maComponents.length)maShowResultsView(true);
+    else{
+      maApplyEntryView();
+      if(view&&view.page==='multilevel'&&view.ma==='results'&&!maComponents.length&&typeof setView==='function')setView({page:'multilevel'});
+    }
   };
 
   window.maLoadTextFile=function(input){
@@ -38923,6 +39473,33 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     reader.onload=function(){document.getElementById('ma-raw-input').value=String(reader.result||'');};
     reader.onerror=function(){alert('文字檔讀取失敗');};
     reader.readAsText(file,'UTF-8');
+  };
+
+  function maResultHeading(){
+    var project=maProject.工程編號||'未提供工程編號',zone=maProject.工程區||maProject.母件編號||'未提供工程區';
+    return project+'　｜　'+zone;
+  }
+  function maShowResultsView(fromHistory){
+    var page=document.getElementById('page-multilevel'),title=document.getElementById('ma-result-title');
+    if(title){title.textContent=maResultHeading();title.title=maResultHeading();}
+    if(page){page.classList.remove('ma-entry-mode');page.classList.add('ma-results-mode');}
+    if(!fromHistory&&typeof setView==='function'){
+      var current=typeof getView==='function'?getView():null;
+      if(!current||current.page!=='multilevel'||current.ma!=='results')setView({page:'multilevel',ma:'results'});
+    }
+    var top=document.getElementById('ma-result-topbar');
+    requestAnimationFrame(function(){if(top)top.scrollIntoView({behavior:'smooth',block:'start'});});
+  }
+  function maApplyEntryView(){
+    var page=document.getElementById('page-multilevel');if(page){page.classList.remove('ma-results-mode');page.classList.add('ma-entry-mode');}
+    requestAnimationFrame(function(){if(page)page.scrollIntoView({behavior:'smooth',block:'start'});});
+  }
+  window.maShowEntryView=function(){
+    var state=history.state&&history.state.__view;
+    if(state&&state.page==='multilevel'&&state.ma==='results'){history.back();return;}
+    maApplyEntryView();
+    var entry={page:'multilevel'};
+    try{localStorage.setItem('zhenshan_view',JSON.stringify(entry));history.replaceState({__view:entry},'',typeof viewToHash==='function'?viewToHash(entry):location.href);}catch(e){}
   };
 
   // 支援從工程構件總表直接匯出的 Tab 分欄格式：
@@ -38992,7 +39569,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var mProj=raw.match(/工程編號\s*[:：]\s*(\S+)/);
     if(mProj)maProject.工程編號=mProj[1];
     var mMother=raw.match(/母件編號\s*[:：]\s*(\S+)/);
-    if(mMother)maProject.母件編號=mMother[1];
+    if(mMother){maProject.母件編號=mMother[1];maProject.工程區=mMother[1];}
     if(tabular){maProject.工程編號=tabular.projectNo||'';maProject.工程區=tabular.zoneCode||'';}
     maComponents=components;
     maSearchQuery='';var searchEl=document.getElementById('ma-result-search');if(searchEl)searchEl.value='';
@@ -39000,8 +39577,8 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     document.getElementById('ma-summary').style.display='grid';
     document.getElementById('ma-workspace').style.display='block';
     document.getElementById('ma-stat-components').textContent=components.length;
-    var projStat=document.getElementById('ma-stat-project');if(projStat)projStat.textContent=maProject.工程編號||'—';
-    var zoneStat=document.getElementById('ma-stat-zone');if(zoneStat)zoneStat.textContent=maProject.工程區||'—';
+    var projStat=document.getElementById('ma-stat-project');if(projStat){projStat.textContent=maProject.工程編號||'—';projStat.title=maProject.工程編號||'未提供';}
+    var zoneStat=document.getElementById('ma-stat-zone');if(zoneStat){zoneStat.textContent=maProject.工程區||'—';zoneStat.title=maProject.工程區||'未提供';}
     document.getElementById('ma-stat-parts').textContent=maPartCount();
     document.getElementById('ma-stat-q').textContent=maCodeCount('Q');
     document.getElementById('ma-stat-h').textContent=maCodeCount('H');
@@ -39013,7 +39590,8 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     maRenderCategory('Q','ma-curtain-result','帷幕');
     maRenderCategory('H','ma-mep-result','水電');
     maUpdateWordPrompt();
-    window.maSwitchTab('parts');
+    window.maSwitchTab('parts',true);
+    maShowResultsView();
   };
 
   function maRowsTable(items,showCategory,c){
@@ -39063,7 +39641,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       return;
     }
     if(maPartsMode==='grouped'){
-      body.innerHTML=groups.map(function(g,i){return maComponentBlock(g.c,g.items,maPartsCat==='ALL'||!!MA_CAT_GROUP[maPartsCat],i===0);}).join('')+'<div class="ma-total-line">數量加總：'+totalQty+'</div>';
+      body.innerHTML=groups.map(function(g){return maComponentBlock(g.c,g.items,maPartsCat==='ALL'||!!MA_CAT_GROUP[maPartsCat],false);}).join('')+'<div class="ma-total-line">數量加總：'+totalQty+'</div>';
     }else{
       body.innerHTML='<div class="ma-flat-title">第一層零件完整明細 · '+allItems.length+' 筆</div><div class="ma-table-wrap"><table class="ma-table ma-flat-table"><thead><tr><th>構件編號</th><th>圖號</th><th>項次</th><th>零件編號</th><th>品名</th><th>規格</th><th>材質</th><th>單位</th><th>數量</th><th>分類</th></tr></thead><tbody>'+allItems.map(function(row){var i=row.item,c=row.c;return '<tr><td class="code">'+maEsc(c.componentNo)+'</td><td class="code">'+maEsc(c.drawingNo||'—')+'</td><td>'+maEsc(i.sequence)+'</td><td class="code">'+maEsc(i.partNo)+'</td><td>'+maEsc(i.description)+'</td><td class="code">'+maEsc(maSpecDisplay(i,c))+'</td><td>'+maEsc(i.material)+'</td><td>'+maEsc(i.unit)+'</td><td>'+maEsc(i.quantity)+'</td><td>'+maCatTag(maPartCategory(i))+'</td></tr>';}).join('')+'</tbody><tfoot><tr class="ma-total-row"><td colspan="8">數量加總</td><td>'+totalQty+'</td><td></td></tr></tfoot></table></div>';
     }
@@ -39076,7 +39654,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var componentCount=new Set(groups.map(function(g){return g.c.componentNo;})).size,kind=code==='Q'?'curtain':'mep';
     var tabCount=document.getElementById('ma-tab-'+kind+'-count');if(tabCount)tabCount.textContent=componentCount+' 支構件';
     var detailCount=document.getElementById('ma-'+kind+'-detail-count');if(detailCount)detailCount.textContent=componentCount+' 支構件 · '+groups.reduce(function(sum,g){return sum+g.items.length;},0)+' 筆明細';
-    document.getElementById(targetId).innerHTML=groups.length?groups.map(function(g,i){return maComponentBlock(g.c,g.items,false,i===0);}).join(''):'<div class="ma-empty">沒有 '+maEsc(label)+'（代碼 '+code+'）資料</div>';
+    document.getElementById(targetId).innerHTML=groups.length?groups.map(function(g){return maComponentBlock(g.c,g.items,false,false);}).join(''):'<div class="ma-empty">沒有 '+maEsc(label)+'（代碼 '+code+'）資料</div>';
     var flatId=code==='Q'?'ma-curtain-flat-result':'ma-mep-flat-result';
     var rows=[];
     groups.forEach(function(g){g.items.forEach(function(item){rows.push({c:g.c,item:item});});});
@@ -39127,24 +39705,106 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     document.querySelectorAll('#ma-'+kind+'-grouped details.ma-component').forEach(function(el){el.open=!!open;});
   };
 
-  window.maSwitchTab=function(name){
+  window.maSwitchTab=function(name,skipScroll){
     document.querySelectorAll('#page-multilevel [data-ma-tab]').forEach(function(btn){
       btn.classList.toggle('active',btn.getAttribute('data-ma-tab')===name);
     });
     document.querySelectorAll('#page-multilevel .ma-tab-pane').forEach(function(pane){pane.classList.remove('active');});
     var pane=document.getElementById('ma-pane-'+name);
     if(pane)pane.classList.add('active');
+    var page=document.getElementById('page-multilevel');
+    if(!skipScroll&&pane&&page&&page.classList.contains('ma-results-mode'))requestAnimationFrame(function(){pane.scrollIntoView({behavior:'smooth',block:'start'});});
   };
 
-  function maPrompt(code,label){
+  function maPromptRows(code){
     var rows=[];
     maComponents.forEach(function(c){
-      var nums=c.items.filter(function(i){return i.code===code;}).map(function(i){return i.partNo;}).filter(Boolean);
-      if(nums.length)rows.push(c.componentNo+'（圖號 '+(c.drawingNo||'未提供')+'）：'+nums.join('、'));
+      var hits=c.items.filter(function(i){return i.code===code&&i.partNo;});
+      if(!hits.length)return;
+      var nums=[],seen={},specs={};
+      hits.forEach(function(i){
+        if(!seen[i.partNo]){seen[i.partNo]=true;nums.push(i.partNo);}
+        if(!specs[i.partNo]&&i.specification)specs[i.partNo]=i.specification;
+      });
+      rows.push({componentNo:c.componentNo,drawingNo:c.drawingNo||'未提供',nums:nums,specs:specs,rawCount:hits.length});
     });
-    return '請依據提供的 PDF、DWG 或 DXF 圖面，製作「'+label+'」Word 明細。\n'+
-      '工程編號：'+(maProject.工程編號||'未提供')+'\n工程區：'+(maProject.工程區||'未提供')+'\n母件編號：'+(maProject.母件編號||'未提供')+'\n\n'+
-      (rows.length?rows.join('\n'):'目前沒有 '+code+' 類別資料。');
+    return rows;
+  }
+
+  function maPrompt(code,label){
+    var rows=maPromptRows(code);
+    var rowCount=rows.reduce(function(s,r){return s+r.rawCount;},0);
+    var list=rows.length?rows.map(function(r){
+      var numsText=r.nums.map(function(n){return code==='H'&&r.specs[n]?n+'（規格：'+r.specs[n]+'）':n;}).join('、');
+      return '* 構件編號 '+r.componentNo+'｜圖號 '+r.drawingNo+'｜'+label+'編號：'+numsText;
+    }).join('\n'):'（目前沒有 '+code+' 類別資料，請先完成多階資料分析）';
+    var sample='';
+    if(rows.length){
+      var sig=rows[0].drawingNo+'|'+rows[0].nums.join(',');
+      var same=rows.filter(function(r){return r.drawingNo+'|'+r.nums.join(',')===sig;}).map(function(r){return r.componentNo;});
+      sample='，例如「構件編號：'+same.join('、')+'　｜　圖號：'+rows[0].drawingNo+'」';
+    }
+    var capLong=code==='H'
+      ?'每頁採「版面配額制」：單頁配額上限 4 點，複雜圖每張佔 2 點、一般圖每張佔 1 點。合法組合例如「2 張複雜圖」「1 張複雜圖＋2 張一般圖」「1 張複雜圖＋1 張一般圖」「1～4 張一般圖」，同頁配額總和不得超過 4 點。'
+      :'每頁最多放 4 張圖。';
+    var capShort=code==='H'?'同頁配額總和不超過 4 點（複雜圖 2 點、一般圖 1 點）':'每頁最多 4 張圖片';
+    var minWidthChk=code==='H'?'、同頁圖片寬度小於頁面可用寬度 22%':'';
+    var imageRules=[
+      'DWG／DXF／PDF 來源檔及圖框內資訊一律視為唯讀，不得編輯、覆寫或另存回來源檔。Word 可編輯僅指文件排版可編輯，不代表圖面內容可以修改。',
+      '只允許將完整圖面當成一個整體做等比例放大或縮小，以及裁除圖框外的空白；不得重繪、描圖、重新排版、補字、修字、翻譯、校正、推測或生成任何圖面內容。',
+      '圖框內的文字、字型呈現、數字、圖號、零件編號、規格、材質、數量、尺寸值、尺寸線、引線、符號、剖面、線條、線型、線寬、顏色、圖層可見性、比例關係、座標及相對位置，都必須與來源檔完全一致，不得因放大、縮小、轉檔或排版而增刪、替換、位移、變形或改變。',
+      '所有圖面圖片必須鎖定原始長寬比。寬度與高度只能使用相同倍率等比例縮放，嚴禁拉伸、壓扁、改變形狀或使用「填滿格位」造成變形。圖片比例與格位比例不同時，允許留白。',
+      '「完整圖框」是指目標圖面最外圍的黑色封閉圖框線及其框內全部內容，不代表必須保留整個 PDF 頁面。',
+      '擷取 PDF 時，必須先辨識目標圖面的最外圍黑色圖框，以黑框外緣作為裁切邊界，裁除黑框以外的白色頁面空間。黑框外最多保留 1～2 mm 安全邊界，不得保留明顯的大面積外部白邊。裁切後才可等比例縮放。',
+      '不得裁掉黑色外框線，也不得裁掉框內的圖號、零件編號、規格、材質、數量、尺寸、標註或剖面；不得將圖框內原有的白色區域誤判為外部白邊。',
+      '若同一個 PDF 頁面包含左右兩張獨立圖面，應以各自獨立的黑色圖框為邊界，只擷取與目標 '+code+' 編號相符的圖框，不得保留另一張圖面或兩圖之間的空白。',
+      'PDF 不得使用螢幕截圖、瀏覽器截圖、附件預覽圖或低解析度縮圖。應直接由原始 PDF 頁面渲染或匯出，依圖框裁切後以至少 400 DPI、建議 600 DPI 輸出無損 PNG；禁止使用 JPEG。',
+      '若 PDF 原始內容為向量圖，優先轉為 Word 可置入的 SVG 或 EMF，以保留文字與線條清晰度；若轉換後發生缺字、缺線、字型錯誤或版面偏移，才改用 600 DPI PNG。',
+      '圖面以白色版面背景渲染後置入，但背景轉白只能是輸出／顯示設定，不得修改 DWG／DXF 原檔、物件屬性、圖層或圖面資料。圖框內若原本含有不同顏色、灰階、線型或線寬，必須忠實保留；不得為了白底黑字而將全部物件強制改色、改線寬或造成資訊差異。若無法在不改變資訊的前提下轉為白底，應保留來源原貌並註明，不可擅自加工。',
+      '每張圖片置入前，必須逐項比對來源檔與輸出圖片，確認黑框四邊、全部文字與數值、線條、符號、圖層內容、顏色及相對位置完全一致，且框外無大面積白邊、長寬比未改變、尺寸文字清楚。任一資訊不一致即不得使用，必須回到來源檔以唯讀方式重新渲染；禁止人工修改輸出圖來修補。'
+    ];
+    if(code==='H')imageRules.push('水電圖面複雜度一律以「多階資料剖析結果」中該 H 項目的結構化規格欄判定，不得依零件編號中的英文字母、前綴或命名方式判斷，也不得再依圖面內零件編號種類數判斷。規格若為兩個尺寸組成的「寬X高」格式，即判定為複雜圖；前方有無「#」皆相同，例如「#700X200」與「700X200」都屬複雜圖，並兼容大寫 X、小寫 x 及乘號 ×。此條件須由多階資料表的文字資料直接判讀，不可依賴 DWG／DXF 圖面 OCR。其餘不符合「寬X高」格式者屬一般圖。複雜圖與一般圖的版面大小一律依配額決定，不得任意拉開差距：複雜圖每張分配約半頁版面（2 點），一般圖每張分配約四分之一頁版面（1 點），因此同頁複雜圖與一般圖的顯示寬度比例應落在約 1.4：1 至 2：1 之間，嚴禁把一般圖壓縮到尺寸文字無法辨識。任何一張圖片的顯示寬度都不得小於頁面可用寬度的 22%（A3 橫向約 8.6 公分）；若配額內無法同時滿足此下限，應減少該頁圖片數量並分頁，而不是繼續縮小一般圖。同類型圖片彼此的顯示尺度應一致。若該頁全部都是同一類型，則不需刻意製造大小差異，依圖片數量平均且盡量放大。所有調整只能改變完整圖片在 Word 中的顯示尺寸與位置，不得裁切圖框內內容、重繪或變更任何圖面資訊；同頁配額總和不得超過 4 點，也不得把該頁原應放置的圖片推到下一頁。');
+    imageRules=imageRules.map(function(t,i){return (i+1)+'. '+t;}).join('\n');
+    var layout=[
+      '頁面尺寸必須固定為 A3 橫向（寬 42 公分、高 29.7 公分），上下左右邊界均不超過 1.27 公分；不得改成 A4、Letter、自訂尺寸或直向。',
+      '每一支構件獨立成頁；若多支構件的圖號與 '+code+' 編號組合完全相同，則合併為同一頁，並在頁首同時列出這些構件編號。',
+      '頁首只需精簡標註「構件編號：◯◯◯、◯◯◯　｜　圖號：◯◯◯」'+sample+'，多支構件以「、」相連。標註尺寸只要文字清楚可讀即可，不得為此建立橫跨整頁的大型外框、色塊、表格列或佔用大量高度。不要出現「多階資料分析」之類的標題行、副標、說明文字、日期或頁碼。',
+      '不得使用藍底白字標題列、色塊標題橫條，或任何與圖片同寬的標題列。圖框內既有的零件編號已足以辨識時，可完全省略圖片標題；若仍需標示，只能在圖片正下方加一行純文字「'+label+' '+code+'編號」，字級 9～10pt、無底色、無外框、無框線，且不得為此建立表格列、儲存格或獨立版面區塊。',
+      '每張圖片與其文字標註一律以「浮動物件」插入：文繞圖設定為「文字在前」或「浮於文字上方」，錨定於所屬頁面並以絕對位置指定座標，使用者必須能在 Word 中直接以滑鼠拖曳圖片自由調整位置。嚴禁把圖片或標註放進表格、儲存格、文字方塊、圖說框或群組物件，也不得使用嵌入式（與文字排列）方式插入圖片；即使框線設定為「無」，也不得以表格作為排版骨架。',
+      capLong+'以上只是每頁的容量上限，並非固定 2×2 格位，也不必補滿版面。依實際張數採單張、並排、上下排列或 2×2 等最清楚的配置；未達上限時不得建立空白格、空白框或預留空位。超出上限時就地手動分頁，下一頁重複同一組精簡的構件編號與圖號標註。',
+      '圖片之間不得加大型共用外框、表格框線、儲存格邊界或包住整組圖片的容器框；即使框線設定為「無」，也不得使用表格或文字方塊作為排版骨架。畫面應以各張圖面圖片本身為主，效果如直接將獨立圖片排列在頁面上。此處禁止的是 Word 排版新增的外框；來源圖面本身最外圍的黑色封閉圖框及框內內容仍須完整保留。',
+      '請先計算 A3 單頁可用寬高，規劃好每張浮動圖片的座標與顯示尺寸，確保同頁圖片彼此不重疊、不超出頁面邊界、不被推到下一頁；圖片下方的文字標註須與所屬圖片一起定位、不得分離。不得使用連續空白段落撐版。',
+      '一般頁面盡量減少無效空白與圖片間距；在不裁切、不變形且同頁圖片不跨頁的前提下，依圖片數量與長寬比彈性配置，將每張圖片等比例放大至清楚可讀。',
+      'Word 必須設定為「不壓縮檔案中的影像」並使用最高保真度；不得自動降低圖片解析度，也不得先縮成低解析度圖片後再放大。',
+      '圖片只可使用與裁切後原圖一致的長寬比等比例縮放，不得使用填滿、拉伸或分別指定不同比例的寬度與高度；縮放只改變整張圖片在 Word 中的顯示尺寸，不得改變圖片內任何資訊。'
+    ];
+    layout.push('文件最後加入摘要表：構件編號、圖號、'+code+' 編號、來源圖面頁碼、配對狀態。');
+    layout.push('完成後請以列印版面逐頁檢查 Word：每頁都必須是 A3 橫向，'+capShort+'且該頁圖片均完整留在同一頁；未達上限時不得出現補位用的空白格或空白框；不得出現藍底白字標題列或色塊標題橫條；每張圖片都必須是可用滑鼠自由拖曳的浮動物件，未被放入表格、儲存格、文字方塊或群組；不得有 Word 排版新增的大型外框、共用容器框或表格框線（含框線設為「無」的表格），也不得有標題與圖片分離、裁切、重疊、空白頁、圖片失真'+minWidthChk+'、來源圖面黑框缺邊、框外大面積白邊或低解析度。另須逐張對照來源 DWG／DXF／PDF，確認圖框內全部資訊完全一致；任何增刪、替換、位移、變形、改色或線型／線寬差異均不合格，必須回到來源檔以唯讀方式重新渲染，禁止直接修改圖片補救。任何一項不合格都要先修正並重新檢查，再交付 .docx。');
+    layout=layout.map(function(t,i){return (i+1)+'. '+t;}).join('\n');
+    return [
+      '請使用我隨附的「多階資料剖析結果」、'+label+'圖面檔（PDF、DWG 或 DXF 擇一即可）與參考排版圖片，製作一份可編輯的 Word（.docx）圖面整合文件。',
+      '',
+      '工程編號：'+(maProject.工程編號||'未提供')+'｜工程區：'+(maProject.工程區||maProject.母件編號||'未提供'),
+      '',
+      '【資料對應原則】',
+      '1. 以剖析結果中的構件編號、圖號，以及 '+code+' 零件編號為唯一對應清單。',
+      '2. 本份文件只處理 '+code+' 開頭的'+label+'圖面，請到相對應圖面檔中逐張找出相同圖號。',
+      '3. 必須直接查看圖框標題及圖面內容進行視覺核對，不可只依賴 OCR；OCR 找不到時仍要逐頁檢查。',
+      '4. 圖面必須包含完整黑色圖框及框內全部內容，不可裁掉或修改圖號、零件編號、規格、材質、數量、尺寸、標註及剖面；黑框以外的頁面白邊不屬於圖面，可以裁除。除整張圖等比例縮放及裁除框外空白外，圖框內資訊一律不得變更。',
+      '5. 若同一頁面有左右兩張圖，只保留與目標 '+code+' 編號相符之獨立黑色圖框，裁除另一張圖與兩圖之間的空白。',
+      '6. 不得自行猜測配對。無法確認的項目請列在文件最後的「待確認清單」。',
+      '',
+      '【圖面裁切、縮放及清晰度規格】',
+      imageRules,
+      '',
+      '【Word 排版規格】',
+      layout,
+      '',
+      '【本次剖析清單】'+label+'（'+rows.length+' 支構件／'+rowCount+' 筆）：',
+      list,
+      '',
+      '請直接開始讀取附件、擷取圖面並產出 Word，不要只提供操作步驟或文字說明。'
+    ].join('\n');
   }
 
   function maUpdateWordPrompt(){
@@ -39209,11 +39869,12 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   function maSetSaveStatus(text,error){var el=document.getElementById('ma-save-status');if(el){el.textContent=text;el.style.color=error?'var(--danger)':'var(--text3)';}}
   function maHistoryRender(rows){
     var host=document.getElementById('ma-history-list');if(!host)return;
-    if(isGuest||!currentSession){host.innerHTML='<div class="ma-empty">訪客模式不提供雲端儲存；登入後即可查看歷史紀錄。</div>';return;}
-    if(!rows.length){host.innerHTML='<div class="ma-empty">尚無已儲存的分析紀錄</div>';return;}
-    host.innerHTML=rows.map(function(r){
+    if(Array.isArray(rows))maHistoryRows=rows;
+    if(isGuest||!currentSession){maHistoryRows=[];host.innerHTML='<div class="ma-empty">訪客模式不提供雲端儲存；登入後即可查看歷史紀錄。</div>';return;}
+    if(!maHistoryRows.length){host.innerHTML='<div class="ma-empty">尚無已儲存的分析紀錄</div>';return;}
+    host.innerHTML=maHistoryRows.map(function(r){
       var title=[r.project_no,r.zone_code,r.mother_no].filter(Boolean).join(' · ')||'未命名分析';
-      return '<div class="ma-history-item"><div class="ma-history-main"><div class="ma-history-title">'+maEsc(title)+'</div><div class="ma-history-meta">'+maEsc(maHistoryDate(r.created_at))+(r.created_by_name?' · '+maEsc(r.created_by_name):'')+'</div></div><div class="ma-history-counts">構件 '+(r.component_count||0)+' · 零件 '+(r.part_count||0)+' · Q '+(r.q_count||0)+' · H '+(r.h_count||0)+'</div><div class="ma-history-actions"><button class="btn btn-add-row" onclick="maOpenAnalysis('+r.id+')">載入</button><button class="btn btn-add-row" style="color:var(--danger)" onclick="maDeleteAnalysis('+r.id+')">刪除</button></div></div>';
+      return '<div class="ma-history-item" role="button" tabindex="0" title="點一下載入此分析" onclick="maOpenAnalysis('+r.id+')" onkeydown="if(event.target===this&&(event.key===\'Enter\'||event.key===\' \')){event.preventDefault();maOpenAnalysis('+r.id+');}"><div class="ma-history-main"><div class="ma-history-title">'+maEsc(title)+'</div><div class="ma-history-meta">'+maEsc(maHistoryDate(r.created_at))+(r.created_by_name?' · '+maEsc(r.created_by_name):'')+'</div></div><div class="ma-history-actions"><button class="btn btn-add-row" style="color:var(--danger)" title="刪除此紀錄" onclick="event.stopPropagation();maDeleteAnalysis('+r.id+')">刪除</button></div></div>';
     }).join('');
   }
   window.maLoadHistory=async function(force){
@@ -39221,6 +39882,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var host=document.getElementById('ma-history-list');if(!host)return;
     if(isGuest||!currentSession){maHistoryRender([]);return;}
     host.innerHTML='<div class="ma-empty">載入中…</div>';
+    maHistoryRows=[];
     var r=await sbFetch('/rest/v1/multilevel_analyses?select=id,project_no,zone_code,mother_no,component_count,part_count,q_count,h_count,created_at,created_by_name&order=created_at.desc&limit=50');
     if(!r.ok){host.innerHTML='<div class="ma-empty">無法載入歷史紀錄。請先執行 multilevel_analyses_migration.sql<br>'+maEsc(maDbError(r))+'</div>';return;}
     maHistoryLoaded=true;maHistoryRender(Array.isArray(r.data)?r.data:[]);
@@ -39241,7 +39903,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   window.maOpenAnalysis=async function(id){
     var r=await sbFetch('/rest/v1/multilevel_analyses?id=eq.'+encodeURIComponent(id)+'&select=id,raw_text&limit=1');
     if(!r.ok||!r.data||!r.data[0]){maSetSaveStatus('載入失敗：'+maDbError(r),true);return;}
-    document.getElementById('ma-raw-input').value=r.data[0].raw_text||'';window.maParseData();maCurrentAnalysisId=r.data[0].id;maSetSaveStatus('已載入紀錄 #'+id+'；再次儲存會建立新版本');window.scrollTo({top:document.getElementById('page-multilevel').offsetTop,behavior:'smooth'});
+    document.getElementById('ma-raw-input').value=r.data[0].raw_text||'';window.maParseData();maCurrentAnalysisId=r.data[0].id;maSetSaveStatus('已載入紀錄 #'+id+'；再次儲存會建立新版本');
   };
   window.maDeleteAnalysis=async function(id){
     if(!await uiConfirm('確定刪除這筆多階分析紀錄？\n其明細也會一併刪除，且無法復原。'))return;
@@ -39260,6 +39922,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var save=document.getElementById('ma-save-btn');if(save)save.disabled=true;maCurrentAnalysisId=null;maSetSaveStatus('');
     ['ma-parts-body','ma-curtain-result','ma-curtain-flat-result','ma-mep-result','ma-mep-flat-result'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerHTML='';});
     var holes=document.getElementById('ma-mep-hole-values');if(holes)holes.value='';
+    window.maShowEntryView();
   };
 
   /* ── 姓名貼 Word 產生器（原檔尾截斷時一併遺失） ── */
