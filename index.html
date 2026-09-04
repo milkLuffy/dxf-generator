@@ -954,10 +954,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .hw-fdrop-foot .cl{background:var(--bg3);color:var(--text2)}
 /* 五金庫存:所有表格固定欄寬(切換篩選/換頁欄位不跳動),面板寬度收斂到表格寬,
    上方工具列/匯出按鈕跟著貼齊表格右緣,不再留一大片空白 */
-#hw-stock-panel,#hw-purchase-panel,#hw-usage-panel,#hw-count-panel,#hw-party-panel,#hw-equip-panel{width:max-content;max-width:100%}
+#hw-stock-panel,#hw-purchase-panel,#hw-repair-panel,#hw-usage-panel,#hw-party-panel,#hw-equip-panel{width:max-content;max-width:100%}
 /* 工具列 + 表格包在同一個貼齊容器:工具列(含匯出按鈕)寬度=表格寬度 */
 .hw-tblbox{width:max-content;max-width:100%}
-#page-hardware .layout-table-wrap{max-width:100%}
+#page-hardware .layout-table-wrap{max-width:100%;max-height:none!important}
 #page-hardware .layout-table{table-layout:fixed}
 #page-hardware .layout-table td{overflow:hidden;text-overflow:ellipsis}
 /* ① 庫存總表 */
@@ -980,6 +980,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 #hw-purchase-table th:nth-child(7),#hw-purchase-table td:nth-child(7){width:96px}
 #hw-purchase-table th:nth-child(8),#hw-purchase-table td:nth-child(8){width:110px}
 #hw-purchase-table th:nth-child(9),#hw-purchase-table td:nth-child(9){width:72px}
+#hw-repair-table{width:968px}
+#hw-repair-table th:nth-child(1),#hw-repair-table td:nth-child(1){width:128px}
+#hw-repair-table th:nth-child(2),#hw-repair-table td:nth-child(2){width:104px}
+#hw-repair-table th:nth-child(3),#hw-repair-table td:nth-child(3){width:230px}
+#hw-repair-table th:nth-child(4),#hw-repair-table td:nth-child(4){width:80px}
+#hw-repair-table th:nth-child(5),#hw-repair-table td:nth-child(5){width:64px}
+#hw-repair-table th:nth-child(6),#hw-repair-table td:nth-child(6){width:84px}
+#hw-repair-table th:nth-child(7),#hw-repair-table td:nth-child(7){width:96px}
+#hw-repair-table th:nth-child(8),#hw-repair-table td:nth-child(8){width:110px}
+#hw-repair-table th:nth-child(9),#hw-repair-table td:nth-child(9){width:72px}
 /* ③ 領用紀錄 */
 #hw-usage-table{width:872px}
 #hw-usage-table th:nth-child(1),#hw-usage-table td:nth-child(1){width:128px}
@@ -991,16 +1001,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 #hw-usage-table th:nth-child(7),#hw-usage-table td:nth-child(7){width:84px}
 #hw-usage-table th:nth-child(8),#hw-usage-table td:nth-child(8){width:72px}
 /* ④ 盤點紀錄 */
-#hw-count-table{width:1032px}
-#hw-count-table th:nth-child(1),#hw-count-table td:nth-child(1){width:128px}
-#hw-count-table th:nth-child(2),#hw-count-table td:nth-child(2){width:104px}
-#hw-count-table th:nth-child(3),#hw-count-table td:nth-child(3){width:210px}
-#hw-count-table th:nth-child(4),#hw-count-table td:nth-child(4){width:88px}
-#hw-count-table th:nth-child(5),#hw-count-table td:nth-child(5){width:88px}
-#hw-count-table th:nth-child(6),#hw-count-table td:nth-child(6){width:72px}
-#hw-count-table th:nth-child(7),#hw-count-table td:nth-child(7){width:100px}
-#hw-count-table th:nth-child(8),#hw-count-table td:nth-child(8){width:170px}
-#hw-count-table th:nth-child(9),#hw-count-table td:nth-child(9){width:72px}
 /* ⑤ 廠商 */
 #hw-vendor-table{width:340px}
 #hw-vendor-table th:nth-child(1),#hw-vendor-table td:nth-child(1){width:260px}
@@ -5303,6 +5303,10 @@ window.normalizeFullWidth=function(value){
     #page-prod .pd-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:16px;margin-bottom:16px}
     #page-prod .pd-sec-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
     #page-prod .pd-sec-title{font-size:14px;font-weight:600;font-family:var(--mono);color:var(--text);display:flex;align-items:center;gap:8px}
+    #page-prod .pd-collapse-btn{display:inline-flex;align-items:center;gap:8px;padding:0;border:0;background:transparent;color:inherit;cursor:pointer;text-align:left}
+    #page-prod .pd-collapse-btn:hover .pd-sec-title{color:var(--accent2)}
+    #page-prod .pd-collapse-caret{width:14px;color:var(--text3);font-size:12px;transition:transform .15s ease}
+    #page-prod .pd-collapse-btn[aria-expanded="true"] .pd-collapse-caret{transform:rotate(90deg)}
     #page-prod .pd-count-badge{font-size:11px;color:var(--text2);background:var(--bg4);border-radius:99px;padding:1px 9px;font-weight:600}
     #page-prod .pd-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto}
     #page-prod .pd-tools input{padding:6px 10px;border:1px solid var(--border);border-radius:var(--rad);font-size:12px;color:var(--text);background:var(--bg);outline:none;min-width:110px}
@@ -5372,8 +5376,8 @@ window.normalizeFullWidth=function(value){
     /* SP 新增列採中性儲存格，不使用預設藍色按鈕／焦點底色。 */
     #spx-track tbody tr.lt-input-row td input,#spx-track tbody tr.lt-input-row td select,#spx-detail tbody tr.lt-input-row td input,#spx-detail tbody tr.lt-input-row td select,#cprBody tr.lt-input-row td input,#cprBody tr.lt-input-row td select{background:transparent!important;background-image:none!important;border-color:var(--border);border-style:dashed}
     #spx-track tbody tr.lt-input-row td input:focus,#spx-track tbody tr.lt-input-row td select:focus,#spx-detail tbody tr.lt-input-row td input:focus,#spx-detail tbody tr.lt-input-row td select:focus,#cprBody tr.lt-input-row td input:focus,#cprBody tr.lt-input-row td select:focus{background:transparent!important;border-color:var(--border-hi)}
-    #spx-track tbody tr.lt-input-row .spx-detail-btn,#spx-detail tbody tr.lt-input-row .spx-detail-btn,#cprBody tr.lt-input-row .spx-detail-btn{background:transparent!important;color:var(--text2);border-color:var(--border);border-style:dashed}
-    #spx-track tbody tr.lt-input-row .spx-detail-btn:hover,#spx-detail tbody tr.lt-input-row .spx-detail-btn:hover,#cprBody tr.lt-input-row .spx-detail-btn:hover{background:var(--bg3)!important;color:var(--text)}
+    #spx-track tbody tr.lt-input-row .spx-detail-btn,#spx-detail tbody tr.lt-input-row .spx-detail-btn,#cprBody tr.lt-input-row .spx-detail-btn,#pdCPBody tr.lt-input-row .spx-detail-btn{background:transparent!important;color:var(--text2);border-color:var(--border);border-style:dashed}
+    #spx-track tbody tr.lt-input-row .spx-detail-btn:hover,#spx-detail tbody tr.lt-input-row .spx-detail-btn:hover,#cprBody tr.lt-input-row .spx-detail-btn:hover,#pdCPBody tr.lt-input-row .spx-detail-btn:hover{background:var(--bg3)!important;color:var(--text)}
     /* 儲存格輸入框:比照「點工單－明細登錄」——固定填滿儲存格、大小統一 */
     .spx-table td input,.spx-table td select{box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:12px;padding:4px 8px;outline:none;text-align:center;width:100%;min-width:96px}
     /* 長文欄(事由/備註/規格):整欄統一,預設 400px,更長才成長到 640px 上限 */
@@ -5840,14 +5844,19 @@ window.normalizeFullWidth=function(value){
 
         <div class="pd-section" id="pdCPSection" onfocusout="setTimeout(cprRefreshZoneDetail,0)">
           <div class="pd-sec-head">
-            <span class="pd-sec-title">📥 CP明細 <span class="pd-count-badge" id="pdCPCount"></span></span>
+            <button type="button" class="pd-collapse-btn" id="pdCPToggle" aria-expanded="false" aria-controls="pdCPContent" onclick="cprToggleZoneDetail()">
+              <span class="pd-collapse-caret">▶</span><span class="pd-sec-title">📥 CP明細 <span class="pd-count-badge" id="pdCPCount"></span></span>
+            </button>
           </div>
-          <div class="cpr-group-tabs" id="pdCPGroupTabs"></div>
-          <div class="section-label" style="margin:0 0 8px;font-size:11px">顯示此工程區的收圖，包含多工程區及全區紀錄。修改會同步收圖登記；共用紀錄的修改也適用於其餘所列工程區。</div>
-          <div class="cpr-table-wrap">
-            <table class="cpr-table spx-table"><thead><tr><th>CP單號</th><th>工程編號</th><th>工程區</th><th>項目</th><th>收圖日期</th><th></th></tr></thead><tbody id="pdCPBody"></tbody></table>
+          <div id="pdCPContent" hidden>
+            <div class="section-label" style="margin:0 0 6px;font-size:11px">篩選項目（預設只顯示製造圖）</div>
+            <div class="cpr-group-tabs" id="pdCPGroupTabs"></div>
+            <div class="section-label" style="margin:0 0 8px;font-size:11px">顯示此工程區的收圖，包含多工程區及全區紀錄。修改會同步收圖登記；共用紀錄的修改也適用於其餘所列工程區。</div>
+            <div class="cpr-table-wrap">
+              <table class="cpr-table spx-table"><thead><tr><th>CP單號</th><th>工程編號</th><th>工程區</th><th>項目</th><th>收圖日期</th><th></th></tr></thead><tbody id="pdCPBody"></tbody></table>
+            </div>
+            <div class="cpr-pager"><span id="pdCPPageInfo"></span><button class="btn" id="pdCPPrev" onclick="cprZoneDetailPageMove(-1)">上一頁</button><button class="btn" id="pdCPNext" onclick="cprZoneDetailPageMove(1)">下一頁</button></div>
           </div>
-          <div class="cpr-pager"><span id="pdCPPageInfo"></span><button class="btn" id="pdCPPrev" onclick="cprZoneDetailPageMove(-1)">上一頁</button><button class="btn" id="pdCPNext" onclick="cprZoneDetailPageMove(1)">下一頁</button></div>
         </div>
 
         <div class="pd-section">
@@ -6283,8 +6292,8 @@ window.normalizeFullWidth=function(value){
         <div class="layout-tabs">
           <button class="layout-tab active" id="hwtab-stock"    onclick="hwSwitchTab('stock')">庫存總表</button>
           <button class="layout-tab"        id="hwtab-purchase" onclick="hwSwitchTab('purchase')">進貨紀錄</button>
+          <button class="layout-tab"        id="hwtab-repair"   onclick="hwSwitchTab('repair')">維修紀錄</button>
           <button class="layout-tab"        id="hwtab-usage"    onclick="hwSwitchTab('usage')">領用紀錄</button>
-          <button class="layout-tab"        id="hwtab-count"    onclick="hwSwitchTab('count')">盤點紀錄</button>
           <button class="layout-tab"        id="hwtab-party"    onclick="hwSwitchTab('party')">廠商</button>
           <button class="layout-tab"        id="hwtab-equip"    onclick="hwSwitchTab('equip')">設備清單</button>
         </div>
@@ -6336,6 +6345,10 @@ window.normalizeFullWidth=function(value){
           <div class="layout-toolbar">
             <span class="layout-hint">新增進貨會自動增加該品項庫存;品名不存在時會自動建立新品項。</span>
             <div style="display:flex;gap:8px">
+              <input id="hw-purchase-month" type="month" class="search-input" style="width:140px" onchange="hwPurchaseMonthRange(this.value)">
+              <input id="hw-purchase-from" type="date" class="search-input" style="width:145px" onchange="hwPurchaseDateChanged()">
+              <span class="layout-hint">～</span><input id="hw-purchase-to" type="date" class="search-input" style="width:145px" onchange="hwPurchaseDateChanged()">
+              <span class="layout-hint">匯出 Excel 會自動合併維修金額</span>
               <button class="btn-sm btn-export" onclick="hwClearFilters('purchase')">清除篩選</button>
               <button class="btn-sm btn-export" onclick="hwExportPurchase()">⬇ 匯出 Excel</button>
             </div>
@@ -6343,13 +6356,33 @@ window.normalizeFullWidth=function(value){
           <div class="layout-table-wrap">
             <table class="layout-table" id="hw-purchase-table" onkeydown="tableArrowNav(event)">
               <thead><tr><th>日期</th><th>種類</th><th>品名</th><th style="text-align:right">數量</th><th>單位</th><th style="text-align:right">單價</th><th style="text-align:right">總額</th><th>廠商</th><th style="text-align:center">操作</th></tr></thead>
-              <tbody id="hw-purchase-body"></tbody>
+              <tbody id="hw-purchase-body"><tr><td colspan="9"><div class="empty-state">載入進貨明細中…</div></td></tr></tbody>
             </table>
           </div>
           </div><!-- /hw-tblbox -->
         </div>
 
-        <!-- ③ 領用紀錄 -->
+        <!-- ③ 維修紀錄（沿用進貨資料結構，種類固定為修理品） -->
+        <div id="hw-repair-panel" style="display:none">
+          <div class="hw-form">
+            <input id="hw-rp-date" type="date" class="search-input" style="width:150px">
+            <input class="search-input" value="修理品" readonly style="width:130px">
+            <input id="hw-rp-name" class="search-input" placeholder="品名／設備" style="width:180px">
+            <input id="hw-rp-qty" type="number" class="search-input" placeholder="數量" style="width:90px">
+            <input id="hw-rp-unit" class="search-input" placeholder="單位" style="width:70px">
+            <input id="hw-rp-price" type="number" class="search-input" placeholder="單價" style="width:90px">
+            <input id="hw-rp-vendor" class="search-input" list="hw-vendor-list" placeholder="廠商" style="width:130px">
+            <button class="btn-sm btn-gen" onclick="hwAddRepair()">＋ 新增維修</button>
+          </div>
+          <div class="hw-tblbox"><div class="layout-toolbar">
+            <span class="layout-hint">種類固定為「修理品」；維修紀錄不會增加庫存。</span>
+            <div style="display:flex;gap:8px"><button class="btn-sm btn-export" onclick="hwClearFilters('repair')">清除篩選</button><button class="btn-sm btn-export" onclick="hwExportRepair()">⬇ 匯出 Excel</button></div>
+          </div><div class="layout-table-wrap"><table class="layout-table" id="hw-repair-table" onkeydown="tableArrowNav(event)">
+            <thead><tr><th>日期</th><th>種類</th><th>品名</th><th style="text-align:right">數量</th><th>單位</th><th style="text-align:right">單價</th><th style="text-align:right">總額</th><th>廠商</th><th style="text-align:center">操作</th></tr></thead><tbody id="hw-repair-body"><tr><td colspan="9"><div class="empty-state">目前沒有維修紀錄</div></td></tr></tbody>
+          </table></div></div>
+        </div>
+
+        <!-- ④ 領用紀錄 -->
         <div id="hw-usage-panel" style="display:none">
           <div class="hw-form">
             <input id="hw-us-date" type="date" class="search-input" style="width:150px"/>
@@ -6376,35 +6409,6 @@ window.normalizeFullWidth=function(value){
             <table class="layout-table" id="hw-usage-table" onkeydown="tableArrowNav(event)">
               <thead><tr><th>日期</th><th>種類</th><th>品項</th><th style="text-align:right">數量</th><th>單位</th><th>領取人</th><th style="text-align:right">剩餘量</th><th style="text-align:center">操作</th></tr></thead>
               <tbody id="hw-usage-body"></tbody>
-            </table>
-          </div>
-          </div><!-- /hw-tblbox -->
-        </div>
-
-        <!-- ④ 盤點紀錄 -->
-        <div id="hw-count-panel" style="display:none">
-          <div class="hw-form">
-            <input id="hw-ct-date" type="date" class="search-input" style="width:150px"/>
-            <select id="hw-ct-cat" class="search-input" style="width:130px" onchange="hwSyncUnit('ct')"></select>
-            <input id="hw-ct-name" class="search-input" list="hw-item-list-ct" placeholder="品項" style="width:180px" oninput="hwCountSync()"/>
-            <input id="hw-ct-before" class="search-input" placeholder="系統數量" style="width:100px" readonly title="目前系統庫存"/>
-            <input id="hw-ct-count" type="number" class="search-input" placeholder="實際盤點數量" style="width:130px"/>
-            <input id="hw-ct-person" class="search-input" list="hw-person-list" placeholder="盤點人" style="width:120px"/>
-            <input id="hw-ct-note" class="search-input" placeholder="備註" style="width:150px"/>
-            <button class="btn-sm btn-gen" onclick="hwAddStocktake()">＋ 登記盤點</button>
-          </div>
-          <div class="hw-tblbox">
-          <div class="layout-toolbar">
-            <span class="layout-hint">登記後會把該品項庫存直接修正為「實際盤點數量」,並記錄與系統數量的差異。</span>
-            <div style="display:flex;gap:8px">
-              <button class="btn-sm btn-export" onclick="hwClearFilters('count')">清除篩選</button>
-              <button class="btn-sm btn-export" onclick="hwExportStocktake()">⬇ 匯出 Excel</button>
-            </div>
-          </div>
-          <div class="layout-table-wrap">
-            <table class="layout-table" id="hw-count-table" onkeydown="tableArrowNav(event)">
-              <thead><tr><th>日期</th><th>種類</th><th>品項</th><th style="text-align:right">系統數量</th><th style="text-align:right">盤點數量</th><th style="text-align:right">差異</th><th>盤點人</th><th>備註</th><th style="text-align:center">操作</th></tr></thead>
-              <tbody id="hw-count-body"></tbody>
             </table>
           </div>
           </div><!-- /hw-tblbox -->
@@ -11128,18 +11132,18 @@ const HW_CATS = ['西工用品','焊工用品','研磨用品','植釘機用品',
 const HW_PAGE_SIZE = 100;
 let hwItems=[], hwPurchases=[], hwUsage=[], hwVendors=[], hwStocktake=[], hwEquip=[];
 let hwTab='stock', hwBusy=false;
-let hwPage={purchase:1, usage:1, count:1};
+let hwPage={purchase:1, repair:1, usage:1};
 
 function hwNum(n){ n=Number(n); return isNaN(n)?0:n; }
 function hwFmt(n){ if(n==null||n==='')return''; const x=Number(n); return isNaN(x)?esc(n):String(x); }
 function hwMoney(n){ if(n==null||n==='')return''; const x=Number(n); return isNaN(x)?esc(n):x.toLocaleString('en-US',{maximumFractionDigits:2}); }
-// 領取人清單來源:公司名冊(在職)+ 過往領用/盤點紀錄出現過的名字
+// 領取人清單來源：清點固定置頂，其餘為公司名冊(在職)+過往紀錄姓名
 function hwPersonNames(){
-  const set=new Set();
+  const set=new Set(['清點']);
   (Array.isArray(allStaff)?allStaff:[]).forEach(s=>{ if(s.name && s.status!=='離職') set.add(s.name); });
   hwUsage.forEach(u=>{ if(u.person) set.add(u.person); });
   hwStocktake.forEach(s=>{ if(s.person) set.add(s.person); });
-  return [...set].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+  return [...set].sort((a,b)=>a==='清點'?-1:b==='清點'?1:a.localeCompare(b,'zh-Hant'));
 }
 // 領取人下拉選單:只列在職人員,依「職級(職稱)」分組;辦公人員(老闆/主管/生管助理/行政助理)一律歸為「辦公人員」一組
 function hwActiveStaffGroups(){
@@ -11159,7 +11163,7 @@ function hwPersonSelectOptions(selected){
     const ia=order.indexOf(a), ib=order.indexOf(b);
     return (ia<0?99:ia)-(ib<0?99:ib) || a.localeCompare(b,'zh-Hant');
   });
-  let html='<option value="">— 選擇領取人 —</option>';
+  let html='<option value="">— 選擇領取人（必填）—</option><option value="清點"'+(selected==='清點'?' selected':'')+'>清點</option>';
   keys.forEach(g=>{
     html+='<optgroup label="'+esc(g)+'">'+groups[g].map(n=>'<option value="'+esc(n)+'"'+(n===selected?' selected':'')+'>'+esc(n)+'</option>').join('')+'</optgroup>';
   });
@@ -11207,7 +11211,7 @@ async function hwInit(){
 
 function hwPopulateSelects(){
   const sc=document.getElementById('hw-stock-cat'); if(sc){ const v=sc.value; sc.innerHTML=hwOpt(HW_CATS,true); sc.value=v; }
-  ['hw-ni-cat','hw-pu-cat','hw-us-cat','hw-ct-cat'].forEach(id=>{ const el=document.getElementById(id); if(el){ const v=el.value; el.innerHTML=hwOpt(HW_CATS,false); if(v)el.value=v; } });
+  ['hw-ni-cat','hw-pu-cat','hw-us-cat'].forEach(id=>{ const el=document.getElementById(id); if(el){ const v=el.value; el.innerHTML=hwOpt(HW_CATS,false); if(v)el.value=v; } });
   ['hw-pu-cat','hw-us-cat','hw-ct-cat'].forEach(id=>{ const pfx=id.slice(3,5); hwRefreshItemList(pfx); });
   document.getElementById('hw-vendor-list').innerHTML = hwVendors.map(v=>`<option value="${esc(v.name)}">`).join('');
   document.getElementById('hw-person-list').innerHTML = hwPersonNames().map(n=>`<option value="${esc(n)}">`).join('');
@@ -11216,6 +11220,7 @@ function hwPopulateSelects(){
   const t=egToday();
   const pd=document.getElementById('hw-pu-date'); if(pd&&!pd.value)pd.value=t;
   const ud=document.getElementById('hw-us-date'); if(ud&&!ud.value)ud.value=t;
+  const rd=document.getElementById('hw-rp-date'); if(rd&&!rd.value)rd.value=t;
   const cd=document.getElementById('hw-ct-date'); if(cd&&!cd.value)cd.value=t;
   const pm=document.getElementById('hw-ppe-month'); if(pm&&!pm.value)pm.value=t.slice(0,7);
 }
@@ -11223,7 +11228,7 @@ function hwPopulateSelects(){
 function hwSwitchTab(tab){
   hwCloseFilter();
   hwTab=tab;
-  ['stock','purchase','usage','count','party','equip'].forEach(t=>{
+  ['stock','purchase','repair','usage','party','equip'].forEach(t=>{
     document.getElementById('hwtab-'+t).classList.toggle('active', t===tab);
     document.getElementById('hw-'+t+'-panel').style.display = (t===tab)?'':'none';
   });
@@ -11235,8 +11240,8 @@ function hwRender(){
   hwRenderStats();
   if(hwTab==='stock') hwRenderStock();
   else if(hwTab==='purchase') hwRenderPurchase();
+  else if(hwTab==='repair') hwRenderRepair();
   else if(hwTab==='usage') hwRenderUsage();
-  else if(hwTab==='count') hwRenderCount();
   else if(hwTab==='party') hwRenderParty();
   else if(hwTab==='equip') hwRenderEquip();
   hwUpdateFilterIcons(hwTab);
@@ -11246,7 +11251,7 @@ function hwRenderStats(){
   const low=hwItems.filter(i=>hwStatus(i)==='low').length;
   const out=hwItems.filter(i=>hwStatus(i)==='out').length;
   const el=document.getElementById('hw-stats');
-  el.innerHTML=[['品項數',hwItems.length],['低庫存',low],['缺貨',out],['進貨筆數',hwPurchases.length],['領用筆數',hwUsage.length],['盤點筆數',hwStocktake.length],['設備數',hwEquip.length]]
+  el.innerHTML=[['品項數',hwItems.length],['低庫存',low],['缺貨',out],['進貨筆數',hwPurchases.filter(p=>p.category!=='修理品').length],['維修筆數',hwPurchases.filter(p=>p.category==='修理品').length],['領用筆數',hwUsage.length],['設備數',hwEquip.length]]
     .map(([l,n])=>`<div class="lstat"><span class="lstat-num">${n}</span><span class="lstat-label">${l}</span></div>`).join('');
 }
 
@@ -11259,18 +11264,19 @@ function hwPagerRow(page,pages,colspan,fn){
 }
 
 // ── 表頭欄位篩選(箭頭下拉,Excel 式)──
-const HW_TABLES={stock:'hw-stock-table',purchase:'hw-purchase-table',usage:'hw-usage-table',count:'hw-count-table',party:'hw-vendor-table',equip:'hw-equip-table'};
+const HW_TABLES={stock:'hw-stock-table',purchase:'hw-purchase-table',repair:'hw-repair-table',usage:'hw-usage-table',party:'hw-vendor-table',equip:'hw-equip-table'};
 const HW_COLDEFS={
   stock:[{key:'category'},{key:'name'},{key:'unit'},{key:'stock',num:1},{key:'safety',num:1},{key:'__status'},null],
   purchase:[{key:'tx_date'},{key:'category'},{key:'name'},{key:'qty',num:1},{key:'unit'},{key:'price',num:1},{key:'total',num:1},{key:'vendor'},null],
+  repair:[{key:'tx_date'},{key:'category'},{key:'name'},{key:'qty',num:1},{key:'unit'},{key:'price',num:1},{key:'total',num:1},{key:'vendor'},null],
   usage:[{key:'tx_date'},{key:'category'},{key:'name'},{key:'qty',num:1},{key:'unit'},{key:'person'},{key:'remaining',num:1},null],
   count:[{key:'tx_date'},{key:'category'},{key:'name'},{key:'before_qty',num:1},{key:'count_qty',num:1},{key:'diff',num:1},{key:'person'},{key:'note'},null],
   party:[{key:'name'},null],
   equip:[{key:'owner'},{key:'seq',num:1},{key:'name'},{key:'qty',num:1},{key:'unit'},{key:'amount',num:1},{key:'note'},null]
 };
-const hwColFilter={stock:{},purchase:{},usage:{},count:{},party:{},equip:{}};
+const hwColFilter={stock:{},purchase:{},repair:{},usage:{},party:{},equip:{}};
 let hwFiltersReady=false;
-function hwTabSource(tab){ return ({stock:hwItems,purchase:hwPurchases,usage:hwUsage,count:hwStocktake,party:hwVendors,equip:hwEquip})[tab]||[]; }
+function hwTabSource(tab){ return ({stock:hwItems,purchase:hwPurchases.filter(p=>p.category!=='修理品'),repair:hwPurchases.filter(p=>p.category==='修理品'),usage:hwUsage,party:hwVendors,equip:hwEquip})[tab]||[]; }
 function hwColValue(tab,def,row){
   if(!def) return '';
   if(def.key==='__status') return ({ok:'正常',low:'低庫存',out:'缺貨'})[hwStatus(row)]||'';
@@ -11489,9 +11495,11 @@ function hwSyncUnit(pfx){
 // ── 進貨 ──
 function hwFilterRecords(arr){ const q=hwSearch(); if(!q)return arr; return arr.filter(r=> String(r.name||'').toLowerCase().includes(q)||String(r.vendor||'').toLowerCase().includes(q)||String(r.person||'').toLowerCase().includes(q)||String(r.category||'').toLowerCase().includes(q)); }
 function hwRenderPurchase(){
-  const all=hwApplyColFilters('purchase',hwFilterRecords(hwPurchases)), pages=Math.max(1,Math.ceil(all.length/HW_PAGE_SIZE));
-  if(hwPage.purchase>pages)hwPage.purchase=pages; if(hwPage.purchase<1)hwPage.purchase=1;
-  const slice=all.slice((hwPage.purchase-1)*HW_PAGE_SIZE, hwPage.purchase*HW_PAGE_SIZE);
+  const from=document.getElementById('hw-purchase-from')?.value||'',to=document.getElementById('hw-purchase-to')?.value||'';
+  const dated=hwPurchases.filter(p=>p.category!=='修理品'&&(!from||String(p.tx_date||'')>=from)&&(!to||String(p.tx_date||'')<=to));
+  const all=hwApplyColFilters('purchase',hwFilterRecords(dated)),pages=Math.max(1,Math.ceil(all.length/HW_PAGE_SIZE));
+  hwPage.purchase=Math.min(pages,Math.max(1,hwPage.purchase));
+  const slice=all.slice((hwPage.purchase-1)*HW_PAGE_SIZE,hwPage.purchase*HW_PAGE_SIZE);
   const tb=document.getElementById('hw-purchase-body');
   if(!all.length){ tb.innerHTML=`<tr><td colspan="9"><div class="empty-state">無資料</div></td></tr>`; return; }
   const rtd=(v,style)=>'<td><input type="text" readonly value="'+esc(v==null?'':v)+'"'+(style?' style="'+style+'"':'')+'></td>';
@@ -11501,10 +11509,12 @@ function hwRenderPurchase(){
     }${rtd(p.price==null?'':hwMoney(p.price),'text-align:right')}${rtd(p.total==null?'':hwMoney(p.total),'text-align:right')
     }${rtd(p.vendor||'')}
     <td style="text-align:center"><button class="hw-act" onclick="hwEditPurchase(${p.id})">編輯</button> <button class="hw-act del" onclick="hwDeletePurchase(${p.id})">刪除</button></td>
-  </tr>`).join('') + hwPagerRow(hwPage.purchase,pages,9,'hwPurchasePage');
+  </tr>`).join('')+hwPagerRow(hwPage.purchase,pages,9,'hwPurchasePage');
   const puTbl=document.getElementById('hw-purchase-table'); if(puTbl) tblInitSelection(puTbl);
 }
 function hwPurchasePage(p){ hwPage.purchase=p; hwRenderPurchase(); }
+function hwPurchaseMonthRange(month){const from=document.getElementById('hw-purchase-from'),to=document.getElementById('hw-purchase-to');if(!month){if(from)from.value='';if(to)to.value='';hwPurchaseDateChanged();return;}const [y,m]=month.split('-').map(Number),last=new Date(y,m,0).getDate();if(from)from.value=month+'-01';if(to)to.value=month+'-'+String(last).padStart(2,'0');hwPurchaseDateChanged();}
+function hwPurchaseDateChanged(){hwPage.purchase=1;hwRenderPurchase();hwUpdateFilterIcons('purchase');}
 async function hwAddPurchase(){
   const date=document.getElementById('hw-pu-date').value||null;
   const cat=document.getElementById('hw-pu-cat').value, name=document.getElementById('hw-pu-name').value.trim();
@@ -11528,23 +11538,24 @@ async function hwAddPurchase(){
 }
 async function hwDeletePurchase(id){
   const p=hwPurchases.find(x=>x.id===id); if(!p) return;
-  if(!await uiConfirm('刪除此筆進貨會回扣對應庫存,確定?')) return;
+  const repair=p.category==='修理品';if(!await uiConfirm(repair?'確定刪除此筆維修紀錄？':'刪除此筆進貨會回扣對應庫存,確定?')) return;
   const r=await sbFetch('/rest/v1/hw_purchases?id=eq.'+id,{method:'DELETE'});
   if(!r.ok){ alert('刪除失敗'); return; }
   hwPurchases=hwPurchases.filter(x=>x.id!==id);
   const it=hwItems.find(i=>i.name===p.name && i.category===p.category);
-  if(it) await hwAdjustStock(it, -hwNum(p.qty));
+  if(it&&!repair) await hwAdjustStock(it, -hwNum(p.qty));
   hwRender();
 }
 function hwEditPurchase(id){
   const p=hwPurchases.find(x=>x.id===id); if(!p) return;
+  const repair=p.category==='修理品';
   const overlay=document.createElement('div');
   overlay.className='input-modal-overlay';
   overlay.innerHTML =
     '<div class="input-modal">' +
-    '<div class="input-modal-title">編輯進貨紀錄</div>' +
+    '<div class="input-modal-title">編輯'+(repair?'維修':'進貨')+'紀錄</div>' +
     '<input type="date" class="input-modal-field" id="hwe-pu-date" style="margin-bottom:8px"/>' +
-    '<select class="input-modal-field" id="hwe-pu-cat" style="margin-bottom:8px">'+hwOpt(HW_CATS,false)+'</select>' +
+    '<select class="input-modal-field" id="hwe-pu-cat" style="margin-bottom:8px" '+(repair?'disabled':'')+'>'+(repair?'<option>修理品</option>':hwOpt(HW_CATS,false))+'</select>' +
     '<input type="text" class="input-modal-field" id="hwe-pu-name" placeholder="品名" style="margin-bottom:8px"/>' +
     '<input type="number" class="input-modal-field" id="hwe-pu-qty" placeholder="數量" style="margin-bottom:8px"/>' +
     '<input type="text" class="input-modal-field" id="hwe-pu-unit" placeholder="單位" style="margin-bottom:8px"/>' +
@@ -11577,15 +11588,15 @@ function hwEditPurchase(id){
     if(!cat||!name||!qty){ alert('請填寫種類、品名、數量'); return; }
     const total=(price!=null)?price*qty:null;
     // 還原舊紀錄對庫存的影響,再套用新紀錄(品名/種類若變更,會自動建立新品項)
-    const oldIt=hwItems.find(i=>i.name===p.name && i.category===p.category);
+    const oldIt=repair?null:hwItems.find(i=>i.name===p.name && i.category===p.category);
     if(oldIt) await hwAdjustStock(oldIt, -hwNum(p.qty));
     let newIt=hwItems.find(i=>i.name===name && i.category===cat);
-    if(!newIt){
+    if(!repair&&!newIt){
       const ri=await sbFetch('/rest/v1/hw_items',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({category:cat,name,unit,stock:0,safety:0})});
       if(!ri.ok||!ri.data){ alert('自動建立品項失敗'); if(oldIt) await hwAdjustStock(oldIt, hwNum(p.qty)); return; }
       newIt=ri.data[0]; hwItems.push(newIt);
     }
-    await hwAdjustStock(newIt, qty);
+    if(!repair)await hwAdjustStock(newIt, qty);
     const r=await sbFetch('/rest/v1/hw_purchases?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({tx_date:date,category:cat,name,qty,unit,price,total,vendor})});
     if(!r.ok){ alert('更新失敗'); return; }
     Object.assign(p,{tx_date:date,category:cat,name,qty,unit,price,total,vendor});
@@ -11597,29 +11608,65 @@ function hwEditPurchase(id){
   overlay.onclick=(e)=>{ if(e.target===overlay) close(); };
 }
 
+// ── 維修紀錄：沿用 hw_purchases 欄位，種類固定為修理品且不影響庫存 ──
+function hwRenderRepair(){
+  const source=hwPurchases.filter(p=>String(p.category||'').trim()==='修理品'),all=hwApplyColFilters('repair',hwFilterRecords(source)),pages=Math.max(1,Math.ceil(all.length/HW_PAGE_SIZE)),tb=document.getElementById('hw-repair-body');
+  if(!tb)return;
+  hwPage.repair=Math.min(pages,Math.max(1,hwPage.repair));
+  const slice=all.slice((hwPage.repair-1)*HW_PAGE_SIZE,hwPage.repair*HW_PAGE_SIZE);
+  if(!all.length){tb.innerHTML='<tr><td colspan="9"><div class="empty-state">目前沒有維修紀錄，可由上方新增第一筆資料</div></td></tr>';const tbl=document.getElementById('hw-repair-table');if(tbl)tblInitSelection(tbl);return;}
+  const rtd=(v,style)=>'<td><input type="text" readonly value="'+esc(v==null?'':v)+'"'+(style?' style="'+style+'"':'')+'></td>';
+  tb.innerHTML=slice.map(p=>'<tr>'+rtd(p.tx_date||'')+rtd('修理品')+rtd(p.name||'')+rtd(hwFmt(p.qty),'text-align:right')+rtd(p.unit||'')+rtd(p.price==null?'':hwMoney(p.price),'text-align:right')+rtd(p.total==null?'':hwMoney(p.total),'text-align:right')+rtd(p.vendor||'')+'<td style="text-align:center"><button class="hw-act" onclick="hwEditPurchase('+p.id+')">編輯</button> <button class="hw-act del" onclick="hwDeletePurchase('+p.id+')">刪除</button></td></tr>').join('')+hwPagerRow(hwPage.repair,pages,9,'hwRepairPage');
+  const tbl=document.getElementById('hw-repair-table');if(tbl)tblInitSelection(tbl);
+}
+function hwRepairPage(p){hwPage.repair=p;hwRenderRepair();}
+async function hwAddRepair(){
+  const date=document.getElementById('hw-rp-date').value||null,name=document.getElementById('hw-rp-name').value.trim(),qty=hwNum(document.getElementById('hw-rp-qty').value),unit=document.getElementById('hw-rp-unit').value.trim(),priceRaw=document.getElementById('hw-rp-price').value,price=priceRaw===''?null:hwNum(priceRaw),vendor=document.getElementById('hw-rp-vendor').value.trim();
+  if(!name||!qty){alert('請填寫品名及數量');return;}const total=price==null?null:price*qty;
+  const res=await sbFetch('/rest/v1/hw_purchases',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({tx_date:date,category:'修理品',name,qty,unit,price,total,vendor})});if(!res.ok||!res.data){alert('新增維修紀錄失敗');return;}
+  hwPurchases.unshift(res.data[0]);if(vendor&&!hwVendors.some(v=>v.name===vendor)){const rv=await sbFetch('/rest/v1/hw_vendors',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({name:vendor})});if(rv.ok&&rv.data)hwVendors.push(rv.data[0]);}
+  ['name','qty','unit','price','vendor'].forEach(k=>document.getElementById('hw-rp-'+k).value='');hwPage.repair=1;hwPopulateSelects();hwRender();
+}
+
 // ── 領用 ──
 function hwRenderUsage(){
-  const all=hwApplyColFilters('usage',hwFilterRecords(hwUsage)), pages=Math.max(1,Math.ceil(all.length/HW_PAGE_SIZE));
-  if(hwPage.usage>pages)hwPage.usage=pages; if(hwPage.usage<1)hwPage.usage=1;
-  const slice=all.slice((hwPage.usage-1)*HW_PAGE_SIZE, hwPage.usage*HW_PAGE_SIZE);
+  const all=hwApplyColFilters('usage',hwFilterRecords(hwUsage)),pages=Math.max(1,Math.ceil(all.length/HW_PAGE_SIZE));
+  hwPage.usage=Math.min(pages,Math.max(1,hwPage.usage));
+  const slice=all.slice((hwPage.usage-1)*HW_PAGE_SIZE,hwPage.usage*HW_PAGE_SIZE);
   const tb=document.getElementById('hw-usage-body');
   if(!all.length){ tb.innerHTML=`<tr><td colspan="8"><div class="empty-state">無資料</div></td></tr>`; return; }
+  const edit=(u,k,v,style,list)=>'<td><input type="text" value="'+esc(v==null?'':v)+'" data-old="'+esc(v==null?'':v)+'" '+(list?'list="'+list+'" ':'')+'oninput="hwUsageLocal('+u.id+',\''+k+'\',this.value)" onchange="hwUsageCellSave('+u.id+',\''+k+'\',this)"'+(style?' style="'+style+'"':'')+'></td>';
   const rtd=(v,style)=>'<td><input type="text" readonly value="'+esc(v==null?'':v)+'"'+(style?' style="'+style+'"':'')+'></td>';
-  tb.innerHTML=slice.map(u=>`<tr>${
-    rtd(u.tx_date||'')}${rtd(u.category||'')}${rtd(u.name)
-    }${rtd(hwFmt(u.qty),'text-align:right')}${rtd(u.unit||'')}${rtd(u.person||'')
+  tb.innerHTML=slice.map(u=>`<tr data-hw-usage-id="${u.id}">${
+    edit(u,'tx_date',u.tx_date||'')}${edit(u,'category',u.category||'')}${edit(u,'name',u.name,'','hw-item-list-us')
+    }${edit(u,'qty',hwFmt(u.qty),'text-align:right')}${edit(u,'unit',u.unit||'')}${edit(u,'person',u.person||'','', 'hw-person-list')
     }${rtd(u.remaining==null?'':hwFmt(u.remaining),'text-align:right')}
-    <td style="text-align:center"><button class="hw-act" onclick="hwEditUsage(${u.id})">編輯</button> <button class="hw-act del" onclick="hwDeleteUsage(${u.id})">刪除</button></td>
-  </tr>`).join('') + hwPagerRow(hwPage.usage,pages,8,'hwUsagePage');
+    <td style="text-align:center"><button class="hw-act del" onclick="hwDeleteUsage(${u.id})">刪除</button></td>
+  </tr>`).join('')+hwPagerRow(hwPage.usage,pages,8,'hwUsagePage');
   const usTbl=document.getElementById('hw-usage-table'); if(usTbl) tblInitSelection(usTbl);
 }
 function hwUsagePage(p){ hwPage.usage=p; hwRenderUsage(); }
+const hwUsageEditState={};
+function hwUsageLocal(id,field,value){const u=hwUsage.find(x=>String(x.id)===String(id));if(!u)return;const s=hwUsageEditState[id]||(hwUsageEditState[id]={old:Object.assign({},u),timer:null});u[field]=field==='qty'?hwNum(value):value;clearTimeout(s.timer);s.timer=setTimeout(()=>hwUsageFlushEdit(id),350);}
+function hwUsageCellSave(id,field,input){if(field==='person'&&!String(input.value||'').trim()){const s=hwUsageEditState[id],old=s?.old?.person||'';input.value=old;hwUsage.find(x=>String(x.id)===String(id)).person=old;alert('領取人不能空白');return;}hwUsageLocal(id,field,input.value);}
+async function hwUsageFlushEdit(id){
+  const u=hwUsage.find(x=>String(x.id)===String(id)),s=hwUsageEditState[id];if(!u||!s)return;clearTimeout(s.timer);
+  const old=s.old,cat=String(u.category||'').trim(),name=String(u.name||'').trim(),qty=hwNum(u.qty),person=String(u.person||'').trim();
+  if(!cat||!name||!qty||!person){Object.assign(u,old);delete hwUsageEditState[id];hwRenderUsage();alert('種類、品項、數量及領取人皆不能空白');return;}
+  const oldIt=hwItems.find(i=>i.name===old.name&&i.category===old.category),newIt=hwItems.find(i=>i.name===name&&i.category===cat);
+  const projected=newIt?hwNum(newIt.stock)+(oldIt===newIt?hwNum(old.qty):0)-qty:null;
+  const payload={tx_date:u.tx_date||null,category:cat,name,qty,unit:String(u.unit||'').trim(),person,remaining:projected};
+  const res=await sbFetch('/rest/v1/hw_usage?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(payload)});
+  if(!res.ok){Object.assign(u,old);delete hwUsageEditState[id];hwRenderUsage();alert('領用紀錄儲存失敗，已恢復原資料');return;}
+  if(oldIt)await hwAdjustStock(oldIt,hwNum(old.qty));if(newIt)await hwAdjustStock(newIt,-qty);Object.assign(u,payload);delete hwUsageEditState[id];
+  const tr=document.querySelector('tr[data-hw-usage-id="'+id+'"]'),rem=tr?.children?.[6]?.querySelector('input');if(rem)rem.value=projected==null?'':hwFmt(projected);hwRenderStats();
+}
 async function hwAddUsage(){
   const date=document.getElementById('hw-us-date').value||null;
   const cat=document.getElementById('hw-us-cat').value, name=document.getElementById('hw-us-name').value.trim();
   const qty=hwNum(document.getElementById('hw-us-qty').value), unit=document.getElementById('hw-us-unit').value.trim();
   const person=document.getElementById('hw-us-person').value.trim();
-  if(!cat||!name||!qty){ alert('請填寫種類、品項、數量'); return; }
+  if(!cat||!name||!qty||!person){ alert('請填寫種類、品項、數量及領取人；領取人不能空白'); return; }
   const it=hwItems.find(i=>i.name===name && i.category===cat);
   if(it && hwNum(it.stock)<qty){ if(!await uiConfirm('庫存不足(目前 '+hwNum(it.stock)+'),仍要領用?庫存將變為負數。')) return; }
   const remaining = it? hwNum(it.stock)-qty : null;
@@ -12087,9 +12134,18 @@ function hwExportStock(){
   hwExport(aoa,'庫存總表','五金庫存總表 '+egToday()+'.xlsx');
 }
 function hwExportPurchase(){
+  const from=document.getElementById('hw-purchase-from')?.value||'',to=document.getElementById('hw-purchase-to')?.value||'';
+  if(from&&to&&from>to){alert('匯出起始日期不能晚於結束日期');return;}
+  const rows=hwPurchases.filter(p=>(!from||String(p.tx_date||'')>=from)&&(!to||String(p.tx_date||'')<=to));
+  if(!rows.length){alert('所選日期區間沒有可匯出的紀錄');return;}
   const aoa=[['日期','種類','品名','數量','單位','單價','總額','廠商']];
-  hwPurchases.forEach(p=>aoa.push([p.tx_date||p.date_label||'',p.category||'',p.name,hwNum(p.qty),p.unit||'',p.price,p.total,p.vendor||'']));
-  hwExport(aoa,'進貨紀錄','五金進貨紀錄 '+egToday()+'.xlsx');
+  rows.forEach(p=>aoa.push([p.tx_date||p.date_label||'',p.category||'',p.name,hwNum(p.qty),p.unit||'',p.price,p.total,p.vendor||'']));
+  aoa.push(['合計','','','','','',rows.reduce((n,p)=>n+hwNum(p.total),0),'']);
+  hwExport(aoa,'進貨與維修紀錄','五金進貨與維修紀錄 '+(from||'全部')+'_'+(to||egToday())+'.xlsx');
+}
+function hwExportRepair(){
+  const rows=hwPurchases.filter(p=>p.category==='修理品'),aoa=[['日期','種類','品名','數量','單位','單價','總額','廠商']];
+  rows.forEach(p=>aoa.push([p.tx_date||'',p.category,p.name,hwNum(p.qty),p.unit||'',p.price,p.total,p.vendor||'']));aoa.push(['合計','','','','','',rows.reduce((n,p)=>n+hwNum(p.total),0),'']);hwExport(aoa,'維修紀錄','五金維修紀錄 '+egToday()+'.xlsx');
 }
 function hwExportUsage(){
   const aoa=[['日期','種類','品項','數量','單位','領取人','剩餘量']];
@@ -33684,7 +33740,7 @@ const CPR_PROJECT_STATUS_GROUPS=[['in_progress','進行中','st-count'],['not_st
 let cprSchemaOk=true,cprPage=1,cprSaving=false,cprStatusSaving=false,cprViewProjectNo='',cprDetailGroup='all',cprStatusFilter='all',cprCardView=['card','mini','detail'].includes(localStorage.getItem('cpr_card_view'))?localStorage.getItem('cpr_card_view'):'card',cprNewDraft=null,cprEditDraft=null;
 let cprRevisionState=null;
 // 看板 CP 明細保有獨立分類、頁碼與新增草稿，不改動收圖登記的篩選。
-let cprZoneDetailGroup='all',cprZoneDetailPage=1,cprZoneDetailDraft=null,cprZoneDetailPending=false;
+let cprZoneDetailGroup='manufacturing',cprZoneDetailPage=1,cprZoneDetailDraft=null,cprZoneDetailPending=false,cprZoneDetailCollapsed=true;
 function cprInlineProjectNo(kind){return kind==='detail'?prodDetailCtx.proj:cprViewProjectNo;}
 function cprBlankZoneDetailDraft(){return Object.assign(cprBlankInlineDraft(),{zones:[prodDetailCtx.zone]});}
 function cprMatchesGroup(row,group){return group==='a15'?cprCpFamily(row,'A15'):group==='a16'?cprCpFamily(row,'A16'):group==='manufacturing'?(row.categories||[]).includes('製造圖'):true;}
@@ -33695,6 +33751,8 @@ function cprZoneDetailRows(){
     .sort((a,b)=>String(b.received_date||'').localeCompare(String(a.received_date||''))||Number(b.id||0)-Number(a.id||0));
 }
 function cprSetZoneDetailGroup(group){cprCloseInlinePicker();cprZoneDetailGroup=CPR_GROUPS.some(x=>x[0]===group)?group:'all';cprZoneDetailPage=1;cprRenderZoneDetail();}
+function cprToggleZoneDetail(){cprZoneDetailCollapsed=!cprZoneDetailCollapsed;cprApplyZoneDetailCollapse();if(!cprZoneDetailCollapsed)cprRenderZoneDetail();}
+function cprApplyZoneDetailCollapse(){const content=cprEl('pdCPContent'),toggle=cprEl('pdCPToggle');if(content)content.hidden=cprZoneDetailCollapsed;if(toggle)toggle.setAttribute('aria-expanded',String(!cprZoneDetailCollapsed));}
 function cprZoneDetailPageMove(delta){cprCloseInlinePicker();const pages=Math.max(1,Math.ceil(cprZoneDetailRows().filter(r=>cprMatchesGroup(r,cprZoneDetailGroup)).length/CPR_PAGE_SIZE));cprZoneDetailPage=Math.min(pages,Math.max(1,cprZoneDetailPage+delta));cprRenderZoneDetail();}
 function cprRefreshZoneDetail(){
   const host=cprEl('prodview-detail'),section=cprEl('pdCPSection');
@@ -33709,6 +33767,7 @@ function cprSyncZoneDetail(renderCP=true){
 }
 function cprRenderZoneDetail(){
   const body=cprEl('pdCPBody');if(!body)return;cprZoneDetailPending=false;
+  cprApplyZoneDetailCollapse();
   const all=cprZoneDetailRows(),rows=all.filter(r=>cprMatchesGroup(r,cprZoneDetailGroup)),pages=Math.max(1,Math.ceil(rows.length/CPR_PAGE_SIZE));
   cprZoneDetailPage=Math.min(pages,Math.max(1,cprZoneDetailPage));
   cprEl('pdCPCount').textContent=all.length+' 筆';
@@ -34141,9 +34200,15 @@ async function prodUnonline(key){
   }else alert('取消上線失敗('+r.status+')');
 }
 function prodToggleShowOnline(){ prodShowOnline=!prodShowOnline; prodRenderBoard(); }
-// ── 狀態篩選(圖例改成的按鈕):單選切換,再按一次清除;轉包預設隱藏,選轉包才顯示 ──
-let prodStatusFilter='';   // '' | 未開始|進行中|完成|已送工地|轉包
-function prodSetStatusFilter(st){ prodStatusFilter=(prodStatusFilter===st)?'':st; prodRenderBoard(); }
+// ── 狀態篩選:可複選；全部取消時回到預設檢視(轉包仍預設隱藏) ──
+let prodStatusFilter=new Set();
+function prodSetStatusFilter(st){
+  if(!st) prodStatusFilter.clear();
+  else if(prodStatusFilter.has(st)) prodStatusFilter.delete(st);
+  else prodStatusFilter.add(st);
+  prodRenderBoard();
+}
+function prodStatusMatches(filter,label){return !filter.size||filter.has(label);}
 // 卡片排序優先序:進行中最前
 const PROD_OV_RANK={'進行中':0,'未開始':1,'完成':2,'已送工地':3,'轉包':4};
 function prodOvRank(l){ return PROD_OV_RANK[l]!=null?PROD_OV_RANK[l]:9; }
@@ -34364,7 +34429,7 @@ function prodRenderCards(units, f){
   const wrap=document.getElementById('prodCardWrap'); if(!wrap) return;
   let zones=prodGroupZones(units);
   if(f.proj) zones=zones.filter(z=>z.proj===f.proj);
-  if(f.stf)  zones=zones.filter(z=>z.ov.label===f.stf);
+  if(f.stf.size) zones=zones.filter(z=>prodStatusMatches(f.stf,z.ov.label));
   if(f.kw)   zones=zones.filter(z=>(z.proj+' '+z.zone).toLowerCase().includes(f.kw) || z.us.some(u=>u.doc.toLowerCase().includes(f.kw)));
   zones.sort((a,b)=>prodOvRank(a.ov.label)-prodOvRank(b.ov.label) || a.proj.localeCompare(b.proj,'zh-Hant')||a.zone.localeCompare(b.zone,'zh-Hant'));
   document.getElementById('prodBoardCount').textContent=zones.length+' 張卡片';
@@ -34421,7 +34486,7 @@ function prodRenderMini(units, f){
     return {proj:g.proj, zones:[...g.zones], us:g.us, ov:prodOverall(allItems), done:b.done, pct:b.pct, total:b.total, byQty:b.byQty};
   });
   if(f.proj) groups=groups.filter(g=>g.proj===f.proj);
-  if(f.stf)  groups=groups.filter(g=>g.ov.label===f.stf);
+  if(f.stf.size) groups=groups.filter(g=>prodStatusMatches(f.stf,g.ov.label));
   if(f.kw)   groups=groups.filter(g=>(g.proj+' '+g.zones.join(' ')).toLowerCase().includes(f.kw) || g.us.some(u=>u.doc.toLowerCase().includes(f.kw)));
   groups.sort((a,b)=>prodOvRank(a.ov.label)-prodOvRank(b.ov.label) || a.proj.localeCompare(b.proj,'zh-Hant'));
   document.getElementById('prodBoardCount').textContent=groups.length+' 個工程';
@@ -34441,7 +34506,7 @@ function prodRenderMini(units, f){
 function prodRenderMiniZones(wrap, units, f){
   const proj=prodMiniProj;
   let zones=prodGroupZones(units.filter(u=>u.proj===proj)).map(z=>{ const b=prodMiniBar(z.us); return Object.assign(z,{done:b.done,pct:b.pct,total:b.total,byQty:b.byQty}); });
-  if(f.stf) zones=zones.filter(z=>z.ov.label===f.stf);
+  if(f.stf.size) zones=zones.filter(z=>prodStatusMatches(f.stf,z.ov.label));
   if(f.kw)  zones=zones.filter(z=>(z.proj+' '+z.zone).toLowerCase().includes(f.kw) || z.us.some(u=>u.doc.toLowerCase().includes(f.kw)));
   zones.sort((a,b)=>prodOvRank(a.ov.label)-prodOvRank(b.ov.label) || a.zone.localeCompare(b.zone,'zh-Hant'));
   document.getElementById('prodBoardCount').textContent=esc(proj)+' — '+zones.length+' 個工程區';
@@ -34544,7 +34609,7 @@ async function prodBulkSubApply(){
   await Promise.all([...byProject.values()].map(async projectTargets=>{for(const target of projectTargets)await runTarget(target);}));
   prodBulkSubMode=false;prodBulkSubSelected.clear();prodRenderBoard();cprRender();if(typeof spxRender==='function')spxRender('track');prodBulkSubRefreshUI();if(failed.length)spxHint('部分設定失敗：'+failed.join('、'),true);else spxHint('✓ 已將 '+targets.length+' 個工程區批次改為「'+labels[status]+'」');
 }
-// 小卡右上「⋯」選單:整個工程區「設為轉包 / 刪除」(只動 SP 細項 sp_track)
+// 小卡右上「⋯」選單:整個工程區批次改狀態或刪除。
 function prodZoneTrackRows(proj,zone){ return prodTrack.filter(r=>(r.proj_no||'').trim()===proj && spTrackZoneHas(r,zone)); }
 async function prodZoneEnsureTrackRows(proj,zone,rows){
   if(rows.length)return rows;
@@ -34562,6 +34627,9 @@ function prodZoneMenu(ev, btn){
   if(old){ const same=old._forBtn===btn; old.remove(); if(same) return; }   // 再點同一顆 = 關閉
   const m=document.createElement('div'); m.id='prod-zone-menu'; m.className='prod-zmenu'; m._forBtn=btn;
   const mk=(txt,cls,fn)=>{ const b=document.createElement('button'); if(cls)b.className=cls; b.textContent=txt; b.onclick=(e)=>{ e.stopPropagation(); m.remove(); fn(); }; return b; };
+  m.appendChild(mk('○ 改為未開始','',()=>prodZoneSetStatus(proj,zone,'-')));
+  m.appendChild(mk('◐ 改為進行中','',()=>prodZoneSetStatus(proj,zone,'清點中')));
+  m.appendChild(mk('● 改為已完成','',()=>prodZoneSetStatus(proj,zone,'OK')));
   m.appendChild(mk('🔁 設為轉包','',()=>prodZoneSetSubcontract(proj,zone)));
   m.appendChild(mk('🗑 刪除工程區','zm-danger',()=>prodZoneDelete(proj,zone)));
   document.body.appendChild(m);
@@ -34570,9 +34638,24 @@ function prodZoneMenu(ev, btn){
   m.style.left=Math.max(6,Math.min(r.right-m.offsetWidth, window.innerWidth-m.offsetWidth-6))+'px';
   setTimeout(()=>{ const close=(e)=>{ if(m.contains(e.target)) return; m.remove(); document.removeEventListener('mousedown',close,true); window.removeEventListener('scroll',close,true); }; document.addEventListener('mousedown',close,true); window.addEventListener('scroll',close,true); },0);
 }
-function prodZoneReceiptRows(proj,zone){
+async function prodZoneSetStatus(proj,zone,status){
+  const labels={'-':'未開始','清點中':'進行中','OK':'已完成'},who='「'+proj+'-'+zone+'」';
+  let rows=prodZoneTrackRows(proj,zone);
+  if(!rows.length&&!prodZoneReceiptRows(proj,zone).length){alert('此工程區沒有可更新的 SP 資料。');return;}
+  if(!await uiConfirm('確定將 '+who+' 裡所有項目的狀態改為「'+labels[status]+'」？',{okText:'確定套用'}))return;
+  const previous=rows.map(r=>({r,status:r.status,dirty:r._dirty}));
+  rows.forEach(r=>{r.status=status;r._dirty=false;});prodRenderBoard();if(typeof spxRender==='function')spxRender('track');
+  try{
+    rows=await prodZoneEnsureTrackRows(proj,zone,rows);
+    const added=rows.filter(r=>!previous.some(x=>x.r===r));added.forEach(r=>{r.status=status;r._dirty=false;});
+    const ids=rows.map(r=>r.id).filter(id=>id!=null);
+    if(ids.length){const res=await sbFetch('/rest/v1/sp_track?id=in.('+ids.join(',')+')',{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status})});if(!res.ok)throw new Error('HTTP '+res.status);}
+    prodRenderBoard();if(typeof spxRender==='function')spxRender('track');
+  }catch(e){previous.forEach(x=>{x.r.status=x.status;x.r._dirty=x.dirty;});prodRenderBoard();if(typeof spxRender==='function')spxRender('track');spxHint('整區狀態更新失敗，已恢復原狀態（'+e.message+'）',true);}
+}
+function prodZoneReceiptRows(proj,zone,includeSubcontract){
   const p=cprProjectByNo(proj),known=prodReceiptZones.filter(z=>String(z.project_id)===String(p?.id)).map(z=>String(z.zone_code||'').trim().toUpperCase()).filter(Boolean);
-  return prodReceipts.filter(r=>{if(String(r.project_no||'').trim()!==proj||r.is_subcontract)return false;const zones=r.zone_scope==='all'||r.zone_text==='全區'?known:cprNormalizeZone(r.zone_text).split('.').filter(Boolean);return zones.includes(String(zone||'').trim().toUpperCase());}).map(r=>({row:r,zones:r.zone_scope==='all'||r.zone_text==='全區'?known:cprNormalizeZone(r.zone_text).split('.').filter(Boolean)}));
+  return prodReceipts.filter(r=>{if(String(r.project_no||'').trim()!==proj||(!includeSubcontract&&r.is_subcontract))return false;const zones=r.zone_scope==='all'||r.zone_text==='全區'?known:cprNormalizeZone(r.zone_text).split('.').filter(Boolean);return zones.includes(String(zone||'').trim().toUpperCase());}).map(r=>({row:r,zones:r.zone_scope==='all'||r.zone_text==='全區'?known:cprNormalizeZone(r.zone_text).split('.').filter(Boolean)}));
 }
 async function prodZoneSetReceiptSubcontract(proj,zone,matches){
   const single=matches.filter(match=>match.zones.length<=1),multi=matches.filter(match=>match.zones.length>1);
@@ -34603,22 +34686,27 @@ async function prodZoneSetSubcontract(proj,zone){
 // 刪除:三層確認。第二層問是否連同保留料/手工單(依工程區精確比對);成品材無工程區欄,一律不納入
 async function prodZoneDelete(proj,zone){
   const zEq=(r)=>(r.proj_no||'').trim()===proj && spTrackZoneHas(r,zone);
-  const spRows=prodTrack.filter(zEq), resRows=prodReserved.filter(zEq), manRows=prodManual.filter(zEq);
+  const spRows=prodTrack.filter(zEq), resRows=prodReserved.filter(zEq), manRows=prodManual.filter(zEq),receiptMatches=prodZoneReceiptRows(proj,zone,true);
   const spShared=spRows.filter(r=>spTrackZones(r.zone).length>1), spDelete=spRows.filter(r=>spTrackZones(r.zone).length<=1);
-  if(!spRows.length && !resRows.length && !manRows.length){ alert('此工程區沒有可刪除的資料。'); return; }
+  if(!spRows.length && !resRows.length && !manRows.length && !receiptMatches.length){ alert('此工程區沒有可刪除的資料。'); return; }
   const who='「'+proj+'-'+zone+'」';
   // 第一層
-  if(!await uiConfirm('確定要刪除 '+who+' 整個工程區?\n\n目前 SP 細項 '+spRows.length+' 筆。',{danger:true,okText:'繼續'})) return;
+  if(!await uiConfirm('確定要刪除 '+who+' 整個工程區?\n\n目前收圖登記 '+receiptMatches.length+' 筆、SP 細項 '+spRows.length+' 筆。',{danger:true,okText:'繼續'})) return;
   // 第二層:是否連同保留料/手工單
   let inclOthers=false;
   if(resRows.length || manRows.length){
     inclOthers=await uiConfirm('要連同這個工程區的其他資料一起刪除嗎?\n\n・保留料 '+resRows.length+' 筆\n・手工單 '+manRows.length+' 筆\n(成品材無工程區欄,不納入)\n\n「一起刪」= 全部刪；「只刪SP」= 只刪 SP 細項',{okText:'一起刪',cancelText:'只刪SP'});
   }
   // 第三層:最後確定
-  const summary=inclOthers?('SP 細項 '+spRows.length+' + 保留料 '+resRows.length+' + 手工單 '+manRows.length+' 筆'):('SP 細項 '+spRows.length+' 筆');
+  const summary='收圖登記 '+receiptMatches.length+' + '+(inclOthers?('SP 細項 '+spRows.length+' + 保留料 '+resRows.length+' + 手工單 '+manRows.length+' 筆'):('SP 細項 '+spRows.length+' 筆'));
   if(!await uiConfirm('最後確認:即將刪除 '+who+' 的 '+summary+'。\n\n刪除後無法復原,確定執行?',{danger:true,okText:'確定刪除'})) return;
   const delBy=async(tbl,rows)=>{ const ids=rows.map(r=>r.id).filter(x=>x!=null); if(ids.length){ const r=await sbFetch('/rest/v1/'+tbl+'?id=in.('+ids.join(',')+')',{method:'DELETE',headers:{'Prefer':'return=minimal'}}); if(!r.ok) throw new Error(tbl+' HTTP '+r.status); } };
   try{
+    for(const match of receiptMatches){
+      const r=match.row,remain=match.zones.filter(z=>z!==String(zone||'').trim().toUpperCase());
+      if(remain.length){const zoneText=cprNormalizeZone(remain.join('.')),pr=await sbFetch('/rest/v1/cp_receipts?id=eq.'+encodeURIComponent(r.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({zone_scope:'selected',zone_text:zoneText})});if(!pr.ok)throw new Error('cp_receipts HTTP '+pr.status);r.zone_scope='selected';r.zone_text=zoneText;}
+      else{const dr=await sbFetch('/rest/v1/cp_receipts?id=eq.'+encodeURIComponent(r.id),{method:'DELETE',headers:{Prefer:'return=minimal'}});if(!dr.ok)throw new Error('cp_receipts HTTP '+dr.status);prodReceipts=prodReceipts.filter(x=>x!==r);}
+    }
     await delBy('sp_track', spDelete);
     for(const r of spShared){
       const next=spTrackZoneText(spTrackZones(r.zone).filter(z=>z!==String(zone||'').trim().toUpperCase()));
@@ -34629,14 +34717,14 @@ async function prodZoneDelete(proj,zone){
   }catch(e){ alert('刪除失敗:'+e.message+'(請確認已登入)'); return; }
   const deletedSet=new Set(spDelete);prodTrack=prodTrack.filter(r=>!deletedSet.has(r));
   if(inclOthers){ prodReserved=prodReserved.filter(r=>!zEq(r)); prodManual=prodManual.filter(r=>!zEq(r)); }
-  prodRenderBoard();
+  cprRender();prodRenderBoard();
   if(typeof spxRender==='function'){ spxRender('track'); if(inclOthers){ spxRender('reserved'); spxRender('manual'); } }
 }
 // 小卡「依工程區」:所有工程區平鋪成小卡(不分工程編號層),點卡直接開該工程區詳情
 function prodRenderMiniZonesFlat(wrap, units, f){
   let zones=prodGroupZones(units).map(z=>{ const b=prodMiniBar(z.us); return Object.assign(z,{done:b.done,pct:b.pct,total:b.total,byQty:b.byQty}); });
   if(f.proj) zones=zones.filter(z=>z.proj===f.proj);
-  if(f.stf)  zones=zones.filter(z=>z.ov.label===f.stf);
+  if(f.stf.size) zones=zones.filter(z=>prodStatusMatches(f.stf,z.ov.label));
   if(f.kw)   zones=zones.filter(z=>(z.proj+' '+z.zone).toLowerCase().includes(f.kw) || z.us.some(u=>u.doc.toLowerCase().includes(f.kw)));
   zones.sort((a,b)=>prodOvRank(a.ov.label)-prodOvRank(b.ov.label) || a.proj.localeCompare(b.proj,'zh-Hant') || a.zone.localeCompare(b.zone,'zh-Hant'));
   document.getElementById('prodBoardCount').textContent=zones.length+' 個工程區';
@@ -34753,7 +34841,7 @@ function prodZoneMatched(proj, zone){
   return {us, docs, reserved, product, welding, manual};
 }
 function prodOpenZoneDetail(proj, zone){
-  cprCloseInlinePicker();cprZoneDetailGroup='all';cprZoneDetailPage=1;cprZoneDetailDraft=null;
+  cprCloseInlinePicker();cprZoneDetailGroup='manufacturing';cprZoneDetailPage=1;cprZoneDetailDraft=null;cprZoneDetailCollapsed=true;
   prodDetailCtx={proj:proj||'', zone:zone||''};
   colFilterState['detail']={};
   if(proj) colFilterState['detail'].proj_no=new Set([proj]);
@@ -34972,7 +35060,7 @@ function prodRenderBoard(){
   const kw  =(document.getElementById('prodSearch').value||'').trim().toLowerCase();
   // 狀態篩選改由上排 KPI 卡點擊(prodMetric)。有選取時淡化其他卡片;active 樣式由 prodMetric 直接標記。
   const metricsEl=document.getElementById('prodMetrics');
-  if(metricsEl) metricsEl.classList.toggle('has-filter', !!stf);
+  if(metricsEl) metricsEl.classList.toggle('has-filter', stf.size>0);
   let units=prodBuildUnits();
 
   // 已上線工程區:預設隱藏(含統計);更新工具列切換鈕的顯示與筆數
@@ -35011,7 +35099,7 @@ function prodRenderBoard(){
     prodMetric('轉包',counts['轉包'],'var(--purple)','轉包','預設隱藏');
 
   // 轉包預設隱藏(整體=轉包的單位);只有按「轉包」篩選鈕時才顯示
-  if(stf!=='轉包') units=units.filter(u=>prodOverall(u.items).label!=='轉包');
+  if(!stf.has('轉包')) units=units.filter(u=>prodOverall(u.items).label!=='轉包');
 
   // 列表 / 卡片 / 小卡 切換
   const tWrap=document.getElementById('prodTableWrap'), cWrap=document.getElementById('prodCardWrap');
@@ -35034,7 +35122,7 @@ function prodRenderBoard(){
     // 依工程區合併(以 工程編號+工程區 分組)
     let zones=prodGroupZones(units);
     if(proj) zones=zones.filter(z=>z.proj===proj);
-    if(stf)  zones=zones.filter(z=>z.ov.label===stf);
+    if(stf.size) zones=zones.filter(z=>prodStatusMatches(stf,z.ov.label));
     if(kw)   zones=zones.filter(z=>(z.proj+' '+z.zone).toLowerCase().includes(kw) || z.us.some(u=>u.doc.toLowerCase().includes(kw)));
     zones.sort((a,b)=>a.proj.localeCompare(b.proj,'zh-Hant')||a.zone.localeCompare(b.zone,'zh-Hant'));
     document.getElementById('prodBoardCount').textContent=zones.length+' 個工程區';
@@ -35067,7 +35155,7 @@ function prodRenderBoard(){
 
   // 依 編號-單號(預設)
   if(proj) units=units.filter(u=>u.proj===proj);
-  if(stf)  units=units.filter(u=>prodOverall(u.items).label===stf);
+  if(stf.size) units=units.filter(u=>prodStatusMatches(stf,prodOverall(u.items).label));
   if(kw)   units=units.filter(u=>(u.proj+' '+u.zone+' '+u.doc).toLowerCase().includes(kw));
   units.sort((a,b)=> a.proj.localeCompare(b.proj,'zh-Hant') || a.zone.localeCompare(b.zone,'zh-Hant') || a.doc.localeCompare(b.doc,'zh-Hant'));
   document.getElementById('prodBoardCount').textContent=units.length+' 個生產單位';
@@ -35082,9 +35170,9 @@ function prodToggleZone(key){
 }
 function prodMetric(lbl,val,color,st,hint){
   const clickable = st!=null;
-  const active = clickable && (prodStatusFilter===st);
+  const active = clickable && (st===''?prodStatusFilter.size===0:prodStatusFilter.has(st));
   const cls = 'prod-metric'+(clickable?' clickable':'')+(active?' active':'');
-  const attr = clickable ? ' role="button" tabindex="0" onclick="prodSetStatusFilter(\''+st+'\')" title="'+(st===''?'顯示全部':'只看「'+esc(st)+'」')+'"' : '';
+  const attr = clickable ? ' role="button" tabindex="0" onclick="prodSetStatusFilter(\''+st+'\')" title="'+(st===''?'清除狀態篩選':'加入／移除「'+esc(st)+'」篩選')+'"' : '';
   return '<div class="'+cls+'"'+attr+'><div class="m-lbl">'+esc(lbl)+'</div><div class="m-val" style="color:'+color+'">'+val+'</div>'+(hint?'<div class="m-hint">'+esc(hint)+'</div>':'')+'</div>';
 }
 
@@ -35673,7 +35761,10 @@ async function spxFlush(key){
   } finally { s.busy=false; if(s.again){ s.again=false; spxFlush(key); } }
   if(saved){ spxAfterChange(key); if(!failed)spxHint('✓ 已自動儲存'); if(typeof prodAutoDoneAfter==='function') prodAutoDoneAfter(key,dirty); }
 }
-function spxHint(msg,err){ if(typeof layoutSaveHint==='function' && !err){ layoutSaveHint(); return; }
+function spxHint(msg,err){
+  // 高頻率的欄位／狀態更新不再彈出右下角成功提示；失敗與其他操作結果仍會顯示。
+  if(!err&&/自動儲存/.test(String(msg||'')))return;
+  if(typeof layoutSaveHint==='function' && !err){ layoutSaveHint(); return; }
   let el=document.getElementById('layout-save-hint'); if(!el){ el=document.createElement('div'); el.id='layout-save-hint'; el.style.cssText='position:fixed;bottom:20px;right:20px;color:#fff;font-weight:600;font-family:var(--mono);font-size:12px;padding:6px 14px;border-radius:8px;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:opacity .3s'; document.body.appendChild(el); }
   el.style.background=err?'#b91c1c':'#16a34a'; el.textContent=msg; el.style.opacity='1'; clearTimeout(el._t); el._t=setTimeout(()=>{el.style.opacity='0';},1400);
 }
@@ -35911,28 +36002,29 @@ let spTrackReceiptItemSaveChain=Promise.resolve();
 async function spTrackReceiptSetZones(g,zones){
   const receipts=g.receiptMeta?.rows||[],receiptIds=receipts.map(r=>r.id).filter(id=>id!=null),trackIds=g.rows.filter(r=>!r._receiptVirtual).map(r=>r.id).filter(id=>id!=null),zoneText=cprNormalizeZone(zones.join('.')),trackZone=spTrackZoneText(zones),receiptBody={zone_scope:'selected',zone_text:zoneText},oldReceipts=receipts.map(r=>({r,scope:r.zone_scope,text:r.zone_text})),oldTrack=g.rows.map(r=>({r,zone:r.zone})),oldMeta=new Set(g.receiptMeta?.zones||[]);
   if(!receiptIds.length){spxHint('找不到對應的收圖登記資料',true);return false;}
-  receipts.forEach(r=>{r.zone_scope='selected';r.zone_text=zoneText;});g.rows.forEach(r=>r.zone=trackZone);g.receiptMeta.zones=new Set(zones);g.zones=zones.slice();g.zone=trackZone;spTrackRenderCurrentList();
+  receipts.forEach(r=>{r.zone_scope='selected';r.zone_text=zoneText;});g.rows.forEach(r=>r.zone=trackZone);g.receiptMeta.zones=new Set(zones);g.zones=zones.slice();g.zone=trackZone;spTrackRenderCurrentList();prodRenderBoard();
   const results=await Promise.all([sbFetch('/rest/v1/cp_receipts?id=in.('+receiptIds.join(',')+')',{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(receiptBody)}),trackIds.length?sbFetch('/rest/v1/sp_track?id=in.('+trackIds.join(',')+')',{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({zone:trackZone})}):Promise.resolve({ok:true})]);
-  if(results.some(r=>!r.ok)){oldReceipts.forEach(x=>{x.r.zone_scope=x.scope;x.r.zone_text=x.text;});oldTrack.forEach(x=>x.r.zone=x.zone);g.receiptMeta.zones=oldMeta;spTrackRenderCurrentList();spTrackNotionRefresh('modal-zone',false);spxHint('工程區同步失敗，已恢復原資料',true);return false;}
+  if(results.some(r=>!r.ok)){oldReceipts.forEach(x=>{x.r.zone_scope=x.scope;x.r.zone_text=x.text;});oldTrack.forEach(x=>x.r.zone=x.zone);g.receiptMeta.zones=oldMeta;spTrackRenderCurrentList();prodRenderBoard();spTrackNotionRefresh('modal-zone',false);spxHint('工程區同步失敗，已恢復原資料',true);return false;}
   spTrackModalGroup=spTrackFindContextGroup(g.key);if(!spTrackDirectFieldEdit){if(spTrackModalGroup)spTrackRenderCPModal();else spTrackCloseCP();}cprRender();prodRenderBoard();spxHint('✓ 工程區已同步更正至收圖登記');return true;
 }
 async function spTrackReceiptToggleItem(g,item,checked,el,fromDropdown){
-  const receipts=g.receiptMeta?.rows||[],mapped=r=>(r.categories||[]).some(c=>CPR_TO_SP_ITEM[String(c||'').trim()]===item),owners=receipts.filter(mapped),changed=[];
+  const receipts=g.receiptMeta?.rows||[],mapped=r=>(r.categories||[]).some(c=>CPR_TO_SP_ITEM[String(c||'').trim()]===item),owners=receipts.filter(mapped),changed=[];let optimisticRemoved=[];
   if(checked&&!owners.length){const target=receipts[0];if(!target){if(el)el.checked=false;return;}changed.push({row:target,categories:cprNormalizeCategories([...(target.categories||[]),spTrackReceiptCategoryForItem(item)])});}
-  if(!checked&&owners.length){const related=g.rows.filter(r=>!r._receiptVirtual&&String(r.item||'')===item),progressed=related.some(r=>!['','-'].includes(String(r.status||'')));if(progressed&&!await uiConfirm('「'+prodItemLabel(item)+'」已有進度，確定從 SP 與收圖登記移除？')){if(el)el.checked=true;return;}owners.forEach(row=>changed.push({row,categories:(row.categories||[]).filter(c=>CPR_TO_SP_ITEM[String(c||'').trim()]!==item)}));}
-  if(!changed.length)return;const oldCategories=changed.map(x=>({row:x.row,categories:[...(x.row.categories||[])]})),oldItems=new Set(g.receiptMeta.items||[]);changed.forEach(x=>x.row.categories=x.categories);if(checked)g.receiptMeta.items.add(item);else g.receiptMeta.items.delete(item);spTrackRenderCurrentList();spTrackNotionRefresh('modal-item',false);
+  if(!checked&&owners.length){optimisticRemoved=g.rows.filter(r=>!r._receiptVirtual&&String(r.item||'')===item);const progressed=optimisticRemoved.some(r=>!['','-'].includes(String(r.status||'')));if(progressed&&!await uiConfirm('「'+prodItemLabel(item)+'」已有進度，確定從 SP 與收圖登記移除？')){if(el)el.checked=true;return;}owners.forEach(row=>changed.push({row,categories:(row.categories||[]).filter(c=>CPR_TO_SP_ITEM[String(c||'').trim()]!==item)}));}
+  if(!changed.length)return;const oldCategories=changed.map(x=>({row:x.row,categories:[...(x.row.categories||[])]})),oldItems=new Set(g.receiptMeta.items||[]);changed.forEach(x=>x.row.categories=x.categories);if(checked)g.receiptMeta.items.add(item);else g.receiptMeta.items.delete(item);if(optimisticRemoved.length){const gone=new Set(optimisticRemoved);prodTrack=prodTrack.filter(r=>!gone.has(r));g.rows=g.rows.filter(r=>!gone.has(r));}spTrackRenderCurrentList();prodRenderBoard();spTrackNotionRefresh('modal-item',false);
   const saveJob=()=>Promise.all(changed.map(x=>sbFetch('/rest/v1/cp_receipts?id=eq.'+encodeURIComponent(x.row.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({categories:x.row.categories})})));const saved=await(spTrackReceiptItemSaveChain=spTrackReceiptItemSaveChain.catch(()=>[]).then(saveJob));
-  if(saved.some(r=>!r.ok)){oldCategories.forEach(x=>x.row.categories=x.categories);g.receiptMeta.items=oldItems;if(el)el.checked=!checked;spTrackRenderCurrentList();spTrackNotionRefresh('modal-item',false);spxHint('項目同步失敗，已恢復原資料',true);return;}
-  const related=g.rows.filter(r=>!r._receiptVirtual&&String(r.item||'')===item);if(!checked&&related.length){const ids=related.map(r=>r.id).filter(id=>id!=null);if(ids.length){const del=await sbFetch('/rest/v1/sp_track?id=in.('+ids.join(',')+')',{method:'DELETE'});if(!del.ok){spxHint('收圖項目已更正，但舊 SP 明細清除失敗，請重新整理再處理',true);return;}}const gone=new Set(related);prodTrack=prodTrack.filter(r=>!gone.has(r));}
+  if(saved.some(r=>!r.ok)){oldCategories.forEach(x=>x.row.categories=x.categories);g.receiptMeta.items=oldItems;if(optimisticRemoved.length){prodTrack.push(...optimisticRemoved);g.rows.push(...optimisticRemoved);}if(el)el.checked=!checked;spTrackRenderCurrentList();prodRenderBoard();spTrackNotionRefresh('modal-item',false);spxHint('項目同步失敗，已恢復原資料',true);return;}
+  const related=optimisticRemoved.length?optimisticRemoved:g.rows.filter(r=>!r._receiptVirtual&&String(r.item||'')===item);if(!checked&&related.length){const ids=related.map(r=>r.id).filter(id=>id!=null);if(ids.length){const del=await sbFetch('/rest/v1/sp_track?id=in.('+ids.join(',')+')',{method:'DELETE'});if(!del.ok){prodTrack.push(...optimisticRemoved);g.rows.push(...optimisticRemoved);spTrackRenderCurrentList();prodRenderBoard();spxHint('收圖項目已更正，但舊 SP 明細清除失敗，已恢復畫面；請重新整理再處理',true);return;}}}
   if(checked&&(g.receiptMeta?.zones?.size||0)===1){const zone=[...g.receiptMeta.zones][0],target=changed[0].row,payload={proj_no:g.proj,zone,dwg_no:g.dwg,order_no:g.ord,item,make:'',status:'-',remark:'',cp_receipt_id:target.id};let add=await sbFetch('/rest/v1/sp_track',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)});if(!add.ok&&add.status===400){delete payload.cp_receipt_id;add=await sbFetch('/rest/v1/sp_track',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)});}if(add.ok&&Array.isArray(add.data)&&add.data[0]){add.data[0]._key=++spxSeq;prodTrack.push(add.data[0]);}}
   spTrackRenderCurrentList();spTrackModalGroup=spTrackFindContextGroup(g.key);if(!spTrackDirectFieldEdit){if(spTrackModalGroup)spTrackRenderCPModal();else spTrackCloseCP();}cprRender();prodRenderBoard();if(fromDropdown&&spTrackModalGroup)spTrackNotionRefresh('modal-item',false);spxHint('✓ 項目已同步更正至收圖登記');
 }
 async function spTrackSetGroupZones(zones){
   const g=spTrackModalGroup;if(!g)return false;const clean=spTrackZones(spTrackZoneText(zones));if(!clean.length){alert('至少要保留一個工程區');return false;}
   if(g.receiptMeta)return spTrackReceiptSetZones(g,clean);
-  const value=spTrackZoneText(clean),ids=g.rows.map(r=>r.id).filter(Boolean);
-  if(ids.length){const res=await sbFetch('/rest/v1/sp_track?id=in.('+ids.join(',')+')',{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({zone:value})});if(!res.ok){spxHint('工程區儲存失敗',true);return false;}}
-  g.rows.forEach(r=>r.zone=value);g.zones=clean;g.zone=value;spTrackRenderCurrentList();spTrackModalGroup=spTrackFindContextGroup(g.key);if(!spTrackDirectFieldEdit){if(spTrackModalGroup)spTrackRenderCPModal();else spTrackCloseCP();}prodRenderBoard();return true;
+  const value=spTrackZoneText(clean),ids=g.rows.map(r=>r.id).filter(Boolean),oldRows=g.rows.map(r=>({r,zone:r.zone})),oldZones=[...(g.zones||[])],oldZone=g.zone;
+  g.rows.forEach(r=>r.zone=value);g.zones=clean;g.zone=value;spTrackRenderCurrentList();prodRenderBoard();spTrackNotionRefresh('modal-zone',false);
+  if(ids.length){const res=await sbFetch('/rest/v1/sp_track?id=in.('+ids.join(',')+')',{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({zone:value})});if(!res.ok){oldRows.forEach(x=>x.r.zone=x.zone);g.zones=oldZones;g.zone=oldZone;spTrackRenderCurrentList();prodRenderBoard();spTrackNotionRefresh('modal-zone',false);spxHint('工程區儲存失敗，已恢復原資料',true);return false;}}
+  spTrackModalGroup=spTrackFindContextGroup(g.key);if(!spTrackDirectFieldEdit){if(spTrackModalGroup)spTrackRenderCPModal();else spTrackCloseCP();}return true;
 }
 async function spTrackToggleZone(zone,checked,el){const g=spTrackModalGroup;if(!g)return;const zones=new Set(g.zones||[]);if(checked)zones.add(zone);else zones.delete(zone);if(!await spTrackSetGroupZones([...zones]))el.checked=!checked;}
 function spTrackAddZone(){const el=document.getElementById('spAddZone'),vals=spTrackZones(el&&el.value);if(!vals.length)return;spTrackSetGroupZones([...(spTrackModalGroup?.zones||[]),...vals]);}
@@ -35942,15 +36034,16 @@ async function spTrackToggleItem(item,checked,el,fromDropdown){
   if(g.receiptMeta)return spTrackReceiptToggleItem(g,item,checked,el,fromDropdown);
   if(checked&&!existing){
     const payload={proj_no:g.proj,zone:g.zone,dwg_no:g.dwg,order_no:g.ord,item,make:'',status:'-',remark:''};
+    const pending=Object.assign({_key:++spxSeq,_optimistic:true},payload);prodTrack.push(pending);g.rows.push(pending);spTrackRenderCurrentList();prodRenderBoard();spTrackNotionRefresh('modal-item',false);
     const res=await sbFetch('/rest/v1/sp_track',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)});
-    if(!res.ok||!Array.isArray(res.data)||!res.data[0]){el.checked=false;spxHint('新增項目失敗',true);return;}
-    const row=res.data[0];row._key=++spxSeq;prodTrack.push(row);g.rows.push(row);
+    if(!res.ok||!Array.isArray(res.data)||!res.data[0]){prodTrack=prodTrack.filter(r=>r!==pending);g.rows=g.rows.filter(r=>r!==pending);el.checked=false;spTrackRenderCurrentList();prodRenderBoard();spTrackNotionRefresh('modal-item',false);spxHint('新增項目失敗，已恢復原資料',true);return;}
+    const localKey=pending._key;Object.assign(pending,res.data[0],{_key:localKey});delete pending._optimistic;
   }else if(!checked&&existing){
     const progressed=existingRows.some(r=>!['','-'].includes(String(r.status||'')));
     if(progressed&&!await uiConfirm('「'+prodItemLabel(item)+'」已有進度，確定移除？')){el.checked=true;return;}
+    const gone=new Set(existingRows);prodTrack=prodTrack.filter(r=>!gone.has(r));g.rows=g.rows.filter(r=>!gone.has(r));spTrackRenderCurrentList();prodRenderBoard();spTrackNotionRefresh('modal-item',false);
     const ids=existingRows.map(r=>r.id).filter(Boolean);
-    if(ids.length){const res=await sbFetch('/rest/v1/sp_track?id=in.('+ids.join(',')+')',{method:'DELETE'});if(!res.ok){el.checked=true;spxHint('移除項目失敗',true);return;}}
-    const gone=new Set(existingRows);prodTrack=prodTrack.filter(r=>!gone.has(r));g.rows=g.rows.filter(r=>!gone.has(r));
+    if(ids.length){const res=await sbFetch('/rest/v1/sp_track?id=in.('+ids.join(',')+')',{method:'DELETE'});if(!res.ok){prodTrack.push(...existingRows);g.rows.push(...existingRows);el.checked=true;spTrackRenderCurrentList();prodRenderBoard();spTrackNotionRefresh('modal-item',false);spxHint('移除項目失敗，已恢復原資料',true);return;}}
   }
   spTrackRenderCurrentList();spTrackModalGroup=spTrackFindContextGroup(g.key);
   if(!fromDropdown){if(spTrackModalGroup)spTrackRenderCPModal();else spTrackCloseCP();}
@@ -35981,7 +36074,7 @@ function spTrackChildEdit(identity,field,value){
       spxHint('SP 狀態寫入後核對不一致，未視為成功',true);return;
     }
     if(spTrackEditVersions[editKey]!==version)return;
-    const verifiedById=new Map(verified.map(x=>[String(x.id),x]));rows.forEach(r=>{const actual=verifiedById.get(String(r.id));if(actual)r[field]=actual[field];r._dirty=false;});spTrackRenderCurrentList();prodRenderBoard();spxHint(rows.length>1?'✓ 已同步儲存並核對 '+rows.length+' 筆':'✓ 已自動儲存並核對');
+    const verifiedById=new Map(verified.map(x=>[String(x.id),x]));rows.forEach(r=>{const actual=verifiedById.get(String(r.id));if(actual)r[field]=actual[field];r._dirty=false;});spTrackRenderCurrentList();prodRenderBoard();
   },250);
 }
 function spTrackCloseCP(){spTrackModalGroup=null;pmCloseDetails();const d=document.getElementById('prodview-detail');if(d&&d.style.display!=='none')spTrackRenderDetailOuter();else spTrackRenderOuter();}
