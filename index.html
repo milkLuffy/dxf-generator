@@ -13300,6 +13300,20 @@ async function announcementDelete(i){
   else announcementLocalWrite(announcementLocalRead().filter(x=>String(x.id)!==String(a.id)));
   await loadAnnouncements();announcementRenderManager();
 }
+// Supabase 失敗時,把資料庫真正在抱怨什麼挖出來 —— 只丟一個 400 沒人猜得到哪裡錯。
+// 常見:PGRST204=資料表少欄位(migration 沒跑完 / PostgREST schema 快取還沒重載)、
+//      22P02/22007=型別不合、23514=違反 check 條件、42501=RLS 擋下。
+function sbErrText(r){
+  const d=(r&&r.data)||null;
+  if(!d||typeof d!=='object') return '';
+  const msg=d.message||d.error_description||d.error||'';
+  const extra=[d.details,d.hint].filter(Boolean).join(' / ');
+  let tip='';
+  if(d.code==='PGRST204') tip='\n→ 資料表少了這個欄位。請確認 migration 整份都執行過;剛執行完的話等 10 秒再試一次(Supabase 的 API schema 快取要重載)。';
+  else if(d.code==='42501') tip='\n→ 資料庫權限(RLS)擋下來的。';
+  else if(d.code==='23514') tip='\n→ 欄位值不在允許範圍內。';
+  return (msg?('\n'+msg):'')+(extra?('\n'+extra):'')+tip;
+}
 // ══════════ 待辦事項(個人 / 團體) ══════════
 // 設計:單一資料表 todos + scope 欄位分流(personal/team),不分兩張表。
 //  · 完成不刪除:只把 status 改成 'done' 並蓋上完成時間/完成人 → 主頁只顯示 open(所以會「消失」),
@@ -13509,7 +13523,7 @@ async function todoSetStatus(id,status){
     : {status:'open',done_at:null,done_by:null,done_by_name:null};
   const r=await sbFetch('/rest/v1/todos?id=eq.'+encodeURIComponent(id),
     {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(patch)});
-  if(!r.ok){ alert('更新待辦失敗('+r.status+')'); return; }
+  if(!r.ok){ alert('更新待辦失敗('+r.status+')'+sbErrText(r)); return; }
   Object.assign(t,patch);
   if(status==='done'){
     todoJustDone.add(String(id));
@@ -13523,7 +13537,7 @@ async function todoDelete(id){
   if(!todoCanModify(t)){ alert('只有建立者或管理員可以刪除'); return; }
   if(!await uiConfirm('確定刪除待辦「'+(t.title||'')+'」？\n刪除後連歷史紀錄都不會留下（想留紀錄請改用「勾選完成」）。',{danger:true})) return;
   const r=await sbFetch('/rest/v1/todos?id=eq.'+encodeURIComponent(id),{method:'DELETE'});
-  if(!r.ok){ alert('刪除失敗('+r.status+')'); return; }
+  if(!r.ok){ alert('刪除失敗('+r.status+')'+sbErrText(r)); return; }
   closeModal('todo-modal');
   await loadTodos();
 }
@@ -13635,7 +13649,7 @@ async function todoSave(){
     : await sbFetch('/rest/v1/todos',{method:'POST',headers:{'Prefer':'return=minimal'},
         body:JSON.stringify({...payload,owner_id:currentUser.id,created_by_name:currentUser.name||'',status:'open'})});
   btn.disabled=false; btn.textContent=todoEditingId?'儲存變更':'新增待辦';
-  if(!r.ok){ alert('待辦儲存失敗('+r.status+')'+(r.status===403?'\n（團體待辦需要權限；個人待辦只能改自己的）':'')); return; }
+  if(!r.ok){ alert('待辦儲存失敗('+r.status+')'+(r.status===403||r.status===401?'\n（團體待辦需要權限；個人待辦只能改自己的）':'')+sbErrText(r)); return; }
   closeModal('todo-modal');
   await loadTodos();
 }
@@ -13646,7 +13660,7 @@ async function todoRuleToggle(id){
   const next=(t.status==='open')?'cancelled':'open';
   const r=await sbFetch('/rest/v1/todos?id=eq.'+encodeURIComponent(id),
     {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({status:next})});
-  if(!r.ok){ alert('更新規則失敗('+r.status+')'); return; }
+  if(!r.ok){ alert('更新規則失敗('+r.status+')'+sbErrText(r)); return; }
   t.status=next;
   await loadTodos();
 }
@@ -14049,7 +14063,7 @@ async function leaveSave(){
         {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)})
     : await sbFetch('/rest/v1/leave_requests',{method:'POST',headers:{'Prefer':'return=minimal'},
         body:JSON.stringify({...payload,created_by:currentUser.id,created_by_name:currentUser.name||''})});
-  if(!r.ok){ btn.disabled=false; btn.textContent=leaveEditingId?'儲存變更':'登記請假'; alert('請假登記失敗('+r.status+')'); return; }
+  if(!r.ok){ btn.disabled=false; btn.textContent=leaveEditingId?'儲存變更':'登記請假'; alert('請假登記失敗('+r.status+')'+sbErrText(r)); return; }
   // 同步出勤回報:編輯時先把舊區間的假別清掉,再寫新的
   btn.textContent='同步出勤回報...';
   if(old) await leaveSyncToAtt(old,true);
@@ -14067,7 +14081,7 @@ async function leaveDelete(id){
   if(!await uiConfirm('確定刪除「'+(l.staff_name||'')+' '+leaveRangeTxt(l)+' '+(l.leave_type||'')+'」？\n出勤回報那幾天的假別會一併還原成「—」。',{danger:true})) return;
   if(l.source!=='att'){
     const r=await sbFetch('/rest/v1/leave_requests?id=eq.'+encodeURIComponent(id),{method:'DELETE'});
-    if(!r.ok){ alert('刪除失敗('+r.status+')'); return; }
+    if(!r.ok){ alert('刪除失敗('+r.status+')'+sbErrText(r)); return; }
   }
   await leaveSyncToAtt(l,true);   // 出勤回報那幾天的假別還原
   await loadLeaves();
