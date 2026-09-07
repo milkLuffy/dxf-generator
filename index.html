@@ -399,6 +399,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .dash-mini-card{display:flex;flex-direction:column;min-width:0}
 /* 清單卡的捲動區 flex 撐滿,短內容也貼齊整列高度,長清單則封頂捲動不撐爆 */
 .dash-mini-scroll{flex:1 1 auto;min-height:0;max-height:122px;overflow:auto}
+/* 小卡分頁:外觀比照 .section-title,不佔額外高度 */
+.dash-mini-tabs{display:flex;align-items:center;gap:2px;min-width:0;flex-wrap:wrap}
+.dash-mini-tab{display:inline-flex;align-items:center;gap:5px;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--text3);font-family:var(--mono);font-size:12px;font-weight:600;padding:3px 8px 5px;cursor:pointer;white-space:nowrap}
+.dash-mini-tab:hover{color:var(--text2)}
+.dash-mini-tab.active{color:var(--text);border-bottom-color:var(--accent2)}
+.dash-proj-count.ld-hot{color:var(--danger);font-weight:700}
 /* 主頁：小型目前天氣 + Apple 行事曆風格今日條列 */
 .dash-weather-card,.dash-agenda-card{min-width:0;display:flex;flex-direction:column}
 .dash-brief-head{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-bottom:8px;min-height:25px}
@@ -494,6 +500,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .dash-board-tabs{display:flex;gap:2px;flex:none}
 .dash-board-tab{display:inline-flex;align-items:center;gap:5px;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--text3);font-family:var(--mono);font-size:12px;font-weight:600;padding:3px 8px 5px;cursor:pointer;white-space:nowrap}
 .dash-board-tab.active{color:var(--text);border-bottom-color:var(--accent2)}
+/* 分頁圖示:線條 SVG,跟側邊欄同一套風格(不吃 Emoji 字型) */
+.dash-tab-ic{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .dash-todo-bar{display:flex;align-items:center;gap:6px;padding:3px 14px;border-bottom:1px solid var(--border);background:var(--bg2)}
 .dash-bar-actions{margin-left:auto;display:flex;align-items:center;gap:9px}
 .dash-bar-label{font-family:var(--mono);font-size:9.5px;color:var(--text3);white-space:nowrap}
@@ -2631,6 +2639,9 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
           <div class="nav-item" onclick="navTo('modparts')" id="nav-modparts">
             <span class="nav-icon">🛠️</span><span class="nav-label">修改構件</span>
           </div>
+          <div class="nav-item" onclick="navTo('loading')" id="nav-loading">
+            <span class="nav-icon">📅</span><span class="nav-label">月產量排程</span>
+          </div>
         </div>
         <div class="nav-sec" data-sec="tools" hidden>
           <div class="nav-item" onclick="navTo('multilevel')" id="nav-multilevel">
@@ -2811,6 +2822,7 @@ window.normalizeFullWidth=function(value){
       'nav-inspect':'<path d="M9 5h6M9 3h6v4H9z"/><rect x="5" y="5" width="14" height="16" rx="2"/><path d="m9 14 2 2 4-5"/>',
       'nav-a201a202':'<path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/>',
       'nav-prod':'<path d="M3 21V10l6 3V9l6 4V5l6 4v12zM7 17h2M13 17h2M18 17h1"/>',
+      'nav-loading':'<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/><path d="M7.5 13h3M7.5 16.5h6"/>',
       'nav-modparts':'<rect x="3" y="4" width="11" height="11" rx="1"/><path d="M6.5 8h4M6.5 11h4"/><path d="M20 12.6 14.6 18l-3 .8.8-3 5.4-5.4a1.5 1.5 0 0 1 2.2 2.2z"/>',
       'nav-multilevel':'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="8.5" y="14" width="7" height="7" rx="1"/><path d="M6.5 10v2h11v-2M12 12v2"/>',
       'nav-bomtool':'<path d="M6 2h9l4 4v16H6zM15 2v5h5M9 11h7M9 15h7M9 19h4"/>',
@@ -2921,21 +2933,26 @@ window.normalizeFullWidth=function(value){
           <div class="stat-label">本月總產量（噸）</div>
           <div class="stat-sub"><span>今日 <b id="stat-today-ton">—</b> t</span><span>本月 <b id="stat-month-qty">—</b> 支</span></div>
         </div>
+        <!-- SP 備料進度 ／ 月排程進度：同一張卡片兩個分頁(比照待辦/公佈欄,不多佔主頁一格) -->
         <div class="card dash-mini-card">
           <div class="section-header" style="margin-bottom:10px">
-            <div class="section-title">SP 備料進度 <span class="dash-proj-count" id="dash-sp-count"></span></div>
-            <button class="btn-sm btn-export" onclick="navTo('prod')">SP 表</button>
+            <div class="dash-mini-tabs">
+              <button type="button" class="dash-mini-tab active" id="dash-mini-tab-sp" onclick="dashMiniTab('sp')">SP 備料進度<span class="dash-proj-count" id="dash-sp-count"></span></button>
+              <button type="button" class="dash-mini-tab" id="dash-mini-tab-ld" onclick="dashMiniTab('ld')">月排程進度<span class="dash-proj-count" id="dash-ld-count"></span></button>
+            </div>
+            <button class="btn-sm btn-export" id="dash-mini-go" onclick="navTo('prod')">SP 表</button>
           </div>
           <div id="dash-sp-progress" class="dash-mini-scroll"><span style="color:var(--text3);font-size:13px">載入中...</span></div>
+          <div id="dash-loading-due" class="dash-mini-scroll" style="display:none"><span style="color:var(--text3);font-size:13px">載入中...</span></div>
         </div>
 
         <!-- 待辦事項 ／ 公司公佈欄：同一張卡片兩個分頁(預設停在待辦事項) -->
         <div class="card dash-ann-board" id="dash-ann-board" style="display:none">
           <div class="dash-ann-head">
             <div class="dash-board-tabs">
-              <button type="button" class="dash-board-tab active" data-tab="todo" onclick="dashBoardTab('todo')">📌 待辦<span class="dash-ann-count" id="dash-todo-count"></span></button>
-              <button type="button" class="dash-board-tab" data-tab="leave" onclick="dashBoardTab('leave')">🌴 請假<span class="dash-ann-count" id="dash-leave-count"></span></button>
-              <button type="button" class="dash-board-tab" data-tab="ann" onclick="dashBoardTab('ann')">📢 公佈欄<span class="dash-ann-count" id="dash-ann-count"></span></button>
+              <button type="button" class="dash-board-tab active" data-tab="todo" onclick="dashBoardTab('todo')"><svg class="dash-tab-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1z"/><path d="M8 6H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-2"/><path d="m9 13 2 2 4-4"/></svg>待辦<span class="dash-ann-count" id="dash-todo-count"></span></button>
+              <button type="button" class="dash-board-tab" data-tab="leave" onclick="dashBoardTab('leave')"><svg class="dash-tab-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18M6 17c1-5 4-8 9-10M9 8c-1-3 1-5 4-5 0 3-1 5-4 5M14 7c3-1 5 1 5 4-3 0-5-1-5-4"/></svg>請假<span class="dash-ann-count" id="dash-leave-count"></span></button>
+              <button type="button" class="dash-board-tab" data-tab="ann" onclick="dashBoardTab('ann')"><svg class="dash-tab-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>公佈欄<span class="dash-ann-count" id="dash-ann-count"></span></button>
             </div>
           </div>
           <div class="dash-todo-bar" id="dash-todo-bar">
@@ -3570,6 +3587,126 @@ window.normalizeFullWidth=function(value){
         </div>
       </div>
       <div id="bt-parse-result" style="margin-top:18px"></div>
+    </div>
+
+    <!-- 月產量排程(LOADING) -->
+    <style>
+    #page-loading .ld-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:9px 11px;border:1px solid var(--border);border-radius:var(--rad-lg);background:var(--bg2)}
+    #page-loading .ld-bar input[type=month]{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:13px;padding:6px 10px}
+    #page-loading .ld-hint{font-size:12px;color:var(--green);font-family:var(--mono)}
+    #page-loading .ld-kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px}
+    #page-loading .ld-kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:14px 16px;min-width:0}
+    #page-loading .ld-kpi-v{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1.15}
+    #page-loading .ld-kpi-l{font-size:12px;color:var(--text2);margin-top:5px}
+    #page-loading .ld-kpi-s{font-size:11px;color:var(--text3);margin-top:2px;font-family:var(--mono)}
+    #page-loading .ld-missing{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:9px 12px;border:1px solid var(--yellow);border-left:3px solid var(--yellow);border-radius:var(--rad);background:color-mix(in srgb,var(--yellow) 9%,var(--bg3));font-size:12px;color:var(--text2)}
+    #page-loading .ld-chip{border:1px solid var(--border);border-radius:999px;background:var(--bg2);color:var(--text2);font-family:var(--mono);font-size:11.5px;padding:4px 11px;cursor:pointer;transition:all .15s}
+    #page-loading .ld-chip:hover{border-color:var(--accent2);color:var(--accent2)}
+    #page-loading .ld-chip-all{border-color:var(--accent2);color:var(--accent2);font-weight:600}
+    /* 欄寬隨資料內容決定,內容一律置中 */
+    #page-loading .ld-table{width:auto;min-width:100%;font-size:12.5px}
+    #page-loading .ld-table th{white-space:nowrap;font-size:11.5px;text-align:center;padding:7px 10px}
+    #page-loading .ld-table td{padding:5px 10px;vertical-align:middle;white-space:nowrap;text-align:center}
+    #page-loading .ld-table td.num{font-family:var(--mono)}
+    /* 狀態燈固定寬度,一整欄才會對齊 */
+    #page-loading .ld-table .ld-light{min-width:96px;text-align:center}
+    #page-loading .ld-zone{cursor:pointer}
+    #page-loading .ld-zone b{font-family:var(--mono);font-size:13.5px;color:var(--accent2)}
+    #page-loading .ld-zone:hover b{text-decoration:underline}
+    #page-loading .ld-issue-ic{width:13px;height:13px;margin-left:5px;vertical-align:-2px;fill:none;stroke:var(--yellow);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    #page-loading .ld-title-ic{width:22px;height:22px;vertical-align:-4px;margin-right:8px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    #page-loading .ld-range{font-family:var(--mono);font-size:11.5px;color:var(--text3)}
+    /* 狀況說明彈窗 */
+    .ld-note-modal .ld-note-sum{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0;font-family:var(--mono);font-size:12px}
+    .ld-note-modal .ld-note-sum div{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);padding:7px 10px;color:var(--text2)}
+    .ld-note-modal .ld-note-sum b{color:var(--text)}
+    .ld-note-modal label{display:block;margin:10px 0 5px;font-size:12px;color:var(--text2)}
+    .ld-note-modal textarea{width:100%;box-sizing:border-box;min-height:110px;resize:vertical;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-size:13px;line-height:1.7;padding:9px 11px;outline:none}
+    .ld-note-modal input[type=text]{width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-size:13px;padding:8px 11px;outline:none}
+    .ld-note-modal textarea:focus,.ld-note-modal input[type=text]:focus{border-color:var(--accent2)}
+    #page-loading .ld-date{background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:12px;padding:4px 6px;outline:none}
+    #page-loading .ld-date:focus{border-color:var(--accent2)}
+    #page-loading .ld-date.ld-auto{color:var(--text3);border-style:dashed}
+    #page-loading .ld-wk{margin-left:4px;font-size:11px;color:var(--text3)}
+    #page-loading .ld-tag{margin-left:5px;padding:1px 6px;border-radius:4px;background:var(--bg4);color:var(--text3);font-size:10px;font-family:var(--mono)}
+    #page-loading .ld-mini{margin-left:5px;border:1px solid var(--border);border-radius:5px;background:var(--bg3);color:var(--text3);font-size:11px;line-height:1;padding:3px 6px;cursor:pointer}
+    #page-loading .ld-mini:hover{border-color:var(--accent2);color:var(--accent2)}
+    #page-loading .ld-mini.ld-del:hover{border-color:var(--danger);color:var(--danger)}
+    #page-loading .ld-tons{width:82px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:12px;padding:4px 6px;text-align:right;outline:none}
+    #page-loading .ld-note{width:130px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:4px 6px;outline:none}
+    #page-loading .ld-tons:focus,#page-loading .ld-note:focus{border-color:var(--accent2)}
+    #page-loading .ld-over{color:var(--danger)}
+    #page-loading .ld-pct{min-width:118px}
+    #page-loading .ld-bar-wrap{display:inline-block;width:64px;height:6px;border-radius:20px;background:var(--bg4);overflow:hidden;vertical-align:middle;margin-right:6px}
+    #page-loading .ld-bar-wrap>i{display:block;height:100%;background:var(--accent2)}
+    #page-loading .ld-total{line-height:1.35}
+    #page-loading .ld-total small{display:block;color:var(--text3);font-size:10.5px}
+    #page-loading .ld-ok{color:var(--green);font-weight:600}
+    #page-loading .ld-part{color:var(--yellow);font-weight:600}
+    #page-loading .ld-no{color:var(--text3)}
+    #page-loading tr.ld-red td{background:color-mix(in srgb,var(--danger) 6%,transparent)}
+    #page-loading .ld-legend{margin-top:10px;font-size:11.5px;color:var(--text3);line-height:1.8}
+    .ld-add-list{max-height:260px;overflow:auto;margin:10px 0;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);padding:8px;font-size:12px;color:var(--text3)}
+    .ld-add-row{display:flex;align-items:center;gap:9px;padding:6px 7px;border-radius:6px;cursor:pointer;color:var(--text)}
+    .ld-add-row:hover{background:var(--bg2)}
+    .ld-add-row b{font-family:var(--mono);font-size:13px;color:var(--accent2);min-width:74px}
+    .ld-add-meta{font-size:11px;color:var(--text3);font-family:var(--mono)}
+    .ld-add-empty{padding:10px;text-align:center}
+    @media(max-width:900px){#page-loading .ld-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    /* 狀態燈:排程表與主頁「月排程進度」小卡共用 */
+    .ld-light{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-family:var(--mono);white-space:nowrap;border:1px solid}
+    .ld-l-red{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);background:color-mix(in srgb,var(--danger) 12%,transparent);font-weight:700}
+    .ld-l-yellow{color:var(--yellow);border-color:color-mix(in srgb,var(--yellow) 45%,transparent);background:color-mix(in srgb,var(--yellow) 12%,transparent)}
+    .ld-l-green{color:var(--green);border-color:color-mix(in srgb,var(--green) 40%,transparent);background:color-mix(in srgb,var(--green) 10%,transparent)}
+    .ld-l-gray{color:var(--text3);border-color:var(--border);background:var(--bg3)}
+    /* 主頁「月排程進度」小卡 */
+    .ld-due-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--rad);cursor:pointer;transition:background .15s}
+    .ld-due-item:hover{background:var(--bg3)}
+    .ld-due-name{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:12.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ld-due-date{flex:0 0 auto;font-family:var(--mono);font-size:11.5px;color:var(--text3)}
+    .ld-due-more{padding:6px 8px;font-size:11.5px;color:var(--text3)}
+    </style>
+    <div class="page" id="page-loading">
+      <div class="page-header">
+        <div>
+          <div class="page-title"><svg class="ld-title-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/><path d="M7.5 13h3M7.5 16.5h6"/></svg>月產量排程</div>
+          <div class="page-subtitle">LOADING 會議：這個月要做哪些工程區、交管料日與達成率</div>
+        </div>
+        <button class="btn-add-new" onclick="ldAddOpen()">＋ 加入工程區</button>
+      </div>
+      <div class="ld-bar">
+        <button class="dash-nav-btn" onclick="ldMonthNav(-1)">« 上個月</button>
+        <input type="month" id="ld-month" onchange="ldMonthChanged()">
+        <button class="dash-nav-btn" onclick="ldMonthNav(1)">下個月 »</button>
+        <button class="dash-nav-btn" onclick="ldMonthNav(0)">本月</button>
+        <button class="dash-nav-btn" onclick="ldCarryOver()" title="把上個月排過的工程區帶進這個月，排定量自動帶「整區還沒做完的量」">↷ 帶入上月未完成</button>
+        <button class="dash-nav-btn" onclick="ldFillPlans()" title="把排定量空白或 0 的工程區，補成該區 BOM 的整區重量">⤓ 補上排定量</button>
+        <span id="ld-range" class="ld-range"></span>
+        <span id="ld-hint" class="ld-hint"></span>
+      </div>
+      <div id="ld-kpi" class="ld-kpi"></div>
+      <div id="ld-missing" class="ld-missing" style="display:none"></div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="table-scroll">
+          <table class="data-table ld-table">
+            <thead><tr>
+              <th>工程編號-工程區</th><th>工程區狀態</th><th>吊裝期</th><th>交管料日</th><th>剩餘工作天</th>
+              <th>本月排定(噸)</th><th>本月完成(噸)</th><th>達成率</th>
+              <th>整區 完成/總量(噸)</th>
+              <th>CP</th><th>SP備料</th><th>排程狀態</th>
+              <th>會議備註</th><th></th>
+            </tr></thead>
+            <tbody id="ld-body"><tr><td colspan="14" class="empty-state">載入中…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="ld-legend">
+        ※ <b>交管料日</b>預設＝吊裝期往前 5 個<b>工作天</b>（只跳過週日，週六照常；國定假日未納入）。虛線框＝自動跟著吊裝期跑，手動改過就固定，按 ↺ 可改回自動。<br>
+        ※ <b>本月排定</b>加入時預設帶整區 BOM 重量，可自行調整；留白＝以整區 BOM 重量計。同一個工程區可以連續排好幾個月，各月分開記。<br>
+        ※ 點<b>工程編號-工程區</b>可以寫「狀況說明」，記錄這個月沒達標的原因（會留在該月份，下個月不會帶過去）。<br>
+        ※ <b>本月完成</b>與<b>整區完成</b>都是從每日產量即時算的，不用另外填；<b>CP</b>＝有沒有收圖登記，<b>SP備料</b>＝SP 狀態表的完成度。<br>
+        ※ 狀態燈：<span class="ld-light ld-l-red">紅</span> 逾期／備料未齊／未收圖　<span class="ld-light ld-l-yellow">黃</span> 剩 7 個工作天內　<span class="ld-light ld-l-green">綠</span> 如期。
+      </div>
     </div>
 
     <!-- 圖面快搜 -->
@@ -11083,6 +11220,7 @@ const PAGE_META=[
   {k:'a201a202',     label:'A201/A202登記',  sec:'prod'},
   {k:'prod',         label:'CP 收圖與追蹤',  sec:'prod'},
   {k:'modparts',     label:'修改構件',       sec:'prod'},
+  {k:'loading',      label:'月產量排程',     sec:'prod'},
   {k:'multilevel',   label:'多階資料分析',     sec:'tools'},
   {k:'bomtool',      label:'BOM 剖析工具',   sec:'tools'},
   {k:'sp',           label:'S/P 板厚分類剖析',sec:'tools'},
@@ -11388,6 +11526,7 @@ function navTo(page, viewState) {
   if(page==='deductions') deductionsInit();
   if(page==='prod') prodInit();
   if(page==='modparts') modpartsInit();
+  if(page==='loading') ldInit();
   if(page==='egstaff') egstInit();
   if(page==='emp') empInit();
   if(page==='payroll') payrollInit();
@@ -12934,6 +13073,7 @@ async function loadDashboard() {
       : '<span style="color:var(--text3);font-size:13px">目前沒有進行中的工程</span>';
   }
   dashLoadSPProgress();   // SP 備料進度(獨立載入,不阻塞主頁其他區塊)
+  if(typeof ldDashLoad==='function') ldDashLoad();   // 月排程進度(同上)
 }
 
 // ── 主頁：目前天氣 + 今日行程 ─────────────────────────────
@@ -43011,6 +43151,554 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   window.sopPrint=function(){ sopPrintList(SOP_DATA.filter(d=>{ const c=document.getElementById('sop-card-'+d.id); return c&&!c.hidden; })); };
   window.sopPrintOne=function(){ const d=SOP_DATA.find(x=>x.id===sopOpenId); if(d) sopPrintList([d],d.title); };
 })();
+</script>
+<script>
+/* ══════════════ 月產量排程(LOADING 會議) ══════════════
+   一列一個「工程編號-工程區」。
+   ・吊裝期(zones.erect_date)= 工地的 deadline;交管料日(zones.handover_date)= 我們真正的 deadline
+   ・交管料日預設 = 吊裝期往前 5 個「工作天」(只跳週日,週六照常;國定假日無資料不計),
+     但會議上常會調整 → 只要填了值就是人工指定,不再跟著吊裝期跑(可按 ↺ 改回自動)
+   ・同一個工程區可能分 2~3 個月做完 → 每月排定量存 loading_plan(ym + zone_id);
+     實際完成一律由 daily_output 即時算,不存表,才不會兩邊對不起來
+   ・月份用自然月(製造月 1 日~月底),與計價月(16~次月15)不同,標題有標示
+*/
+const LD_BACK_WORKDAYS = 5;      // 交管料 = 吊裝期往前幾個工作天(預設值)
+const LD_WARN_WORKDAYS = 7;      // 剩幾個工作天以內算「接近」
+let ldYM = '', ldBusy = false, ldErr = '';
+let ldZones = [], ldProjects = [], ldPlans = [];
+let ldBom = {}, ldDoneAll = {}, ldDoneMon = {}, ldCP = new Set(), ldSP = {};
+
+function ldEl(id){ return document.getElementById(id); }
+function ldEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function ldNum(v){ const n=parseFloat(v); return isNaN(n)?0:n; }
+function ldT(kg){ return (ldNum(kg)/1000); }
+function ldFix(n,d){ return (Math.round(ldNum(n)*Math.pow(10,d==null?2:d))/Math.pow(10,d==null?2:d)).toFixed(d==null?2:d); }
+function ldISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function ldToday(){ return ldISO(new Date()); }
+function ldYMOf(ymd){ return String(ymd||'').slice(0,7); }
+function ldYMAdd(ym,n){ let a=String(ym||'').split('-'); let y=+a[0], m=+a[1]+n; while(m<1){m+=12;y--;} while(m>12){m-=12;y++;} return y+'-'+String(m).padStart(2,'0'); }
+function ldWk(ymd){ const d=new Date(String(ymd||'')+'T00:00:00'); return isNaN(d)?'':['日','一','二','三','四','五','六'][d.getDay()]; }
+
+// 工作天:只跳過週日(週六照常上班,比照製造 Key in 的規則)
+function ldIsWorkday(d){ return d.getDay()!==0; }
+function ldWorkdayBack(ymd,n){
+  const d=new Date(String(ymd||'')+'T00:00:00'); if(isNaN(d)) return '';
+  let left=n;
+  while(left>0){ d.setDate(d.getDate()-1); if(ldIsWorkday(d)) left--; }
+  return ldISO(d);
+}
+// 今天(不含)到 target(含)還有幾個工作天;target 已過 → 負數(逾期幾個工作天)
+function ldWorkdaysLeft(target){
+  if(!target) return null;
+  const today=new Date(ldToday()+'T00:00:00'), end=new Date(target+'T00:00:00');
+  if(isNaN(end)) return null;
+  let n=0; const d=new Date(today<end?today:end);
+  if(end>=today){ while(d<end){ d.setDate(d.getDate()+1); if(ldIsWorkday(d)) n++; } return n; }
+  while(d<today){ d.setDate(d.getDate()+1); if(ldIsWorkday(d)) n--; }
+  return n;
+}
+// 產量月:上個月 26 日 ~ 當月 25 日(長榮口徑)。例:9 月的產量 = 08/26 ~ 09/25
+function ldMonthRange(ym){ const m=ym||ldYM; return {from:ldYMAdd(m,-1)+'-26', to:m+'-25'}; }
+function ldMonthRangeTxt(ym){ const r=ldMonthRange(ym); return r.from.slice(5).replace('-','/')+' ～ '+r.to.slice(5).replace('-','/'); }
+function ldInMonth(ymd, ym){
+  const d=String(ymd||'').slice(0,10); if(!d) return false;
+  const r=ldMonthRange(ym); return d>=r.from && d<=r.to;
+}
+function ldHandoverOf(z){
+  const manual=String(z&&z.handover_date||'').slice(0,10);
+  if(manual) return manual;
+  const erect=String(z&&z.erect_date||'').slice(0,10);
+  return erect ? ldWorkdayBack(erect, LD_BACK_WORKDAYS) : '';
+}
+function ldHandoverIsAuto(z){ return !String(z&&z.handover_date||'').trim(); }
+function ldProjNum(z){
+  const p=ldProjects.find(x=>String(x.id)===String(z.project_id));
+  return String(p&&p.proj_num||'').trim();
+}
+function ldZoneKey(z){ return ldProjNum(z).toUpperCase()+'|'+String(z.zone_code||'').trim().toUpperCase(); }
+function ldZoneById(id){ return ldZones.find(z=>String(z.id)===String(id)); }
+
+// ── 載入 ────────────────────────────────────────────────────
+async function ldInit(){
+  if(!ldYM) ldYM=ldToday().slice(0,7);
+  const m=ldEl('ld-month'); if(m) m.value=ldYM;
+  await ldLoad();
+}
+function ldMonthNav(dir){
+  ldYM = (dir===0) ? ldToday().slice(0,7) : ldYMAdd(ldYM,dir);
+  const m=ldEl('ld-month'); if(m) m.value=ldYM;
+  ldLoad();
+}
+function ldMonthChanged(){ const m=ldEl('ld-month'); if(m&&m.value){ ldYM=m.value; ldLoad(); } }
+
+async function ldLoad(){
+  if(ldBusy) return;
+  ldBusy=true; ldErr='';
+  const body=ldEl('ld-body'); if(body) body.innerHTML='<tr><td colspan="14" class="empty-state">載入中…</td></tr>';
+  try{
+    const [rz,rpj,rpl]=await Promise.all([
+      sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,sub_code,status,erect_date,handover_date&order=zone_code'),
+      sbFetchAll('/rest/v1/projects?select=id,proj_num,proj_name&order=proj_num'),
+      sbFetchAll('/rest/v1/loading_plan?select=*&ym=eq.'+encodeURIComponent(ldYM))
+    ]);
+    if(!rz.ok){ ldErr='工程區讀取失敗:zones 還沒有 erect_date／handover_date 欄位,請先在 Supabase SQL Editor 執行 loading_plan_migration.sql。'; return; }
+    if(!rpl.ok){ ldErr='loading_plan 資料表尚未建立,請先在 Supabase SQL Editor 執行 loading_plan_migration.sql。'; }
+    ldZones=Array.isArray(rz.data)?rz.data:[];
+    ldProjects=Array.isArray(rpj.data)?rpj.data:[];
+    ldPlans=(rpl.ok&&Array.isArray(rpl.data))?rpl.data:[];
+    await ldLoadFacts();
+  }catch(e){ console.error(e); ldErr='載入失敗:'+e.message; }
+  finally{ ldBusy=false; ldRender(); }
+}
+
+// BOM 噸數／實際產量／CP／SP:只抓本月會用到的工程區與工程,不掃全表
+async function ldLoadFacts(){
+  ldBom={}; ldDoneAll={}; ldDoneMon={}; ldCP=new Set(); ldSP={};
+  const zs=ldMonthZones();
+  if(!zs.length) return;
+  const ids=zs.map(z=>z.id).filter(x=>x!=null);
+  const projNums=[...new Set(zs.map(z=>ldProjNum(z)).filter(Boolean))];
+  const inIds='('+ids.join(',')+')';
+  const inProj='('+projNums.map(p=>'"'+p+'"').join(',')+')';
+  const none={ok:true,data:[]};
+  const [rc,re,rd,rcp,rsp]=await Promise.all([
+    ids.length?sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,qty&zone_id=in.'+inIds):none,
+    ids.length?sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no,extra&zone_id=in.'+inIds):none,
+    projNums.length?sbFetchAll('/rest/v1/daily_output?select=proj_num,zone_code,date,net_weight&proj_num=in.'+inProj):none,
+    projNums.length?sbFetchAll('/rest/v1/cp_receipts?select=project_no,zone_text,zone_scope&project_no=in.'+inProj):none,
+    sbFetch('/rest/v1/sp_progress?select=*')
+  ]);
+  // 非本公司製作構件不列入噸數(比照計價頁)
+  const nonco=new Set();
+  (Array.isArray(re.data)?re.data:[]).forEach(e=>{
+    const x=e.extra||{};
+    if(x[NONCO_KEY]==='1'||x[NONCO_KEY]===true) nonco.add(e.zone_id+'|'+String(e.part_no||'').trim().toUpperCase());
+  });
+  (Array.isArray(rc.data)?rc.data:[]).forEach(c=>{
+    if(nonco.has(c.zone_id+'|'+String(c.part_no||'').trim().toUpperCase())) return;
+    const b=ldBom[c.zone_id]||(ldBom[c.zone_id]={kg:0,qty:0});
+    b.kg+=ldNum(c.net_weight); b.qty+=parseInt(c.qty)||0;
+  });
+  (Array.isArray(rd.data)?rd.data:[]).forEach(r=>{
+    const k=String(r.proj_num||'').trim().toUpperCase()+'|'+String(r.zone_code||'').trim().toUpperCase();
+    const w=ldNum(r.net_weight);
+    ldDoneAll[k]=(ldDoneAll[k]||0)+w;
+    if(ldInMonth(r.date)) ldDoneMon[k]=(ldDoneMon[k]||0)+w;
+  });
+  (Array.isArray(rcp.data)?rcp.data:[]).forEach(r=>{
+    const proj=String(r.project_no||'').trim().toUpperCase();
+    if(r.zone_scope==='all'||String(r.zone_text||'').trim()==='全區'){ ldCP.add(proj+'|*'); return; }
+    const txt=(typeof cprNormalizeZone==='function')?cprNormalizeZone(r.zone_text):String(r.zone_text||'').toUpperCase();
+    String(txt||'').split('.').filter(Boolean).forEach(zc=>ldCP.add(proj+'|'+zc));
+  });
+  (Array.isArray(rsp.data)?rsp.data:[]).forEach(r=>{
+    const k=String(r.proj_no||'').trim().toUpperCase()+'|'+String(r.zone||'').trim().toUpperCase();
+    ldSP[k]={total:+r.total||0, done:+r.done||0};
+  });
+}
+
+// 本月要處理的工程區 = 已排進本月的 ∪ 交管料日落在本月的(後者用來提醒「漏排」)
+function ldMonthZones(){
+  const planned=ldPlans.map(p=>ldZoneById(p.zone_id)).filter(Boolean);
+  const due=ldZones.filter(z=>ldInMonth(ldHandoverOf(z)) && String(z.status||'').trim()!=='轉包');
+  return [...new Map([...planned,...due].map(z=>[String(z.id),z])).values()];
+}
+
+// ── 一列的所有數字 ──────────────────────────────────────────
+function ldRowOf(z, plan){
+  const key=ldZoneKey(z), proj=ldProjNum(z);
+  const bom=ldBom[z.id]||{kg:0,qty:0};
+  const doneAllT=ldT(ldDoneAll[key]||0), doneMonT=ldT(ldDoneMon[key]||0), bomT=ldT(bom.kg);
+  const remainT=Math.max(0, bomT-doneAllT);
+  const handover=ldHandoverOf(z);
+  // 0 或空白都當「沒填」→ 以整區 BOM 重量計(修正前加入的列會把 0 存進 DB)
+  const planRaw=(plan&&plan.plan_tons!=null&&plan.plan_tons!=='')?Number(plan.plan_tons):null;
+  const planT=(planRaw!=null && planRaw>0)?planRaw:null;
+  const target=(planT!=null)?planT:bomT;         // 沒填排定量就以整區 BOM 重量計
+  return {
+    z, plan, proj, key, handover,
+    erect:String(z.erect_date||'').slice(0,10),
+    auto:ldHandoverIsAuto(z),
+    left:ldWorkdaysLeft(handover),
+    bomT, doneAllT, remainT, doneMonT,
+    planT, target,
+    pct: target>0 ? Math.min(999, Math.round(doneMonT/target*100)) : (doneMonT>0?100:0),
+    cp: ldCP.has(proj.toUpperCase()+'|*') || ldCP.has(key),
+    sp: ldSP[key]||null,
+    planned: !!plan
+  };
+}
+function ldSPpct(r){ return (r.sp&&r.sp.total>0)?Math.round(r.sp.done/r.sp.total*100):null; }
+// 燈號:紅=已經來不及或料還沒齊、黃=快到了、綠=如期、灰=還沒設吊裝期
+function ldLight(r){
+  if(!r.handover) return {cls:'gray', txt:'未設吊裝期'};
+  const finished = r.target>0 ? (r.doneMonT>=r.target-0.001) : false;
+  if(r.left!=null && r.left<0 && !finished) return {cls:'red', txt:'逾期 '+Math.abs(r.left)+' 天'};
+  const sp=ldSPpct(r);
+  if(sp!=null && sp<100 && r.left!=null && r.left<=LD_BACK_WORKDAYS) return {cls:'red', txt:'備料未齊'};
+  if(!r.cp && r.left!=null && r.left<=LD_BACK_WORKDAYS) return {cls:'red', txt:'未收圖'};
+  if(r.left!=null && r.left<=LD_WARN_WORKDAYS) return {cls:'yellow', txt:'剩 '+r.left+' 天'};
+  return {cls:'green', txt:'如期'};
+}
+function ldRows(){
+  return ldPlans.map(p=>{ const z=ldZoneById(p.zone_id); return z?ldRowOf(z,p):null; })
+    .filter(Boolean)
+    .sort((a,b)=> String(a.handover||'9999').localeCompare(String(b.handover||'9999'))
+      || String(a.proj).localeCompare(String(b.proj),undefined,{numeric:true})
+      || String(a.z.zone_code||'').localeCompare(String(b.z.zone_code||''),undefined,{numeric:true}));
+}
+// 交管料日在本月、卻還沒排進來的(漏排提醒)
+function ldMissing(){
+  const inPlan=new Set(ldPlans.map(p=>String(p.zone_id)));
+  return ldZones.filter(z=>ldInMonth(ldHandoverOf(z)) && !inPlan.has(String(z.id))
+      && String(z.status||'').trim()!=='轉包' && String(z.status||'').trim()!=='已完成')
+    .map(z=>ldRowOf(z,null))
+    .filter(r=>!(r.bomT>0 && r.remainT<=0.001));   // 整區已經做完的就不用再排
+}
+
+// ── 畫面 ────────────────────────────────────────────────────
+function ldRender(){
+  const body=ldEl('ld-body'); if(!body) return;
+  const rangeEl=ldEl('ld-range');
+  if(rangeEl) rangeEl.textContent='產量月 '+ldMonthRangeTxt()+'（上月 26 日～當月 25 日）';
+  if(ldErr){
+    body.innerHTML='<tr><td colspan="14" class="empty-state" style="color:var(--danger)">'+ldEsc(ldErr)+'</td></tr>';
+    ldEl('ld-kpi').innerHTML=''; ldEl('ld-missing').style.display='none';
+    return;
+  }
+  const rows=ldRows();
+  ldRenderKpi(rows);
+  ldRenderMissing();
+  if(!rows.length){
+    body.innerHTML='<tr><td colspan="14" class="empty-state">'+ldEsc(ldYM)+' 還沒有排程。按右上角「＋ 加入工程區」，或用「↷ 帶入上月未完成」。</td></tr>';
+    return;
+  }
+  body.innerHTML=rows.map(r=>{
+    const lt=ldLight(r), sp=ldSPpct(r);
+    const zid=r.z.id, pid=r.plan?r.plan.id:'';
+    return '<tr class="ld-row ld-'+lt.cls+'">'
+      +'<td class="ld-zone" onclick="ldOpenNote(\''+pid+'\')" title="點一下記錄這個月的狀況／沒達標的原因"><b>'+ldEsc(r.proj)+'-'+ldEsc(r.z.zone_code||'')+'</b>'
+        +(r.plan&&String(r.plan.issue||'').trim()?'<svg class="ld-issue-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L20 8l-4-4L4 16z"/></svg>':'')+'</td>'
+      +'<td class="ld-mid">'+(String(r.z.status||'').trim()?'<span class="status-badge '+ldEsc(r.z.status)+'">'+ldEsc(r.z.status)+'</span>':'<span class="ld-no">—</span>')+'</td>'
+      +'<td><input type="date" class="ld-date" value="'+ldEsc(r.erect)+'" onchange="ldSetDate('+zid+',\'erect_date\',this.value)">'
+        +'<span class="ld-wk">'+(r.erect?('（'+ldWk(r.erect)+'）'):'')+'</span></td>'
+      +'<td><input type="date" class="ld-date'+(r.auto?' ld-auto':'')+'" value="'+ldEsc(r.handover)+'" onchange="ldSetDate('+zid+',\'handover_date\',this.value)">'
+        +'<span class="ld-wk">'+(r.handover?('（'+ldWk(r.handover)+'）'):'')+'</span>'
+        +(r.auto?'<span class="ld-tag">自動</span>':'<button class="ld-mini" title="改回自動(吊裝期往前 '+LD_BACK_WORKDAYS+' 個工作天)" onclick="ldResetHandover('+zid+')">↺</button>')+'</td>'
+      +'<td class="num">'+(r.left==null?'—':(r.left<0?('<b class="ld-over">逾期 '+Math.abs(r.left)+'</b>'):(r.left+' 天')))+'</td>'
+      +'<td class="num"><input type="number" step="0.01" min="0" class="ld-tons" value="'+(r.planT==null?'':ldFix(r.planT))+'" placeholder="'+ldFix(r.bomT)+'" title="留白＝以整區 BOM 重量 '+ldFix(r.bomT)+' t 計" onchange="ldSetPlan(\''+pid+'\',this.value)"></td>'
+      +'<td class="num">'+ldFix(r.doneMonT)+'</td>'
+      +'<td class="ld-pct"><div class="ld-bar-wrap"><i style="width:'+Math.min(100,r.pct)+'%"></i></div><span>'+r.pct+'%</span></td>'
+      +(r.bomT>0
+        ? '<td class="num ld-total" title="整區 BOM '+ldFix(r.bomT)+' t，累計完成 '+ldFix(r.doneAllT)+' t">'+ldFix(r.doneAllT)+' / '+ldFix(r.bomT)+'<small>剩 '+ldFix(r.remainT)+'</small></td>'
+        : '<td class="num ld-total"><span class="ld-no">尚無 BOM</span><small>構件總表沒有重量</small></td>')
+      +'<td class="ld-mid">'+(r.cp?'<span class="ld-ok">✓</span>':'<span class="ld-no">—</span>')+'</td>'
+      +'<td class="ld-mid">'+(sp==null?'<span class="ld-no">—</span>':('<span class="'+(sp>=100?'ld-ok':(sp>0?'ld-part':'ld-no'))+'">'+sp+'%</span>'))+'</td>'
+      +'<td class="ld-mid"><span class="ld-light ld-l-'+lt.cls+'">'+ldEsc(lt.txt)+'</span></td>'
+      +'<td><input type="text" class="ld-note" value="'+ldEsc(r.plan&&r.plan.note||'')+'" placeholder="會議備註" onchange="ldSetNote(\''+pid+'\',this.value)"></td>'
+      +'<td class="ld-mid"><button class="ld-mini ld-del" title="從本月排程移除(不會刪資料)" onclick="ldRemove(\''+pid+'\')">✕</button></td>'
+      +'</tr>';
+  }).join('');
+}
+
+function ldRenderKpi(rows){
+  const box=ldEl('ld-kpi'); if(!box) return;
+  const plan=rows.reduce((s,r)=>s+r.target,0);
+  const done=rows.reduce((s,r)=>s+r.doneMonT,0);
+  const pct=plan>0?Math.round(done/plan*100):0;
+  const alert=rows.filter(r=>{ const c=ldLight(r).cls; return c==='red'||c==='yellow'; }).length;
+  const red=rows.filter(r=>ldLight(r).cls==='red').length;
+  const card=(v,l,s,c)=>'<div class="ld-kpi-card"><div class="ld-kpi-v"'+(c?(' style="color:'+c+'"'):'')+'>'+v+'</div>'
+    +'<div class="ld-kpi-l">'+l+'</div><div class="ld-kpi-s">'+(s||'')+'</div></div>';
+  const noBom=rows.filter(r=>r.bomT<=0).length;
+  box.innerHTML=card(ldFix(plan),'本月排定（噸）', rows.length+' 個工程區'+(noBom?('，'+noBom+' 個沒有 BOM 重量'):''))
+    +card(ldFix(done),'本月已完成（噸）','來自每日產量','var(--green)')
+    +card(pct+'%','達成率', plan>0?('還差 '+ldFix(Math.max(0,plan-done))+' t'):'尚未排定', pct>=100?'var(--green)':(pct>=60?'var(--accent2)':'var(--yellow)'))
+    +card(alert,'需要注意','其中 '+red+' 個已亮紅燈', alert?'var(--danger)':'var(--text)');
+}
+
+function ldRenderMissing(){
+  const box=ldEl('ld-missing'); if(!box) return;
+  const miss=ldMissing();
+  if(!miss.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='';
+  box.innerHTML='<span>⚠️ <b>這 '+miss.length+' 個工程區的交管料日落在 '+ldEsc(ldMonthRangeTxt())+'，但還沒排進來：</b></span>'
+    +miss.map(r=>'<button class="ld-chip" data-z="'+r.z.id+'" onclick="ldAddZone(this.dataset.z)" title="加入本月排程">'
+      +ldEsc(r.proj)+'-'+ldEsc(r.z.zone_code||'')+(r.bomT>0?('　'+ldFix(r.bomT)+'t'):'')+' ＋</button>').join('')
+    +'<button class="ld-chip ld-chip-all" onclick="ldAddAllMissing()">全部加入</button>';
+}
+
+// ── 寫入 ────────────────────────────────────────────────────
+async function ldSetDate(zoneId, field, val){
+  const z=ldZoneById(zoneId); if(!z) return;
+  const v=String(val||'').slice(0,10)||null;
+  const r=await sbFetch('/rest/v1/zones?id=eq.'+zoneId,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({[field]:v})});
+  if(!r.ok){ alert((field==='erect_date'?'吊裝期':'交管料日')+'儲存失敗('+(r.status||'?')+')：'+((r.data&&(r.data.message||r.data.hint))||'')+'\n若是缺欄位,請先執行 loading_plan_migration.sql。'); return; }
+  z[field]=v;
+  if(field==='erect_date' && ldHandoverIsAuto(z)) ldHint('交管料日自動跟著調成 '+(ldHandoverOf(z)||'—'));
+  ldRender();
+}
+async function ldResetHandover(zoneId){
+  const z=ldZoneById(zoneId); if(!z) return;
+  if(!z.erect_date){ alert('還沒有吊裝期,無法自動推算交管料日。'); return; }
+  const r=await sbFetch('/rest/v1/zones?id=eq.'+zoneId,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({handover_date:null})});
+  if(!r.ok){ alert('還原失敗('+(r.status||'?')+')'); return; }
+  z.handover_date=null; ldHint('已改回自動:吊裝期往前 '+LD_BACK_WORKDAYS+' 個工作天'); ldRender();
+}
+async function ldSetPlan(planId, val){
+  const p=ldPlans.find(x=>String(x.id)===String(planId)); if(!p) return;
+  const v=(String(val||'').trim()==='')?null:ldNum(val);
+  const r=await sbFetch('/rest/v1/loading_plan?id=eq.'+encodeURIComponent(planId),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({plan_tons:v})});
+  if(!r.ok){ alert('排定量儲存失敗('+(r.status||'?')+')'); return; }
+  p.plan_tons=v; ldRender();
+}
+async function ldSetNote(planId, val){
+  const p=ldPlans.find(x=>String(x.id)===String(planId)); if(!p) return;
+  const v=String(val||'').trim()||null;
+  const r=await sbFetch('/rest/v1/loading_plan?id=eq.'+encodeURIComponent(planId),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({note:v})});
+  if(!r.ok){ alert('備註儲存失敗('+(r.status||'?')+')'); return; }
+  p.note=v;
+}
+async function ldRemove(planId){
+  const p=ldPlans.find(x=>String(x.id)===String(planId)); if(!p) return;
+  const z=ldZoneById(p.zone_id);
+  if(!await uiConfirm('把「'+(z?ldProjNum(z)+'-'+(z.zone_code||''):'這個工程區')+'」從 '+ldYM+' 的排程移除？\n只移除這個月的排程,吊裝期與生產資料都不會動。',{danger:true,okText:'移除'})) return;
+  const r=await sbFetch('/rest/v1/loading_plan?id=eq.'+encodeURIComponent(planId),{method:'DELETE',headers:{'Prefer':'return=minimal'}});
+  if(!r.ok){ alert('移除失敗('+(r.status||'?')+')'); return; }
+  ldPlans=ldPlans.filter(x=>String(x.id)!==String(planId));
+  await ldLoadFacts(); ldRender();
+}
+// 加入本月排程:排定量預設帶「整區還沒做完的量」
+// 指定工程區的 BOM 噸數(還沒抓過才抓);沒有先抓,新加入的排定量會帶成 0
+async function ldFetchBom(ids){
+  const need=[...new Set(ids.map(String))].filter(id=>!ldBom[id]);
+  if(!need.length) return;
+  const inIds='('+need.join(',')+')';
+  const [rc,re]=await Promise.all([
+    sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,qty&zone_id=in.'+inIds),
+    sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no,extra&zone_id=in.'+inIds)
+  ]);
+  const nonco=new Set();
+  (Array.isArray(re.data)?re.data:[]).forEach(e=>{
+    const x=e.extra||{};
+    if(x[NONCO_KEY]==='1'||x[NONCO_KEY]===true) nonco.add(e.zone_id+'|'+String(e.part_no||'').trim().toUpperCase());
+  });
+  (Array.isArray(rc.data)?rc.data:[]).forEach(c=>{
+    if(nonco.has(c.zone_id+'|'+String(c.part_no||'').trim().toUpperCase())) return;
+    const b=ldBom[c.zone_id]||(ldBom[c.zone_id]={kg:0,qty:0});
+    b.kg+=ldNum(c.net_weight); b.qty+=parseInt(c.qty)||0;
+  });
+  need.forEach(id=>{ if(!ldBom[id]) ldBom[id]={kg:0,qty:0}; });
+}
+// 某工程各工程區的累計完成(kg):加入視窗用來判斷整區是不是已經做完了
+async function ldFetchDone(projNum){
+  const out={};
+  if(!projNum) return out;
+  const r=await sbFetchAll('/rest/v1/daily_output?select=proj_num,zone_code,net_weight&proj_num=eq.'+encodeURIComponent(projNum));
+  (Array.isArray(r.data)?r.data:[]).forEach(x=>{
+    const k=String(x.proj_num||'').trim().toUpperCase()+'|'+String(x.zone_code||'').trim().toUpperCase();
+    out[k]=(out[k]||0)+ldNum(x.net_weight);
+  });
+  return out;
+}
+async function ldAddZones(zoneIds){
+  const list=[...new Set(zoneIds.map(String))].filter(id=>!ldPlans.some(p=>String(p.zone_id)===id));
+  if(!list.length) return 0;
+  await ldFetchBom(list);
+  const payload=list.map(id=>{
+    const bom=ldBom[id]||{kg:0};
+    return {ym:ldYM, zone_id:(isNaN(+id)?id:+id), plan_tons:+ldFix(ldT(bom.kg)),
+            created_by_name:(typeof currentUser!=='undefined'&&currentUser)?(currentUser.name||''):''};
+  });
+  const r=await sbFetch('/rest/v1/loading_plan',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)});
+  if(!r.ok||!Array.isArray(r.data)){ alert('加入失敗('+(r.status||'?')+')：'+((r.data&&(r.data.message||r.data.hint))||'')+'\n若是資料表不存在,請先執行 loading_plan_migration.sql。'); return 0; }
+  ldPlans=ldPlans.concat(r.data);
+  await ldLoadFacts(); ldRender();
+  return r.data.length;
+}
+async function ldAddZone(zoneId){ const n=await ldAddZones([zoneId]); if(n) ldHint('已加入本月排程'); }
+async function ldAddAllMissing(){ const n=await ldAddZones(ldMissing().map(r=>r.z.id)); if(n) ldHint('已加入 '+n+' 個工程區'); }
+
+// 排定量是空白或 0 的列(修正前加入的資料會是 0),一次補成整區 BOM 重量
+async function ldFillPlans(){
+  const targets=ldPlans.filter(p=>{
+    const v=(p.plan_tons==null||p.plan_tons==='')?null:Number(p.plan_tons);
+    return v==null || !(v>0);
+  });
+  if(!targets.length){ alert('本月每一列都已經有排定量了。'); return; }
+  await ldFetchBom(targets.map(p=>p.zone_id));
+  const fixable=targets.filter(p=>ldT((ldBom[p.zone_id]||{}).kg||0)>0);
+  if(!fixable.length){ alert('這 '+targets.length+' 個工程區在構件總表裡查不到重量（BOM 是空的），沒辦法自動帶入。\n請先確認該工程區的構件總表有資料。'); return; }
+  if(!await uiConfirm('要把 '+fixable.length+' 個工程區的排定量補成整區 BOM 重量嗎？\n（只補空白或 0 的，已經填過數字的不會被覆蓋）',{okText:'補上'})) return;
+  let ok=0, fail=0;
+  for(const p of fixable){
+    const t=+ldFix(ldT((ldBom[p.zone_id]||{}).kg||0));
+    const r=await sbFetch('/rest/v1/loading_plan?id=eq.'+encodeURIComponent(p.id),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({plan_tons:t})});
+    if(r.ok){ p.plan_tons=t; ok++; } else fail++;
+  }
+  ldRender();
+  ldHint(fail?('補上 '+ok+' 個，'+fail+' 個失敗'):('已補上 '+ok+' 個工程區的排定量'));
+}
+
+// 帶入上月未完成:上個月排了但沒做完的區,直接排進這個月(量=整區剩餘)
+async function ldCarryOver(){
+  const prev=ldYMAdd(ldYM,-1);
+  const r=await sbFetchAll('/rest/v1/loading_plan?select=zone_id&ym=eq.'+encodeURIComponent(prev));
+  if(!r.ok){ alert('讀取上個月排程失敗'); return; }
+  const ids=(Array.isArray(r.data)?r.data:[]).map(x=>String(x.zone_id))
+    .filter(id=>!ldPlans.some(p=>String(p.zone_id)===id));
+  if(!ids.length){ alert(prev+' 沒有可帶入的工程區（可能都已排進本月或上個月沒有排程）。'); return; }
+  // 已經完工的不帶
+  const zs=ids.map(id=>ldZoneById(id)).filter(Boolean);
+  if(!await uiConfirm('把 '+prev+' 的 '+zs.length+' 個工程區帶進 '+ldYM+' 嗎？\n排定量會自動帶「整區還沒做完的量」，可再手動調整。',{okText:'帶入'})) return;
+  const n=await ldAddZones(zs.map(z=>z.id));
+  ldHint(n?('已帶入 '+n+' 個工程區'):'沒有新增任何工程區');
+}
+
+// 加入工程區:先選工程,再勾工程區
+// 這個工程區還可以排進本月嗎(已完成/轉包/已經排在本月的都不算)
+function ldZoneAddable(z){
+  return ['已完成','完成','轉包'].indexOf(String(z.status||'').trim())<0
+      && !ldPlans.some(p=>String(p.zone_id)===String(z.id));
+}
+function ldAddOpen(){
+  if(ldErr){ alert(ldErr); return; }
+  // 整個工程的工程區都完成(或都已排進本月)→ 這個工程就不要出現在下拉裡
+  const projs=ldProjects.filter(p=>ldZones.some(z=>String(z.project_id)===String(p.id) && ldZoneAddable(z)))
+    .sort((a,b)=>String(a.proj_num||'').localeCompare(String(b.proj_num||''),undefined,{numeric:true}));
+  if(!projs.length){ alert('目前沒有可以加入的工程：所有工程區不是已完成／轉包，就是已經排進 '+ldYM+' 了。'); return; }
+  const overlay=document.createElement('div'); overlay.className='input-modal-overlay';
+  overlay.innerHTML='<div class="input-modal" style="width:520px"><div class="input-modal-title">加入工程區到 '+ldEsc(ldYM)+' 排程</div>'
+    +'<select class="filter-select" id="ld-add-proj" style="width:100%;padding:9px"><option value="">— 選擇工程 —</option>'
+    +projs.map(p=>'<option value="'+p.id+'">'+ldEsc(p.proj_num||'')+(p.proj_name?('｜'+ldEsc(p.proj_name)):'')+'</option>').join('')+'</select>'
+    +'<div id="ld-add-list" class="ld-add-list">請先選擇工程</div>'
+    +'<div class="input-modal-actions"><button class="input-modal-btn cancel">取消</button><button class="input-modal-btn ok">加入</button></div></div>';
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  overlay.querySelector('.cancel').onclick=close;
+  overlay.onclick=e=>{ if(e.target===overlay) close(); };
+  const sel=overlay.querySelector('#ld-add-proj'), list=overlay.querySelector('#ld-add-list');
+  sel.onchange=async()=>{
+    if(!sel.value){ list.innerHTML='請先選擇工程'; return; }
+    list.innerHTML='<div class="ld-add-empty">載入中…</div>';
+    const zs=ldZones.filter(z=>String(z.project_id)===String(sel.value) && ldZoneAddable(z));
+    if(!zs.length){ list.innerHTML='<div class="ld-add-empty">這個工程沒有可加入的工程區（已完成／轉包／已在本月排程的不列）。</div>'; return; }
+    await ldFetchBom(zs.map(z=>z.id));
+    const done=await ldFetchDone(ldProjNum(zs[0]));
+    // 整區都已經做完的(累計完成 ≥ BOM)不要再列出來
+    const rows=zs.map(z=>{
+      const bomT=ldT((ldBom[z.id]||{}).kg||0), doneT=ldT(done[ldZoneKey(z)]||0);
+      return {z, bomT, doneT, remainT:Math.max(0,bomT-doneT)};
+    }).filter(x=>!(x.bomT>0 && x.remainT<=0.001));
+    if(!rows.length){ list.innerHTML='<div class="ld-add-empty">這個工程的工程區都已經做完了。</div>'; return; }
+    list.innerHTML=rows.map(x=>{
+      const h=ldHandoverOf(x.z);
+      return '<label class="ld-add-row"><input type="checkbox" value="'+x.z.id+'">'
+        +'<b>'+ldEsc(x.z.zone_code||'')+'</b>'
+        +'<span class="ld-add-meta">'+(h?('交管料 '+ldEsc(h)):'未設吊裝期')
+        +(x.bomT>0?('　BOM '+ldFix(x.bomT)+'t'+(x.doneT>0?('，已做 '+ldFix(x.doneT)+'t'):'')):'　尚無 BOM')
+        +'</span></label>';
+    }).join('');
+  };
+  overlay.querySelector('.ok').onclick=async()=>{
+    const ids=[...list.querySelectorAll('input[type=checkbox]:checked')].map(c=>c.value);
+    if(!ids.length){ alert('請先勾選工程區'); return; }
+    close();
+    const n=await ldAddZones(ids);
+    if(n) ldHint('已加入 '+n+' 個工程區');
+  };
+  setTimeout(()=>sel.focus(),30);
+}
+
+// 主頁小卡:SP 備料進度 ／ 月排程進度 兩個分頁共用同一格
+function dashMiniTab(t){
+  const sp=(t!=='ld');
+  const spBox=document.getElementById('dash-sp-progress'), ldBox=document.getElementById('dash-loading-due');
+  if(spBox) spBox.style.display=sp?'':'none';
+  if(ldBox) ldBox.style.display=sp?'none':'';
+  const a=document.getElementById('dash-mini-tab-sp'), b=document.getElementById('dash-mini-tab-ld');
+  if(a) a.classList.toggle('active',sp);
+  if(b) b.classList.toggle('active',!sp);
+  const go=document.getElementById('dash-mini-go');
+  if(go){ go.textContent=sp?'SP 表':'月排程'; go.onclick=function(){ navTo(sp?'prod':'loading'); }; }
+}
+
+/* 主頁小卡:未來 14 個工作天內要交管料、或已經逾期的工程區。
+   只讀 zones + projects(都是小表),不碰產量,主頁才不會變慢。 */
+async function ldDashLoad(){
+  const box=document.getElementById('dash-loading-due'); if(!box) return;
+  const cnt=document.getElementById('dash-ld-count');
+  const [rz,rp]=await Promise.all([
+    sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,status,erect_date,handover_date'),
+    sbFetchAll('/rest/v1/projects?select=id,proj_num')
+  ]);
+  if(!rz.ok){ box.innerHTML='<span style="color:var(--text3);font-size:13px">尚未啟用（請先執行 loading_plan_migration.sql）</span>'; if(cnt)cnt.textContent=''; return; }
+  const projById={}; (Array.isArray(rp.data)?rp.data:[]).forEach(p=>projById[String(p.id)]=p.proj_num||'');
+  const rows=(Array.isArray(rz.data)?rz.data:[])
+    .filter(z=>{ const st=String(z.status||'').trim(); return st!=='已完成' && st!=='轉包'; })
+    .map(z=>({z, proj:projById[String(z.project_id)]||'', h:ldHandoverOf(z)}))
+    .filter(x=>x.h)
+    .map(x=>Object.assign(x,{left:ldWorkdaysLeft(x.h)}))
+    .filter(x=>x.left!=null && x.left<=14)
+    .sort((a,b)=>a.left-b.left);
+  if(cnt){
+    cnt.textContent=rows.length?('· '+rows.length+' 區'):'';
+    // 有逾期或 5 個工作天內要交管料 → 數字標紅,停在 SP 分頁也看得見
+    cnt.classList.toggle('ld-hot', rows.some(x=>x.left<=LD_BACK_WORKDAYS));
+  }
+  if(!rows.length){ box.innerHTML='<span style="color:var(--text3);font-size:13px">14 天內沒有要交管料的工程區</span>'; return; }
+  box.innerHTML=rows.slice(0,12).map(x=>{
+    const over=x.left<0;
+    const tag=over?('逾期 '+Math.abs(x.left)+' 天'):(x.left===0?'今天':('剩 '+x.left+' 天'));
+    const cls=(over||x.left<=LD_BACK_WORKDAYS)?'ld-l-red':'ld-l-yellow';
+    return '<div class="ld-due-item" onclick="navTo(\'loading\')" title="'+ldEsc(x.h)+'（'+ldWk(x.h)+'）交管料">'
+      +'<span class="ld-due-name">'+ldEsc(x.proj)+'-'+ldEsc(x.z.zone_code||'')+'</span>'
+      +'<span class="ld-due-date">'+ldEsc(String(x.h).slice(5))+'</span>'
+      +'<span class="ld-light '+cls+'">'+tag+'</span></div>';
+  }).join('')+(rows.length>12?('<div class="ld-due-more">另有 '+(rows.length-12)+' 區…</div>'):'');
+}
+
+// 點工程編號-工程區 → 記錄這個月的狀況(沒達標的原因),連同會議備註一起存
+function ldOpenNote(planId){
+  const p=ldPlans.find(x=>String(x.id)===String(planId)); if(!p) return;
+  const z=ldZoneById(p.zone_id); if(!z) return;
+  const r=ldRowOf(z,p), lt=ldLight(r);
+  const overlay=document.createElement('div'); overlay.className='input-modal-overlay';
+  overlay.innerHTML='<div class="input-modal ld-note-modal" style="width:540px">'
+    +'<div class="input-modal-title">'+ldEsc(r.proj)+'-'+ldEsc(z.zone_code||'')+'　'+ldEsc(ldYM)+' 狀況說明</div>'
+    +'<div class="ld-note-sum">'
+      +'<div>交管料日　<b>'+ldEsc(r.handover||'—')+'</b>'+(r.handover?('（'+ldWk(r.handover)+'）'):'')+'</div>'
+      +'<div>狀態　<b>'+ldEsc(lt.txt)+'</b></div>'
+      +'<div>本月排定　<b>'+ldFix(r.target)+'</b> t</div>'
+      +'<div>本月完成　<b>'+ldFix(r.doneMonT)+'</b> t（'+r.pct+'%）</div>'
+    +'</div>'
+    +'<label>狀況說明／沒達標的原因</label>'
+    +'<textarea id="ld-note-issue" placeholder="例如：CP 圖 9/8 才到、SP 板料等到 9/12，本月只做得完 20t"></textarea>'
+    +'<label>會議備註（表格上那一欄）</label>'
+    +'<input type="text" id="ld-note-memo" maxlength="200">'
+    +'<div class="input-modal-actions"><button class="input-modal-btn cancel">取消</button><button class="input-modal-btn ok">儲存</button></div></div>';
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  overlay.querySelector('#ld-note-issue').value=String(p.issue||'');
+  overlay.querySelector('#ld-note-memo').value=String(p.note||'');
+  overlay.querySelector('.cancel').onclick=close;
+  overlay.onclick=e=>{ if(e.target===overlay) close(); };
+  overlay.querySelector('.ok').onclick=async()=>{
+    const issue=overlay.querySelector('#ld-note-issue').value.trim()||null;
+    const note=overlay.querySelector('#ld-note-memo').value.trim()||null;
+    const res=await sbFetch('/rest/v1/loading_plan?id=eq.'+encodeURIComponent(planId),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({issue:issue, note:note})});
+    if(!res.ok){ alert('儲存失敗('+(res.status||'?')+')：'+((res.data&&(res.data.message||res.data.hint))||'')+'\n若說沒有 issue 欄位,請重新執行 loading_plan_migration.sql。'); return; }
+    p.issue=issue; p.note=note; close(); ldRender(); ldHint('狀況說明已儲存');
+  };
+  setTimeout(()=>{ const t=overlay.querySelector('#ld-note-issue'); if(t) t.focus(); },40);
+}
+
+function ldHint(t){
+  const el=ldEl('ld-hint'); if(!el) return;
+  el.textContent=t||'';
+  if(t) setTimeout(()=>{ if(el.textContent===t) el.textContent=''; },4000);
+}
+
 </script>
 </body>
 </html>
