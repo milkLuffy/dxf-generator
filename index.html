@@ -659,6 +659,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .status-badge.已完成{background:rgba(92,184,138,.15);color:var(--green);border:1px solid rgba(92,184,138,.3)}
 .status-badge.未開始{background:rgba(90,98,120,.15);color:var(--text3);border:1px solid var(--border)}
 .status-badge.異常{background:rgba(255,69,58,.16);color:var(--red);border:1px solid rgba(255,69,58,.4);font-weight:700}
+.status-badge.轉包{background:rgba(191,90,242,.16);color:var(--purple);border:1px solid rgba(191,90,242,.4);font-weight:700}
 .status-badge.REVIEW{background:rgba(245,197,66,.15);color:var(--yellow);border:1px solid rgba(245,197,66,.3)}
 
 /* dashboard 統計報表 */
@@ -814,15 +815,30 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 /* ── Staff page ── */
 .staff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
 .zone-grid{display:block}
-.zone-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.zone-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px}
 .zone-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:18px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden}
 .zone-card:hover{border-color:var(--accent2);transform:translateY(-2px)}
 .zone-card:before{content:'';position:absolute;top:-15px;right:-15px;width:60px;height:60px;border-radius:50%;background:var(--accent2);opacity:.08}
 .zone-code{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.05em;color:var(--accent2);line-height:1;margin-bottom:6px}
 .zone-name{font-size:13px;color:var(--text2);margin-bottom:12px;min-height:18px}
-.zone-card-footer{display:flex;align-items:center;justify-content:space-between}
-.zone-actions{display:flex;gap:4px}
-.zone-card .btn-icon{padding:3px 6px;font-size:11px}
+.zone-card-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;row-gap:4px}
+.zone-actions{display:flex;gap:4px;flex-wrap:nowrap}
+/* 工程區動作:一律文字小鈕,靠顏色分辨(藍=編輯、青=轉移、紫=轉包、紅=刪除) */
+.zbtn{display:inline-flex;align-items:center;justify-content:center;padding:3px 7px;border:1px solid;border-radius:var(--rad);background:none;font-family:var(--sans);font-size:11px;line-height:1.55;white-space:nowrap;cursor:pointer;transition:all .15s}
+.zbtn.edit{color:var(--accent2);border-color:color-mix(in srgb,var(--accent2) 45%,transparent)}
+.zbtn.edit:hover{background:color-mix(in srgb,var(--accent2) 14%,transparent);border-color:var(--accent2)}
+.zbtn.move{color:var(--accent3);border-color:color-mix(in srgb,var(--accent3) 45%,transparent)}
+.zbtn.move:hover{background:color-mix(in srgb,var(--accent3) 14%,transparent);border-color:var(--accent3)}
+.zbtn.sub{color:var(--purple);border-color:color-mix(in srgb,var(--purple) 45%,transparent)}
+.zbtn.sub:hover{background:color-mix(in srgb,var(--purple) 14%,transparent);border-color:var(--purple)}
+.zbtn.sub.on{background:color-mix(in srgb,var(--purple) 20%,transparent);border-color:var(--purple);font-weight:600}
+.zbtn.del{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 42%,transparent)}
+.zbtn.del:hover{background:color-mix(in srgb,var(--danger) 14%,transparent);border-color:var(--danger)}
+.zone-list-table .zone-actions{justify-content:flex-end}
+.zone-card .zone-actions{width:100%;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+/* 卡片較窄:四顆一律擠在同一排,寬度不夠就一起縮 */
+.zone-card .zbtn{flex:0 1 auto;min-width:0;padding:3px 5px;font-size:10.5px}
+@media(max-width:768px){.zbtn{padding:6px 9px;font-size:12px}.zone-card .zbtn{padding:6px 6px;font-size:11.5px}}
 /* 柱工程區(尾字 C)且落在長度回饋節次(#1/#4/#7/#10/#13):只掛一顆低調徽章,外層不上色 */
 .len-fb-badge{display:inline-flex;align-items:center;margin-left:8px;padding:2px 9px;border-radius:12px;font-family:var(--mono);font-size:11px;letter-spacing:.03em;white-space:nowrap;vertical-align:middle;background:rgba(225,29,72,.16);color:#ff92a1;border:1px solid rgba(225,29,72,.38)}
 [data-theme="light"] .len-fb-badge{background:#fdeaec;color:#b02a37;border-color:#eec3c8}
@@ -1493,6 +1509,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .zv-btn:hover{border-color:var(--border-hi)}
 .zv-btn.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
 .proc-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:12px;font-size:12px;font-family:var(--mono);background:var(--bg4);color:var(--accent3);border:1px solid var(--border)}
+/* 水電加工代號:與加工代號同形狀,換色好分辨 */
+.proc-badge.util{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,var(--border))}
 .zone-card-footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .zone-list-table{width:100%;border-collapse:collapse;font-family:var(--sans);font-size:14px}
 .zone-list-table th{text-align:left;padding:10px 14px;color:var(--text3);font-size:12px;border-bottom:1px solid var(--border);font-weight:500}
@@ -1762,6 +1780,23 @@ table.att-grid td{padding:4px 5px;vertical-align:middle}
 table.att-grid .att-cat-head td{background:var(--bg4);font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--accent2);font-weight:600}
 table.att-grid tfoot td{font-family:var(--mono);font-weight:600;background:var(--bg2);border-top:2px solid var(--border-hi)}
 table.att-grid .att-na{color:var(--text3);text-align:center}
+/* 本月重複計算檢查結果 */
+.att-dup-panel{border:1px solid var(--danger);border-left:3px solid var(--danger);border-radius:var(--rad);background:color-mix(in srgb,var(--danger) 7%,var(--bg3));padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--text2)}
+.att-dup-panel.ok{border-color:var(--success);border-left-color:var(--success);background:color-mix(in srgb,var(--success) 8%,var(--bg3))}
+.att-dup-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.att-dup-head b{color:var(--text)}
+.att-dup-head .att-dup-actions{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.att-dup-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px}
+.att-dup-table th{text-align:left;padding:5px 8px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border)}
+.att-dup-table td{padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+.att-dup-table tr:last-child td{border-bottom:0}
+.att-dup-table .num{text-align:right}
+.att-dup-table .bad{color:var(--danger);font-weight:600}
+.att-dup-table .warn{color:var(--yellow)}
+.att-dup-table .lnk{color:var(--accent2);cursor:pointer;text-decoration:underline dotted}
+/* 防呆:請假又填了上班工數(合計超過一天) */
+table.att-grid input.att-bad{border-color:var(--danger)!important;background:color-mix(in srgb,var(--danger) 14%,var(--bg3))!important;color:var(--danger)}
+table.att-grid tfoot tr.att-warn-row td{color:var(--danger);font-weight:600;background:color-mix(in srgb,var(--danger) 10%,var(--bg2));border-top:2px solid var(--danger)}
 table.att-grid .att-ro{display:inline-block;font-size:12px;color:var(--text2);white-space:nowrap}
 /* 出勤回報 分頁 */
 #page-attendance .page-header{position:sticky;top:var(--appbar-h);z-index:40;background:var(--bg);margin:0 -32px 16px;padding:14px 32px;border-bottom:1px solid var(--border)}
@@ -2466,9 +2501,11 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
           <option value="未開始">未開始</option>
           <option value="進行中">進行中</option>
           <option value="已完成">已完成</option>
+          <option value="轉包">轉包</option>
         </select>
       </div>
       <div class="lf"><label>加工代號</label><input type="text" id="zone-proc" placeholder="例 72201"/></div>
+      <div class="lf"><label>水電加工代號</label><input type="text" id="zone-util-proc" placeholder="例 CFH529（沒有水電就留白）"/></div>
       <div class="lf"><label>工程副號</label><input type="text" id="zone-sub" placeholder="例 A"/></div>
     </div>
     <div class="lf">
@@ -6327,10 +6364,12 @@ window.normalizeFullWidth=function(value){
             <button class="dash-nav-btn" id="att-nav-today" onclick="attNavDate(0)">今日</button>
             <span class="date-wk-show" id="att-date-show">—</span>
             <button class="dash-nav-btn" onclick="attBatchImport()" title="從 JSON 批次匯入出勤(att_report 欄位格式)">📥 批次輸入</button>
+            <button class="dash-nav-btn" onclick="attScanDup()" title="掃描本月:同一天既有請假時數又有上班工數,合計超過一天(8 小時)">🔍 檢查本月重複計算</button>
             <span style="flex:1"></span>
             <span id="att-save-hint" style="font-family:var(--mono);font-size:11px;color:var(--text3)"></span>
           </div>
           <div class="att-leave-bar" id="att-leave-bar" style="display:none"></div>
+          <div class="att-dup-panel" id="att-dup-panel" style="display:none"></div>
           <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:8px">※ 人員、部門、職稱皆來自「公司名冊」，於名冊修改後即時同步。上班/加班/請假可輸入工數(左)或時數(右)，時數預設＝工數×8。<br>※ 可用方向鍵移動儲存格、Enter 跳到下一格，輸入即時儲存（離開儲存格立刻寫入資料庫）。</div>
           <div style="overflow:auto">
             <table class="project-table att-grid" id="att-daily-grid" onkeydown="attGridKey(event)">
@@ -13890,7 +13929,16 @@ async function leaveSyncToAtt(l, clear){
       if(hasOther) await sbFetch(q,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({leave_type:null,leave_hours:0})});
       else         await sbFetch(q,{method:'DELETE',headers:{'Prefer':'return=minimal'}});
     }else{
-      if(row) await sbFetch(q,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({leave_type:l.leave_type,leave_hours:hours})});
+      if(row){
+        // 請了假就不該再有同一段時間的上班工數:一天以 8 小時計,上班上限 = 8 - 請假時數
+        // (全天假 → 0;上午/下午半天假 → 最多 4 小時。加班不動,請半天假晚上回來加班是可能的)
+        const cap=Math.max(0, 8-hours);
+        const work=Math.min(parseFloat(row.work_hours)||0, cap);
+        const patch={leave_type:l.leave_type, leave_hours:hours, work_hours:work};
+        // 沒上班也沒加班就沒有便當(比照出勤回報本來的預設:出勤1個、加班2個、都沒有就0)
+        if(work<=0 && (parseFloat(row.ot_hours)||0)<=0 && (parseFloat(row.bento)||0)>0) patch.bento=0;
+        await sbFetch(q,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(patch)});
+      }
       else    await sbFetch('/rest/v1/att_report',{method:'POST',headers:{'Prefer':'return=minimal'},
                 body:JSON.stringify({work_date:d,staff_name:l.staff_name,category:cat,team:st.role||'',
                   work_hours:0,ot_hours:0,night_hours:0,bento:0,leave_type:l.leave_type,leave_hours:hours,note:null})});
@@ -14582,6 +14630,7 @@ function calcZoneStatus(total, onlineCount, doneCount) {
   return '未開始';
 }
 function calcProjectStatus(zoneStatuses) {
+  zoneStatuses = (zoneStatuses||[]).filter(s => String(s||'').trim() !== '轉包');   // 轉包區不代表本廠進度
   if (!zoneStatuses.length) return '未開始';
   if (zoneStatuses.every(s => s === '已完成')) return '已完成';
   if (zoneStatuses.some(s => s === '進行中' || s === '已完成')) return '進行中';
@@ -14603,6 +14652,7 @@ async function applyCurrentZoneStatus() {
     if (hasA202) done++;
   });
   const st = calcZoneStatus(total, online, done);
+  if (zoneObj.status === '轉包') { await applyProjectStatus(currentProjectId); return; }   // 轉包=人工狀態,不被生產資料覆寫
   if (st !== zoneObj.status) {
     await sbFetch('/rest/v1/zones?id=eq.' + currentZoneId, {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({status:st})});
     zoneObj.status = st;
@@ -14619,6 +14669,7 @@ async function applyProjectStatus(projectId) {
   const p = allBOM.find(x => x.id === projectId);
   if (p && p.status === '異常') return;   // 「異常」為手動狀態,不被生產資料自動重算覆寫
   if (!zones.length) return;              // 沒有工程區=無生產資料可推導,保留手動狀態(不強制歸為未開始)
+  if (!zones.some(z => String(z.status||'').trim() !== '轉包')) return;   // 整個工程都轉包出去:保留原狀態
   const st = calcProjectStatus(zones.map(z => z.status));
   if (p && p.status !== st) {
     await sbFetch('/rest/v1/projects?id=eq.' + projectId, {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({status:st})});
@@ -14658,6 +14709,7 @@ async function refreshZoneStatusByCode(projNum, zoneCode) {
   });
   const st = calcZoneStatus(total, on, dn);
   const lz = allZones.find(z => z.id === zone.id);
+  if (String(zone.status||'').trim() === '轉包') { if (lz) lz.status = zone.status; await applyProjectStatus(proj.id); return; }
   if (st !== zone.status) {
     await sbFetch('/rest/v1/zones?id=eq.' + zone.id, {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({status:st})});
     if (lz) lz.status = st;
@@ -14717,6 +14769,8 @@ async function syncBOMProjectStatusFromLayout() {
       if (online[pn] || (e.A201 && String(e.A201).trim())) on++;
       if (done[pn] || (e.A202 && String(e.A202).trim())) dn++;
     });
+    // 轉包=人工狀態:保持原樣,也不列入工程狀態的計算
+    if (String(z.status||'').trim() === '轉包') return;
     const st = calcZoneStatus(statParts.length, on, dn);
     if (st !== z.status) zoneUpdates.push({id: z.id, status: st});
     const lz = allZones.find(x => x.id === z.id); if (lz) lz.status = st;
@@ -15162,7 +15216,7 @@ async function bomCloneProject(projectId, newProjNum, withZones) {
       const zr = await sbFetchAll('/rest/v1/zones?select=*&project_id=eq.' + projectId + '&order=id');
       const zones = Array.isArray(zr.data) ? zr.data : [];
       for (const z of zones) {
-        const zoneBody = {project_id:dst.id, zone_code:z.zone_code||'', status:'未開始', proc_code:z.proc_code||'', sub_code:z.sub_code||''};
+        const zoneBody = {project_id:dst.id, zone_code:z.zone_code||'', status:'未開始', proc_code:z.proc_code||'', util_proc_code:z.util_proc_code||null, sub_code:z.sub_code||''};
         const nzr = await sbFetch('/rest/v1/zones', {method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(zoneBody)});
         const nz = nzr.ok && Array.isArray(nzr.data) ? nzr.data[0] : null;
         if (!nz) throw new Error('工程區 ' + (z.zone_code||'') + ' 建立失敗');
@@ -15224,7 +15278,7 @@ async function deleteBOM(id) {
   filterBOM();           // 立即移除(套用當前篩選)
   loadDashboard();       // 背景更新
 }
-let currentProjectId=null, allZones=[], editZoneId=null;
+let currentProjectId=null, allZones=[], editZoneId=null, zoneModalOrigStatus='';
 
 async function showProjectDetail(id) {
   if(!allBOM.length){ try{ await loadBOM(); }catch(e){} }   // 未預載時自載,確保能查到工程
@@ -15257,8 +15311,10 @@ async function loadZones(projectId) {
 
 let zoneViewMode = 'card';  // 'card' | 'list'
 let zoneShowDone = false;   // 是否顯示已完成工程區
+let zoneShowSub = false;    // 是否顯示轉包工程區(比照已完成,預設收起來)
 function setZoneView(mode) { zoneViewMode = mode; renderZones(); }
 function toggleZoneDone() { zoneShowDone = !zoneShowDone; renderZones(); }
+function toggleZoneSub() { zoneShowSub = !zoneShowSub; renderZones(); }
 // 依工程區代號 A-Z 排序 (numeric)
 function zoneCodeCmp(a,b){ return String(a.zone_code||'').localeCompare(String(b.zone_code||''), undefined, {numeric:true, sensitivity:'base'})
   || String(a.sub_code||'').localeCompare(String(b.sub_code||''), undefined, {numeric:true, sensitivity:'base'}); }
@@ -15325,30 +15381,140 @@ function zoneLenFbBadge(code){
     ? '<span class="len-fb-badge" title="柱 #'+zoneSectionNo(code)+' 節:每三節一次的長度回饋節次,要跟工程主辦追蹤">長度回饋</span>'
     : '';
 }
+// ── 工程區轉包 ────────────────────────────────────────────────
+// 工程區是最上層:這裡設成轉包,BOM 狀態、SP 明細、CP 收圖一起變轉包。
+// SP/CP 的一筆資料可能同時掛好幾個工程區 → 交給 SP 頁既有的拆分邏輯,只把這一區拆出來標轉包。
+const ZONE_SUB_STATUS = '轉包';
+function zoneIsSubcontract(z){ return String(z?.status||'').trim() === ZONE_SUB_STATUS; }
+// 四顆文字鈕:編輯(藍) / 轉移(青) / 轉包(紫,已轉包時變成取消) / 刪除(紅)
+function zoneActionBtns(z){
+  const sub = zoneIsSubcontract(z);
+  return '<button class="zbtn edit" onclick="editZone(' + z.id + ')">編輯</button>' +
+    '<button class="zbtn move" onclick="bomOpenMoveZone(' + z.id + ')" title="轉移到其他工程">轉移</button>' +
+    '<button class="zbtn sub' + (sub?' on':'') + '" onclick="zoneToggleSubcontract(' + z.id + ')" title="' +
+      (sub?'取消轉包:狀態依實際生產資料算回來,SP 明細改回未開始、CP 收圖取消轉包標記'
+          :'設為轉包:本工程區的 BOM 狀態、SP 明細與 CP 收圖一起改為轉包') + '">' +
+      (sub?'取消轉包':'轉包') + '</button>' +
+    '<button class="zbtn del" onclick="deleteZone(' + z.id + ')">刪除</button>';
+}
+// SP/CP 資料只在「SP鋼材狀態追蹤表」那頁載入;從 BOM 這邊設定要先補載,否則會誤判成「沒有資料」
+async function zoneEnsureProdLoaded(){
+  if (typeof prodDataLoaded !== 'undefined' && prodDataLoaded) return true;
+  if (typeof prodInit !== 'function') return false;
+  await prodInit();
+  return typeof prodDataLoaded !== 'undefined' && prodDataLoaded;
+}
+// 找出這個工程區在 SP/CP 裡要跟著改的資料(on=要轉包 → 取還沒轉包的;off=要取消 → 取已轉包的)
+function zoneSubcontractTargets(projNum, zoneCode, on){
+  const spRows = typeof prodZoneTrackRows === 'function' ? prodZoneTrackRows(projNum, zoneCode) : [];
+  const receipts = (typeof prodZoneReceiptRows === 'function' ? prodZoneReceiptRows(projNum, zoneCode, true) : [])
+    .filter(m => on ? !m.row.is_subcontract : !!m.row.is_subcontract);
+  return { spRows, receipts, multi: receipts.filter(m => m.zones.length > 1).length };
+}
+// 真正動 SP/CP 的那一段(工程區狀態由呼叫端先寫好)
+async function zoneApplySubcontractToProd(projNum, zoneCode, on, spRows, receipts){
+  if (on) {
+    await prodZoneSetReceiptSubcontract(projNum, zoneCode, receipts);
+    const ids = spRows.map(r => r.id).filter(x => x != null);
+    if (ids.length) {
+      const r = await sbFetch('/rest/v1/sp_track?id=in.(' + ids.join(',') + ')', {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({status:ZONE_SUB_STATUS})});
+      if (!r.ok) throw new Error('SP 明細更新失敗 HTTP ' + r.status);
+    }
+    spRows.forEach(r => { r.status = ZONE_SUB_STATUS; r._dirty = false; });
+  } else {
+    const ids = receipts.map(m => m.row.id).filter(x => x != null);
+    if (ids.length) {
+      const r = await sbFetch('/rest/v1/cp_receipts?id=in.(' + ids.map(encodeURIComponent).join(',') + ')', {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({is_subcontract:false})});
+      if (!r.ok) throw new Error('CP 收圖更新失敗 HTTP ' + r.status);
+      receipts.forEach(m => { m.row.is_subcontract = false; });
+    }
+    const back = spRows.filter(r => String(r.status||'').trim() === ZONE_SUB_STATUS);
+    const backIds = back.map(r => r.id).filter(x => x != null);
+    if (backIds.length) {
+      const r = await sbFetch('/rest/v1/sp_track?id=in.(' + backIds.join(',') + ')', {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({status:'-'})});
+      if (!r.ok) throw new Error('SP 明細更新失敗 HTTP ' + r.status);
+    }
+    back.forEach(r => { r.status = '-'; r._dirty = false; });
+  }
+  if (typeof prodRenderBoard === 'function') prodRenderBoard();
+  if (typeof cprRender === 'function') cprRender();
+  if (typeof spxRender === 'function') spxRender('track');
+}
+// 轉包鈕:先問清楚會動到哪些資料,再寫工程區狀態,最後連動 SP/CP
+async function zoneToggleSubcontract(id){
+  const z = allZones.find(x => x.id === id); if (!z) return;
+  const proj = allBOM.find(p => p.id === currentProjectId);
+  const projNum = String(proj?.proj_num||'').trim();
+  const zoneCode = String(z.zone_code||'').trim().toUpperCase();
+  if (!projNum || !zoneCode) { alert('找不到工程編號或工程區代號,無法設定轉包。'); return; }
+  const on = !zoneIsSubcontract(z);
+  if (!await zoneEnsureProdLoaded()) { alert('SP／CP 資料還在載入,請稍後再試一次。'); return; }
+  const { spRows, receipts, multi } = zoneSubcontractTargets(projNum, zoneCode, on);
+  const who = '「' + projNum + '-' + zoneCode + '」';
+  const detail = '・SP 明細 ' + spRows.length + ' 筆\n・CP 收圖 ' + receipts.length + ' 筆' +
+    (multi ? '(其中 ' + multi + ' 筆同時掛多個工程區,只會拆出這一區)' : '');
+  const ask = on
+    ? ('確定把工程區 ' + who + ' 設為「轉包」?\n\nBOM 工程區狀態會改成轉包,並同步:\n' + detail +
+       '\n\n資料不會刪除;轉包後在工程區列表、看板與 SP 狀態表都預設隱藏(工程區列表可按「顯示轉包」展開)。')
+    : ('確定取消 ' + who + ' 的轉包?\n\n工程區狀態會依實際生產資料重新計算,並同步:\n' + detail +
+       '\n\nSP 明細會改回「未開始」;先前被拆開的 CP 收圖不會自動合併回去。');
+  if (!await uiConfirm(ask, {okText: on ? '確定轉包' : '確定取消轉包'})) return;
+  const next = on ? ZONE_SUB_STATUS : '未開始';
+  const r = await sbFetch('/rest/v1/zones?id=eq.' + id, {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({status:next})});
+  if (!r.ok) {
+    alert('工程區狀態存檔失敗(' + (r.status||'?') + ')：' + ((r.data&&(r.data.message||r.data.hint))||'') +
+      '\n若是 status 的檢查限制擋下來,請先在 Supabase 執行 zone_subcontract_migration.sql。');
+    return;
+  }
+  z.status = next;
+  renderZones();
+  try {
+    await zoneApplySubcontractToProd(projNum, zoneCode, on, spRows, receipts);
+  } catch (e) {
+    alert('工程區狀態已改好,但 SP／CP 同步失敗：' + e.message + '\n請再按一次' + (on?'「轉包」':'「取消轉包」') + '重試。');
+    return;
+  }
+  if (!on) await refreshZoneStatusByCode(projNum, zoneCode);   // 取消後把狀態算回實際進度
+  else if (typeof applyProjectStatus === 'function') await applyProjectStatus(currentProjectId);
+  renderZones();
+}
+// 編輯視窗把狀態改成/改離「轉包」時,SP/CP 也要跟著走(狀態已由 commitZoneSave 寫入)
+async function zoneSyncSubcontractProd(zoneId, on){
+  const z = allZones.find(x => x.id === zoneId);
+  const proj = allBOM.find(p => p.id === currentProjectId);
+  const projNum = String(proj?.proj_num||'').trim();
+  const zoneCode = String(z?.zone_code||'').trim().toUpperCase();
+  if (!projNum || !zoneCode) return;
+  if (!await zoneEnsureProdLoaded()) { alert('SP／CP 資料還在載入,這次沒有跟著改;請到「SP鋼材狀態追蹤表」載入後,再用工程區的轉包鈕設定一次。'); return; }
+  const { spRows, receipts, multi } = zoneSubcontractTargets(projNum, zoneCode, on);
+  if (!spRows.length && !receipts.length) return;
+  const detail = '・SP 明細 ' + spRows.length + ' 筆\n・CP 收圖 ' + receipts.length + ' 筆' +
+    (multi ? '(其中 ' + multi + ' 筆同時掛多個工程區,只會拆出這一區)' : '');
+  if (!await uiConfirm('工程區「' + projNum + '-' + zoneCode + '」的狀態已改為「' + (on?ZONE_SUB_STATUS:'非轉包') + '」。\n要一起同步 SP／CP 嗎?\n\n' + detail, {okText:'一起同步'})) return;
+  try { await zoneApplySubcontractToProd(projNum, zoneCode, on, spRows, receipts); }
+  catch (e) { alert('SP／CP 同步失敗：' + e.message); }
+}
+
 // 一組工程區 → HTML(依目前檢視模式:卡片/列表)
 function renderZoneGroup(zones){
   if (zoneViewMode === 'list') {
     const rows = zones.map(z=>`<tr onclick="showZoneDetail(${z.id})" style="cursor:pointer">
       <td>${z.zone_code}${zoneLenFbBadge(z.zone_code)}</td>
       <td onclick="event.stopPropagation()"><input type="text" class="zl-proc" value="${(z.proc_code||'').replace(/"/g,'&quot;')}" placeholder="未設定" onchange="saveZoneProcCode(${z.id}, this.value, this)"/></td>
+      <td onclick="event.stopPropagation()"><input type="text" class="zl-proc" value="${(z.util_proc_code||'').replace(/"/g,'&quot;')}" placeholder="無水電" onchange="saveZoneUtilProcCode(${z.id}, this.value, this)"/></td>
       <td><span class="status-badge ${z.status}">${z.status}</span></td>
       <td onclick="event.stopPropagation()" style="text-align:right">
-        <button class="btn-icon edit" onclick="editZone(${z.id})">✏️</button>
-        <button class="btn-icon edit" onclick="bomOpenMoveZone(${z.id})" title="轉移到其他工程">轉移</button>
-        <button class="btn-icon del" onclick="deleteZone(${z.id})">🗑</button>
+        <div class="zone-actions">${zoneActionBtns(z)}</div>
       </td></tr>`).join('');
-    return '<table class="zone-list-table"><thead><tr><th>工程區</th><th>加工代號</th><th>狀態</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+    return '<table class="zone-list-table"><thead><tr><th>工程區</th><th>加工代號</th><th>水電加工代號</th><th>狀態</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
   }
   const cards = zones.map(z=>`<div class="zone-card" onclick="showZoneDetail(${z.id})">
     <div class="zone-code">${z.zone_code}${zoneLenFbBadge(z.zone_code)}</div>
     <div class="zone-card-footer">
       <span class="status-badge ${z.status}">${z.status}</span>
       ${z.proc_code?('<span class="proc-badge">'+z.proc_code+'</span>'):''}
-      <div class="zone-actions" onclick="event.stopPropagation()">
-        <button class="btn-icon edit" onclick="editZone(${z.id})">✏️</button>
-        <button class="btn-icon edit" onclick="bomOpenMoveZone(${z.id})" title="轉移到其他工程">轉移</button>
-        <button class="btn-icon del" onclick="deleteZone(${z.id})">🗑</button>
-      </div>
+      ${z.util_proc_code?('<span class="proc-badge util">水電 '+z.util_proc_code+'</span>'):''}
+      <div class="zone-actions" onclick="event.stopPropagation()">${zoneActionBtns(z)}</div>
     </div>
   </div>`).join('');
   return '<div class="zone-card-grid">' + cards + '</div>';
@@ -15362,15 +15528,22 @@ function renderZones() {
     '<button class="zv-btn' + (zoneViewMode==='card'?' active':'') + '" onclick="setZoneView(\'card\')">▦ 卡片</button>' +
     '<button class="zv-btn' + (zoneViewMode==='list'?' active':'') + '" onclick="setZoneView(\'list\')">▤ 列表</button>' +
     '</div>';
-  // 未完成:進行中 > 未開始(同狀態再依代號);已完成另外放
-  const active = allZones.filter(z=>z.status!=='已完成')
+  // 未完成:進行中 > 未開始(同狀態再依代號);已完成與轉包各自收合另放
+  const active = allZones.filter(z=>z.status!=='已完成' && !zoneIsSubcontract(z))
     .sort((a,b)=> bomStatusIdx(a.status)-bomStatusIdx(b.status) || zoneCodeCmp(a,b));
   const done = allZones.filter(z=>z.status==='已完成').sort(zoneCodeCmp);
+  const subs = allZones.filter(zoneIsSubcontract).sort(zoneCodeCmp);
   let html = toggle + (active.length ? renderZoneGroup(active) : '<div class="empty-state">目前沒有進行中或未開始的工程區</div>');
   if (done.length) {
     html += '<div style="margin-top:18px">' +
       '<button class="filter-select" onclick="toggleZoneDone()">' + (zoneShowDone?'隱藏已完成 (':'顯示已完成 (') + done.length + ')</button>' +
       (zoneShowDone ? '<div style="margin-top:10px">' + renderZoneGroup(done) + '</div>' : '') +
+    '</div>';
+  }
+  if (subs.length) {
+    html += '<div style="margin-top:12px">' +
+      '<button class="filter-select" onclick="toggleZoneSub()">' + (zoneShowSub?'隱藏轉包 (':'顯示轉包 (') + subs.length + ')</button>' +
+      (zoneShowSub ? '<div style="margin-top:10px">' + renderZoneGroup(subs) + '</div>' : '') +
     '</div>';
   }
   grid.innerHTML = html;
@@ -15393,12 +15566,34 @@ async function saveZoneProcCode(id, val, inputEl) {
   }
 }
 
+// 水電加工代號:與「產值→單價」同一個欄位,這裡改完那邊就跟著變
+async function saveZoneUtilProcCode(id, val, inputEl) {
+  const v = upperEN(val.trim());
+  const r = await sbFetch('/rest/v1/zones?id=eq.' + id, { method:'PATCH', headers:{'Prefer':'return=minimal'}, body: JSON.stringify({ util_proc_code: v || null }) });
+  const z = allZones.find(x => String(x.id) === String(id));
+  if (z) z.util_proc_code = v;
+  if (inputEl) {
+    inputEl.value = v;
+    if (r.ok) {
+      inputEl.style.borderColor = 'var(--success)';
+      setTimeout(() => { inputEl.style.borderColor = ''; }, 1000);
+    } else {
+      inputEl.style.borderColor = 'var(--danger)';
+      alert('水電加工代號儲存失敗,請確認資料庫已新增 util_proc_code 欄位(執行 output_value_migration.sql)');
+      return;
+    }
+  }
+  if (typeof window.outputSyncUtilProcCode === 'function') window.outputSyncUtilProcCode(id, v);
+}
+
 function openZoneModal(z=null) {
   editZoneId=z?z.id:null;
+  zoneModalOrigStatus=z?String(z.status||'').trim():'';
   document.getElementById('zone-modal-title').textContent=z?'編輯工程區':'新增工程區';
   document.getElementById('zone-code').value=z?.zone_code||'';
   document.getElementById('zone-status').value=z?.status||'未開始';
   document.getElementById('zone-proc').value=z?.proc_code||'';
+  document.getElementById('zone-util-proc').value=z?.util_proc_code||'';
   document.getElementById('zone-sub').value=z?.sub_code||'';
   document.getElementById('zone-bom-input').value='';
   document.getElementById('zone-bom-preview').textContent='尚未貼上資料';
@@ -15413,6 +15608,8 @@ async function saveZone() {
     zone_code:document.getElementById('zone-code').value.trim(),
     status:document.getElementById('zone-status').value,
     proc_code:document.getElementById('zone-proc').value.trim(),
+    // 水電加工代號與「產值→單價」是同一個欄位(zones.util_proc_code):這裡填了那邊就會出現
+    util_proc_code:document.getElementById('zone-util-proc').value.trim()||null,
     sub_code:document.getElementById('zone-sub').value.trim()
   };
   if(!data.zone_code){alert('工程區代號為必填');return;}
@@ -15448,7 +15645,12 @@ async function commitZoneSave(data, compMode){
   }
   btn.disabled=false; btn.textContent='儲存';
   closeModal('zone-modal');
+  // 狀態在「轉包」與其他之間切換 → SP/CP 也要跟著改(用轉包鈕的同一套邏輯)
+  if (zoneId && typeof window.outputSyncUtilProcCode === 'function') window.outputSyncUtilProcCode(zoneId, data.util_proc_code||'');
+  const subFlip = editZoneId && ((data.status===ZONE_SUB_STATUS) !== (zoneModalOrigStatus===ZONE_SUB_STATUS));
+  const flipId = editZoneId, flipOn = data.status===ZONE_SUB_STATUS;
   await loadZones(currentProjectId);
+  if (subFlip) await zoneSyncSubcontractProd(flipId, flipOn);
 }
 // 依模式將解析出的構件寫入指定工程區(與批次匯入邏輯一致)
 // mode: 'weight'(更新共通編號/重量/數量/規格) | 'overwrite'(刪除舊構件重建)
@@ -26636,6 +26838,7 @@ function attRenderDailyGrid(){
   body.oninput=attDayInput; body.onchange=attDayInput;
   tblInitSelection(document.getElementById('att-daily-grid'));   // Excel 式拖曳多選
   attInitLeaveSelect();   // 請假類別下拉:滾輪循環選擇 + 讓下拉可參與框選(多選複製/貼上)
+  attMarkAllConflicts();  // 舊資料若有「請假又有上班工數」也要標出來
   attUpdateDayFoot();
   attRenderLeaveBar();    // 當天有人事先登記請假 → 上方提示 + 一鍵帶入
 }
@@ -26725,6 +26928,10 @@ function attDayInput(e){
       }
     }
     if(t.getAttribute('data-f')==='bento') t.setAttribute('data-touched','1');
+    // 防呆:請假與上班不能重複算。動到假別/請假時數 → 直接把上班工數壓到上限;動到上班 → 只標紅提醒
+    const lf=t.getAttribute('data-f')||t.getAttribute('data-pair');
+    if(lf==='leave_type'||lf==='leave_hours') attCapWorkByLeave(tr, lf);
+    attMarkLeaveConflict(tr);
   }
   attUpdateDayFoot();
   // change(離開儲存格/提交)即時寫入；input(打字中)用極短延遲合併連續鍵入
@@ -26833,6 +27040,131 @@ async function attAutoSaveDay(){
   }
 }
 
+// 成對輸入(工數/時數)一起設定:h=實際時數,u=工數(正常/請假 ÷8、加班 ÷6)
+function attSetPair(tr,f,hours){
+  const div=(f==='ot')?6:8;
+  const u=tr.querySelector('[data-role="u"][data-pair="'+f+'"]');
+  const h=tr.querySelector('[data-role="h"][data-f="'+f+'"]');
+  if(h) h.value=(hours>0)?attN(hours):'';
+  if(u) u.value=(hours>0)?attN(hours/div):'';
+}
+// 一天以 8 小時計:請幾小時假,當天上班就最多只能填 8-請假時數(全天假 → 0)
+function attCapWorkByLeave(tr, changed){
+  const typeEl=tr.querySelector('select[data-f="leave_type"]');
+  const lhEl=tr.querySelector('[data-role="h"][data-f="leave_hours"]');
+  const whEl=tr.querySelector('[data-role="h"][data-f="work"]');
+  if(!typeEl||!lhEl||!whEl) return;
+  if(!String(typeEl.value||'').trim()) return;          // 取消假別:工時交還使用者自己填
+  let hours=parseFloat(lhEl.value)||0;
+  if(changed==='leave_type' && !(hours>0)){ hours=8; attSetPair(tr,'leave_hours',8); }   // 選了假別預設請整天
+  const cap=Math.max(0, 8-hours);
+  if((parseFloat(whEl.value)||0)>cap) attSetPair(tr,'work',cap);
+  // 沒上班也沒加班 → 便當歸 0(同本表預設規則);老闆的便當是金額,一樣跟著出勤走
+  const otEl=tr.querySelector('[data-role="h"][data-f="ot"]');
+  const b=tr.querySelector('input[data-f="bento"]');
+  if(b && (parseFloat(whEl.value)||0)<=0 && (parseFloat(otEl?otEl.value:'')||0)<=0 && (parseFloat(b.value)||0)>0) b.value=0;
+}
+// 上班 + 請假超過一天 → 兩格標紅提醒(不擋存檔:本表是即時自動存檔,硬擋會卡住輸入)
+function attMarkLeaveConflict(tr){
+  const lhEl=tr.querySelector('[data-role="h"][data-f="leave_hours"]');
+  const whEl=tr.querySelector('[data-role="h"][data-f="work"]');
+  if(!lhEl||!whEl) return;
+  const w=parseFloat(whEl.value)||0, lh=parseFloat(lhEl.value)||0;
+  const bad=w>0 && lh>0 && (w+lh)>8.0001;
+  ['[data-role="u"][data-pair="work"]','[data-role="h"][data-f="work"]',
+   '[data-role="u"][data-pair="leave_hours"]','[data-role="h"][data-f="leave_hours"]'].forEach(sel=>{
+    const el=tr.querySelector(sel); if(!el) return;
+    el.classList.toggle('att-bad', bad);
+    el.title=bad?('這天請假 '+attN(lh)+' 小時,上班卻填了 '+attN(w)+' 小時,合計超過一天(8 小時)'):(el.getAttribute('data-role')==='u'?'工數':'時數');
+  });
+}
+function attMarkAllConflicts(){
+  document.querySelectorAll('#att-daily-body tr[data-name]').forEach(tr=>attMarkLeaveConflict(tr));
+}
+
+// ── 本月重複計算檢查:同一天既有請假又有上班工數 ──────────────────
+// 'over'    = 上班+請假 > 8 小時,可一鍵修正成「8 − 請假時數」
+// 'nohours' = 有假別但沒填請假時數,又有上班工數 → 無法判斷該扣多少,只提醒人工確認
+function attDupRows(){
+  return (Array.isArray(attMonthData)?attMonthData:[]).map(r=>{
+    const w=+r.work_hours||0, lh=+r.leave_hours||0, type=String(r.leave_type||'').trim();
+    if(w>0 && lh>0 && w+lh>8.0001) return {row:r, w, lh, type, kind:'over'};
+    if(w>0 && type && lh<=0)       return {row:r, w, lh, type, kind:'nohours'};
+    return null;
+  }).filter(Boolean).sort((a,b)=>
+    String(a.row.work_date).localeCompare(String(b.row.work_date)) ||
+    String(a.row.staff_name||'').localeCompare(String(b.row.staff_name||''),'zh-Hant'));
+}
+function attScanDup(){
+  const panel=document.getElementById('att-dup-panel'); if(!panel) return;
+  const month=(document.getElementById('att-month')||{}).value||'';
+  const list=attDupRows();
+  panel.style.display='';
+  if(!list.length){
+    panel.className='att-dup-panel ok';
+    panel.innerHTML='<div class="att-dup-head"><span>✅ <b>'+attEsc(month)+' 沒有重複計算</b>：沒有人同一天既請假又有超過一天的上班工數。</span>'
+      +'<div class="att-dup-actions"><button class="dash-nav-btn" onclick="attCloseDup()">關閉</button></div></div>';
+    return;
+  }
+  const fixable=list.filter(x=>x.kind==='over');
+  panel.className='att-dup-panel';
+  panel.innerHTML='<div class="att-dup-head"><span>⚠️ <b>'+attEsc(month)+' 找到 '+list.length+' 筆要確認</b>'
+      +(fixable.length?('（其中 '+fixable.length+' 筆可一鍵修正）'):'')+'</span>'
+    +'<div class="att-dup-actions">'
+      +(fixable.length?'<button class="dash-nav-btn" onclick="attDupFixAll()">一鍵修正這 '+fixable.length+' 筆</button>':'')
+      +'<button class="dash-nav-btn" onclick="attCloseDup()">關閉</button></div></div>'
+    +'<div style="overflow:auto;max-height:280px"><table class="att-dup-table"><thead><tr>'
+      +'<th>日期</th><th>姓名</th><th>假別</th><th class="num">上班</th><th class="num">請假</th><th class="num">合計</th><th>問題</th><th></th>'
+    +'</tr></thead><tbody>'+list.map(x=>{
+      const d=String(x.row.work_date).slice(0,10), name=x.row.staff_name||'';
+      const over=x.kind==='over';
+      return '<tr><td><span class="lnk" data-d="'+attEsc(d)+'" onclick="attDupGoto(this.dataset.d)" title="跳到這一天">'+attEsc(fmtDateWk(d))+'</span></td>'
+        +'<td>'+attEsc(name)+'</td><td>'+attEsc(x.type||'—')+'</td>'
+        +'<td class="num">'+attN(x.w)+'h</td><td class="num">'+(x.lh>0?attN(x.lh)+'h':'—')+'</td>'
+        +'<td class="num '+(over?'bad':'warn')+'">'+(over?attN(x.w+x.lh)+'h':'—')+'</td>'
+        +'<td class="'+(over?'bad':'warn')+'">'+(over?'超過一天':'沒填請假時數')+'</td>'
+        +'<td>'+(over
+            ? '<button class="dash-nav-btn" data-d="'+attEsc(d)+'" data-n="'+attEsc(name)+'" onclick="attDupFixOne(this.dataset.d,this.dataset.n)">修正成 '+attN(Math.max(0,8-x.lh))+'h</button>'
+            : '<span style="color:var(--text3)">請人工確認</span>')+'</td></tr>';
+    }).join('')+'</tbody></table></div>'
+    +'<div style="margin-top:7px;color:var(--text3);font-size:11px">修正＝把上班時數改成「8 − 請假時數」（全天假就是 0）；加班不會被更動，當天完全沒上班也沒加班時便當一併歸 0。</div>';
+}
+function attCloseDup(){ const p=document.getElementById('att-dup-panel'); if(p){ p.style.display='none'; p.innerHTML=''; } }
+function attDupGoto(d){
+  const el=document.getElementById('att-date'); if(!el) return;
+  el.value=d; attRenderDailyGrid(); attRenderKpi();
+  document.getElementById('att-daily-grid')?.scrollIntoView({behavior:'smooth',block:'center'});
+}
+// 單筆修正:比照請假登記的規則寫回資料庫,再更新本地月資料與畫面
+async function attDupApply(item){
+  const d=String(item.row.work_date).slice(0,10), name=item.row.staff_name||'';
+  const cap=Math.max(0, 8-item.lh);
+  const patch={work_hours:cap};
+  if(cap<=0 && (+item.row.ot_hours||0)<=0 && (+item.row.bento||0)>0) patch.bento=0;
+  const q='/rest/v1/att_report?work_date=eq.'+d+'&staff_name=eq.'+encodeURIComponent(name);
+  const r=await sbFetch(q,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(patch)});
+  if(!r.ok) return false;
+  Object.assign(item.row, patch);
+  return true;
+}
+async function attDupFixOne(d,name){
+  const item=attDupRows().find(x=>String(x.row.work_date).slice(0,10)===d && String(x.row.staff_name||'')===name && x.kind==='over');
+  if(!item) { attScanDup(); return; }
+  if(!await uiConfirm('把 '+name+' 在 '+fmtDateWk(d)+' 的上班時數改成 '+attN(Math.max(0,8-item.lh))+' 小時？\n（該天請假 '+attN(item.lh)+' 小時；加班不會更動）',{okText:'確定修正'})) return;
+  const ok=await attDupApply(item);
+  if(!ok){ alert('修正失敗,請確認已登入且有出勤回報的編輯權限。'); return; }
+  attRenderDailyGrid(); attRenderKpi(); attRenderMonthly(); attScanDup();
+}
+async function attDupFixAll(){
+  const list=attDupRows().filter(x=>x.kind==='over');
+  if(!list.length){ attScanDup(); return; }
+  if(!await uiConfirm('要修正這 '+list.length+' 筆嗎？\n上班時數會改成「8 − 請假時數」（全天假就是 0），加班不會更動。',{okText:'全部修正'})) return;
+  let ok=0, fail=0;
+  for(const item of list){ if(await attDupApply(item)) ok++; else fail++; }
+  attRenderDailyGrid(); attRenderKpi(); attRenderMonthly(); attScanDup();
+  if(fail) alert('已修正 '+ok+' 筆，'+fail+' 筆失敗（請確認已登入且有編輯權限）。');
+}
+
 function attReadDayRows(){
   const rows=[];
   document.querySelectorAll('#att-daily-body tr[data-name]').forEach(tr=>{
@@ -26852,7 +27184,11 @@ function attUpdateDayFoot(){
   rows.forEach(r=>{ workH+=r.work; otH+=r.ot; leaveH+=r.leave_hours;
     if(!(r.cat==='辦公人員'&&r.team==='老闆')) bento+=r.bento;  // 老闆便當為金額,不計入便當數
     if(r.work>0)present++; if(r.leave_type)leaveN++; });
-  document.getElementById('att-daily-foot').innerHTML=
+  const conflicts=rows.filter(r=>r.work>0 && r.leave_hours>0 && (r.work+r.leave_hours)>8.0001);
+  const warn=conflicts.length
+    ? `<tr class="att-warn-row"><td colspan="12">⚠️ ${conflicts.length} 人同時有請假與上班工數且合計超過一天：${attEsc(conflicts.map(r=>r.name).join('、'))}　請確認是否重複計算</td></tr>`
+    : '';
+  document.getElementById('att-daily-foot').innerHTML=warn+
     `<tr><td colspan="3">本日合計（出勤 ${present} 人）</td>
      <td style="text-align:right">${attN(workH/8)}</td><td style="text-align:right">${attN(workH)}</td>
      <td style="text-align:right">${attN(otH/6)}</td><td style="text-align:right">${attN(otH)}</td>
@@ -29466,7 +29802,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   function money(n){ if(n==null||n==='') return ''; var x=Number(n); return isNaN(x)?'':x.toLocaleString('en-US',{maximumFractionDigits:2}); }
   // 水電重量 t = kg / 1000（小數點 2 位）
   function ton(kg){ if(kg==null||kg==='') return ''; var x=Number(kg); return isNaN(x)?'':(x/1000).toFixed(2); }
-  function hasUtil(row){ return row.util_weight_kg!=null; }
+  // 有水電 = 有水電重量 或 有水電加工代號(BOM 工程區填的也算),比照計價頁 zHasUtil 與請款的判定
+  function hasUtil(row){ return row.util_weight_kg!=null || String(row.util_proc_code||'').trim()!==''; }
   // 議價判定：主件（數字單價或點工/文字備註皆算已定價）+（有水電時）水電單價需為數字；
   // 只要其中一項缺數字（且非文字備註）即視為「未議價」
   function isNegotiated(row){
@@ -29653,6 +29990,12 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       if(!dirty[String(zoneId)]&&!dirty[zoneId]) setSaved('水電重量已由 S/P 核對同步 ✓','var(--success)');
     }
   };
+  // BOM 工程區改了水電加工代號;產值頁若已載入過,畫面快取同步更新(未載入則下次進來自然是新的)
+  window.outputSyncUtilProcCode=function(zoneId,code){
+    var hit=false;
+    rows.forEach(function(row){ if(String(row.zid)!==String(zoneId)) return; row.util_proc_code=String(code||''); hit=true; });
+    if(hit){ outputRenderPrice(); if(!dirty[String(zoneId)]&&!dirty[zoneId]) setSaved('水電加工代號已由 BOM 工程區同步 ✓','var(--success)'); }
+  };
   window.outputToggleEdit=function(){ editMode=!editMode; outputRenderPrice(); };
   // 切換 點工計價/文字備註 <-> 數字單價
   window.outputSetLabor=function(i,on){
@@ -29681,7 +30024,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   window.outputToggleUtil=function(i,on){
     if(!rows[i]) return;
     if(on){ rows[i].util_weight_kg=0; if(rows[i].util_price==null) rows[i].util_price=0; }
-    else  { rows[i].util_weight_kg=null; }
+    else  { rows[i].util_weight_kg=null; rows[i].util_proc_code=''; rows[i].util_price=null; }   // 改為無水電:代號與單價一起清掉
     dirty[rows[i].zid]=true; setSaved('尚有未儲存的變更…','var(--text3)');
     outputRenderPrice();
   };
@@ -29694,11 +30037,12 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     for(var i=0;i<pending.length;i++){
       var row=pending[i];
       var note=(row.price_note||'').trim();
+      var hasU=hasUtil(row);
       var payload={ unit_price: (note ? null : row.unit_price),
                     price_note: (note || null),
-                    util_price: (row.util_weight_kg==null ? null : row.util_price),
+                    util_price: (hasU ? row.util_price : null),
                     util_weight_kg: row.util_weight_kg,
-                    util_proc_code: (row.util_weight_kg==null ? null : ((row.util_proc_code||'').trim()||null)) };
+                    util_proc_code: ((row.util_proc_code||'').trim()||null) };
       var r=await sbFetch('/rest/v1/zones?id=eq.'+row.zid, {method:'PATCH', headers:{'Prefer':'return=minimal'}, body:JSON.stringify(payload)});
       if(r.ok){ ok++; delete dirty[row.zid]; } else { fail++; }
     }
@@ -35173,6 +35517,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 <script>
 let prodReceipts=[], prodReceiptProjects=[], prodReceiptZones=[];
 let prodTrack=[], prodReserved=[], prodProduct=[], prodManual=[], prodCurTab='receipt', prodBusy=false;
+let prodDataLoaded=false;   // SP/CP 是否已載入(BOM 工程區設轉包時要先確認)
 // 收圖項目：圖面類型保留，需追蹤的項目與 SP 狀態表使用相同名稱。
 const CPR_CATEGORIES=['通圖','製造圖','平面圖','水電通圖','SP','成品材 Z','X','水電 H','RCP(RH & BH)','削翼','扁鐵 FB','角鐵 L','圓管 P','方管 Q','槽鐵 U','BT(T-BAR)','板組托樑','板組BT'];
 const CPR_CATEGORY_ALIASES=Object.freeze({'水電':'水電通圖','H':'水電 H','S/P':'SP','成品材':'成品材 Z','Z':'成品材 Z','RCP':'RCP(RH & BH)','RH & BH':'RCP(RH & BH)','RH&BH':'RCP(RH & BH)'});
@@ -35287,7 +35632,7 @@ function cprProjectStatus(projectNo,rows){
   const override=cprStatusOverrideValue(projectNo,rows),manual=CPR_PROJECT_STATUS_GROUPS.find(x=>x[0]===override);
   if(manual)return{key:manual[0],label:manual[1],cls:manual[2]};
   const activeRows=rows.filter(r=>!r.is_subcontract);if(rows.length&&!activeRows.length)return{key:'subcontract',label:'轉包',cls:'st-sub'};
-  const bomZones=cprProjectBomZones(projectNo);
+  const bomZones=cprProjectBomZones(projectNo).filter(z=>String(z.status||'').trim()!=='轉包');
   // 「已完成」只由 BOM 工程總表判定；SP 完成不能取代 BOM 完成。
   if(bomZones.length&&bomZones.every(z=>String(z.status||'').trim()==='已完成'))return{key:'completed',label:'已完成',cls:'st-ok'};
   // BOM 有 A201 時工程區狀態會成為「進行中」或「已完成」；任一區已動作即視為進行中。
@@ -35697,6 +36042,7 @@ async function prodInit(){
     prodOnline   = (ro.ok&&Array.isArray(ro.data))?ro.data:[];
     if(typeof spxDetectOptional==='function') spxDetectOptional();
     prodRebuildOnline();
+    prodDataLoaded=true;
   }catch(e){ console.error(e); }
   prodBusy=false;
   prodBuildProjOptions();
@@ -40737,7 +41083,18 @@ async function dsOpenPages(rows, titleOverride = '') {
     }, tabTitle);
     const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
     const fileName = dsFileBaseName(uniqueRows) + '.pdf';
-    if (win && !win.closed) {
+    let pageImages = null;
+    if (win && !win.closed && dsTouchTab()) {
+      try {
+        say(uniqueRows.length > 1 ? ('正在轉出 ' + uniqueRows.length + ' 張圖面…') : '正在轉出圖面…');
+        pageImages = await dsPdfBytesToPageImages(bytes, (done, total) => {
+          if (total > 1) say('正在轉出圖面 ' + done + ' / ' + total + '…');
+        });
+      } catch (error) { console.error('轉頁圖失敗，改用瀏覽器內建檢視器：', error); pageImages = null; }
+    }
+    if (win && !win.closed && pageImages && pageImages.length) {
+      dsRenderTouchViewer(win, pageImages, tabTitle, fileName, url);
+    } else if (win && !win.closed) {
       win.document.title = tabTitle;
       win.document.body.style.cssText = 'margin:0;overflow:hidden;background:#525659';
       win.document.body.innerHTML = '<div style="height:38px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 12px;background:#323639;color:#e8eaed;font:13px/1.4 system-ui,sans-serif">' +
@@ -40768,6 +41125,120 @@ async function dsOpenPages(rows, titleOverride = '') {
   } finally {
     dsOpenBusy = false; dsUpdatePrintControls();
   }
+}
+
+/* 手機/平板的內建 PDF 檢視器放進 iframe 會出事:iOS Safari 只畫得出第一頁而且不能捲,
+   Android Chrome 直接一片空白。所以觸控裝置改走「pdf.js 轉頁圖 → 排成可捲動的圖片」這條路 */
+function dsTouchTab() {
+  try {
+    if (window.matchMedia('(max-width:820px)').matches) return true;
+    return window.matchMedia('(pointer:coarse)').matches && (navigator.maxTouchPoints || 0) > 1;
+  } catch (_) { return false; }
+}
+
+/* 把合併好的 PDF 逐頁轉成 JPEG(長邊約 2000px:手機記憶體吃得下,又看得清圖號與尺寸) */
+async function dsPdfBytesToPageImages(bytes, onProgress) {
+  await scEnsurePdfjs();
+  const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+  const images = [];
+  try {
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+      const page = await pdf.getPage(pageNumber);
+      const base = page.getViewport({ scale: 1 });
+      const scale = Math.min(3, Math.max(1.2, 2000 / Math.max(base.width, base.height)));
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport, background: '#ffffff' }).promise;
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+      if (!blob) throw new Error('圖面轉檔失敗');
+      images.push({ url: URL.createObjectURL(blob), width: canvas.width, height: canvas.height });
+      canvas.width = canvas.height = 0;
+      if (onProgress) onProgress(pageNumber, pdf.numPages);
+    }
+  } finally {
+    try { await pdf.destroy(); } catch (_) {}
+  }
+  return images;
+}
+
+/* 手機版圖面分頁:一頁一張圖依序往下捲,不留空白;
+   直握手機時預設把橫向 A3 轉 90°,整張圖沿著手機長邊放到最大(可用按鈕還原) */
+function dsRenderTouchViewer(win, images, tabTitle, fileName, downloadUrl) {
+  const doc = win.document;
+  const style = '*{box-sizing:border-box}' +
+    'html,body{margin:0;padding:0;background:#525659;-webkit-text-size-adjust:100%}' +
+    'body{font:13px/1.45 system-ui,-apple-system,"Noto Sans TC",sans-serif;color:#e8eaed}' +
+    '#ds-bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:7px 10px;background:#323639;box-shadow:0 1px 6px rgba(0,0,0,.45)}' +
+    '#ds-bar .t{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}' +
+    '#ds-bar .pn{flex:0 0 auto;color:#9aa0a6;font-size:12px;font-variant-numeric:tabular-nums}' +
+    '#ds-bar button{flex:0 0 auto;border:1px solid #5f6368;border-radius:6px;background:#3c4043;color:#e8eaed;font:600 12px/1 system-ui,-apple-system,sans-serif;padding:8px 11px;cursor:pointer}' +
+    '#ds-bar button.on{background:#8ab4f8;border-color:#8ab4f8;color:#202124}' +
+    '#ds-doc{padding:8px 0 30px}' +
+    '.ds-pg{position:relative;margin:0 0 10px;background:#fff;overflow:hidden}' +
+    '.ds-pg img{display:block;width:100%;height:auto}' +
+    '.ds-pg .no{position:absolute;right:6px;top:6px;z-index:2;background:rgba(0,0,0,.55);color:#fff;border-radius:4px;padding:2px 7px;font-size:11px;font-variant-numeric:tabular-nums}' +
+    'body.rot .ds-pg img{position:absolute;top:0;left:100%;width:auto;transform-origin:0 0;transform:rotate(90deg)}';
+  try {
+    doc.head.innerHTML = '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=8,user-scalable=yes">';
+    const styleTag = doc.createElement('style');
+    styleTag.textContent = style;
+    doc.head.appendChild(styleTag);
+  } catch (_) {}
+  doc.title = tabTitle;
+  doc.body.style.cssText = '';
+  doc.body.innerHTML = '<div id="ds-bar"><span class="t">' + dsEsc(tabTitle) + '</span>' +
+    '<span class="pn" id="ds-pn">1 / ' + images.length + '</span>' +
+    '<button id="ds-rot" type="button">↻ 旋轉</button>' +
+    '<button id="ds-dl" type="button">下載 PDF</button></div>' +
+    '<div id="ds-doc">' + images.map((image, index) =>
+      '<div class="ds-pg" data-w="' + image.width + '" data-h="' + image.height + '">' +
+      '<img src="' + image.url + '" alt="第 ' + (index + 1) + ' 頁圖面">' +
+      (images.length > 1 ? '<span class="no">' + (index + 1) + ' / ' + images.length + '</span>' : '') +
+      '</div>').join('') + '</div>';
+
+  const pages = Array.from(doc.querySelectorAll('.ds-pg'));
+  const rotateButton = doc.getElementById('ds-rot');
+  const counter = doc.getElementById('ds-pn');
+  const layout = () => {
+    const rotated = doc.body.classList.contains('rot');
+    const width = doc.getElementById('ds-doc').clientWidth;
+    pages.forEach(page => {
+      const naturalWidth = Number(page.dataset.w) || 1, naturalHeight = Number(page.dataset.h) || 1;
+      const image = page.querySelector('img');
+      // 轉 90° 後:螢幕寬 = 原圖高,所以先把圖高設成容器寬,容器高再依原圖比例補回來
+      if (rotated) { page.style.height = Math.round(width * naturalWidth / naturalHeight) + 'px'; image.style.height = width + 'px'; image.style.width = 'auto'; }
+      else { page.style.height = ''; image.style.height = ''; image.style.width = ''; }
+    });
+    if (rotateButton) rotateButton.classList.toggle('on', rotated);
+  };
+  if (rotateButton) rotateButton.onclick = () => { doc.body.classList.toggle('rot'); layout(); win.scrollTo({ top: 0 }); };
+  if (images.length > 1 && counter) {
+    win.addEventListener('scroll', () => {
+      const middle = win.scrollY + win.innerHeight / 2;
+      let current = 1;
+      pages.forEach((page, index) => { if (page.offsetTop <= middle) current = index + 1; });
+      counter.textContent = current + ' / ' + images.length;
+    }, { passive: true });
+  }
+  const downloadButton = doc.getElementById('ds-dl');
+  if (downloadButton) downloadButton.onclick = () => {
+    const asker = win && !win.closed && typeof win.confirm === 'function' ? win : window;
+    if (!asker.confirm('要下載這份圖面嗎？\n檔名：' + fileName)) return;
+    dsSaveBlobAs(downloadUrl, fileName);
+  };
+  // 直握手機看橫向 A3 只會小小一條;預設先轉正,想看原方向再按一次「旋轉」
+  if (win.innerHeight > win.innerWidth && images[0] && images[0].width > images[0].height) doc.body.classList.add('rot');
+  layout();
+  win.addEventListener('resize', layout);
+  win.addEventListener('orientationchange', () => setTimeout(layout, 250));
+  try {
+    win.addEventListener('pagehide', () => setTimeout(() => {
+      images.forEach(image => { try { URL.revokeObjectURL(image.url); } catch (_) {} });
+      try { URL.revokeObjectURL(downloadUrl); } catch (_) {}
+    }, 500));
+  } catch (_) {}
 }
 
 async function dsPrintPages(rows) {
