@@ -20383,8 +20383,8 @@ async function layoutMultiOpen() {
         '<div class="layout-multi-help" id="layout-multi-count">只列出尚有未上線數量的構件，可多重勾選。</div>' +
       '</div>' +
       '<div id="layout-multi-text-panel" style="display:none">' +
-        '<textarea class="input-modal-field layout-multi-text" id="layout-multi-text" placeholder="例如：D13Y12 D13Y10 D15Y03 D13Y01"></textarea>' +
-        '<div class="layout-multi-help">可用空白、換行、逗號、頓號或引號分隔；系統會自動解析並從所選工程的 BOM 帶入資料。</div>' +
+        '<textarea class="input-modal-field layout-multi-text" id="layout-multi-text" placeholder="例如：D13Y12 D13Y10、D15Y03.D13Y01"></textarea>' +
+        '<div class="layout-multi-help">任何分隔符都可以（空白、換行、逗號、頓號、點、斜線、引號…）；系統會自動解析並從所選工程的 BOM 帶入資料。</div>' +
       '</div>' +
       '<div class="input-modal-actions"><button type="button" class="input-modal-btn cancel" onclick="layoutMultiClose()">取消</button><button type="button" class="input-modal-btn ok" onclick="layoutMultiSubmit()">加入明細</button></div>' +
     '</div>';
@@ -20448,7 +20448,13 @@ function layoutMultiRenderParts() {
 }
 
 function layoutMultiParse(text) {
-  return [...new Set(String(text || '').toUpperCase().replace(/["'“”‘’]/g, ' ').split(/[\s,，、;；]+/).map(s => s.trim()).filter(Boolean))];
+  // 不限定分隔符:不管使用者用空白、換行、逗號、頓號、點、斜線、引號還是其他符號,
+  // 一律直接把英數字(含編號內常見的 - _)串挖出來當成構件編號。
+  // 先 NFKC 把全形英數/符號轉半形,避免貪上全形字母漏掘。
+  let src = String(text || '');
+  try { src = src.normalize('NFKC'); } catch (e) {}
+  const toks = src.toUpperCase().match(/[A-Z0-9][A-Z0-9_-]*/g) || [];
+  return [...new Set(toks.map(s => s.replace(/^[_-]+|[_-]+$/g, '')).filter(Boolean))];
 }
 
 async function layoutMultiSubmit() {
@@ -22413,13 +22419,15 @@ async function inspLoadExistingDocNos(projNum) {
 
 async function inspRememberHandle(handle) {
   const db = await inspHandleDb();
-  await new Promise((resolve, reject) => {
-    const tx = db.transaction('handles', 'readwrite');
-    tx.objectStore('handles').put(handle, 'report-root');
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
-  db.close();
+  try {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('handles', 'readwrite');
+      tx.objectStore('handles').put(handle, 'report-root');
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('IndexedDB 交易被中止'));
+    });
+  } finally { db.close(); }
 }
 
 async function inspLoadRememberedHandle() {
@@ -22470,7 +22478,7 @@ async function inspChooseSaveFolder() {
     const picked = await window.showDirectoryPicker({ mode:'readwrite', id:'inspection-word-root' });
     if (inspNormFolderName(picked.name) !== '報驗') {
       inspSaveRootHandle = null;
-      inspFolderStatus('請選擇最外層名稱為「報驗」的資料夾，不要選工程資料夾或裡面的「申驗單」。', false);
+      inspFolderStatus('您選到的是「' + picked.name + '」。請選擇最外層名稱剛好是「報驗」的資料夾，不要選工程資料夾或裡面的「申驗單」。', false);
       return null;
     }
     inspSaveRootHandle = picked;
@@ -22518,6 +22526,55 @@ async function inspResolveSaveFolder(root, projNo, create) {
   return projectFolder.getDirectoryHandle('申驗單', { create:create });
 }
 
+// 檔案被 Word／其他程式鎖住(Windows 共用鎖)時的錯誤特徵。
+// 追加既有流水號會產生同名檔覆蓋,而那份單子通常剛被開起來看,所以最常踩到。
+function inspIsFileLockedErr(err) {
+  const name = (err && err.name) || '';
+  const msg = String((err && err.message) || '');
+  return name === 'NoModificationAllowedError' || name === 'InvalidStateError' ||
+         /lock|busy|being used|in use|another process|存取被拒|使用中/i.test(msg);
+}
+
+// 依實際錯誤分類給訊息。原本一律回「無法連線至共用資料夾」,
+// 使用者看不出到底是權限過期、資料夾不見還是檔案被開著,無從排除。
+// btnLabel/folderLabel 讓「點工單」那邊也能共用同一套判斷(單一 index.html,全域函式)。
+function inspSaveErrMsg(err, btnLabel, folderLabel) {
+  btnLabel = btnLabel || '設定固定「報驗」資料夾';
+  folderLabel = folderLabel || '報驗';
+  const name = (err && err.name) || '';
+  const msg = String((err && err.message) || err || '');
+  if (name === 'InspNoPermission' || name === 'NotAllowedError' || name === 'SecurityError')
+    return '共用資料夾的寫入權限需要重新確認（瀏覽器每次重開都會失效）。請按一次上方「' + btnLabel + '」重新授權；本次已改下載至 Downloads。';
+  if (name === 'NotFoundError')
+    return '找不到原本固定的「' + folderLabel + '」資料夾（可能已改名、被移動，或網路磁碟尚未連線）。請重新設定；本次已改下載至 Downloads。';
+  if (inspIsFileLockedErr(err))
+    return '同名檔案正被 Word 或其他程式開啟中，無法覆蓋。請先關閉該檔再產生一次；本次已改下載至 Downloads。';
+  return '無法寫入共用資料夾（' + (name ? name + '：' : '') + msg + '）；本次已改下載至 Downloads。';
+}
+
+// 取得／確認固定資料夾的寫入權限。
+// requestPermission() 只在「使用者手勢的短暫有效期內」(Chrome 約 5 秒)才能叫出視窗,
+// 因此 interactive=true 必須在按下按鈕後、任何耗時 await 之前呼叫;等到最後存檔階段
+// 再要權限一定已經過期,瀏覽器會直接丟 NotAllowedError,被誤判成「共用資料夾連不上」。
+async function inspEnsureFolderPermission(interactive) {
+  if (!window.showDirectoryPicker) return 'unsupported';
+  if (!inspSaveRootHandle) await inspLoadRememberedHandle();
+  if (!inspSaveRootHandle) return 'none';
+  try {
+    let permission = await inspSaveRootHandle.queryPermission({ mode:'readwrite' });
+    if (permission !== 'granted' && interactive) {
+      permission = await inspSaveRootHandle.requestPermission({ mode:'readwrite' });
+    }
+    if (permission !== 'granted' && interactive) {
+      inspFolderStatus('尚未取得共用資料夾寫入權限，若稍後存檔失敗請按「設定固定「報驗」資料夾」重新授權。', false);
+    }
+    return permission;
+  } catch (err) {
+    console.warn('確認共用資料夾權限失敗', err);
+    return 'error';
+  }
+}
+
 async function inspSaveDocx(blob, fname, projNo) {
   const downloadNormally = () => {
     const url = URL.createObjectURL(blob);
@@ -22533,20 +22590,60 @@ async function inspSaveDocx(blob, fname, projNo) {
     inspFolderStatus('尚未設定固定共用資料夾，本次已直接下載至 Downloads。', true);
     return downloadNormally();
   }
+  let folder = null;
   try {
+    // 這裡不再自行 requestPermission():產單流程走到這裡早已離開使用者手勢的有效期,
+    // 叫了只會被瀏覽器拒絕。權限在按下按鈕當下已由 inspEnsureFolderPermission() 取得。
     let permission = await inspSaveRootHandle.queryPermission({ mode:'readwrite' });
-    if (permission !== 'granted') permission = await inspSaveRootHandle.requestPermission({ mode:'readwrite' });
-    if (permission !== 'granted') throw new Error('未取得資料夾寫入權限');
-    const folder = await inspResolveSaveFolder(inspSaveRootHandle, projNo);
-    const fileHandle = await folder.getFileHandle(fname, { create:true });
-    const writable = await fileHandle.createWritable();
-    await writable.write(blob);
-    await writable.close();
-    inspFolderStatus('已儲存：' + folder.name + '／' + fname, true);
-    return { directDownload:false, folderName:folder.name };
+    if (permission !== 'granted') {
+      try { permission = await inspSaveRootHandle.requestPermission({ mode:'readwrite' }); }
+      catch (permErr) { permission = 'prompt'; }
+    }
+    if (permission !== 'granted') {
+      throw Object.assign(new Error('未取得資料夾寫入權限'), { name:'InspNoPermission' });
+    }
+    folder = await inspResolveSaveFolder(inspSaveRootHandle, projNo);
   } catch (err) {
+    console.warn('共用資料夾目前無法使用，改存 Downloads', err);
+    inspFolderStatus(inspSaveErrMsg(err), false);
+    return downloadNormally();
+  }
+  const writeTo = async (name) => {
+    const fileHandle = await folder.getFileHandle(name, { create:true });
+    const writable = await fileHandle.createWritable();
+    try {
+      await writable.write(blob);
+      await writable.close();
+    } catch (e) {
+      // 中斷暫存檔,避免半截內容蓋掉原本正常的申驗單。
+      try { await writable.abort(); } catch (_) {}
+      throw e;
+    }
+    return name;
+  };
+  try {
+    await writeTo(fname);
+    inspFolderStatus('已儲存：' + folder.name + '／' + fname, true);
+    return { directDownload:false, folderName:folder.name, fileName:fname };
+  } catch (err) {
+    // 同名檔被 Word 開著時,不要把單子丟去 Downloads 讓使用者找不到:
+    // 在同一個「申驗單」資料夾另存加時間後綴的副本,並明講原因。
+    if (inspIsFileLockedErr(err)) {
+      const stamp = (function(){ const d = new Date(), p = n => String(n).padStart(2,'0');
+        return p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()); })();
+      const alt = fname.replace(/\.docx$/i, '') + '_' + stamp + '.docx';
+      try {
+        await writeTo(alt);
+        inspFolderStatus('「' + fname + '」正被 Word 開啟（檔案鎖定）無法覆蓋，已另存為「' + alt +
+          '」。請關閉 Word 後以新檔為準（舊檔可刪除）。', false);
+        return { directDownload:false, folderName:folder.name, fileName:alt, renamed:true };
+      } catch (err2) {
+        console.warn('備援檔名仍無法寫入', err2);
+        err = err2;
+      }
+    }
     console.warn('共用資料夾目前無法寫入，改存 Downloads', err);
-    inspFolderStatus('目前無法連線至鎮山共用資料夾，本次已改下載至 Downloads。', false);
+    inspFolderStatus(inspSaveErrMsg(err), false);
     return downloadNormally();
   }
 }
@@ -22811,7 +22908,9 @@ async function inspBuildDocx(checked, ctx) {
     docNo, report_date:inspTodayStr()
   }));
   const openBtn = document.getElementById('insp-open-word-btn');
-  if (saveResult && !saveResult.directDownload) {
+  // renamed:原檔被鎖、改存了帶時間後綴的副本,助手依 工程/日期/流水號 組不出這個檔名,
+  // 因此不開放「用 Word 開啟」,避免按了說找不到檔。
+  if (saveResult && !saveResult.directDownload && !saveResult.renamed) {
     inspLastOpenInfo = {
       project:String(ctx.proj_no || '').trim(),
       ymd:ymd,
@@ -22823,7 +22922,8 @@ async function inspBuildDocx(checked, ctx) {
     inspLastOpenInfo = null;
     if (openBtn) openBtn.disabled = true;
   }
-  return fname;
+  // 檔案被鎖而另存副本時,回報實際存下來的檔名,才不會跟資料夾裡看到的對不上。
+  return (saveResult && saveResult.fileName) ? saveResult.fileName : fname;
 }
 
 // 解析某工程要用的第一頁範本(不動 UI):有自訂第一頁用自訂,否則用共用預設封面。
@@ -22863,6 +22963,9 @@ async function generateInspection() {
   // 有實報構件才需要範本;全部都預報時只寫產量+暫存,不產 Word
   if (realChecked.length && !inspTemplateBuffer) { setInspStatus('請先上傳範本 .docx', false); return; }
   _inspGenerating = true;
+  // 資料夾權限一定要在「使用者剛按下按鈕」時就要,後面查床位／抓號碼／合併既有批次／
+  // 組 Word 動輒數秒,手勢有效期早就過了,那時再要權限會被瀏覽器直接拒絕。
+  if (realChecked.length) { try { await inspEnsureFolderPermission(true); } catch(e) {} }
 
   // Project info
   const pid = document.getElementById('insp-proj').value;
@@ -23116,6 +23219,7 @@ async function preInspReport(docNo) {
   const rows = preInspRows.filter(r => ids.indexOf(r.id) >= 0);
   if (!rows.length) { setInspStatus('找不到預報構件資料,請重新整理', false); return; }
   _preInspReporting = true;
+  try { await inspEnsureFolderPermission(true); } catch(e) {}   // 同上:趁手勢還有效先取得寫入權限
   const g0 = rows[0];
   const checked = rows.map(r => ({
     part_no: r.part_no, spec: r.spec, drawing_no: r.drawing_no,
@@ -27588,6 +27692,13 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   var CAT='beam';
   var SHEETS={};    // groupKey -> {header, util, summary, items}
   var IMPORTED_QTY={}; // zone_id -> {item_name: confirmed qty}
+  // ── 雲端儲存(pricing_sheets)。localStorage 仍然照寫,當作離線備援。 ──
+  var REMOTE={};              // sheet_key -> data(本次載入時從 DB 抓下來的)
+  var REMOTE_TABLE_OK=true;   // 尚未執行 migration 時關掉,免得每次輸入都打一次注定失敗的請求
+  var SYNC_TIMER=null;        // 自動儲存(debounce)
+  var SYNC_ERR=null;          // 最近一次雲端儲存失敗的原因
+  var SYNC_BUSY=false;
+  var MIGRATION_ALERTED=false;   // 「資料表尚未建立」只提醒一次,不要每選一個工程就跳一次
 
   function keyOf(gkey){ return 'steelcore_pricing_v2_'+(PROJ?PROJ.id:'')+'_'+gkey; }
   function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
@@ -27777,9 +27888,11 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     picked.forEach(function(g){ zones=zones.concat(g.zones); });
     var codes=zones.map(function(z){ return z.code; });
     var key='misc|pick|'+zones.map(function(z){ return z.id; }).join(',');
+    var ownerOfZone={};
+    picked.forEach(function(pg){ (pg.zones||[]).forEach(function(z){ ownerOfZone[String(z.id)]=pg.key; }); });
     var sides=zones.map(function(z){
       var sk='m_'+String(z.id).replace(/[^a-zA-Z0-9_-]/g,'_');
-      return {k:sk,tag:'雜項',code:z.code,zoneIds:[z.id],priceF:'p_'+sk,qtyF:'q_'+sk,hkg:'kg_'+sk,hcnt:'cnt_'+sk};
+      return {k:sk,tag:'雜項',code:z.code,zoneIds:[z.id],owner:ownerOfZone[String(z.id)],priceF:'p_'+sk,qtyF:'q_'+sk,hkg:'kg_'+sk,hcnt:'cnt_'+sk};
     });
     var auto={};
     sides.forEach(function(side,i){
@@ -27789,6 +27902,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var g={
       key:key, cat:'misc', prefix:'', label:codes.join('.')+'雜項', multi:true,
       dual:false, hasG:false, hasB:false, codeG:'', codeB:'',
+      picked:picked,
       sides:sides,
       zones:zones,
       auto:auto,
@@ -27798,6 +27912,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     MISC_GROUPS[key]=g;
     PICK.misc=key;
     if(!SHEETS[key]) SHEETS[key]=loadSheet(g);
+    if(!REMOTE[key]) scheduleSync();   // 舊資料只存在本機 → 補上傳到雲端
     return g;
   }
 
@@ -27813,7 +27928,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         var zoneIds=sideZones.map(function(z){return z.id;});
         var sk='b_'+String(zoneIds.join('_')+'_'+src.k).replace(/[^a-zA-Z0-9_-]/g,'_');
         var side={k:sk,tag:src.tag,code:src.code,sourcePrice:src.k==='bg'&&pg.hasG?'bg':'sb',
-          zoneIds:zoneIds,priceF:'p_'+sk,qtyF:'q_'+sk,hkg:'kg_'+sk,hcnt:'cnt_'+sk};
+          zoneIds:zoneIds,owner:pg.key,priceF:'p_'+sk,qtyF:'q_'+sk,hkg:'kg_'+sk,hcnt:'cnt_'+sk};
         sides.push(side);
         auto[side.hkg]=num(pg.auto[src.hkg]); auto[side.hcnt]=num(pg.auto[src.hcnt]);
         util[sk]=(pg.util&&pg.util[src.k])||{code:'',kg:'',price:''};
@@ -27821,9 +27936,10 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     });
     var key='beam|pick|'+picked.map(function(g){return g.key;}).join(',');
     var g={key:key,cat:'beam',label:sides.map(function(s){return s.code;}).join('.')+'大小樑',
-      multi:true,dual:false,sides:sides,zones:zones,auto:auto,util:util};
+      multi:true,dual:false,picked:picked,sides:sides,zones:zones,auto:auto,util:util};
     BEAM_GROUP=g;BEAM_GROUPS[key]=g;PICK.beam=key;
     if(!SHEETS[key]) SHEETS[key]=loadSheet(g);
+    if(!REMOTE[key]) scheduleSync();   // 舊資料只存在本機 → 補上傳到雲端
     return g;
   }
 
@@ -27836,14 +27952,15 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       zones=zones.concat(pg.zones);
       var sk='c_'+pg.zones.map(function(z){return z.id;}).join('_').replace(/[^a-zA-Z0-9_-]/g,'_');
       var side={k:sk,tag:'柱子',code:pg.zones.map(function(z){return z.code;}).join('、'),
-        zoneIds:pg.zones.map(function(z){return z.id;}),sourcePrice:'bg',priceF:'p_'+sk,qtyF:'q_'+sk,hkg:'kg_'+sk,hcnt:'cnt_'+sk};
+        zoneIds:pg.zones.map(function(z){return z.id;}),owner:pg.key,sourcePrice:'bg',priceF:'p_'+sk,qtyF:'q_'+sk,hkg:'kg_'+sk,hcnt:'cnt_'+sk};
       sides.push(side); auto[side.hkg]=num(pg.auto.kg); auto[side.hcnt]=num(pg.auto.cnt);
     });
     var key='col|pick|'+picked.map(function(g){return g.key;}).join(',');
     var g={key:key,cat:'col',label:sides.map(function(s){return s.code;}).join('.')+'柱',
-      multi:true,dual:false,sides:sides,zones:zones,auto:auto,util:null};
+      multi:true,dual:false,picked:picked,sides:sides,zones:zones,auto:auto,util:null};
     COL_GROUP=g;COL_GROUPS[key]=g;PICK.col=key;
     if(!SHEETS[key]) SHEETS[key]=loadSheet(g);
+    if(!REMOTE[key]) scheduleSync();   // 舊資料只存在本機 → 補上傳到雲端
     return g;
   }
 
@@ -27875,9 +27992,91 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     });
     return out;
   }
+  // 每個工程區組「單獨選取」時所用的儲存鍵。
+  // 儲存鍵是依「目前選了哪幾區」組出來的,所以單選 6D 和 6D+7D 複選是兩把不同的鑰匙;
+  // 沒有下面這組搬運,加選或取消一區就會讓已填的數量看起來整批消失。
+  function singlePickKey(cat,pg){
+    if(cat==='misc') return 'misc|pick|'+(pg.zones||[]).map(function(z){ return z.id; }).join(',');
+    return cat+'|pick|'+pg.key;
+  }
+  // 從整組表裡切出「只屬於某一個工程區組」的部分(欄位名本來就帶工程區 id,可直接分拆)。
+  function subSheetFor(g,st,pg){
+    var own=(g.sides||[]).filter(function(sd){ return sd.owner===pg.key; });
+    if(!own.length||!st) return null;
+    var header={}, srcH=st.header||{};
+    own.forEach(function(sd){
+      if(srcH[sd.hkg]!=null) header[sd.hkg]=srcH[sd.hkg];
+      if(srcH[sd.hcnt]!=null) header[sd.hcnt]=srcH[sd.hcnt];
+    });
+    var util=null;
+    if(st.util){ util={}; own.forEach(function(sd){ if(st.util[sd.k]) util[sd.k]=st.util[sd.k]; }); }
+    var items=(st.items||[]).map(function(it){
+      if(it.cat) return {cat:it.cat};
+      var o={name:it.name};
+      ['base','floor','mh','div','custom'].forEach(function(f){ if(it[f]!=null) o[f]=it[f]; });
+      own.forEach(function(sd){
+        if(it[sd.priceF]!=null) o[sd.priceF]=it[sd.priceF];
+        if(it[sd.qtyF]!=null) o[sd.qtyF]=it[sd.qtyF];
+      });
+      return o;
+    });
+    return {header:header, util:util, summary:st.summary, items:items};
+  }
+  // 存整組的同時,也把各工程區組自己那一份分開存回去,之後單獨選那一區才看得到最新數量。
+  function splitPersist(g,st){
+    if(!g||!g.multi||!st||!(g.picked&&g.picked.length>1)||!PROJ) return;
+    // 整段包起來:這是附帶的備份寫入,不能因為它失敗就讓主儲存被誤判成失敗。
+    try{
+      g.picked.forEach(function(pg){
+        var sub=subSheetFor(g,st,pg);
+        if(!sub) return;
+        try{ localStorage.setItem(keyOf(singlePickKey(g.cat,pg)), JSON.stringify(sub)); }catch(e){}
+      });
+    }catch(e){}
+  }
+  // 這個選取組合還沒存過時,改用各工程區組各自存下的那份拼回來,而不是給一張空表。
+  function inheritFromSingles(g){
+    if(!g||!g.multi||!(g.picked&&g.picked.length>1)) return null;
+    var sheet=blankSheet(g), got=false;
+    g.picked.forEach(function(pg){
+      var sk=singlePickKey(g.cat,pg), raw=null;
+      if(REMOTE[sk] && Array.isArray(REMOTE[sk].items)){
+        try{ raw=JSON.parse(JSON.stringify(REMOTE[sk])); }catch(e){ raw=null; }
+      }
+      if(!raw){ try{ var t=localStorage.getItem(keyOf(sk)); if(t) raw=JSON.parse(t); }catch(e){} }
+      if(!raw||!Array.isArray(raw.items)) return;
+      got=true;
+      var own=(g.sides||[]).filter(function(sd){ return sd.owner===pg.key; });
+      own.forEach(function(sd){
+        if(raw.header){
+          if(raw.header[sd.hkg]!=null) sheet.header[sd.hkg]=raw.header[sd.hkg];
+          if(raw.header[sd.hcnt]!=null) sheet.header[sd.hcnt]=raw.header[sd.hcnt];
+        }
+        if(sheet.util&&raw.util&&raw.util[sd.k]) sheet.util[sd.k]=raw.util[sd.k];
+      });
+      var byName={};
+      sheet.items.forEach(function(it){ if(!it.cat&&it.name) byName[it.name]=it; });
+      raw.items.forEach(function(src){
+        if(src.cat||!src.name) return;
+        var dst=byName[src.name];
+        if(!dst){ dst={name:src.name}; if(src.custom) dst.custom=true; sheet.items.push(dst); byName[src.name]=dst; }
+        own.forEach(function(sd){
+          if(src[sd.priceF]!=null) dst[sd.priceF]=src[sd.priceF];
+          if(src[sd.qtyF]!=null) dst[sd.qtyF]=src[sd.qtyF];
+        });
+      });
+      if(raw.summary) sheet.summary=raw.summary;
+    });
+    return got?sheet:null;
+  }
   function loadSheet(g){
     var saved=null;
-    try{ var raw=localStorage.getItem(keyOf(g.key)); if(raw) saved=JSON.parse(raw); }catch(e){}
+    // 雲端那份是唯一的正本(換電腦、換瀏覽器都讀得到);本機只在雲端沒有時當備援,
+    // 並在載入後由 scheduleSync() 自動補上傳,把舊資料搬到雲端。
+    if(REMOTE[g.key] && Array.isArray(REMOTE[g.key].items)){
+      try{ saved=JSON.parse(JSON.stringify(REMOTE[g.key])); }catch(e){ saved=null; }
+    }
+    if(!saved){ try{ var raw=localStorage.getItem(keyOf(g.key)); if(raw) saved=JSON.parse(raw); }catch(e){} }
     if(saved && saved.items){
       if(!saved.summary) saved.summary = g.cat==='col'?{mgmtRate:'0.1',inspRate:'',supAdd:'100'}:{admin:'1.1',cdong:'200',che:'0'};
       if(g.cat!=='col' && !(saved.summary.cdong)) saved.summary.cdong='200';
@@ -27898,9 +28097,112 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       }
       return saved;
     }
-    return blankSheet(g);
+    var inherited=inheritFromSingles(g);
+    return inherited || blankSheet(g);
   }
-  function persist(){ var k=PICK[CAT]; try{ if(PROJ&&k&&SHEETS[k]) localStorage.setItem(keyOf(k), JSON.stringify(SHEETS[k])); }catch(e){} }
+  // ── 雲端讀寫 ────────────────────────────────────────────────
+  function canSync(){
+    if(!PROJ||!REMOTE_TABLE_OK) return false;
+    if(window._roActive) return false;                                    // 唯讀頁面
+    if(typeof isGuest!=='undefined' && isGuest) return false;             // 訪客沒有寫入權
+    return true;
+  }
+  // 要上傳的列:整組一列,另外把每個工程區組自己那一份也各存一列,
+  // 換電腦後不管單選或複選都讀得到。
+  function sheetRows(k){
+    // 工程 id 是數字字串就轉成數字,其他型別(例如 uuid)原樣送出。
+    var rawId=PROJ.id, pid=(/^\d+$/.test(String(rawId))?parseInt(rawId,10):rawId);
+    var now=new Date().toISOString(), st=SHEETS[k];
+    var rows=[{project_id:pid, sheet_key:k, data:st, updated_at:now}];
+    var g=curGroup();
+    if(g&&g.multi&&g.picked&&g.picked.length>1){
+      g.picked.forEach(function(pg){
+        var sub=subSheetFor(g,st,pg);
+        if(sub) rows.push({project_id:pid, sheet_key:singlePickKey(g.cat,pg), data:sub, updated_at:now});
+      });
+    }
+    return rows;
+  }
+  async function pushSheets(k){
+    if(!k||!SHEETS[k]) return {ok:false, msg:'目前沒有可儲存的計價表'};
+    if(!canSync()){
+      return {ok:false, msg:REMOTE_TABLE_OK
+        ? '目前是唯讀／訪客模式，無法存到雲端（資料仍存在這台電腦的瀏覽器）。'
+        : '雲端的 pricing_sheets 資料表尚未建立，請先在 Supabase SQL Editor 執行 pricing_sheets_migration.sql。'};
+    }
+    var rows=sheetRows(k);
+    var r=await sbFetch('/rest/v1/pricing_sheets?on_conflict=project_id,sheet_key',{
+      method:'POST',
+      headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify(rows)
+    });
+    if(r.ok){
+      rows.forEach(function(row){ REMOTE[row.sheet_key]=row.data; });
+      SYNC_ERR=null;
+      return {ok:true};
+    }
+    // 404 = 表還沒建立;之後就不再重試,只留本機備援並提示執行 migration。
+    if(r.status===404){
+      REMOTE_TABLE_OK=false;
+      SYNC_ERR='雲端的 pricing_sheets 資料表尚未建立，請先在 Supabase SQL Editor 執行 pricing_sheets_migration.sql。';
+    } else {
+      var detail='';
+      try{ detail=(r.data&&(r.data.message||r.data.hint))||''; }catch(e){}
+      SYNC_ERR='雲端儲存失敗（HTTP '+r.status+(detail?'：'+detail:'')+'）。';
+    }
+    return {ok:false, msg:SYNC_ERR};
+  }
+  // 邊打邊存:停手 1 秒後自動上傳一次,不必每個字都打一次 API。
+  function scheduleSync(){
+    var k=PICK[CAT];
+    if(!k||!canSync()) return;
+    clearTimeout(SYNC_TIMER);
+    SYNC_TIMER=setTimeout(function(){
+      if(SYNC_BUSY) { scheduleSync(); return; }
+      SYNC_BUSY=true;
+      pushSheets(k).then(function(res){
+        SYNC_BUSY=false;
+        if(!res.ok) markSaved('⚠ 尚未存到雲端', true);
+      }).catch(function(){ SYNC_BUSY=false; });
+    }, 1000);
+  }
+  // 切走之前(換分頁、換工程區)把還在等 debounce 的那筆立刻送出,免得剛打的數字沒上傳。
+  function flushSync(){
+    var k=PICK[CAT];
+    if(!k||!SHEETS[k]||!canSync()) return;
+    clearTimeout(SYNC_TIMER);
+    pushSheets(k).catch(function(){});
+  }
+  // 同一畫面可能同時有項目表與頁尾兩個 .pr-saved,要一起更新。
+  function markSaved(txt, bad){
+    var els=document.querySelectorAll('.pr-saved');
+    for(var i=0;i<els.length;i++){ els[i].textContent=txt; els[i].style.color=bad?'var(--danger)':''; }
+  }
+
+  var PERSIST_ERR=null;   // 最近一次儲存失敗的原因(給「儲存」鈕顯示用)
+  // 舊版把 localStorage 的錯誤整個吞掉,瀏覽器空間滿了或不允許寫入時,
+  // 畫面照樣顯示「✓ 已儲存」,使用者要等到重新整理才發現整張表都沒存進去。
+  // 這裡改成寫入後立刻讀回核對,失敗就把原因記下來讓上層明講。
+  function persist(){
+    var k=PICK[CAT];
+    if(!(PROJ&&k&&SHEETS[k])) return false;
+    var storeKey=keyOf(k), json;
+    try{ json=JSON.stringify(SHEETS[k]); }
+    catch(e){ PERSIST_ERR='計價資料無法轉成可儲存的格式（'+((e&&e.message)||e)+'）'; return false; }
+    try{
+      localStorage.setItem(storeKey, json);
+      if(localStorage.getItem(storeKey)!==json) throw new Error('寫入後讀回的內容不一致');
+      PERSIST_ERR=null;
+      splitPersist(curGroup(), SHEETS[k]);
+      scheduleSync();
+      return true;
+    }catch(e){
+      PERSIST_ERR=(e&&e.name==='QuotaExceededError')
+        ? '瀏覽器本機儲存空間已滿，這張計價表沒有存進去。'
+        : '瀏覽器無法寫入本機儲存空間（'+((e&&e.name)?e.name+'：':'')+((e&&e.message)||e)+'）。';
+      return false;
+    }
+  }
 
   // ── 對外：初始化 / 載入 ──
   // 議價判定（比照單價頁 isNegotiated）：主件有數字單價或文字備註(點工) + 有水電時水電單價需為數字
@@ -27974,6 +28276,16 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         byName[r.item_name]=num(r.qty);
       });
     }
+    // 計價表本體(雲端正本)。表尚未建立時不擋流程,退回本機 localStorage。
+    REMOTE={}; REMOTE_TABLE_OK=true; SYNC_ERR=null;
+    var shr=await sbFetch('/rest/v1/pricing_sheets?select=sheet_key,data&project_id=eq.'+pid);
+    if(shr.ok && Array.isArray(shr.data)){
+      shr.data.forEach(function(row){ if(row&&row.sheet_key) REMOTE[row.sheet_key]=row.data||null; });
+    } else if(shr.status===404){
+      REMOTE_TABLE_OK=false;
+      SYNC_ERR='雲端的 pricing_sheets 資料表尚未建立，請先在 Supabase SQL Editor 執行 pricing_sheets_migration.sql；在那之前計價表只會存在這台電腦。';
+      if(!MIGRATION_ALERTED){ MIGRATION_ALERTED=true; alert('計價表雲端儲存尚未啟用\n\n'+SYNC_ERR); }
+    }
     computeGroups();
     SHEETS={}; PICK={beam:null,misc:null,col:null};
     MISC_PICK=[]; MISC_GROUP=null; MISC_GROUPS={};
@@ -27983,11 +28295,13 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   };
   window.pricingTab=function(cat){
     if(!PROJ||!CATS[cat]) return;
+    flushSync();
     CAT=cat;
     Object.keys(CATS).forEach(function(c){ var b=document.getElementById('prtab-'+c); if(b) b.classList.toggle('active', c===cat); });
     pricingRender();
   };
   window.pricingPickGroup=function(cat,key){
+    flushSync();
     CAT=cat;
     var gs=GROUPS[CAT]||[], g=null;
     for(var i=0;i<gs.length;i++) if(gs[i].key===key){ g=gs[i]; break; }
@@ -28432,12 +28746,30 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     persist();
   };
 
-  window.pricingSave=function(){
+  window.pricingSave=async function(){
     if(!S()) return;
-    pricingRecalc();
-    var el=document.getElementById('pr-saved');
-    var t=new Date();
-    if(el) el.textContent='✓ 已儲存 '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
+    var k=PICK[CAT];
+    pricingRecalc();               // 內含 persist()
+    var localOk=persist();         // 本機備援,並取得明確結果
+    clearTimeout(SYNC_TIMER);      // 手動存 → 不必再等 debounce
+    markSaved('儲存中…');
+    var cloud=await pushSheets(k);
+    var t=new Date(), hhmm=String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
+    if(cloud.ok){
+      markSaved('✓ 已儲存 '+hhmm+'（雲端）');
+      return;
+    }
+    // 雲端沒存成功時,一定要講清楚現在資料在哪、風險是什麼,不能再假裝存好了。
+    if(localOk){
+      markSaved('⚠ 只存到本機 '+hhmm, true);
+      alert('計價表沒有存到雲端。\n\n' + (cloud.msg||SYNC_ERR||'未知原因') +
+        '\n\n目前資料只存在這台電腦的瀏覽器裡：換電腦、換瀏覽器或清除瀏覽資料就會不見，請盡快處理後再存一次。');
+    } else {
+      markSaved('✗ 儲存失敗', true);
+      alert('計價儲存失敗！\n\n雲端：' + (cloud.msg||SYNC_ERR||'未知原因') +
+        '\n本機：' + (PERSIST_ERR||'未知原因') +
+        '\n\n請先不要重新整理或關閉這一頁，把畫面上的數字抄下來或截圖，再聯絡管理員。');
+    }
   };
 
   // 歷史水電單價：列出各工程區已定的水電單價供參考（彈跳視窗）
@@ -38211,12 +38543,14 @@ function lmFolderStatus(message,ok){
 }
 async function lmRememberHandle(handle){
   const db=await inspHandleDb();
-  await new Promise((resolve,reject)=>{
-    const tx=db.transaction('handles','readwrite');
-    tx.objectStore('handles').put(handle,'labor-root');
-    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
-  });
-  db.close();
+  try{
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction('handles','readwrite');
+      tx.objectStore('handles').put(handle,'labor-root');
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+      tx.onabort=()=>reject(tx.error||new Error('IndexedDB 交易被中止'));
+    });
+  }finally{db.close();}
 }
 async function lmLoadRememberedHandle(){
   if(!window.showDirectoryPicker)return null;
@@ -38256,6 +38590,21 @@ async function lmResolveSaveFolder(root,proj){
   }
   return root.getDirectoryHandle(proj||'未分類',{create:true});
 }
+// 比照申驗單:requestPermission() 只在使用者手勢的短暫有效期內有效(Chrome 約 5 秒),
+// 而產單要先 lmSyncData()、組 Word、嵌照片,等到存檔才要權限一定過期。
+// 因此改由 lmBuild() 一開始就呼叫本函式把權限要好。
+async function lmEnsureFolderPermission(interactive){
+  if(!window.showDirectoryPicker)return 'unsupported';
+  if(!lmSaveRootHandle)await lmLoadRememberedHandle();
+  if(!lmSaveRootHandle)return 'none';
+  try{
+    let permission=await lmSaveRootHandle.queryPermission({mode:'readwrite'});
+    if(permission!=='granted'&&interactive)permission=await lmSaveRootHandle.requestPermission({mode:'readwrite'});
+    if(permission!=='granted'&&interactive)
+      lmFolderStatus('尚未取得共用資料夾寫入權限，若稍後存檔失敗請按「設定固定「點工單」資料夾」重新授權。',false);
+    return permission;
+  }catch(err){console.warn('確認點工單資料夾權限失敗',err);return 'error';}
+}
 async function lmSaveDocx(blob,fname,proj){
   const downloadNormally=()=>{
     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=fname;
@@ -38265,18 +38614,45 @@ async function lmSaveDocx(blob,fname,proj){
   if(!window.showDirectoryPicker)return downloadNormally();
   if(!lmSaveRootHandle)await lmLoadRememberedHandle();
   if(!lmSaveRootHandle){lmFolderStatus('尚未設定固定共用資料夾，本次已下載至 Downloads。',true);return downloadNormally();}
+  const errMsg=err=>inspSaveErrMsg(err,'設定固定「點工單」資料夾','點工單');
+  let folder=null;
   try{
     let permission=await lmSaveRootHandle.queryPermission({mode:'readwrite'});
-    if(permission!=='granted')permission=await lmSaveRootHandle.requestPermission({mode:'readwrite'});
-    if(permission!=='granted')throw new Error('未取得資料夾寫入權限');
-    const folder=await lmResolveSaveFolder(lmSaveRootHandle,proj);
-    const fileHandle=await folder.getFileHandle(fname,{create:true}),writable=await fileHandle.createWritable();
-    await writable.write(blob);await writable.close();
-    lmFolderStatus('已儲存：'+folder.name+'／'+fname,true);
-    return {directDownload:false,folderName:folder.name};
+    if(permission!=='granted'){
+      try{permission=await lmSaveRootHandle.requestPermission({mode:'readwrite'});}
+      catch(permErr){permission='prompt';}   // 已離開手勢有效期時瀏覽器會直接丟錯
+    }
+    if(permission!=='granted')throw Object.assign(new Error('未取得資料夾寫入權限'),{name:'InspNoPermission'});
+    folder=await lmResolveSaveFolder(lmSaveRootHandle,proj);
   }catch(err){
+    console.warn('點工單共用資料夾目前無法使用，改存 Downloads',err);
+    lmFolderStatus(errMsg(err),false);
+    return downloadNormally();
+  }
+  const writeTo=async name=>{
+    const fileHandle=await folder.getFileHandle(name,{create:true}),writable=await fileHandle.createWritable();
+    try{await writable.write(blob);await writable.close();}
+    catch(e){try{await writable.abort();}catch(_){}throw e;}   // 中止暫存檔,不讓半截內容蓋掉原檔
+    return name;
+  };
+  try{
+    await writeTo(fname);
+    lmFolderStatus('已儲存：'+folder.name+'／'+fname,true);
+    return {directDownload:false,folderName:folder.name,fileName:fname};
+  }catch(err){
+    // 同名檔正被 Word 開著時,另存帶時間後綴的副本在同一資料夾,不要丟去 Downloads 讓人找不到。
+    if(inspIsFileLockedErr(err)){
+      const stamp=(function(){const d=new Date(),p=n=>String(n).padStart(2,'0');
+        return p(d.getHours())+p(d.getMinutes())+p(d.getSeconds());})();
+      const alt=fname.replace(/\.docx$/i,'')+'_'+stamp+'.docx';
+      try{
+        await writeTo(alt);
+        lmFolderStatus('「'+fname+'」正被 Word 開啟（檔案鎖定）無法覆蓋，已另存為「'+alt+'」。請關閉 Word 後以新檔為準（舊檔可刪除）。',false);
+        return {directDownload:false,folderName:folder.name,fileName:alt,renamed:true};
+      }catch(err2){console.warn('點工單備援檔名仍無法寫入',err2);err=err2;}
+    }
     console.warn('點工單共用資料夾目前無法寫入，改存 Downloads',err);
-    lmFolderStatus((err&&err.message?err.message+'；':'目前無法使用鎮山共用資料夾，')+'本次已改下載至 Downloads。',false);
+    lmFolderStatus(errMsg(err),false);
     return downloadNormally();
   }
 }
@@ -38510,6 +38886,8 @@ window.lmBuild=async function(){
   try{
     const proj=(document.getElementById('lm-proj').value||'').trim();
     if(!proj){alert('請先選擇工程編號(點工單編號會自動接續產生)');return;}
+    // 資料夾權限要在使用者剛按下按鈕時就取得,後面同步 DB／組 Word／嵌照片會耗掉手勢有效期
+    try{await lmEnsureFolderPermission(true);}catch(e){}
     // 產生前再同步一次 DB → 編號一定接在最新一筆之後;手改過的編號則檢查是否撞號
     await lmSyncData();
     const dEl=document.getElementById('lm-docno');
@@ -38611,7 +38989,7 @@ window.lmBuild=async function(){
     const fname=docno+(sp?'(外勞)':'')+'.docx';
     const saved=await lmSaveDocx(blob,fname,proj);
     const openBtn=document.getElementById('lm-open-word-btn');
-    if(saved&&!saved.directDownload){
+    if(saved&&!saved.directDownload&&!saved.renamed){
       lmLastOpenInfo={project:proj,docno:docno,sp:sp};
       if(openBtn)openBtn.disabled=false;
     }else{
@@ -38624,7 +39002,7 @@ window.lmBuild=async function(){
     const regContent=typedContent||(sp?(lmSpRange()+'外勞支援'):null);
     const reg=await lmRegister(proj,docno,document.getElementById('lm-date').value,hours,regContent,detailResp);
     const st=document.getElementById('lm-status');
-    if(st)st.textContent='✓ 已產生 '+fname+(saved.directDownload?'（Downloads）':'（'+saved.folderName+'）')+(reg?' ｜ 已自動登錄到明細登錄':' ｜ ⚠ 未登錄明細(需登入後重試)');
+    if(st)st.textContent='✓ 已產生 '+((saved&&saved.fileName)||fname)+(saved.directDownload?'（Downloads）':'（'+saved.folderName+'）')+(reg?' ｜ 已自動登錄到明細登錄':' ｜ ⚠ 未登錄明細(需登入後重試)');
     lmResetForm();   // 清空所有輸入,準備下一張
   }catch(e){console.error(e);alert('產生失敗:'+(e&&e.message||e));}
   finally{lmBusy=false;}
