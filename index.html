@@ -41204,6 +41204,30 @@ async function dsMergeRowsToPdf(uniqueRows, onProgress, title = '') {
   return await output.save({ useObjectStreams: true, addDefaultPage: false, objectsPerTick: 50 });
 }
 
+/* 手機上的 pdf.js/Canvas 偶爾不會回報失敗（特別是 iOS 的 blob worker），
+   不可讓使用者永遠停在「正在轉出圖面」。逾時後改由分頁直接開啟 PDF。 */
+function dsPromiseTimeout(promise, milliseconds, message) {
+  let timer = 0;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(message || '處理逾時')), milliseconds);
+    })
+  ]).finally(() => clearTimeout(timer));
+}
+
+function dsOpenPdfDirectly(win, url, tabTitle) {
+  if (!win || win.closed) return false;
+  try {
+    win.document.title = tabTitle;
+    // 手機瀏覽器的 PDF 放在 iframe 內容易空白；最上層分頁則可使用原生檢視器。
+    win.location.replace(url);
+    return true;
+  } catch (_) {
+    try { win.location.href = url; return true; } catch (_) { return false; }
+  }
+}
+
 /* 一次開啟：選幾張就合成幾頁的同一份 PDF，只跳一個分頁，用瀏覽器內建檢視器依序翻頁 */
 async function dsOpenPages(rows, titleOverride = '') {
   if (dsOpenBusy || dsPrintBusy || !rows.length) return;
@@ -41227,13 +41251,16 @@ async function dsOpenPages(rows, titleOverride = '') {
     if (win && !win.closed && dsTouchTab()) {
       try {
         say(uniqueRows.length > 1 ? ('正在轉出 ' + uniqueRows.length + ' 張圖面…') : '正在轉出圖面…');
-        pageImages = await dsPdfBytesToPageImages(bytes, (done, total) => {
+        pageImages = await dsPromiseTimeout(dsPdfBytesToPageImages(bytes, (done, total) => {
           if (total > 1) say('正在轉出圖面 ' + done + ' / ' + total + '…');
-        });
+        }), 30000, '手機圖面轉檔逾時');
       } catch (error) { console.error('轉頁圖失敗，改用瀏覽器內建檢視器：', error); pageImages = null; }
     }
     if (win && !win.closed && pageImages && pageImages.length) {
       dsRenderTouchViewer(win, pageImages, tabTitle, fileName, url);
+    } else if (win && !win.closed && dsTouchTab() && dsOpenPdfDirectly(win, url, tabTitle)) {
+      // 直接導向後不可立即 revoke，否則部分手機尚未讀完 PDF 就會變成空白。
+      setTimeout(() => { try { URL.revokeObjectURL(url); } catch (_) {} }, 10 * 60 * 1000);
     } else if (win && !win.closed) {
       win.document.title = tabTitle;
       win.document.body.style.cssText = 'margin:0;overflow:hidden;background:#525659';
