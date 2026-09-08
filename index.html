@@ -3652,7 +3652,28 @@ window.normalizeFullWidth=function(value){
     .ld-add-row b{font-family:var(--mono);font-size:13px;color:var(--accent2);min-width:74px}
     .ld-add-meta{font-size:11px;color:var(--text3);font-family:var(--mono)}
     .ld-add-empty{padding:10px;text-align:center}
-    @media(max-width:900px){#page-loading .ld-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    /* 產能負荷圖 */
+    #page-loading .ld-chart{margin-bottom:12px;padding:12px 14px 10px;border:1px solid var(--border);border-radius:var(--rad-lg);background:var(--bg2)}
+    #page-loading .ld-chart-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+    #page-loading .ld-chart-title{font-size:13px;font-weight:600}
+    #page-loading .ld-cap-field{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
+    #page-loading .ld-cap-field input{width:88px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:12px;padding:4px 7px;text-align:right;outline:none}
+    #page-loading .ld-cap-field input:focus{border-color:var(--accent2)}
+    #page-loading .ld-chart-sum{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--text3)}
+    #page-loading .ld-chart-sum b{color:var(--text)}
+    #page-loading .ld-chart-sum .over{color:var(--danger);font-weight:700}
+    #page-loading .ld-chart-sum .ok{color:var(--green)}
+    #page-loading .ld-chart-note{margin-top:6px;font-size:11px;color:var(--text3);line-height:1.7}
+    #page-loading .ld-svg{width:100%;height:auto;display:block}
+    #page-loading .ld-grid{stroke:var(--border);stroke-width:1}
+    #page-loading .ld-axis{fill:var(--text3);font-family:var(--mono);font-size:11px}
+    #page-loading .ld-axis.dim{opacity:.75;font-size:10px}
+    #page-loading .ld-bartxt{fill:var(--text2);font-family:var(--mono);font-size:11px;font-weight:600}
+    #page-loading .ld-bartxt.over{fill:var(--danger)}
+    #page-loading .ld-cap-line{stroke:var(--danger);stroke-width:1.5;stroke-dasharray:6 4}
+    #page-loading .ld-seg{stroke:var(--bg2);stroke-width:.75}
+    /* 手機:圖表不要跟著縮到看不清字,改成可以左右捲 */
+    @media(max-width:900px){#page-loading .ld-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}#page-loading #ld-chart-svg{overflow-x:auto}#page-loading .ld-svg{min-width:720px}}
     /* 狀態燈:排程表與主頁「月排程進度」小卡共用 */
     .ld-light{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-family:var(--mono);white-space:nowrap;border:1px solid}
     .ld-l-red{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);background:color-mix(in srgb,var(--danger) 12%,transparent);font-weight:700}
@@ -3679,12 +3700,23 @@ window.normalizeFullWidth=function(value){
         <input type="month" id="ld-month" onchange="ldMonthChanged()">
         <button class="dash-nav-btn" onclick="ldMonthNav(1)">下個月 »</button>
         <button class="dash-nav-btn" onclick="ldMonthNav(0)">本月</button>
-        <button class="dash-nav-btn" onclick="ldCarryOver()" title="把上個月排過的工程區帶進這個月，排定量自動帶「整區還沒做完的量」">↷ 帶入上月未完成</button>
+        <button class="dash-nav-btn" onclick="ldCarryOver()" title="把上個月沒做完的量(上月排定 − 上月實際完成)結轉到這個月">↷ 結轉上月未完成</button>
         <button class="dash-nav-btn" onclick="ldFillPlans()" title="把排定量空白或 0 的工程區，補成該區 BOM 的整區重量">⤓ 補上排定量</button>
         <span id="ld-range" class="ld-range"></span>
         <span id="ld-hint" class="ld-hint"></span>
       </div>
       <div id="ld-kpi" class="ld-kpi"></div>
+      <div id="ld-chart" class="ld-chart" style="display:none">
+        <div class="ld-chart-head">
+          <div class="ld-chart-title">本月負荷（依交管料日分週）</div>
+          <label class="ld-cap-field">月產能上限
+            <input type="number" id="ld-cap" min="0" step="1" placeholder="未設定" onchange="ldSaveCap(this.value)"> 噸
+          </label>
+          <span id="ld-chart-sum" class="ld-chart-sum"></span>
+        </div>
+        <div id="ld-chart-svg"></div>
+        <div class="ld-chart-note">每根柱＝該週要交管料的工程區排定量堆疊（滑過去看是哪一區）；紅色虛線＝該週可用產能（月產能按天數分攤）。柱子變紅代表那一週排太滿，要往前後挪。</div>
+      </div>
       <div id="ld-missing" class="ld-missing" style="display:none"></div>
       <div class="card" style="padding:0;overflow:hidden">
         <div class="table-scroll">
@@ -35647,6 +35679,28 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 let prodReceipts=[], prodReceiptProjects=[], prodReceiptZones=[];
 let prodTrack=[], prodReserved=[], prodProduct=[], prodManual=[], prodCurTab='receipt', prodBusy=false;
 let prodDataLoaded=false;   // SP/CP 是否已載入(BOM 工程區設轉包時要先確認)
+// ── CP 收圖與追蹤：重繪期間的共用快取 ──
+// 這頁的統計函式彼此層層呼叫（看板每一格都會重算整份 SP 虛擬列、每張工程卡都會重掃
+// zones/sp_track），資料量一大就退化成 O(n²)。以下快取只在「同一次同步重繪」內有效：
+// 一進入微任務（await／事件回合結束）就自動清空，所以任何寫入資料後的重繪一定拿得到新值；
+// 各重繪進入點另外再 prodMemoReset() 一次，確保「先改資料再重繪」也不會讀到舊快取。
+const prodMemoStore=new Map(); let prodMemoQueued=false;
+function prodMemoReset(){ prodMemoStore.clear(); }
+function prodMemo(key,build){
+  if(!prodMemoQueued){ prodMemoQueued=true; Promise.resolve().then(()=>{ prodMemoStore.clear(); prodMemoQueued=false; }); }
+  if(prodMemoStore.has(key)) return prodMemoStore.get(key);
+  const v=build(); prodMemoStore.set(key,v); return v;
+}
+// 常用索引：把「每次都全表掃一遍」換成建一次 Map。
+function prodReceiptById(){ return prodMemo('receiptById',()=>new Map((prodReceipts||[]).filter(r=>r.id!=null).map(r=>[String(r.id),r]))); }
+function cprProjectIndex(){ return prodMemo('projByNo',()=>{const m=new Map();(prodReceiptProjects||[]).forEach(p=>{const k=String(p.proj_num||'').trim();if(!m.has(k))m.set(k,p);});return m;}); }
+function cprReceiptIndex(){ return prodMemo('receiptsByProj',()=>{const m=new Map();(prodReceipts||[]).forEach(r=>{const k=String(r.project_no||'').trim();let a=m.get(k);if(!a)m.set(k,a=[]);a.push(r);});return m;}); }
+function cprZoneIndex(){ return prodMemo('zonesByProjId',()=>{const m=new Map();(prodReceiptZones||[]).forEach(z=>{const k=String(z.project_id);let a=m.get(k);if(!a)m.set(k,a=[]);a.push(z);});return m;}); }
+// BOM 工程區依代號取第一筆（沿用原本 find 的語意）
+function cprBomZoneMap(projectNo){ return prodMemo('bomZoneMap:'+String(projectNo||'').trim(),()=>{const m=new Map();cprProjectBomZones(projectNo).forEach(z=>{const c=String(z.zone_code||'').trim().toUpperCase();if(c&&!m.has(c))m.set(c,z);});return m;}); }
+// SP 已動作（清點中／OK／送工地）的工程編號
+function cprSpStartedProjects(){ return prodMemo('spStarted',()=>new Set((prodTrack||[]).filter(r=>['清點中','OK','送工地'].includes(String(r.status||'').trim())).map(r=>String(r.proj_no||'').trim().toUpperCase()))); }
+
 // 收圖項目：圖面類型保留，需追蹤的項目與 SP 狀態表使用相同名稱。
 const CPR_CATEGORIES=['通圖','製造圖','平面圖','水電通圖','SP','成品材 Z','X','水電 H','RCP(RH & BH)','削翼','扁鐵 FB','角鐵 L','圓管 P','方管 Q','槽鐵 U','BT(T-BAR)','板組托樑','板組BT'];
 const CPR_CATEGORY_ALIASES=Object.freeze({'水電':'水電通圖','H':'水電 H','S/P':'SP','成品材':'成品材 Z','Z':'成品材 Z','RCP':'RCP(RH & BH)','RH & BH':'RCP(RH & BH)','RH&BH':'RCP(RH & BH)'});
@@ -35693,7 +35747,7 @@ function cprSyncZoneDetail(renderCP=true){
   if(typeof prodRenderDetailHeader==='function')prodRenderDetailHeader();
 }
 function cprRenderZoneDetail(){
-  const body=cprEl('pdCPBody');if(!body)return;cprZoneDetailPending=false;
+  const body=cprEl('pdCPBody');if(!body)return;cprZoneDetailPending=false;prodMemoReset();
   cprApplyZoneDetailCollapse();
   const all=cprZoneDetailRows(),rows=all.filter(r=>cprMatchesGroup(r,cprZoneDetailGroup)),pages=Math.max(1,Math.ceil(rows.length/CPR_PAGE_SIZE));
   cprZoneDetailPage=Math.min(pages,Math.max(1,cprZoneDetailPage));
@@ -35706,12 +35760,13 @@ function cprRenderZoneDetail(){
   cprEl('pdCPPageInfo').textContent=rows.length+' 筆 · 第 '+cprZoneDetailPage+' / '+pages+' 頁';
   cprEl('pdCPPrev').disabled=cprZoneDetailPage<=1;cprEl('pdCPNext').disabled=cprZoneDetailPage>=pages;
 }
-// 一般格式：A15-001 / A16-C001；特殊編號經使用者確認後仍可儲存。
-function cprIsStandardCpNo(value){return /^(?:A15-\d{3}|A16-C\d{3})$/.test(String(value||'').trim().toUpperCase());}
+// 一般格式：A15 / A16 各自都可以有沒有 C 兩種 → A15-001、A15-C001、A16-001、A16-C001。
+// 特殊編號經使用者確認後仍可儲存。
+function cprIsStandardCpNo(value){return /^A1[56]-C?\d{3}$/.test(String(value||'').trim().toUpperCase());}
 async function cprConfirmCpNo(value,previous){
   const cp=String(value||'').trim().toUpperCase();
   if(cp===String(previous||'').trim().toUpperCase()||cprIsStandardCpNo(cp))return true;
-  return uiConfirm('CP單號「'+cp+'」不符合一般格式 A15-001 或 A16-C001。\n\n請確認是否輸入有誤；若確定是特殊編號，仍可繼續儲存。',{okText:'確定使用特殊編號',cancelText:'返回修改'});
+  return uiConfirm('CP單號「'+cp+'」不符合一般格式（A15-001、A15-C001、A16-001、A16-C001）。\n\n請確認是否輸入有誤；若確定是特殊編號，仍可繼續儲存。',{okText:'確定使用特殊編號',cancelText:'返回修改'});
 }
 async function cprDirectSetCP(id,value,input){
   const r=cprDirectRow(id);if(!r||pagePerm('prod')!=='edit')return;
@@ -35745,18 +35800,22 @@ function cprUndo(){return cprHistoryMove(cprUndoStack,cprRedoStack,'復原');}
 function cprRedo(){return cprHistoryMove(cprRedoStack,cprUndoStack,'重做');}
 function cprToday(){return new Date().toLocaleDateString('sv-SE');}
 function cprProjectById(id){return prodReceiptProjects.find(p=>String(p.id)===String(id))||null;}
-function cprProjectByNo(no){return prodReceiptProjects.find(p=>String(p.proj_num||'').trim()===String(no||'').trim())||null;}
+function cprProjectByNo(no){return cprProjectIndex().get(String(no||'').trim())||null;}
 function cprCpFamily(row,family){return new RegExp('^'+family+'(?:[^0-9]|$)','i').test(String(row?.cp_no||'').trim());}
-function cprRowsForProject(projectNo){return prodReceipts.filter(r=>String(r.project_no||'').trim()===String(projectNo||'').trim());}
+function cprRowsForProject(projectNo){return cprReceiptIndex().get(String(projectNo||'').trim())||[];}
 function cprCpKey(value){return String(value||'').trim().toUpperCase().replace(/[\s_]+/g,'-');}
 function cprProjectBomZones(projectNo){
-  const p=cprProjectByNo(projectNo);return prodReceiptZones.filter(z=>String(z.project_id)===String(p?.id));
+  const p=cprProjectByNo(projectNo);return (p&&cprZoneIndex().get(String(p.id)))||[];
 }
 function cprStatusOverrideValue(projectNo,rows){
   const p=cprProjectByNo(projectNo),projectValue=String(p?.cp_receipt_status_override||'').trim();if(projectValue)return projectValue;
   rows=Array.isArray(rows)?rows:cprRowsForProject(projectNo);return String(rows.find(r=>String(r.project_status_override||'').trim())?.project_status_override||'').trim();
 }
 function cprProjectStatus(projectNo,rows){
+  // 工程卡片、看板與 SP 表都會反覆問同一個工程的狀態，同一次重繪只算一次。
+  return prodMemo('projStatus:'+String(projectNo||'').trim(),()=>cprComputeProjectStatus(projectNo,rows));
+}
+function cprComputeProjectStatus(projectNo,rows){
   rows=Array.isArray(rows)?rows:cprRowsForProject(projectNo);
   const override=cprStatusOverrideValue(projectNo,rows),manual=CPR_PROJECT_STATUS_GROUPS.find(x=>x[0]===override);
   if(manual)return{key:manual[0],label:manual[1],cls:manual[2]};
@@ -35767,7 +35826,7 @@ function cprProjectStatus(projectNo,rows){
   // BOM 有 A201 時工程區狀態會成為「進行中」或「已完成」；任一區已動作即視為進行中。
   const bomStarted=bomZones.some(z=>['進行中','已完成'].includes(String(z.status||'').trim()));
   // SP 只有開始清點／領料後才算動作；空白、未開始與轉包都不算。
-  const proj=String(projectNo||'').trim().toUpperCase(),spStarted=prodTrack.some(r=>String(r.proj_no||'').trim().toUpperCase()===proj&&['清點中','OK','送工地'].includes(String(r.status||'').trim()));
+  const proj=String(projectNo||'').trim().toUpperCase(),spStarted=cprSpStartedProjects().has(proj);
   if(bomStarted||spStarted)return{key:'in_progress',label:'進行中',cls:'st-count'};
   // 單純收圖不等於開工。
   return{key:'not_started',label:'未開始',cls:'st-none'};
@@ -35896,7 +35955,7 @@ function cprInlineRowHtml(kind,d){
 function cprInlineFocusOut(kind){if(kind!=='edit')return;setTimeout(()=>{const row=document.querySelector('tr[data-cpr-inline="edit"]'),drop=document.getElementById('cprInlineDrop');if(!cprEditDraft||drop||(row&&row.contains(document.activeElement)))return;cprCommitInline('edit');},0);}
 function cprCloseInlinePicker(){const d=document.getElementById('cprInlineDrop');if(d)d.remove();document.removeEventListener('mousedown',cprInlinePickerOutside,true);if(d)setTimeout(cprRefreshZoneDetail,0);}
 function cprInlinePickerOutside(e){const d=document.getElementById('cprInlineDrop');if(!d||d.contains(e.target))return;const kind=d.dataset.kind;cprCloseInlinePicker();if(kind==='edit')cprCommitInline('edit');}
-function cprBomZoneCodes(projectNo){return[...new Set(cprProjectBomZones(projectNo).map(z=>String(z.zone_code||'').trim().toUpperCase()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));}
+function cprBomZoneCodes(projectNo){return prodMemo('bomZoneCodes:'+String(projectNo||'').trim(),()=>[...new Set(cprProjectBomZones(projectNo).map(z=>String(z.zone_code||'').trim().toUpperCase()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'})));}
 function cprCustomZoneCodes(projectNo){const p=cprProjectByNo(projectNo),raw=Array.isArray(p?.cp_receipt_zone_options)?p.cp_receipt_zone_options:[];return[...new Set(raw.map(cprNormalizeZone).flatMap(z=>z.split('.')).filter(z=>z&&z!=='全區'))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));}
 async function cprSaveCustomZoneOptions(projectNo,zones){
   const p=cprProjectByNo(projectNo);if(!p)return false;const clean=[...new Set((zones||[]).map(cprNormalizeZone).flatMap(z=>z.split('.')).filter(z=>z&&z!=='全區'&&!cprBomZoneCodes(projectNo).includes(z)))];
@@ -36059,6 +36118,7 @@ function cprReceiptRowHtml(r,canEdit,prefix='cpr'){
     return '<tr><td><input class="lt-edit cpr-direct-input cpr-code" value="'+esc(r.cp_no||'')+'" placeholder="CP單號" oninput="this.value=this.value.toUpperCase()" onchange="cprDirectSetCP('+r.id+',this.value,this)"></td><td class="cpr-code">'+esc(r.project_no||'—')+'</td><td><button type="button" id="'+prefix+'-row-zone-'+r.id+'" class="spx-detail-btn cpr-direct-picker" onclick="cprOpenRowPicker(event,'+r.id+',\'zone\')" onkeydown="cprPickerButtonKeydown(event,null,\'zone\','+r.id+')" title="可直接輸入工程區；不存在時按 Enter 建立">'+zones+'</button></td><td><button type="button" id="'+prefix+'-row-item-'+r.id+'" class="spx-detail-btn cpr-direct-picker" style="white-space:normal" onclick="cprOpenRowPicker(event,'+r.id+',\'item\')" onkeydown="cprPickerButtonKeydown(event,null,\'item\','+r.id+')" title="可直接輸入項目後按 Enter 選取"><span class="sp-notion-tags">'+items+'</span></button></td><td><input class="lt-edit cpr-direct-input cpr-code" type="date" value="'+esc(String(r.received_date||'').slice(0,10))+'" onchange="cprDirectSet('+r.id+',\'received_date\',this.value,true)"></td><td class="del-col" style="white-space:nowrap">'+revBtn+'<button type="button" class="btn-del-row" title="刪除這筆收圖" onclick="cprDelete('+r.id+')">✕</button></td></tr>';
 }
 function cprRender(){
+  prodMemoReset();
   cprZoneDetailPending=true;cprRefreshZoneDetail();
   const banner=cprEl('cprSchemaBanner');if(banner)banner.style.display=cprSchemaOk?'none':'block';const isDetail=!!cprViewProjectNo,home=cprEl('cprProjectHome'),homeHead=cprEl('cprHomeHeader'),detail=cprEl('cprProjectDetail'),detailHead=cprEl('cprDetailHeader'),addProject=cprEl('cprAddProject');if(home)home.style.display=isDetail?'none':'';if(homeHead)homeHead.style.display=isDetail?'none':'';if(detail)detail.style.display=isDetail?'':'none';if(detailHead)detailHead.style.display=isDetail?'':'none';if(addProject)addProject.style.display=pagePerm('prod')==='edit'?'':'none';cprRenderProjectCards();cprUpdateHistoryButtons();if(!isDetail)return;cprRenderDetailHeader();
   const body=cprEl('cprBody');if(!body)return;if(!cprSchemaOk){body.innerHTML='<tr><td colspan="6" class="cpr-empty">請先部署 cp_receipts 資料表。</td></tr>';return;}
@@ -36084,8 +36144,13 @@ function prodItemTags(rows){
   const tags=[...grouped].map(([x,itemRows])=>prodItemTag(x,itemRows.length>0&&itemRows.every(r=>['OK','送工地'].includes(String(r.status||'').trim()))));
   return '<span class="sp-notion-tags">'+tags.join('')+'</span>';
 }
+const SP_ZONES_CACHE=new Map();
 function spTrackZones(value){
-  return [...new Set(String(value||'').trim().toUpperCase().split(/[、,，.。/／;；+＋&＆\s]+/).map(x=>x.trim()).filter(Boolean))];
+  // 純字串運算，同一個 zone 字串在一次重繪裡會被切上萬次；用長效快取省掉重複的 regex。
+  const raw=String(value||''); let hit=SP_ZONES_CACHE.get(raw); if(hit) return hit;
+  hit=[...new Set(raw.trim().toUpperCase().split(/[、,，.。/／;；+＋&＆\s]+/).map(x=>x.trim()).filter(Boolean))];
+  if(SP_ZONES_CACHE.size>8000) SP_ZONES_CACHE.clear();
+  SP_ZONES_CACHE.set(raw,hit); return hit;
 }
 function spTrackZoneText(values){ return [...new Set((values||[]).map(x=>String(x||'').trim().toUpperCase()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'})).join('、'); }
 function spTrackZoneHas(row,zone){ return spTrackZones(row&&row.zone).includes(String(zone||'').trim().toUpperCase()); }
@@ -36140,12 +36205,37 @@ function prodStatusMatches(filter,label){return !filter.size||filter.has(label);
 const PROD_OV_RANK={'進行中':0,'未開始':1,'完成':2,'已送工地':3,'轉包':4};
 function prodOvRank(l){ return PROD_OV_RANK[l]!=null?PROD_OV_RANK[l]:9; }
 
+// 七個分頁的畫面全部重畫一次（載入完成、以及切回本頁先用手上的資料立刻上畫都用它）。
+function prodRenderAll(){
+  prodBuildProjOptions();
+  cprInitUI();
+  prodRenderBoard();
+  prodRenderTrack();
+  prodRenderReserved();
+  prodRenderProduct();
+  spxRender('manual');
+}
+// 重抓回來要整片重畫；若使用者正好在某個輸入格裡打字，先等他離開該欄位再畫，
+// 免得游標與還沒存完的字被洗掉（焦點若只是跳到隔壁格，會再等一次）。
+function prodRenderAfterReload(){
+  const el=document.activeElement, page=document.getElementById('page-prod');
+  const typing=el&&page&&page.contains(el)&&
+    (el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT'||el.isContentEditable===true);
+  if(!typing){ prodRenderAll(); return; }
+  el.addEventListener('blur',()=>setTimeout(prodRenderAfterReload,50),{once:true});
+}
 async function prodInit(){
   if(prodBusy) return;
   prodTab(prodCurTab||'receipt');
+  // 已載入過就先用手上的資料立刻畫出來（切頁不再卡在「載入中…」），
+  // 但資料每次都照樣重抓，畫面隨即換成最新的。
+  const warm=prodDataLoaded;
+  if(warm) prodRenderAll();
   prodBusy=true;
-  document.getElementById('prodBoardBody').innerHTML='<tr><td colspan="'+PROD_BOARD_COLS+'" class="prod-empty">載入中…</td></tr>';
-  if(cprEl('cprBody'))cprEl('cprBody').innerHTML='<tr><td colspan="6" class="cpr-empty">載入中…</td></tr>';
+  if(!warm){
+    document.getElementById('prodBoardBody').innerHTML='<tr><td colspan="'+PROD_BOARD_COLS+'" class="prod-empty">載入中…</td></tr>';
+    if(cprEl('cprBody'))cprEl('cprBody').innerHTML='<tr><td colspan="6" class="cpr-empty">載入中…</td></tr>';
+  }
   try{
     const [rc,rpj,rz,rt,rr,rp,rm,ro]=await Promise.all([
       sbFetchAll('/rest/v1/cp_receipts?select=*&order=received_date.desc,id.desc'),
@@ -36174,13 +36264,7 @@ async function prodInit(){
     prodDataLoaded=true;
   }catch(e){ console.error(e); }
   prodBusy=false;
-  prodBuildProjOptions();
-  cprInitUI();
-  prodRenderBoard();
-  prodRenderTrack();
-  prodRenderReserved();
-  prodRenderProduct();
-  spxRender('manual');
+  prodRenderAfterReload();
   prodMaybeApplyPending();   // 若由 back/forward 回到某子狀態,資料載好後套用
 }
 
@@ -36255,7 +36339,8 @@ function prodProductProjMatch(materialProj, boardProj){
 }
 
 // ── 生產看板 ──
-function prodVisibleTrackRows(){const source=typeof spTrackRowsWithReceipts==='function'?spTrackRowsWithReceipts():prodTrack;return source.filter(r=>!(typeof spTrackReceiptProjectHidden==='function'&&spTrackReceiptProjectHidden(r.proj_no))&&(!(typeof spTrackZones==='function')||!spTrackZones(r.zone).length||(typeof spTrackActiveZones!=='function'||spTrackActiveZones(r.proj_no,r.zone).length)));}
+function prodVisibleTrackRows(){return prodMemo('visibleTrackRows',prodBuildVisibleTrackRows);}
+function prodBuildVisibleTrackRows(){const source=typeof spTrackRowsWithReceipts==='function'?spTrackRowsWithReceipts():prodTrack;return source.filter(r=>!(typeof spTrackReceiptProjectHidden==='function'&&spTrackReceiptProjectHidden(r.proj_no))&&(!(typeof spTrackZones==='function')||!spTrackZones(r.zone).length||(typeof spTrackActiveZones!=='function'||spTrackActiveZones(r.proj_no,r.zone).length)));}
 function prodBuildUnits(){
   const map=new Map();
   prodVisibleTrackRows().forEach(r=>{
@@ -36268,11 +36353,13 @@ function prodBuildUnits(){
     });
   });
   // 多工程區手工單只建立各自的工程區入口，不建立「5DB.5DG」合併看板。
+  // 以 工程|工程區 索引取代逐筆展開 map.values() 搜尋，手工單一多就不會變 O(n²)。
+  const unitByZone=new Map(); map.forEach(u=>{ const zk=u.proj+'|'+u.zone; if(!unitByZone.has(zk)) unitByZone.set(zk,u); });
   prodManual.forEach(r=>{
     const proj=(r.proj_no||'').trim();
     prodManualZones(r).forEach(zone=>{
-      const existing=[...map.values()].find(u=>u.proj===proj && u.zone===zone);
-      if(!existing) map.set(proj+'|'+zone+'|__manual__',{proj,zone,dwg:'',ord:'',doc:'',manualOnly:true,items:[{status:r.completed?'OK':'-'}]});
+      const zk=proj+'|'+zone, existing=unitByZone.get(zk);
+      if(!existing){ const u={proj,zone,dwg:'',ord:'',doc:'',manualOnly:true,items:[{status:r.completed?'OK':'-'}]}; map.set(zk+'|__manual__',u); unitByZone.set(zk,u); }
       else if(existing.manualOnly) existing.items.push({status:r.completed?'OK':'-'});
     });
   });
@@ -36296,13 +36383,23 @@ function prodRmCell(pred){
   return rm.length?('<span class="prod-yes" title="'+esc(rm.map(r=>(r.mat_no||'')+' '+(r.spec||'')).join('\n'))+'">'+rm.length+'筆</span>'):'<span class="prod-no">—</span>';
 }
 function prodManualZones(row){
-  const proj=String(row?.proj_no||'').trim().toUpperCase();
-  return [...new Set(String(row?.zone||'').trim().toUpperCase().split(/[.、,，/／;；+＋&＆\s]+/).map(z=>{
+  const proj=String(row?.proj_no||'').trim().toUpperCase(), raw=String(row?.zone||'').trim().toUpperCase();
+  return prodMemo('manualZones:'+proj+'\u0001'+raw,()=>[...new Set(raw.split(/[.、,，/／;；+＋&＆\s]+/).map(z=>{
     z=z.trim(); return proj && z.startsWith(proj+'-') ? z.slice(proj.length+1) : z;
-  }).filter(Boolean))];
+  }).filter(Boolean))]);
+}
+// 看板每個工程區都要問一次手工單；先依工程區建索引，再套原本的工程編號比對規則
+//（手工單沒填工程編號、或查詢沒帶工程編號時一律算符合）。
+function prodManualZoneIndex(){
+  return prodMemo('manualByZone',()=>{
+    const m=new Map();
+    (prodManual||[]).forEach(r=>prodManualZones(r).forEach(z=>{ let a=m.get(z); if(!a) m.set(z,a=[]); a.push(r); }));
+    return m;
+  });
 }
 function prodManualForZone(proj,zone){
-  return prodManual.filter(r=>(!(r.proj_no||'').trim() || !(proj||'').trim() || (r.proj_no||'').trim()===(proj||'').trim()) && prodManualZones(r).includes(String(zone||'').trim().toUpperCase()));
+  const q=String(proj||'').trim(), list=prodManualZoneIndex().get(String(zone||'').trim().toUpperCase())||[];
+  return list.filter(r=>{ const p=(r.proj_no||'').trim(); return !p || !q || p===q; });
 }
 // 手工單已完成 → 標出領取日期(未跑 take_date migration 時不顯示)
 function prodManualTakeText(r){
@@ -36343,10 +36440,27 @@ function prodUnitCells(u){
 }
 // 工程區合併模式:單一項目格的狀態計數
 const PROD_SHORT={'st-none':'未','st-count':'清','st-ok':'完','st-ship':'送','st-sub':'轉'};
+// 看板每個工程區 × 每個項目原本都要重掃一次整份 SP 列（含收圖虛擬列），
+// 改成一次重繪只建一張 工程|工程區|項目 → 各狀態筆數 的索引。
+function prodAggItemIndex(){
+  return prodMemo('aggItemIndex',()=>{
+    const idx=new Map();
+    prodVisibleTrackRows().forEach(r=>{
+      const proj=(r.proj_no||'').trim(), code=(r.item||'').trim().toUpperCase();
+      if(!code) return;
+      const cls=prodStatusMeta(r.status,r.remark).cls;
+      spTrackActiveZones(proj,r.zone).forEach(zone=>{
+        const k=proj+'\u0001'+zone+'\u0001'+code;
+        let b=idx.get(k); if(!b) idx.set(k,b={});
+        b[cls]=(b[cls]||0)+1;
+      });
+    });
+    return idx;
+  });
+}
 function prodAggItemChips(proj, zone, code){
-  const rows=prodVisibleTrackRows().filter(r=>(r.proj_no||'').trim()===proj && spTrackActiveZones(proj,r.zone).includes(String(zone||'').trim().toUpperCase()) && (r.item||'').trim().toUpperCase()===code);
-  if(!rows.length) return '';
-  const b={}; rows.forEach(r=>{ const m=prodStatusMeta(r.status,r.remark); b[m.cls]=(b[m.cls]||0)+1; });
+  const b=prodAggItemIndex().get((proj==null?'':String(proj))+'\u0001'+String(zone||'').trim().toUpperCase()+'\u0001'+(code==null?'':String(code)));
+  if(!b) return '';
   const order=['st-none','st-count','st-ok','st-ship','st-sub'];
   return order.filter(c=>b[c]).map(c=>'<span class="chip mini '+c+'">'+PROD_SHORT[c]+'×'+b[c]+'</span>').join('');
 }
@@ -36922,6 +37036,7 @@ function pdTakeBox(k,on,label,onLabel,offLabel,fnChk,fnDate,date,showDate){
 }
 
 function prodRenderDetail(){
+  prodMemoReset();
   const {proj,zone}=prodDetailCtx;
   cprRenderZoneDetail();
   ['reserved','product','manual'].forEach(k=>spxKeyRows(k));   // 就地編輯要靠 _key 對回資料列
@@ -36976,6 +37091,7 @@ function prodGroupZones(units){
 }
 
 function prodRenderBoard(){
+  prodMemoReset();
   cprZoneDetailPending=true;cprRefreshZoneDetail();
   const body=document.getElementById('prodBoardBody'); if(!body) return;
   prodRenderBoardHead();
@@ -37793,17 +37909,19 @@ function spTrackNewestFirst(a,b){
   return (Number(b?.newest)||0)-(Number(a?.newest)||0)||String(a?.proj||'').localeCompare(String(b?.proj||''),'zh-Hant')||String(a?.cp||'').localeCompare(String(b?.cp||''),undefined,{numeric:true});
 }
 function spTrackReceivedDate(group){
-  const linked=(group?.receiptMeta?.rows||[]).concat((group?.rows||[]).map(r=>prodReceipts.find(x=>String(x.id)===String(r.cp_receipt_id))).filter(Boolean));
+  const linked=(group?.receiptMeta?.rows||[]).concat((group?.rows||[]).map(r=>prodReceiptById().get(String(r.cp_receipt_id))).filter(Boolean));
   return linked.map(r=>String(r.received_date||'').slice(0,10)).filter(Boolean).sort().pop()||'';
 }
-function spTrackReceiptProjectHidden(projectNo){const proj=String(projectNo||'').trim().toUpperCase();if(!proj)return false;const receipts=cprRowsForProject(proj);if(!receipts.length)return false;return['completed','subcontract','abnormal'].includes(cprProjectStatus(proj,receipts).key);}
-function spTrackBomZoneCompleted(projectNo,zone){const code=String(zone||'').trim().toUpperCase();if(!code)return false;const bom=cprProjectBomZones(projectNo).find(z=>String(z.zone_code||'').trim().toUpperCase()===code);return!!bom&&String(bom.status||'').trim()==='已完成';}
-function spTrackActiveZones(projectNo,value){return spTrackZones(value).filter(zone=>!spTrackBomZoneCompleted(projectNo,zone));}
-function spTrackReceiptMetaMap(){
+function spTrackReceiptProjectHidden(projectNo){const proj=String(projectNo||'').trim().toUpperCase();if(!proj)return false;return prodMemo('projHidden:'+proj,()=>{const receipts=cprRowsForProject(proj);if(!receipts.length)return false;return['completed','subcontract','abnormal'].includes(cprProjectStatus(proj,receipts).key);});}
+function spTrackBomZoneCompleted(projectNo,zone){const code=String(zone||'').trim().toUpperCase();if(!code)return false;const bom=cprBomZoneMap(projectNo).get(code);return!!bom&&String(bom.status||'').trim()==='已完成';}
+function spTrackActiveZones(projectNo,value){return prodMemo('activeZones:'+String(projectNo||'').trim()+'\u0001'+String(value||''),()=>spTrackZones(value).filter(zone=>!spTrackBomZoneCompleted(projectNo,zone)));}
+function spTrackReceiptMetaMap(){ return prodMemo('receiptMeta',spTrackBuildReceiptMetaMap); }
+function spTrackBuildReceiptMetaMap(){
   const map=new Map();(prodReceipts||[]).forEach(receipt=>{const proj=String(receipt.project_no||'').trim().toUpperCase(),cp=String(receipt.cp_no||'').trim();if(!proj||!cp||receipt.is_subcontract||spTrackReceiptProjectHidden(proj))return;const temp={};spxSetCombo(temp,SPX.track.cols.find(c=>c.combo),cp);const probe={proj_no:proj,dwg_no:temp.dwg_no||'',order_no:temp.order_no||''},key=spTrackGroupKey(probe),items=(receipt.categories||[]).map(x=>CPR_TO_SP_ITEM[String(x||'').trim()]).filter(x=>PROD_ITEMS.includes(x));if(!items.length)return;let zones=receipt.zone_scope==='all'||receipt.zone_text==='全區'?(typeof cprBomZoneCodes==='function'?cprBomZoneCodes(proj):[]):spTrackZones(receipt.zone_text);if(!zones.length&&receipt.zone_text==='全區')zones=['全區'];zones=zones.filter(zone=>!spTrackBomZoneCompleted(proj,zone));if(!zones.length)return;if(!map.has(key))map.set(key,{key,proj,dwg:probe.dwg_no,ord:probe.order_no,cp,rows:[],zones:new Set(),items:new Set(),itemReceiptIds:{},newest:0});const meta=map.get(key);meta.rows.push(receipt);zones.forEach(z=>meta.zones.add(z));items.forEach(item=>{meta.items.add(item);if(meta.itemReceiptIds[item]==null&&receipt.id!=null)meta.itemReceiptIds[item]=receipt.id;});meta.newest=Math.max(meta.newest,Date.parse(String(receipt.created_at||receipt.received_date||''))||Number(receipt.id)||0);});return map;
 }
-function spTrackRowsWithReceipts(){
-  const receiptById=new Map((prodReceipts||[]).filter(r=>r.id!=null).map(r=>[String(r.id),r]));
+function spTrackRowsWithReceipts(){ return prodMemo('rowsWithReceipts',spTrackBuildRowsWithReceipts); }
+function spTrackBuildRowsWithReceipts(){
+  const receiptById=prodReceiptById();
   const visibleTrack=prodTrack.filter(r=>{const receipt=r.cp_receipt_id!=null?receiptById.get(String(r.cp_receipt_id)):null;return !receipt?.is_subcontract&&!spTrackReceiptProjectHidden(r.proj_no);});
   const meta=spTrackReceiptMetaMap(),existing=new Set(visibleTrack.filter(r=>spTrackActiveZones(r.proj_no,r.zone).length).map(r=>spTrackGroupKey(r)+'\u0001'+String(r.item||'').trim())),virtual=[];meta.forEach(m=>m.items.forEach(item=>{const itemKey=m.key+'\u0001'+item;if(existing.has(itemKey))return;virtual.push({_key:'cpr:'+String(m.itemReceiptIds[item]||m.key)+':'+item,_receiptVirtual:true,cp_receipt_id:m.itemReceiptIds[item]||null,proj_no:m.proj,zone:spTrackZoneText([...m.zones]),dwg_no:m.dwg,order_no:m.ord,item,make:'',status:'-',remark:'',created_at:m.rows[0]?.created_at||m.rows[0]?.received_date||''});}));return visibleTrack.concat(virtual);
 }
@@ -37825,6 +37943,7 @@ function spTrackContextRows(){
 }
 function spTrackFindContextGroup(key){return spTrackBuildGroups(spTrackContextRows()).find(x=>x.key===key)||null;}
 function spTrackRenderOuter(){
+  prodMemoReset();
   const head=document.getElementById('spxHead-track'),body=document.getElementById('spxBody-track'); if(!head||!body)return;
   if(!spTrackDraft||spTrackDraft._detailKey)spTrackDraft={proj:'',zone:'',cp:'',items:new Set(),remark:''};
   head.innerHTML='<tr><th>CP編號</th><th>工程編號</th><th>工程區</th><th>項目（多選）</th><th>收圖日期</th><th>整體狀態</th><th>備註</th><th></th></tr>';
@@ -37851,6 +37970,7 @@ function spTrackRenderOuter(){
   const cnt=document.getElementById('spxCount-track');if(cnt)cnt.textContent=spTrackOuterGroups.length+' 個 CP';
 }
 function spTrackRenderDetailOuter(){
+  prodMemoReset();
   const head=document.getElementById('spxHead-detail'),body=document.getElementById('spxBody-detail');if(!head||!body)return;
   const proj=String(prodDetailCtx.proj||'').trim(),zone=String(prodDetailCtx.zone||'').trim().toUpperCase(),kw=spxFilterText.detail||'';
   // 詳情頁的新增列必須屬於目前小卡。草稿是全站共用物件，若沿用完整 SP 表或上一張
@@ -43191,6 +43311,113 @@ function ldWorkdaysLeft(target){
   while(d<today){ d.setDate(d.getDate()+1); if(ldIsWorkday(d)) n--; }
   return n;
 }
+// ── 月產能上限(全公司一個值,存 app_config;0 = 未設定就不畫產能線) ──
+const LD_CAP_KEY='loading_capacity';
+let ldCap=0, ldCapLoaded=false;
+async function ldLoadCap(){
+  if(ldCapLoaded) return;
+  ldCapLoaded=true;
+  const r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+encodeURIComponent(LD_CAP_KEY));
+  if(r.ok&&Array.isArray(r.data)&&r.data[0]){
+    try{ ldCap=Number(JSON.parse(r.data[0].value||'{}').tons)||0; }catch(_){ ldCap=0; }
+  }
+}
+async function ldSaveCap(v){
+  const tons=Math.max(0, ldNum(v));
+  const r=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:LD_CAP_KEY,value:JSON.stringify({tons:tons})})});
+  if(!r.ok){ alert('月產能上限儲存失敗('+(r.status||'?')+'),請確認有編輯權限。'); return; }
+  ldCap=tons; ldRender(); ldHint(tons>0?('月產能上限已設為 '+ldFix(tons)+' 噸'):'已清除月產能上限');
+}
+
+// 產量月切成週:從產量月起日起每 7 天一桶(最後一桶通常不滿 7 天)
+function ldWeeks(ym){
+  const r=ldMonthRange(ym), out=[];
+  const end=new Date(r.to+'T00:00:00');
+  let cur=new Date(r.from+'T00:00:00');
+  for(let i=0;i<8 && cur<=end;i++){
+    const from=new Date(cur), to=new Date(cur);
+    to.setDate(to.getDate()+6);
+    if(to>end) to.setTime(end.getTime());
+    const days=Math.round((to-from)/86400000)+1;
+    out.push({from:ldISO(from), to:ldISO(to), days:days,
+      label:ldISO(from).slice(5).replace('-','/')+'–'+ldISO(to).slice(5).replace('-','/')});
+    cur.setDate(cur.getDate()+7);
+  }
+  return out;
+}
+// 把本月排定的工程區依交管料日分到各週;沒有日期或落在區間外的歸「未定」
+function ldChartBuckets(rows){
+  const weeks=ldWeeks(ldYM).map(w=>Object.assign({items:[],total:0},w));
+  const other={label:'未定',days:0,items:[],total:0,other:true};
+  rows.forEach(r=>{
+    const w=r.handover?weeks.find(x=>r.handover>=x.from&&r.handover<=x.to):null;
+    const b=w||other;
+    b.items.push({name:r.proj+'-'+(r.z.zone_code||''), t:r.target});
+    b.total+=r.target;
+  });
+  return other.total>0?weeks.concat([other]):weeks;
+}
+const LD_SEG_COLORS=['#4f8ef7','#32d74b','#ffd60a','#bf5af2','#40c8e0','#ff9f0a','#ff6b8a','#8ab4f8'];
+// 純手寫 inline SVG(不引外部圖表庫,比照產值歷史總覽)
+function ldChartSvg(buckets){
+  const W=900,H=286,L=64,R=18,T=16,B=58;
+  const pw=W-L-R, ph=H-T-B;
+  const totalDays=buckets.filter(b=>!b.other).reduce((s,b)=>s+b.days,0)||1;
+  const capOf=b=>(ldCap>0&&!b.other)?(ldCap*b.days/totalDays):0;
+  const top=Math.max(1, ...buckets.map(b=>b.total), ...buckets.map(capOf))*1.15;
+  const y=v=>T+ph-(v/top)*ph;
+  const n=buckets.length||1, slot=pw/n, bw=Math.min(78, slot*0.6);
+  let g='';
+  for(let i=0;i<=4;i++){
+    const v=top*i/4, yy=y(v);
+    g+='<line x1="'+L+'" y1="'+yy.toFixed(1)+'" x2="'+(W-R)+'" y2="'+yy.toFixed(1)+'" class="ld-grid"/>'
+      +'<text x="'+(L-8)+'" y="'+(yy+4).toFixed(1)+'" class="ld-axis" text-anchor="end">'+Math.round(v)+'</text>';
+  }
+  buckets.forEach((b,i)=>{
+    const cx=L+slot*i+slot/2, x=cx-bw/2, cap=capOf(b), over=cap>0&&b.total>cap+0.001;
+    let acc=0;
+    b.items.forEach((it,k)=>{
+      if(!(it.t>0)) return;
+      const yy=y(acc+it.t), h=Math.max(1, y(acc)-yy);
+      g+='<rect x="'+x.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="2" fill="'+LD_SEG_COLORS[k%LD_SEG_COLORS.length]+'" class="ld-seg"><title>'+ldEsc(it.name)+'　'+ldFix(it.t)+' t</title></rect>';
+      acc+=it.t;
+    });
+    if(b.total>0) g+='<text x="'+cx.toFixed(1)+'" y="'+(y(b.total)-6).toFixed(1)+'" class="ld-bartxt'+(over?' over':'')+'" text-anchor="middle">'+ldFix(b.total)+'</text>';
+    if(cap>0){
+      const yy=y(cap);
+      g+='<line x1="'+(cx-slot*0.44).toFixed(1)+'" y1="'+yy.toFixed(1)+'" x2="'+(cx+slot*0.44).toFixed(1)+'" y2="'+yy.toFixed(1)+'" class="ld-cap-line"><title>本週可用產能 '+ldFix(cap)+' t（'+b.days+' 天）</title></line>';
+    }
+    g+='<text x="'+cx.toFixed(1)+'" y="'+(T+ph+20)+'" class="ld-axis" text-anchor="middle">'+ldEsc(b.label)+'</text>'
+      +'<text x="'+cx.toFixed(1)+'" y="'+(T+ph+36)+'" class="ld-axis dim" text-anchor="middle">'+(b.items.length?(b.items.length+' 區'):'')+'</text>';
+  });
+  return '<svg viewBox="0 0 '+W+' '+H+'" class="ld-svg" role="img" aria-label="本月負荷長條圖">'+g+'</svg>';
+}
+function ldRenderChart(rows){
+  const box=ldEl('ld-chart'); if(!box) return;
+  const capEl=ldEl('ld-cap'); if(capEl && document.activeElement!==capEl) capEl.value=ldCap>0?ldCap:'';
+  if(!rows.length){ box.style.display='none'; return; }
+  box.style.display='';
+  const buckets=ldChartBuckets(rows);
+  ldEl('ld-chart-svg').innerHTML=ldChartSvg(buckets);
+  const plan=rows.reduce((s,r)=>s+r.target,0), done=rows.reduce((s,r)=>s+r.doneMonT,0);
+  const over=buckets.filter(b=>{
+    if(b.other||!(ldCap>0)) return false;
+    const totalDays=buckets.filter(x=>!x.other).reduce((s,x)=>s+x.days,0)||1;
+    return b.total>ldCap*b.days/totalDays+0.001;
+  }).length;
+  let txt='本月排定 <b>'+ldFix(plan)+'</b> t　已完成 <b>'+ldFix(done)+'</b> t';
+  if(ldCap>0){
+    const diff=plan-ldCap;
+    txt+='　月產能 <b>'+ldFix(ldCap)+'</b> t　'+(diff>0.001
+      ? '<span class="over">超出 '+ldFix(diff)+' t</span>'
+      : '<span class="ok">還可排 '+ldFix(-diff)+' t</span>');
+    if(over) txt+='　<span class="over">'+over+' 週排太滿</span>';
+  }else{
+    txt+='　<span style="color:var(--text3)">（設定月產能上限就會畫出產能線）</span>';
+  }
+  ldEl('ld-chart-sum').innerHTML=txt;
+}
+
 // 產量月:上個月 26 日 ~ 當月 25 日(長榮口徑)。例:9 月的產量 = 08/26 ~ 09/25
 function ldMonthRange(ym){ const m=ym||ldYM; return {from:ldYMAdd(m,-1)+'-26', to:m+'-25'}; }
 function ldMonthRangeTxt(ym){ const r=ldMonthRange(ym); return r.from.slice(5).replace('-','/')+' ～ '+r.to.slice(5).replace('-','/'); }
@@ -43237,6 +43464,7 @@ async function ldLoad(){
     ]);
     if(!rz.ok){ ldErr='工程區讀取失敗:zones 還沒有 erect_date／handover_date 欄位,請先在 Supabase SQL Editor 執行 loading_plan_migration.sql。'; return; }
     if(!rpl.ok){ ldErr='loading_plan 資料表尚未建立,請先在 Supabase SQL Editor 執行 loading_plan_migration.sql。'; }
+    await ldLoadCap();
     ldZones=Array.isArray(rz.data)?rz.data:[];
     ldProjects=Array.isArray(rpj.data)?rpj.data:[];
     ldPlans=(rpl.ok&&Array.isArray(rpl.data))?rpl.data:[];
@@ -43358,13 +43586,15 @@ function ldRender(){
   if(ldErr){
     body.innerHTML='<tr><td colspan="14" class="empty-state" style="color:var(--danger)">'+ldEsc(ldErr)+'</td></tr>';
     ldEl('ld-kpi').innerHTML=''; ldEl('ld-missing').style.display='none';
+    const chartBox=ldEl('ld-chart'); if(chartBox) chartBox.style.display='none';
     return;
   }
   const rows=ldRows();
   ldRenderKpi(rows);
+  ldRenderChart(rows);
   ldRenderMissing();
   if(!rows.length){
-    body.innerHTML='<tr><td colspan="14" class="empty-state">'+ldEsc(ldYM)+' 還沒有排程。按右上角「＋ 加入工程區」，或用「↷ 帶入上月未完成」。</td></tr>';
+    body.innerHTML='<tr><td colspan="14" class="empty-state">'+ldEsc(ldYM)+' 還沒有排程。按右上角「＋ 加入工程區」，或用「↷ 結轉上月未完成」。</td></tr>';
     return;
   }
   body.innerHTML=rows.map(r=>{
@@ -43467,6 +43697,8 @@ async function ldRemove(planId){
 async function ldFetchBom(ids){
   const need=[...new Set(ids.map(String))].filter(id=>!ldBom[id]);
   if(!need.length) return;
+  const needSet=new Set(need);
+  need.forEach(id=>{ ldBom[id]={kg:0,qty:0}; });   // 先歸零,重複呼叫也不會累加成兩倍
   const inIds='('+need.join(',')+')';
   const [rc,re]=await Promise.all([
     sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,qty&zone_id=in.'+inIds),
@@ -43478,11 +43710,11 @@ async function ldFetchBom(ids){
     if(x[NONCO_KEY]==='1'||x[NONCO_KEY]===true) nonco.add(e.zone_id+'|'+String(e.part_no||'').trim().toUpperCase());
   });
   (Array.isArray(rc.data)?rc.data:[]).forEach(c=>{
+    if(!needSet.has(String(c.zone_id))) return;   // 只吃這次要補的
     if(nonco.has(c.zone_id+'|'+String(c.part_no||'').trim().toUpperCase())) return;
     const b=ldBom[c.zone_id]||(ldBom[c.zone_id]={kg:0,qty:0});
     b.kg+=ldNum(c.net_weight); b.qty+=parseInt(c.qty)||0;
   });
-  need.forEach(id=>{ if(!ldBom[id]) ldBom[id]={kg:0,qty:0}; });
 }
 // 某工程各工程區的累計完成(kg):加入視窗用來判斷整區是不是已經做完了
 async function ldFetchDone(projNum){
@@ -43534,19 +43766,60 @@ async function ldFillPlans(){
   ldHint(fail?('補上 '+ok+' 個，'+fail+' 個失敗'):('已補上 '+ok+' 個工程區的排定量'));
 }
 
-// 帶入上月未完成:上個月排了但沒做完的區,直接排進這個月(量=整區剩餘)
+// 上個產量月各工程區的實際完成(kg):結轉規則要用「那個月真的做了多少」,不是累計
+async function ldFetchDoneInMonth(ym, zones){
+  const out={};
+  const projNums=[...new Set(zones.map(z=>ldProjNum(z)).filter(Boolean))];
+  if(!projNums.length) return out;
+  const range=ldMonthRange(ym);
+  const r=await sbFetchAll('/rest/v1/daily_output?select=proj_num,zone_code,date,net_weight&proj_num=in.('
+    +projNums.map(p=>'"'+p+'"').join(',')+')&date=gte.'+range.from+'&date=lte.'+range.to);
+  (Array.isArray(r.data)?r.data:[]).forEach(x=>{
+    const k=String(x.proj_num||'').trim().toUpperCase()+'|'+String(x.zone_code||'').trim().toUpperCase();
+    out[k]=(out[k]||0)+ldNum(x.net_weight);
+  });
+  return out;
+}
+// 結轉上月未完成:結轉量 = 上月排定 − 上月實際完成(只看上個產量月做了多少),
+// 只結轉還有缺口、且本月還沒排到的工程區;已經排進本月的不覆蓋人工調整過的數字。
 async function ldCarryOver(){
   const prev=ldYMAdd(ldYM,-1);
-  const r=await sbFetchAll('/rest/v1/loading_plan?select=zone_id&ym=eq.'+encodeURIComponent(prev));
-  if(!r.ok){ alert('讀取上個月排程失敗'); return; }
-  const ids=(Array.isArray(r.data)?r.data:[]).map(x=>String(x.zone_id))
-    .filter(id=>!ldPlans.some(p=>String(p.zone_id)===id));
-  if(!ids.length){ alert(prev+' 沒有可帶入的工程區（可能都已排進本月或上個月沒有排程）。'); return; }
-  // 已經完工的不帶
-  const zs=ids.map(id=>ldZoneById(id)).filter(Boolean);
-  if(!await uiConfirm('把 '+prev+' 的 '+zs.length+' 個工程區帶進 '+ldYM+' 嗎？\n排定量會自動帶「整區還沒做完的量」，可再手動調整。',{okText:'帶入'})) return;
-  const n=await ldAddZones(zs.map(z=>z.id));
-  ldHint(n?('已帶入 '+n+' 個工程區'):'沒有新增任何工程區');
+  const r=await sbFetchAll('/rest/v1/loading_plan?select=zone_id,plan_tons&ym=eq.'+encodeURIComponent(prev));
+  if(!r.ok){ alert('讀取 '+prev+' 的排程失敗。'); return; }
+  const prevPlans=Array.isArray(r.data)?r.data:[];
+  if(!prevPlans.length){ alert(prev+' 沒有排程可以結轉。'); return; }
+  await ldFetchBom(prevPlans.map(p=>p.zone_id));
+  const zs=prevPlans.map(p=>ldZoneById(p.zone_id)).filter(Boolean);
+  const done=await ldFetchDoneInMonth(prev, zs);
+  const skipped=[];
+  const items=prevPlans.map(p=>{
+    const z=ldZoneById(p.zone_id); if(!z) return null;
+    const bomT=ldT((ldBom[p.zone_id]||{}).kg||0);
+    const v=(p.plan_tons!=null&&p.plan_tons!=='')?Number(p.plan_tons):null;
+    const planT=(v!=null&&v>0)?v:bomT;                      // 上月排定(0/空白一樣回退成 BOM)
+    const doneT=ldT(done[ldZoneKey(z)]||0);
+    const short=Math.max(0, planT-doneT);
+    const already=ldPlans.some(x=>String(x.zone_id)===String(p.zone_id));
+    if(short>0.001 && already) skipped.push(ldProjNum(z)+'-'+(z.zone_code||''));
+    return {z, planT, doneT, short, already};
+  }).filter(Boolean).filter(x=>x.short>0.001 && !x.already);
+  if(!items.length){
+    alert(prev+' 沒有需要結轉的工程區。'+(skipped.length?('\n（'+skipped.join('、')+' 還有缺口，但已經排進 '+ldYM+' 了）'):'（上月排的都做完了）'));
+    return;
+  }
+  const total=items.reduce((s,x)=>s+x.short,0);
+  const list=items.slice(0,8).map(x=>'・'+ldProjNum(x.z)+'-'+(x.z.zone_code||'')+'　缺 '+ldFix(x.short)+' t（排 '+ldFix(x.planT)+'、做 '+ldFix(x.doneT)+'）').join('\n');
+  if(!await uiConfirm('把 '+prev+' 沒做完的 '+items.length+' 個工程區結轉到 '+ldYM+'？\n合計 '+ldFix(total)+' t\n\n'+list
+      +(items.length>8?('\n…另有 '+(items.length-8)+' 區'):'')
+      +'\n\n結轉量＝上月排定 − 上月實際完成，之後仍可手動調整。',{okText:'結轉'})) return;
+  const payload=items.map(x=>({ym:ldYM, zone_id:(isNaN(+x.z.id)?x.z.id:+x.z.id), plan_tons:+ldFix(x.short),
+    note:prev+' 結轉 '+ldFix(x.short)+' t',
+    created_by_name:(typeof currentUser!=='undefined'&&currentUser)?(currentUser.name||''):''}));
+  const res=await sbFetch('/rest/v1/loading_plan',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)});
+  if(!res.ok||!Array.isArray(res.data)){ alert('結轉失敗('+(res.status||'?')+')：'+((res.data&&(res.data.message||res.data.hint))||'')); return; }
+  ldPlans=ldPlans.concat(res.data);
+  await ldLoadFacts(); ldRender();
+  ldHint('已結轉 '+res.data.length+' 個工程區，合計 '+ldFix(total)+' t');
 }
 
 // 加入工程區:先選工程,再勾工程區
