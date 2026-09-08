@@ -26977,7 +26977,7 @@ function attRenderDailyGrid(){
   body.innerHTML=html;
   body.oninput=attDayInput; body.onchange=attDayInput;
   tblInitSelection(document.getElementById('att-daily-grid'));   // Excel 式拖曳多選
-  attInitLeaveSelect();   // 請假類別下拉:滾輪循環選擇 + 讓下拉可參與框選(多選複製/貼上)
+  attInitLeaveSelect();   // 請假類別下拉可參與框選（多選複製／貼上）
   attMarkAllConflicts();  // 舊資料若有「請假又有上班工數」也要標出來
   attUpdateDayFoot();
   attRenderLeaveBar();    // 當天有人事先登記請假 → 上方提示 + 一鍵帶入
@@ -26986,7 +26986,7 @@ function attRenderDailyGrid(){
 // 「請假類別」下拉的操作增強：
 //   ① 單擊 → 維持原生「點一下就展開下拉」可直接挑選；
 //   ② Shift+點 → 延伸框選(不展開下拉)，用來做多選複製 / 貼上 / 刪除；
-//   ③ 雙擊 → 展開下拉；④ 滑鼠滾輪 → 循環切換(到頂/到底輪迴)。
+//   ③ 雙擊 → 展開下拉；滑鼠滾輪只捲動畫面，不變更假別。
 function attInitLeaveSelect(){
   const grid=document.getElementById('att-daily-grid');
   if(!grid || grid._attLeaveInit) return;
@@ -27005,17 +27005,6 @@ function attInitLeaveSelect(){
     const s=leaveOf(ev.target); if(!s) return;
     if(typeof s.showPicker==='function'){ try{ s.showPicker(); }catch(_){} }
   });
-  // 滾輪：在下拉上循環切換，捲到最上再往上→跳到最後一項；捲到最後再往下→跳回第一項
-  grid.addEventListener('wheel', ev=>{
-    const s=leaveOf(ev.target); if(!s) return;
-    ev.preventDefault();
-    const n=s.options.length; if(!n) return;
-    let i=s.selectedIndex+(ev.deltaY>0?1:-1);
-    if(i<0) i=n-1; else if(i>=n) i=0;   // 輪迴
-    s.selectedIndex=i;
-    s.dispatchEvent(new Event('input',{bubbles:true}));
-    s.dispatchEvent(new Event('change',{bubbles:true}));
-  }, {passive:false});
   // Ctrl/Cmd + C：下拉格保留專用複製處理。
   // Ctrl/Cmd + V 不在 keydown 主動讀取剪貼簿，統一交由全域原生 paste 事件處理，
   // 避免瀏覽器反覆詢問剪貼簿讀取權限。
@@ -41204,18 +41193,7 @@ async function dsMergeRowsToPdf(uniqueRows, onProgress, title = '') {
   return await output.save({ useObjectStreams: true, addDefaultPage: false, objectsPerTick: 50 });
 }
 
-/* 手機上的 pdf.js/Canvas 偶爾不會回報失敗（特別是 iOS 的 blob worker），
-   不可讓使用者永遠停在「正在轉出圖面」。逾時後改由分頁直接開啟 PDF。 */
-function dsPromiseTimeout(promise, milliseconds, message) {
-  let timer = 0;
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error(message || '處理逾時')), milliseconds);
-    })
-  ]).finally(() => clearTimeout(timer));
-}
-
+/* 手機直接把 PDF 導向最上層分頁，避開 iframe 與額外的逐頁轉圖等待。 */
 function dsOpenPdfDirectly(win, url, tabTitle) {
   if (!win || win.closed) return false;
   try {
@@ -41247,18 +41225,8 @@ async function dsOpenPages(rows, titleOverride = '') {
     }, tabTitle);
     const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
     const fileName = dsFileBaseName(uniqueRows) + '.pdf';
-    let pageImages = null;
-    if (win && !win.closed && dsTouchTab()) {
-      try {
-        say(uniqueRows.length > 1 ? ('正在轉出 ' + uniqueRows.length + ' 張圖面…') : '正在轉出圖面…');
-        pageImages = await dsPromiseTimeout(dsPdfBytesToPageImages(bytes, (done, total) => {
-          if (total > 1) say('正在轉出圖面 ' + done + ' / ' + total + '…');
-        }), 30000, '手機圖面轉檔逾時');
-      } catch (error) { console.error('轉頁圖失敗，改用瀏覽器內建檢視器：', error); pageImages = null; }
-    }
-    if (win && !win.closed && pageImages && pageImages.length) {
-      dsRenderTouchViewer(win, pageImages, tabTitle, fileName, url);
-    } else if (win && !win.closed && dsTouchTab() && dsOpenPdfDirectly(win, url, tabTitle)) {
+    // 手機／平板不再耗時轉成頁圖；PDF 合併完成後立即交給瀏覽器原生檢視器。
+    if (win && !win.closed && dsTouchTab() && dsOpenPdfDirectly(win, url, tabTitle)) {
       // 直接導向後不可立即 revoke，否則部分手機尚未讀完 PDF 就會變成空白。
       setTimeout(() => { try { URL.revokeObjectURL(url); } catch (_) {} }, 10 * 60 * 1000);
     } else if (win && !win.closed) {
@@ -41294,8 +41262,7 @@ async function dsOpenPages(rows, titleOverride = '') {
   }
 }
 
-/* 手機/平板的內建 PDF 檢視器放進 iframe 會出事:iOS Safari 只畫得出第一頁而且不能捲,
-   Android Chrome 直接一片空白。所以觸控裝置改走「pdf.js 轉頁圖 → 排成可捲動的圖片」這條路 */
+/* 判斷是否使用手機／平板的最上層原生 PDF 檢視器。 */
 function dsTouchTab() {
   try {
     if (window.matchMedia('(max-width:820px)').matches) return true;
