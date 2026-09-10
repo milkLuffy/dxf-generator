@@ -415,6 +415,32 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .dash-mini-tab:hover{color:var(--text2)}
 .dash-mini-tab.active{color:var(--text);border-bottom-color:var(--accent2)}
 .dash-proj-count.ld-hot{color:var(--danger);font-weight:700}
+/* 主頁「上線準備」分頁:一區一行 = 燈號 + 名稱 + 五個小燈 + 剩幾天/可上線 */
+.rdy-dash-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:var(--rad);cursor:pointer;transition:background .15s}
+.rdy-dash-item:hover{background:var(--bg3)}
+.rdy-dash-item .rdy-dot{flex:none}
+.rdy-dash-name{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:12.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rdy-dash-chips{flex:none;display:inline-flex;gap:3px}
+.rdy-chip{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;padding:0 3px;border-radius:4px;font-style:normal;font-size:10.5px;font-weight:600;font-family:var(--mono);border:1px solid var(--border);background:var(--bg3);color:var(--text3)}
+.rdy-chip.rdy-k-green{background:color-mix(in srgb,var(--green) 16%,transparent);border-color:color-mix(in srgb,var(--green) 45%,transparent);color:var(--green)}
+.rdy-chip.rdy-k-yellow{background:color-mix(in srgb,var(--yellow) 16%,transparent);border-color:color-mix(in srgb,var(--yellow) 50%,transparent);color:var(--yellow)}
+.rdy-chip.rdy-k-red{background:color-mix(in srgb,var(--danger) 16%,transparent);border-color:color-mix(in srgb,var(--danger) 50%,transparent);color:var(--danger)}
+.rdy-chip.rdy-k-na{opacity:.35;border-style:dashed}
+.rdy-dash-due{flex:none;min-width:58px;text-align:right;font-family:var(--mono);font-size:11.5px;color:var(--text3)}
+.rdy-dash-due.over{color:var(--danger);font-weight:700}
+.rdy-dash-item .rdy-dash-go{display:inline-flex;flex:none}   /* .spp-go 預設隱藏(hover 才出現),這裡要常駐 */
+.rdy-dash-more{padding:5px 8px;font-size:11.5px;color:var(--text3);cursor:pointer}
+.rdy-dash-more:hover{color:var(--accent2)}
+.rdy-dash-empty{display:block;padding:4px 8px 6px;color:var(--text3);font-size:13px}
+/* 主頁產量卡:月排程達成率 */
+.dash-plan{margin-top:8px;cursor:pointer}
+.dash-plan[hidden]{display:none}
+.dash-plan-txt{display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-size:11px;color:var(--text3);white-space:nowrap}
+.dash-plan-txt b{font-family:var(--mono);color:var(--text2);font-weight:600}
+.dash-plan-txt>b{font-size:13px;font-weight:700}
+.dash-plan-bar{margin-top:3px;height:5px;border-radius:4px;background:var(--bg4);overflow:hidden}
+.dash-plan-bar i{display:block;height:100%;width:0;background:var(--green);border-radius:4px;transition:width .3s}
+.dash-plan:hover .dash-plan-txt span{color:var(--accent2)}
 /* 主頁：小型目前天氣 + Apple 行事曆風格今日條列 */
 .dash-weather-card,.dash-agenda-card{min-width:0;display:flex;flex-direction:column}
 .dash-brief-head{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-bottom:8px;min-height:25px}
@@ -994,6 +1020,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .log-table td.op{color:var(--accent3)}
 .log-table td.op.guest{color:#c89050}
 .btn-del-row{background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:2px 6px;border-radius:3px;transition:color .15s}
+/* 靠模產生紀錄:開單篩選／已開單勾選／下載 */
+.log-ord-filter{display:inline-flex;gap:4px;flex-wrap:wrap}
+.log-ord-chip{border:1px solid var(--border);border-radius:999px;background:var(--bg2);color:var(--text2);font-family:var(--mono);font-size:11.5px;padding:3px 10px;cursor:pointer}
+.log-ord-chip:hover{border-color:var(--accent2);color:var(--accent2)}
+.log-ord-chip.active{border-color:var(--accent2);background:color-mix(in srgb,var(--accent2) 14%,transparent);color:var(--accent2);font-weight:600}
+.log-table td.log-ord-td{white-space:nowrap}
+.log-ord{display:inline-flex;align-items:center;gap:5px;cursor:pointer;color:var(--yellow)}
+.log-ord.done{color:var(--green);font-weight:600}
+.log-ord input{width:15px;height:15px;margin:0}
+.log-ord-who{font-size:10.5px;color:var(--text3)}
+.log-ord-na{color:var(--text3)}
+.log-table td.log-act-td{white-space:nowrap}
+.log-dl{border:1px solid var(--border);border-radius:5px;background:var(--bg3);color:var(--accent2);font-size:11.5px;padding:2px 9px;cursor:pointer;margin-right:4px}
+.log-dl:hover{border-color:var(--accent2)}
+.log-table tr.log-row-done td{opacity:.72}
 .btn-del-row:hover{color:var(--danger)}
 
 /* ── Project detail page ── */
@@ -2947,17 +2988,22 @@ window.normalizeFullWidth=function(value){
           <div class="stat-value" style="color:var(--green)" id="stat-month-ton">—</div>
           <div class="stat-label">本月總產量（噸）</div>
           <div class="stat-sub"><span>今日 <b id="stat-today-ton">—</b> t</span><span>本月 <b id="stat-month-qty">—</b> 支</span></div>
+          <!-- 月排程達成率(產量月 26 日~次月 25 日,與上面的日曆月不同 → 區間寫在 title) -->
+          <div class="dash-plan" id="dash-plan" hidden onclick="navTo('loading')">
+            <div class="dash-plan-txt"><span>月排程 <b id="dash-plan-tons">—</b></span><b id="dash-plan-pct">—</b></div>
+            <div class="dash-plan-bar"><i id="dash-plan-bar"></i></div>
+          </div>
         </div>
-        <!-- SP 備料進度 ／ 月排程進度：同一張卡片兩個分頁(比照待辦/公佈欄,不多佔主頁一格) -->
+        <!-- 上線準備 ／ 月排程進度：同一張卡片兩個分頁(比照待辦/公佈欄,不多佔主頁一格) -->
         <div class="card dash-mini-card">
           <div class="section-header" style="margin-bottom:10px">
             <div class="dash-mini-tabs">
-              <button type="button" class="dash-mini-tab active" id="dash-mini-tab-sp" onclick="dashMiniTab('sp')">SP 備料進度<span class="dash-proj-count" id="dash-sp-count"></span></button>
+              <button type="button" class="dash-mini-tab active" id="dash-mini-tab-sp" onclick="dashMiniTab('sp')">上線準備<span class="dash-proj-count" id="dash-sp-count"></span></button>
               <button type="button" class="dash-mini-tab" id="dash-mini-tab-ld" onclick="dashMiniTab('ld')">月排程進度<span class="dash-proj-count" id="dash-ld-count"></span></button>
             </div>
-            <button class="btn-sm btn-export" id="dash-mini-go" onclick="navTo('prod')">SP 表</button>
+            <button class="btn-sm btn-export" id="dash-mini-go" onclick="navTo('prod')">CP 頁</button>
           </div>
-          <div id="dash-sp-progress" class="dash-mini-scroll"><span style="color:var(--text3);font-size:13px">載入中...</span></div>
+          <div id="dash-ready" class="dash-mini-scroll"><span style="color:var(--text3);font-size:13px">載入中...</span></div>
           <div id="dash-loading-due" class="dash-mini-scroll" style="display:none"><span style="color:var(--text3);font-size:13px">載入中...</span></div>
         </div>
 
@@ -3668,9 +3714,16 @@ window.normalizeFullWidth=function(value){
     .ld-add-meta{font-size:11px;color:var(--text3);font-family:var(--mono)}
     .ld-add-empty{padding:10px;text-align:center}
     /* 產能負荷圖 */
-    #page-loading .ld-chart{margin-bottom:12px;padding:12px 14px 10px;border:1px solid var(--border);border-radius:var(--rad-lg);background:var(--bg2)}
+    #page-loading .ld-chart{margin-top:12px;padding:12px 14px 10px;border:1px solid var(--border);border-radius:var(--rad-lg);background:var(--bg2)}
     #page-loading .ld-chart-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+    #page-loading .ld-chart.ld-collapsed{padding-bottom:12px}
+    #page-loading .ld-chart.ld-collapsed .ld-chart-head{margin-bottom:0}
+    #page-loading .ld-chart-toggle{display:inline-flex;align-items:center;gap:7px;border:0;background:none;color:var(--text);padding:2px 4px 2px 0;cursor:pointer;font:inherit}
+    #page-loading .ld-chart-toggle:hover .ld-chart-title{color:var(--accent2)}
+    #page-loading .ld-chart-caret{display:inline-block;font-size:10px;color:var(--text3);transition:transform .15s}
+    #page-loading .ld-chart:not(.ld-collapsed) .ld-chart-caret{transform:rotate(90deg)}
     #page-loading .ld-chart-title{font-size:13px;font-weight:600}
+    #page-loading .ld-go{white-space:nowrap}
     #page-loading .ld-cap-field{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
     #page-loading .ld-cap-field input{width:88px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:12px;padding:4px 7px;text-align:right;outline:none}
     #page-loading .ld-cap-field input:focus{border-color:var(--accent2)}
@@ -3695,6 +3748,48 @@ window.normalizeFullWidth=function(value){
     .ld-l-yellow{color:var(--yellow);border-color:color-mix(in srgb,var(--yellow) 45%,transparent);background:color-mix(in srgb,var(--yellow) 12%,transparent)}
     .ld-l-green{color:var(--green);border-color:color-mix(in srgb,var(--green) 40%,transparent);background:color-mix(in srgb,var(--green) 10%,transparent)}
     .ld-l-gray{color:var(--text3);border-color:var(--border);background:var(--bg3)}
+    /* 上線準備(工程區詳情頁):日期鏈＋六盞燈 */
+    .rdy-sum{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
+    .rdy-sum b{font-family:var(--mono);color:var(--text)}
+    .rdy-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--text3)}
+    .rdy-dot.rdy-green{background:var(--green)} .rdy-dot.rdy-yellow{background:var(--yellow)} .rdy-dot.rdy-red{background:var(--danger)}
+    .rdy-dates{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:4px 0 10px}
+    .rdy-dt{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .rdy-dt label{font-size:11px;color:var(--text3)} .rdy-dt label small{font-size:10px;opacity:.8}
+    .rdy-dv{display:flex;align-items:center;gap:5px;min-height:28px}
+    .rdy-date{background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:12px;padding:4px 6px;outline:none}
+    .rdy-date:focus{border-color:var(--accent2)}
+    .rdy-date.rdy-auto{color:var(--text3);border-style:dashed}
+    .rdy-tag{padding:1px 6px;border-radius:4px;background:var(--bg4);color:var(--text3);font-size:10px;font-family:var(--mono);white-space:nowrap}
+    .rdy-mini{border:1px solid var(--border);border-radius:5px;background:var(--bg3);color:var(--text3);font-size:11px;line-height:1;padding:2px 5px;cursor:pointer}
+    .rdy-mini:hover{border-color:var(--accent2);color:var(--accent2)}
+    .rdy-arrow{color:var(--text3);padding-bottom:6px}
+    .rdy-due{display:flex;align-items:center;font-size:12.5px;font-family:var(--mono);color:var(--text2)}
+    .rdy-over{color:var(--danger);font-weight:700}
+    .rdy-hint{font-size:11.5px;color:var(--text3);margin:0 0 10px;line-height:1.6}
+    .rdy-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:8px}
+    .rdy-card{border:1px solid var(--border);border-left:3px solid var(--text3);border-radius:var(--rad);background:var(--bg3);padding:8px 10px;min-width:0}
+    .rdy-card.rdy-c-green{border-left-color:var(--green)}
+    .rdy-card.rdy-c-yellow{border-left-color:var(--yellow);background:color-mix(in srgb,var(--yellow) 7%,var(--bg3))}
+    .rdy-card.rdy-c-red{border-left-color:var(--danger);background:color-mix(in srgb,var(--danger) 8%,var(--bg3))}
+    .rdy-card.rdy-c-na{opacity:.6;border-left-color:var(--border)}
+    .rdy-card-h{display:flex;align-items:center;gap:6px;font-size:12.5px}
+    .rdy-card-h b{font-size:13px}
+    .rdy-ic{font-size:12px;color:var(--text3)}
+    .rdy-c-green .rdy-ic{color:var(--green)} .rdy-c-yellow .rdy-ic{color:var(--yellow)} .rdy-c-red .rdy-ic{color:var(--danger)}
+    .rdy-name{color:var(--text3);font-size:11px}
+    .rdy-card-t{margin-top:4px;font-size:12px;color:var(--text2);line-height:1.5}
+    .rdy-card-a{margin-top:6px;display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+    .rdy-act{padding:3px 10px;font-size:12px}
+    .rdy-line{font-size:11.5px;color:var(--text2)}
+    .rdy-line b{color:var(--text)}
+    .rdy-ok{color:var(--green);font-weight:600}
+    .rdy-link{color:var(--accent2);cursor:pointer;margin-left:4px;white-space:nowrap}
+    .rdy-link:hover{text-decoration:underline}
+    .rdy-chk{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text)}
+    .rdy-chk input{width:15px;height:15px;margin:0}
+    .rdy-chk small{color:var(--text3);font-size:10.5px;margin-left:2px}
+    .rdy-rev-modal .rdy-chk{margin:6px 0}
     /* 主頁「月排程進度」小卡 */
     .ld-due-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--rad);cursor:pointer;transition:background .15s}
     .ld-due-item:hover{background:var(--bg3)}
@@ -3721,17 +3816,6 @@ window.normalizeFullWidth=function(value){
         <span id="ld-hint" class="ld-hint"></span>
       </div>
       <div id="ld-kpi" class="ld-kpi"></div>
-      <div id="ld-chart" class="ld-chart" style="display:none">
-        <div class="ld-chart-head">
-          <div class="ld-chart-title">本月負荷（依交管料日分週）</div>
-          <label class="ld-cap-field">月產能上限
-            <input type="number" id="ld-cap" min="0" step="1" placeholder="未設定" onchange="ldSaveCap(this.value)"> 噸
-          </label>
-          <span id="ld-chart-sum" class="ld-chart-sum"></span>
-        </div>
-        <div id="ld-chart-svg"></div>
-        <div class="ld-chart-note">每根柱＝該週要交管料的工程區排定量堆疊（滑過去看是哪一區）；紅色虛線＝該週可用產能（月產能按天數分攤）。柱子變紅代表那一週排太滿，要往前後挪。</div>
-      </div>
       <div id="ld-missing" class="ld-missing" style="display:none"></div>
       <div class="card" style="padding:0;overflow:hidden">
         <div class="table-scroll">
@@ -3740,11 +3824,27 @@ window.normalizeFullWidth=function(value){
               <th>工程編號-工程區</th><th>工程區狀態</th><th>吊裝期</th><th>交管料日</th><th>剩餘工作天</th>
               <th>本月排定(噸)</th><th>本月完成(噸)</th><th>達成率</th>
               <th>整區 完成/總量(噸)</th>
-              <th>CP</th><th>SP備料</th><th>排程狀態</th>
+              <th>CP</th><th>SP備料</th><th>零件明細</th><th>排程狀態</th>
               <th>會議備註</th><th></th>
             </tr></thead>
-            <tbody id="ld-body"><tr><td colspan="14" class="empty-state">載入中…</td></tr></tbody>
+            <tbody id="ld-body"><tr><td colspan="15" class="empty-state">載入中…</td></tr></tbody>
           </table>
+        </div>
+      </div>
+      <!-- 產能負荷圖:放在表格下方,預設收合(收合時標題列仍顯示排定/產能摘要) -->
+      <div id="ld-chart" class="ld-chart ld-collapsed" style="display:none">
+        <div class="ld-chart-head">
+          <button type="button" class="ld-chart-toggle" id="ld-chart-toggle" aria-expanded="false" aria-controls="ld-chart-body" onclick="ldToggleChart()">
+            <span class="ld-chart-caret">▶</span><span class="ld-chart-title">本月負荷（依交管料日分週）</span>
+          </button>
+          <label class="ld-cap-field">月產能上限
+            <input type="number" id="ld-cap" min="0" step="1" placeholder="未設定" onchange="ldSaveCap(this.value)"> 噸
+          </label>
+          <span id="ld-chart-sum" class="ld-chart-sum"></span>
+        </div>
+        <div id="ld-chart-body" hidden>
+          <div id="ld-chart-svg"></div>
+          <div class="ld-chart-note">每根柱＝該週要交管料的工程區排定量堆疊（滑過去看是哪一區）；紅色虛線＝該週可用產能（月產能按天數分攤）。柱子變紅代表那一週排太滿，要往前後挪。</div>
         </div>
       </div>
       <div class="ld-legend">
@@ -3752,6 +3852,7 @@ window.normalizeFullWidth=function(value){
         ※ <b>本月排定</b>加入時預設帶整區 BOM 重量，可自行調整；留白＝以整區 BOM 重量計。同一個工程區可以連續排好幾個月，各月分開記。<br>
         ※ 點<b>工程編號-工程區</b>可以寫「狀況說明」，記錄這個月沒達標的原因（會留在該月份，下個月不會帶過去）。<br>
         ※ <b>本月完成</b>與<b>整區完成</b>都是從每日產量即時算的，不用另外填；<b>CP</b>＝有沒有收圖登記，<b>SP備料</b>＝SP 狀態表的完成度。<br>
+        ※ <b>零件明細</b>「查看」會跳到 CP 收圖與追蹤的工程區詳情頁（CP 明細／SP 狀態／保留料／成品材／手工單），看完按「← 返回月產量排程」回來。<br>
         ※ 狀態燈：<span class="ld-light ld-l-red">紅</span> 逾期／備料未齊／未收圖　<span class="ld-light ld-l-yellow">黃</span> 剩 7 個工作天內　<span class="ld-light ld-l-green">綠</span> 如期。
       </div>
     </div>
@@ -6308,9 +6409,18 @@ window.normalizeFullWidth=function(value){
       <!-- ── 工程區詳情(下鑽,非頂層分頁) ── -->
       <div class="prod-view" id="prodview-detail" style="display:none">
         <div class="pd-head">
-          <button class="pm-back" onclick="prodDetailBack()">← 返回看板</button>
+          <button class="pm-back" id="pdBackBtn" onclick="prodDetailBack()">← 返回看板</button>
           <div class="pd-title" id="pdTitle"></div>
           <div class="pd-badges" id="pdBadges"></div>
+        </div>
+
+        <!-- 上線準備:日期鏈＋六盞燈(rdy* 模組在檔案最末) -->
+        <div class="pd-section rdy-sec" id="pdReadySection">
+          <div class="pd-sec-head">
+            <span class="pd-sec-title">上線準備</span>
+            <span class="rdy-sum" id="rdySum"></span>
+          </div>
+          <div id="rdyBody"></div>
         </div>
 
         <div class="pd-section" id="pdCPSection" onfocusout="setTimeout(cprRefreshZoneDetail,0)">
@@ -6388,8 +6498,9 @@ window.normalizeFullWidth=function(value){
         <div class="section-label">工程資訊</div>
         <div class="proj-row">
           <input type="text" id="dxf-proj-name" list="dxf-projnum-list" placeholder="工程編號（例：B820）" oninput="updateFname()"/>
-          <input type="text" id="dxf-proj-num" placeholder="工程區" oninput="updateFname()"/>
+          <input type="text" id="dxf-proj-num" list="dxf-zone-list" placeholder="工程區" oninput="updateFname()"/>
           <datalist id="dxf-projnum-list"></datalist>
+          <datalist id="dxf-zone-list"></datalist>
         </div>
         <div class="fname-preview">檔案名稱：<span id="fname-display">請輸入工程資訊</span></div>
       </div>
@@ -6443,6 +6554,7 @@ window.normalizeFullWidth=function(value){
             <div class="log-count" id="log-count">—</div>
           </div>
           <div class="log-actions-bar">
+            <span class="log-ord-filter" id="log-ord-filter"></span>
             <input class="log-filter" id="log-filter" placeholder="搜尋工程 / 人員..." oninput="filterLog()"/>
             <button class="btn-sm btn-export" onclick="exportCSV()">↓ 匯出 CSV</button>
             <button class="btn-sm" id="btn-admin-clear" onclick="adminClearAll()" style="display:none;border-color:var(--danger);color:var(--danger)">✕ 清除全部</button>
@@ -11590,7 +11702,7 @@ function navTo(page, viewState) {
   if(page==='mypage') myPageInit();
   if(page==='sop') sopInit();
   if(page==='todo') todoInit();
-  if(page==='dxf') dxfFillProjNums();
+  if(page==='dxf') { dxfFillProjNums(); loadLog(); }   // 產生紀錄每次進頁重抓(別人勾的已開單才看得到)
   if(page==='bom') { if(allBOM.length) setBomView(bomView); loadBOM(); }
   if(page==='inspect') inspInit();
   if(page==='a201a202') { a201Load(); a202Load(); }
@@ -13161,8 +13273,9 @@ async function loadDashboard() {
         </span>`).join('')
       : '<span style="color:var(--text3);font-size:13px">目前沒有進行中的工程</span>';
   }
-  dashLoadSPProgress();   // SP 備料進度(獨立載入,不阻塞主頁其他區塊)
-  if(typeof ldDashLoad==='function') ldDashLoad();   // 月排程進度(同上)
+  if(typeof rdyDashLoad==='function') rdyDashLoad();   // 上線準備(取代原 SP 備料進度;獨立載入,不阻塞主頁其他區塊)
+  if(typeof ldDashLoad==='function') ldDashLoad();     // 月排程進度(同上)
+  if(typeof ldDashPlan==='function') ldDashPlan();     // 產量卡上的月排程達成率
 }
 
 // ── 主頁：目前天氣 + 今日行程 ─────────────────────────────
@@ -23733,6 +23846,24 @@ function updateFname() {
   const el=document.getElementById('fname-display');
   el.textContent=(parts.join('-')||'frame')+'.dxf';
   el.style.color=parts.length?'var(--accent3)':'var(--text3)';
+  dxfFillZones(n);
+}
+// 工程區下拉:跟著工程編號帶出該工程的 BOM 工程區(打錯碼會對不到工程區,上線準備的「模」燈就不會亮)
+let _dxfZoneFor='', _dxfZoneCache={};
+async function dxfFillZones(projNum){
+  const dl=document.getElementById('dxf-zone-list'); if(!dl) return;
+  const P=String(projNum||'').trim().toUpperCase();
+  if(P===_dxfZoneFor) return; _dxfZoneFor=P;
+  if(!P){ dl.innerHTML=''; return; }
+  const pids=(allBOM||[]).filter(p=>String(p.proj_num||'').trim().toUpperCase()===P).map(p=>p.id);
+  if(!pids.length){ dl.innerHTML=''; _dxfZoneFor=''; return; }   // BOM 還沒載入時下次再試
+  const key=pids.join(',');
+  if(!_dxfZoneCache[key]){
+    const r=await sbFetch('/rest/v1/zones?select=zone_code&project_id=in.('+key+')&order=zone_code');
+    _dxfZoneCache[key]=(r.ok&&Array.isArray(r.data))?[...new Set(r.data.map(z=>String(z.zone_code||'').trim()).filter(Boolean))]:[];
+  }
+  if(_dxfZoneFor!==P) return;   // 抓回來時使用者已經換了工程編號
+  dl.innerHTML=_dxfZoneCache[key].map(z=>'<option value="'+esc(z)+'"></option>').join('');
 }
 // 工程編號下拉(模糊查詢)：資料來源 BOM 工程編號
 async function dxfFillProjNums() {
@@ -23877,7 +24008,7 @@ async function insertLog(pn,pnum,fname,frames){
 async function loadLog(){
   const r=await sbFetch('/rest/v1/gen_logs?select=*&order=created_at.desc&limit=300');
   if(!r.ok||!Array.isArray(r.data)){document.getElementById('log-container').innerHTML='<div class="log-empty">無法載入紀錄</div>';return;}
-  allLogs=r.data; renderLog(allLogs);
+  allLogs=r.data; filterLog();
 }
 async function deleteLogEntry(id){
   await sbFetch(`/rest/v1/gen_logs?id=eq.${id}`,{method:'DELETE'});
@@ -23887,21 +24018,68 @@ function filterLog(){
   const q=document.getElementById('log-filter').value.toLowerCase();
   renderLog(allLogs.filter(e=>(e.proj_name||'').toLowerCase().includes(q)||(e.proj_num||'').toLowerCase().includes(q)||(e.user_name||'').toLowerCase().includes(q)));
 }
+// 開單篩選:all 全部 / open 未開單 / done 已開單(未開單的一律排在最上面)
+let genLogOrdFilter='all';
+function genLogSetOrdFilter(f){ genLogOrdFilter=f; filterLog(); }
+// 資料庫還沒跑 readiness_migration.sql 時,紀錄不會有 ordered_at 欄 → 開單欄改顯示提示
+function genLogOrderedOk(){ return !allLogs.length || allLogs.some(e=>Object.prototype.hasOwnProperty.call(e,'ordered_at')); }
 function renderLog(logs){
+  const ordOk=genLogOrderedOk();
+  const nOpen=logs.filter(e=>!e.ordered_at).length, nDone=logs.length-nOpen;
+  const chips=document.getElementById('log-ord-filter');
+  if(chips) chips.innerHTML=ordOk?[['open','未開單',nOpen],['done','已開單',nDone],['all','全部',logs.length]]
+    .map(([k,l,n])=>'<button type="button" class="log-ord-chip'+(genLogOrdFilter===k?' active':'')+'" onclick="genLogSetOrdFilter(\''+k+'\')">'+l+' '+n+'</button>').join(''):'';
+  if(ordOk && genLogOrdFilter!=='all') logs=logs.filter(e=>genLogOrdFilter==='done'?!!e.ordered_at:!e.ordered_at);
+  logs=logs.slice().sort((a,b)=>(a.ordered_at?1:0)-(b.ordered_at?1:0));   // 穩定排序:未開單在前,各自維持新到舊
   document.getElementById('log-count').textContent=logs.length+' 筆';
-  if(!logs.length){document.getElementById('log-container').innerHTML='<div class="log-empty">尚無產生紀錄</div>';return;}
-  let html='<div class="log-wrap"><table class="log-table"><thead><tr><th>日期/時間</th><th>人員</th><th>工程名稱</th><th>工程編號</th><th>檔案名稱</th><th>尺寸</th><th></th></tr></thead><tbody>';
+  if(!logs.length){document.getElementById('log-container').innerHTML='<div class="log-empty">'+(allLogs.length?'沒有符合的紀錄':'尚無產生紀錄')+'</div>';return;}
+  const canOrder=!isGuest&&currentUser&&(typeof pagePerm!=='function'||pagePerm('dxf')==='edit');
+  let html='<div class="log-wrap"><table class="log-table"><thead><tr><th>日期/時間</th><th>人員</th><th>工程編號</th><th>工程區</th><th>檔案名稱</th><th>尺寸</th><th>開單</th><th></th></tr></thead><tbody>';
   logs.forEach(e=>{
     const dt=new Date(e.created_at);
     const date=dt.toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
     const time=dt.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
-    const fr=Array.isArray(e.frames)?e.frames.map(f=>`<span>${f}</span>`).join(''):(e.frames||'');
+    const fr=Array.isArray(e.frames)?e.frames.map(f=>`<span>${esc(f)}</span>`).join(''):esc(e.frames||'');
     const isGuestEntry=(e.user_name||'').includes('(訪客)');
     const canDel=!isGuest&&currentUser&&(currentUser.isAdmin||(e.user_id&&e.user_id===currentUser.id));
-    html+=`<tr><td class="date">${date}<br>${time}</td><td class="op${isGuestEntry?' guest':''}">${e.user_name||'—'}</td><td class="proj">${e.proj_name||'—'}</td><td>${e.proj_num||'—'}</td><td>${e.fname||'—'}</td><td class="frames">${fr}</td><td>${canDel?`<button class="btn-del-row" onclick="deleteLogEntry(${e.id})">✕</button>`:''}</td></tr>`;
+    const done=!!e.ordered_at;
+    const ord=!ordOk?'<span class="log-ord-na" title="請先在 Supabase 執行 readiness_migration.sql">—</span>'
+      :`<label class="log-ord${done?' done':''}"><input type="checkbox"${done?' checked':''}${canOrder?'':' disabled'} onchange="genToggleOrdered(${e.id},this.checked,this)">${done?'已開單':'未開單'}</label>`
+       +(done?`<div class="log-ord-who">${esc(new Date(e.ordered_at).toLocaleDateString('zh-TW',{month:'2-digit',day:'2-digit'}))} ${esc(e.ordered_by||'')}</div>`:'');
+    // 已開單就不再提供下載(等同刪除雲端檔);要重下載取消勾選即可
+    const dl=done?'':`<button class="log-dl" onclick="genDownloadLog(${e.id})" title="用這筆紀錄的尺寸重新產生 DXF">下載</button>`;
+    html+=`<tr class="${done?'log-row-done':''}"><td class="date">${date}<br>${time}</td><td class="op${isGuestEntry?' guest':''}">${esc(e.user_name||'—')}</td><td class="proj">${esc(e.proj_name||'—')}</td><td>${esc(e.proj_num||'—')}</td><td>${esc(e.fname||'—')}</td><td class="frames">${fr}</td><td class="log-ord-td">${ord}</td><td class="log-act-td">${dl}${canDel?`<button class="btn-del-row" onclick="deleteLogEntry(${e.id})">✕</button>`:''}</td></tr>`;
   });
   html+='</tbody></table></div>';
   document.getElementById('log-container').innerHTML=html;
+}
+async function genToggleOrdered(id,on,el){
+  const e=allLogs.find(x=>String(x.id)===String(id)); if(!e) return;
+  const patch=on?{ordered_at:new Date().toISOString(),ordered_by:(currentUser&&currentUser.name)||null}:{ordered_at:null,ordered_by:null};
+  if(el) el.disabled=true;
+  const r=await sbFetch('/rest/v1/gen_logs?id=eq.'+encodeURIComponent(id)+'&select=id',{method:'PATCH',headers:{'Prefer':'return=representation'},body:JSON.stringify(patch)});
+  if(!r.ok||!Array.isArray(r.data)||!r.data.length){
+    alert('已開單儲存失敗('+(r.status||'?')+')：'+((r.data&&(r.data.message||r.data.hint))||'沒有更新權限')+'\n請先在 Supabase SQL Editor 執行 readiness_migration.sql。');
+    if(el){ el.checked=!on; el.disabled=false; } return;
+  }
+  Object.assign(e,patch);
+  setDXFStatus(on?('已開單：'+(e.fname||'')):('已取消開單：'+(e.fname||'')),true);
+  filterLog();
+}
+// 紀錄存的尺寸是「700x400 R25」字串 → 還原成 buildDXF 要的 {w,h,r}
+function genParseFrames(e){
+  const arr=Array.isArray(e.frames)?e.frames:String(e.frames||'').split('|');
+  return arr.map(s=>{ const m=String(s).match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)\s*R\s*(\d+(?:\.\d+)?)/); return m?{w:+m[1],h:+m[2],r:+m[3]}:null; }).filter(Boolean);
+}
+function genDownloadLog(id){
+  const e=allLogs.find(x=>String(x.id)===String(id)); if(!e) return;
+  const frames=genParseFrames(e);
+  if(!frames.length){ setDXFStatus('這筆紀錄沒有可用的尺寸',false); return; }
+  const url=URL.createObjectURL(new Blob([buildDXF(frames)],{type:'application/dxf'}));
+  const a=document.createElement('a'); a.href=url; a.download=e.fname||'frame.dxf';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+  setDXFStatus('已下載 '+(e.fname||'')+'，'+frames.length+' 組框架',true);
 }
 async function adminClearAll(){
   if(!currentUser?.isAdmin) return;
@@ -23911,11 +24089,12 @@ async function adminClearAll(){
 }
 function exportCSV(){
   if(!allLogs.length){setDXFStatus('沒有紀錄可匯出',false);return;}
-  const header=['日期時間','人員','工程名稱','工程編號','檔案名稱','尺寸'];
+  const header=['日期時間','人員','工程編號','工程區','檔案名稱','尺寸','已開單'];
   const rows=allLogs.map(e=>{
     const dt=new Date(e.created_at).toLocaleString('zh-TW');
     const fr=Array.isArray(e.frames)?e.frames.join(' | '):(e.frames||'');
-    return[dt,e.user_name,e.proj_name,e.proj_num,e.fname,fr].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',');
+    const ord=e.ordered_at?(new Date(e.ordered_at).toLocaleDateString('zh-TW')+' '+(e.ordered_by||'')):'';
+    return[dt,e.user_name,e.proj_name,e.proj_num,e.fname,fr,ord].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',');
   });
   const csv='\uFEFF'+[header.join(','),...rows].join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
@@ -37104,9 +37283,12 @@ function prodZoneMatched(proj, zone){
   const manual=prodManualForZone(proj,zone);
   return {us, docs, reserved, product, welding, manual};
 }
-function prodOpenZoneDetail(proj, zone){
+// from:從哪一頁跳進來('loading'=月產量排程),返回鈕就回那一頁;看板卡片點進來不帶
+function prodOpenZoneDetail(proj, zone, from){
   cprCloseInlinePicker();cprZoneDetailGroup='manufacturing';cprZoneDetailPage=1;cprZoneDetailDraft=null;cprZoneDetailCollapsed=true;
-  prodDetailCtx={proj:proj||'', zone:zone||''};
+  from=(from==='loading')?from:'';
+  prodDetailCtx={proj:proj||'', zone:zone||'', from};
+  const bb=document.getElementById('pdBackBtn'); if(bb) bb.textContent=from==='loading'?'← 返回月產量排程':'← 返回看板';
   colFilterState['detail']={};
   if(proj) colFilterState['detail'].proj_no=new Set([proj]);
   if(zone) colFilterState['detail'].zone=new Set([zone]);
@@ -37116,19 +37298,26 @@ function prodOpenZoneDetail(proj, zone){
   prodCurTab='board';
   ['receipt','board','track','reserved','product','welding','manual'].forEach(k=>{ const tab=document.getElementById('prodtab-'+k); if(tab) tab.classList.toggle('active', k==='board'); });
   window.scrollTo(0,0);
-  setView({page:'prod', pdetail:1, pproj:proj||'', pzone:zone||''});   // 推入歷史 → 可用上一頁/下一頁
+  setView(Object.assign({page:'prod', pdetail:1, pproj:proj||'', pzone:zone||''}, from?{pfrom:from}:{}));   // 推入歷史 → 可用上一頁/下一頁
   // 大表格渲染延到下一幀:先讓詳情頁即時畫出來,避免資料量大時「點一下沒反應」的卡頓感。
   const _sig=(proj||'')+''+(zone||''); prodDetailCtx._sig=_sig;
   requestAnimationFrame(()=>{ if(prodDetailCtx._sig!==_sig) return; prodRenderDetail(); spxRender('detail'); });
+  // 靠模產生紀錄只在登入時抓過一次 → 開詳情頁時補抓,抓回來只重畫上線準備段落
+  if(typeof loadLog==='function' && typeof rdyRenderZone==='function')
+    loadLog().then(()=>{ if(prodDetailCtx._sig===_sig) rdyRenderZone(); }).catch(()=>{});
 }
-function prodDetailBack(){ const det=document.getElementById('prodview-detail'); if(det) det.style.display='none'; prodTab('board'); prodRenderBoard(); setView({page:'prod', ptab:'board'}); }
+function prodDetailBack(){
+  const det=document.getElementById('prodview-detail'); if(det) det.style.display='none';
+  if(prodDetailCtx.from==='loading'){ prodDetailCtx.from=''; prodTab('board'); navTo('loading'); return; }   // 從月產量排程來的 → 回排程表
+  prodTab('board'); prodRenderBoard(); setView({page:'prod', ptab:'board'});
+}
 // 上方分頁按鈕(使用者點擊):切換 + 推入歷史
 function prodGoTab(t){ const det=document.getElementById('prodview-detail'); if(det) det.style.display='none'; prodTab(t); if(t==='receipt'){cprViewProjectNo='';cprDetailGroup='all';cprStatusFilter='all';cprEditDraft=null;cprRender();}else if(t==='board') prodRenderBoard(); else if(typeof SPX!=='undefined'&&SPX[t]&&typeof spxRender==='function') spxRender(t); setView({page:'prod', ptab:t}); }
 // 依 view 還原 SP 頁子狀態(不推歷史;呼叫端已在 _applyingPop 保護下)
 function prodApplyViewNow(v){
   if(v.preceipt){prodTab('receipt');cprViewProjectNo=v.pproj||'';cprDetailGroup=CPR_GROUPS.some(x=>x[0]===v.cpgroup)?v.cpgroup:'all';cprStatusFilter='all';cprEditDraft=null;cprEnsureInlineDraft();cprRender();}
   else if(v.cphome){prodTab('receipt');cprViewProjectNo='';cprDetailGroup='all';cprStatusFilter='all';cprEditDraft=null;cprRender();}
-  else if(v.pdetail){ prodOpenZoneDetail(v.pproj||'', v.pzone||''); }
+  else if(v.pdetail){ prodOpenZoneDetail(v.pproj||'', v.pzone||'', v.pfrom||''); }
   else if(v.pproj || v.pzone){ prodDrillToTab(v.ptab||'track', v.pproj||'', v.pzone||''); }
   else { const det=document.getElementById('prodview-detail'); if(det) det.style.display='none'; const tab=v.ptab||'receipt';prodTab(tab);if(tab==='receipt')cprRender();else prodTabBanner(tab); }
 }
@@ -37263,6 +37452,7 @@ function prodRenderDetail(){
   cprRenderZoneDetail();
   ['reserved','product','manual'].forEach(k=>spxKeyRows(k));   // 就地編輯要靠 _key 對回資料列
   prodRenderDetailHeader();
+  if(typeof rdyRenderZone==='function') rdyRenderZone();   // 上線準備(模組在檔案最末)
   const m=prodZoneMatched(proj,zone);
   // 保留料(領取狀態可就地編輯)
   const rc=document.getElementById('pdResCount'); if(rc) rc.textContent=m.reserved.length+' 筆';
@@ -43658,11 +43848,26 @@ function ldChartSvg(buckets){
   });
   return '<svg viewBox="0 0 '+W+' '+H+'" class="ld-svg" role="img" aria-label="本月負荷長條圖">'+g+'</svg>';
 }
+// 負荷圖預設收合,展開與否記在各自瀏覽器
+let ldChartOpen=false;
+try{ ldChartOpen=localStorage.getItem('ld_chart_open')==='1'; }catch(e){}
+function ldApplyChartOpen(){
+  const box=ldEl('ld-chart'), body=ldEl('ld-chart-body'), btn=ldEl('ld-chart-toggle');
+  if(box) box.classList.toggle('ld-collapsed', !ldChartOpen);
+  if(body) body.hidden=!ldChartOpen;
+  if(btn) btn.setAttribute('aria-expanded', ldChartOpen?'true':'false');
+}
+function ldToggleChart(){
+  ldChartOpen=!ldChartOpen;
+  try{ localStorage.setItem('ld_chart_open', ldChartOpen?'1':'0'); }catch(e){}
+  ldApplyChartOpen();
+}
 function ldRenderChart(rows){
   const box=ldEl('ld-chart'); if(!box) return;
   const capEl=ldEl('ld-cap'); if(capEl && document.activeElement!==capEl) capEl.value=ldCap>0?ldCap:'';
   if(!rows.length){ box.style.display='none'; return; }
   box.style.display='';
+  ldApplyChartOpen();
   const buckets=ldChartBuckets(rows);
   ldEl('ld-chart-svg').innerHTML=ldChartSvg(buckets);
   const plan=rows.reduce((s,r)=>s+r.target,0), done=rows.reduce((s,r)=>s+r.doneMonT,0);
@@ -43721,7 +43926,7 @@ function ldMonthChanged(){ const m=ldEl('ld-month'); if(m&&m.value){ ldYM=m.valu
 async function ldLoad(){
   if(ldBusy) return;
   ldBusy=true; ldErr='';
-  const body=ldEl('ld-body'); if(body) body.innerHTML='<tr><td colspan="14" class="empty-state">載入中…</td></tr>';
+  const body=ldEl('ld-body'); if(body) body.innerHTML='<tr><td colspan="15" class="empty-state">載入中…</td></tr>';
   try{
     const [rz,rpj,rpl]=await Promise.all([
       sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,sub_code,status,erect_date,handover_date&order=zone_code'),
@@ -43850,7 +44055,7 @@ function ldRender(){
   const rangeEl=ldEl('ld-range');
   if(rangeEl) rangeEl.textContent='產量月 '+ldMonthRangeTxt()+'（上月 26 日～當月 25 日）';
   if(ldErr){
-    body.innerHTML='<tr><td colspan="14" class="empty-state" style="color:var(--danger)">'+ldEsc(ldErr)+'</td></tr>';
+    body.innerHTML='<tr><td colspan="15" class="empty-state" style="color:var(--danger)">'+ldEsc(ldErr)+'</td></tr>';
     ldEl('ld-kpi').innerHTML=''; ldEl('ld-missing').style.display='none';
     const chartBox=ldEl('ld-chart'); if(chartBox) chartBox.style.display='none';
     return;
@@ -43860,12 +44065,13 @@ function ldRender(){
   ldRenderChart(rows);
   ldRenderMissing();
   if(!rows.length){
-    body.innerHTML='<tr><td colspan="14" class="empty-state">'+ldEsc(ldYM)+' 還沒有排程。按右上角「＋ 加入工程區」，或用「↷ 結轉上月未完成」。</td></tr>';
+    body.innerHTML='<tr><td colspan="15" class="empty-state">'+ldEsc(ldYM)+' 還沒有排程。按右上角「＋ 加入工程區」，或用「↷ 結轉上月未完成」。</td></tr>';
     return;
   }
+  const canGo=typeof pagePerm!=='function' || pagePerm('prod')!=='hide';   // 沒有 CP 收圖頁權限就不給連結
   body.innerHTML=rows.map(r=>{
     const lt=ldLight(r), sp=ldSPpct(r);
-    const zid=r.z.id, pid=r.plan?r.plan.id:'';
+    const zid=r.z.id, pid=r.plan?r.plan.id:'', zc=String(r.z.zone_code||'').trim();
     return '<tr class="ld-row ld-'+lt.cls+'">'
       +'<td class="ld-zone" onclick="ldOpenNote(\''+pid+'\')" title="點一下記錄這個月的狀況／沒達標的原因"><b>'+ldEsc(r.proj)+'-'+ldEsc(r.z.zone_code||'')+'</b>'
         +(r.plan&&String(r.plan.issue||'').trim()?'<svg class="ld-issue-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L20 8l-4-4L4 16z"/></svg>':'')+'</td>'
@@ -43884,6 +44090,9 @@ function ldRender(){
         : '<td class="num ld-total"><span class="ld-no">尚無 BOM</span><small>構件總表沒有重量</small></td>')
       +'<td class="ld-mid">'+(r.cp?'<span class="ld-ok">✓</span>':'<span class="ld-no">—</span>')+'</td>'
       +'<td class="ld-mid">'+(sp==null?'<span class="ld-no">—</span>':('<span class="'+(sp>=100?'ld-ok':(sp>0?'ld-part':'ld-no'))+'">'+sp+'%</span>'))+'</td>'
+      +'<td class="ld-mid">'+(canGo
+        ? '<button class="ld-mini ld-go" data-proj="'+ldEsc(r.proj)+'" data-zone="'+ldEsc(zc)+'" onclick="ldGoZone(this.dataset.proj,this.dataset.zone)" title="開啟 '+ldEsc(r.proj)+'-'+ldEsc(zc)+' 的工程區詳情:CP 明細、SP 狀態、保留料、成品材、手工單">查看 →</button>'
+        : '<span class="ld-no">—</span>')+'</td>'
       +'<td class="ld-mid"><span class="ld-light ld-l-'+lt.cls+'">'+ldEsc(lt.txt)+'</span></td>'
       +'<td><input type="text" class="ld-note" value="'+ldEsc(r.plan&&r.plan.note||'')+'" placeholder="會議備註" onchange="ldSetNote(\''+pid+'\',this.value)"></td>'
       +'<td class="ld-mid"><button class="ld-mini ld-del" title="從本月排程移除(不會刪資料)" onclick="ldRemove(\''+pid+'\')">✕</button></td>'
@@ -44144,17 +44353,17 @@ function ldAddOpen(){
   setTimeout(()=>sel.focus(),30);
 }
 
-// 主頁小卡:SP 備料進度 ／ 月排程進度 兩個分頁共用同一格
+// 主頁小卡:上線準備 ／ 月排程進度 兩個分頁共用同一格(分頁 id 沿用舊的 sp)
 function dashMiniTab(t){
   const sp=(t!=='ld');
-  const spBox=document.getElementById('dash-sp-progress'), ldBox=document.getElementById('dash-loading-due');
+  const spBox=document.getElementById('dash-ready'), ldBox=document.getElementById('dash-loading-due');
   if(spBox) spBox.style.display=sp?'':'none';
   if(ldBox) ldBox.style.display=sp?'none':'';
   const a=document.getElementById('dash-mini-tab-sp'), b=document.getElementById('dash-mini-tab-ld');
   if(a) a.classList.toggle('active',sp);
   if(b) b.classList.toggle('active',!sp);
   const go=document.getElementById('dash-mini-go');
-  if(go){ go.textContent=sp?'SP 表':'月排程'; go.onclick=function(){ navTo(sp?'prod':'loading'); }; }
+  if(go){ go.textContent=sp?'CP 頁':'月排程'; go.onclick=function(){ navTo(sp?'prod':'loading'); }; }
 }
 
 /* 主頁小卡:未來 14 個工作天內要交管料、或已經逾期的工程區。
@@ -44190,6 +44399,14 @@ async function ldDashLoad(){
       +'<span class="ld-due-date">'+ldEsc(String(x.h).slice(5))+'</span>'
       +'<span class="ld-light '+cls+'">'+tag+'</span></div>';
   }).join('')+(rows.length>12?('<div class="ld-due-more">另有 '+(rows.length-12)+' 區…</div>'):'');
+}
+
+// 零件明細「查看」→ CP 收圖與追蹤的工程區詳情頁(CP/SP/保留料/成品材/手工單),比照主頁 SP 小卡 dashGoSP
+function ldGoZone(proj, zone){
+  if(typeof prodOpenZoneDetail!=='function') return;
+  navTo('prod');                                       // 觸發 prodInit 載入
+  _prodPendingView={page:'prod', pdetail:1, pproj:proj||'', pzone:zone||'', pfrom:'loading'};
+  prodMaybeApplyPending();                             // 資料已在→立即;否則 prodInit 完成後套用
 }
 
 // 點工程編號-工程區 → 記錄這個月的狀況(沒達標的原因),連同會議備註一起存
@@ -44231,6 +44448,373 @@ function ldHint(t){
   const el=ldEl('ld-hint'); if(!el) return;
   el.textContent=t||'';
   if(t) setTimeout(()=>{ if(el.textContent===t) el.textContent=''; },4000);
+}
+
+// ══ 上線準備(Readiness)══════════════════════════════════════════
+// 日期鏈:吊裝期 → 交管料日(−5 工作天) → 預計上線(−1 個月) → 準備期限(−2 週)
+// 六盞燈:圖(收製造圖)/審(圖面審核)/模(水電、削翼靠模開單)/SP(清點)/外包(回廠)/料(保留料+成品材)
+// 只有「審核 OK」「削翼靠模已開單」兩個人工勾選(存 zones),其餘全由既有資料即時判斷、不存表,
+// 資料一更新燈號就跟著變,不會留下過期的提醒。
+// 資料來源:CP 收圖與追蹤頁已載入的 prodReceipts/prodReceiptZones/prodTrack…,靠模紀錄用 allLogs(gen_logs)。
+const RDY_PREP_DAYS=14;   // 準備要在上線前幾天完成
+const RDY_WARN_DAYS=14;   // 準備期限前幾天開始亮黃燈
+function rdyUp(s){ return String(s==null?'':s).trim().toUpperCase(); }
+function rdyAddDays(ymd,n){ const d=new Date(String(ymd||'').slice(0,10)+'T00:00:00'); if(isNaN(d)) return ''; d.setDate(d.getDate()+n); return ldISO(d); }
+function rdyAddMonths(ymd,n){
+  const d=new Date(String(ymd||'').slice(0,10)+'T00:00:00'); if(isNaN(d)) return '';
+  const day=d.getDate(); d.setDate(1); d.setMonth(d.getMonth()+n);
+  d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth()+1, 0).getDate()));   // 3/31 往前一個月 = 2/28
+  return ldISO(d);
+}
+function rdyDaysBetween(a,b){ return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000); }
+function rdyMD(ymd){ const s=String(ymd||'').slice(0,10); return s?(s.slice(5).replace('-','/')+'（'+ldWk(s)+'）'):'—'; }
+// 預計上線:有填就用填的(白板排的時段),沒填 = 交管料日往前 1 個月
+function rdyOnlineOf(z){
+  const m=String(z&&z.online_date||'').slice(0,10); if(m) return m;
+  const h=ldHandoverOf(z); return h?rdyAddMonths(h,-1):'';
+}
+function rdyDates(z){
+  z=z||{};
+  const online=rdyOnlineOf(z), due=online?rdyAddDays(online,-RDY_PREP_DAYS):'';
+  return {
+    erect:String(z.erect_date||'').slice(0,10),
+    handover:ldHandoverOf(z), handoverAuto:ldHandoverIsAuto(z),
+    online, onlineAuto:!String(z.online_date||'').trim(),
+    due, left:due?rdyDaysBetween(ldToday(),due):null
+  };
+}
+// BOM 工程區(同一個工程編號可能有重複的工程主檔,全部都找)
+function rdyZoneRec(proj,zone){
+  const P=rdyUp(proj), Z=rdyUp(zone);
+  const pids=new Set(prodReceiptProjects.filter(p=>rdyUp(p.proj_num)===P).map(p=>String(p.id)));
+  return prodReceiptZones.find(z=>pids.has(String(z.project_id)) && rdyUp(z.zone_code)===Z)||null;
+}
+// 靠模產生紀錄:gen_logs 的 proj_name 存的是工程編號、proj_num 存的是工程區(欄名是舊的)
+function rdyJigLogs(proj,zone,logs){
+  const P=rdyUp(proj), Z=rdyUp(zone);
+  const src=logs||(typeof allLogs!=='undefined'&&Array.isArray(allLogs)?allLogs:[]);
+  return src.filter(e=>rdyUp(e.proj_name)===P && rdyUp(e.proj_num)===Z);
+}
+// 自動判斷:有水電重量/水電加工代號(比照計價頁 hasUtil),或已經產生過靠模
+function rdyUtilAuto(z,logs){ return !!(z && (z.util_weight_kg!=null || String(z.util_proc_code||'').trim()!=='')) || logs.length>0; }
+// 自動判斷:該工程收圖登記有「削翼」(削翼是通圖 → 整個工程都算有,個別沒有的在審核時改)
+function rdyBevelAuto(proj,receipts){ const P=String(proj||'').trim(); return (receipts||prodReceipts).some(r=>String(r.project_no||'').trim()===P && (r.categories||[]).includes('削翼')); }
+function rdyUtilNeed(z,logs){ return (z&&z.jig_util!=null)?z.jig_util===true:rdyUtilAuto(z,logs); }
+function rdyBevelNeed(z,bevelAuto){ return (z&&z.jig_bevel!=null)?z.jig_bevel===true:!!bevelAuto; }
+function rdyIsSub(i){ const s=(i.status||'').trim(); return s==='轉包' || ((i.remark||'').indexOf('轉包')>=0 && (s===''||s==='-')); }
+// timestamptz 是 UTC,要換成本地時間再取月日(否則台灣凌晨 0~8 點會顯示成前一天)
+function rdyMDLocal(at){ const d=new Date(at); return isNaN(d)?'':(String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')); }
+function rdyWho(at,by){ return (at?rdyMDLocal(at):'')+(by?(' '+by):''); }
+
+// 詳情頁:用 CP 收圖與追蹤頁已載入的資料(與看板同一套比對 prodZoneMatched)
+function rdyEval(proj,zone){
+  const z=rdyZoneRec(proj,zone), m=prodZoneMatched(proj,zone);
+  return rdyEvalCore(z, {
+    logs:rdyJigLogs(proj,zone), bevelAuto:rdyBevelAuto(proj),
+    sp:[...new Set(m.us.flatMap(u=>u.items))], reserved:m.reserved, product:m.product
+  });
+}
+// 核心判斷(詳情頁與主頁共用):src = {logs 本區靠模紀錄, bevelAuto, sp 本區 SP 列, reserved, product}
+// 名稱/小備註照使用者指定:圖面審核｜靠模開單(水電/削翼)｜SP清點狀態｜外包(SP/角鐵)｜領料(保留料／成品材)
+function rdyEvalCore(z,src){
+  const d=rdyDates(z), items=[];
+  // 圖面審核
+  items.push({k:'rev', short:'審', label:'圖面審核', name:'', st:(z&&z.drawing_ok_at)?'done':'todo',
+    text:(z&&z.drawing_ok_at)?('審核 OK　'+rdyWho(z.drawing_ok_at,z.drawing_ok_by)):'尚未審核'});
+  // 靠模開單:水電靠模(產生紀錄勾已開單)+削翼靠模(詳情頁勾已開單)
+  const logs=src.logs||[], uNeed=rdyUtilNeed(z,logs), bNeed=rdyBevelNeed(z,src.bevelAuto);
+  const uSt=logs.some(e=>e.ordered_at)?'done':(logs.length?'part':'todo');
+  const bSt=(z&&z.bevel_jig_at)?'done':'todo';
+  const jigSts=[uNeed?uSt:null, bNeed?bSt:null].filter(Boolean);
+  items.push({k:'jig', short:'模', label:'靠模開單', name:'水電/削翼', uNeed, bNeed, uSt, bSt, logs,
+    st:!jigSts.length?'na':(jigSts.every(s=>s==='done')?'done':(jigSts.some(s=>s!=='todo')?'part':'todo')),
+    text:!jigSts.length?'不需要靠模':[uNeed?('水電 '+({done:'已開單',part:'已產生未開單',todo:'未產生'})[uSt]):'', bNeed?('削翼 '+(bSt==='done'?'已開單':'未開單')):''].filter(Boolean).join('　')});
+  // SP清點狀態 / 外包:排除轉包;外包(製造者=外包)另外一盞燈
+  const sp=(src.sp||[]).filter(i=>!rdyIsSub(i));
+  const own=sp.filter(i=>(i.make||'').trim()!=='外包'), out=sp.filter(i=>(i.make||'').trim()==='外包');
+  const okN=a=>a.filter(i=>prodStatusLevel(i.status)>=2).length, startN=a=>a.filter(i=>prodStatusLevel(i.status)>=1).length;
+  const spIt={k:'sp', short:'SP', label:'SP清點狀態', name:''};
+  if(!sp.length) items.push(Object.assign(spIt,{st:'todo', text:'SP 狀態表還沒有這區'}));
+  else if(!own.length) items.push(Object.assign(spIt,{st:'na', text:'全部外包'}));
+  else { const n=okN(own); items.push(Object.assign(spIt,{st:n>=own.length?'done':(startN(own)?'part':'todo'), text:'清點 OK '+n+'/'+own.length})); }
+  const outIt={k:'out', short:'外', label:'外包', name:'SP/角鐵'};
+  if(!out.length) items.push(Object.assign(outIt,{st:'na', text:'無外包'}));
+  else { const n=okN(out); items.push(Object.assign(outIt,{st:n>=out.length?'done':(startN(out)?'part':'todo'), text:'回廠 '+n+'/'+out.length})); }
+  // 領料:保留料(領取+該退的退了)、成品材(已領)
+  const rs=src.reserved||[], pd=src.product||[];
+  const matIt={k:'mat', short:'料', label:'領料', name:'保留料／成品材'};
+  if(!rs.length && !pd.length) items.push(Object.assign(matIt,{st:'na', text:'無登記'}));
+  else {
+    const rsDone=rs.filter(prodResDone).length, rsTake=rs.filter(prodResTaken).length;
+    const retLeft=rs.filter(r=>r.need_return===true && !prodResReturned(r)).length;
+    const pdDone=pd.filter(p=>p.is_picked===true).length;
+    const all=rsDone>=rs.length && pdDone>=pd.length;
+    items.push(Object.assign(matIt,{st:all?'done':((rsTake||pdDone)?'part':'todo'),
+      text:[rs.length?('保留料 領 '+rsTake+'/'+rs.length+(retLeft?('，待退 '+retLeft):'')):'', pd.length?('成品材 領 '+pdDone+'/'+pd.length):''].filter(Boolean).join('　')}));
+  }
+  items.forEach(it=>it.light=rdyLight(it.st,d));
+  const need=items.filter(it=>it.st!=='na'), done=need.filter(it=>it.st==='done').length;
+  const rank={red:3,yellow:2,gray:1,green:0};
+  const worst=need.filter(it=>it.st!=='done').reduce((w,it)=>rank[it.light]>rank[w]?it.light:w,'green');
+  return {z, d, items, need:need.length, done, worst, sub:String(z&&z.status||'').trim()==='轉包'};
+}
+// 燈號:完成=綠;不需要=—;沒有日期=灰;過了準備期限=紅;期限前 2 週內=黃;還早=灰
+function rdyLight(st,d){
+  if(st==='done') return 'green';
+  if(st==='na') return 'na';
+  if(!d.due) return 'gray';
+  if(d.left<0) return 'red';
+  if(d.left<=RDY_WARN_DAYS) return 'yellow';
+  return 'gray';
+}
+
+// ── 工程區詳情頁「上線準備」段落 ─────────────────────────────
+function rdyRenderZone(){
+  const box=document.getElementById('rdyBody'); if(!box) return;
+  const {proj,zone}=prodDetailCtx; if(!proj||!zone){ box.innerHTML=''; return; }
+  const ev=rdyEval(proj,zone), z=ev.z, d=ev.d;
+  const canEdit=(typeof pagePerm!=='function'||pagePerm('prod')==='edit') && !!z;
+  const dis=canEdit?'':' disabled';
+  const sum=document.getElementById('rdySum');
+  if(sum) sum.innerHTML=ev.sub?'<span class="chip st-sub">轉包</span>'
+    :('<span class="rdy-dot rdy-'+(ev.done>=ev.need?'green':ev.worst)+'"></span>準備完成 <b>'+ev.done+'/'+ev.need+'</b>');
+  if(!z){
+    box.innerHTML='<div class="pd-empty">BOM 工程總表沒有「'+esc(proj)+'-'+esc(zone)+'」這個工程區，無法設定吊裝期與審核。燈號仍依現有資料顯示如下。</div>'+rdyCardsHtml(ev,proj,zone,false);
+    return;
+  }
+  const dateIn=(field,val,auto,label)=>'<input type="date" class="rdy-date'+(auto?' rdy-auto':'')+'" value="'+esc(val||'')+'" title="'+label+'"'+dis
+    +' onchange="rdySetDate(\''+esc(z.id)+'\',\''+field+'\',this.value)">';
+  const resetBtn=(field,auto,label)=>auto?'<span class="rdy-tag">自動</span>'
+    :(canEdit?'<button class="rdy-mini" title="改回自動('+label+')" onclick="rdyResetDate(\''+esc(z.id)+'\',\''+field+'\')">↺</button>':'');
+  let dueTxt='—';
+  if(d.due) dueTxt='<b>'+rdyMD(d.due)+'</b>　'+(d.left<0?('<span class="rdy-over">已逾期 '+Math.abs(d.left)+' 天</span>'):(d.left===0?'今天到期':('剩 '+d.left+' 天')));
+  box.innerHTML=(ev.sub?'<div class="pd-empty">此工程區已轉包，不需要準備。</div>':'')
+    +'<div class="rdy-dates">'
+      +'<div class="rdy-dt"><label>吊裝期</label><div class="rdy-dv">'+dateIn('erect_date',d.erect,false,'吊裝期')+'</div></div>'
+      +'<span class="rdy-arrow">→</span>'
+      +'<div class="rdy-dt"><label>交管料日 <small>−5 工作天</small></label><div class="rdy-dv">'+dateIn('handover_date',d.handover,d.handoverAuto,'交管料日')+(d.handover?resetBtn('handover_date',d.handoverAuto,'吊裝期往前 '+LD_BACK_WORKDAYS+' 個工作天'):'')+'</div></div>'
+      +'<span class="rdy-arrow">→</span>'
+      +'<div class="rdy-dt"><label>預計上線 <small>−1 個月</small></label><div class="rdy-dv">'+dateIn('online_date',d.online,d.onlineAuto,'預計上線日')+(d.online?resetBtn('online_date',d.onlineAuto,'交管料日往前 1 個月'):'')+'</div></div>'
+      +'<span class="rdy-arrow">→</span>'
+      +'<div class="rdy-dt"><label>準備期限 <small>上線前 2 週</small></label><div class="rdy-dv rdy-due">'+dueTxt+'</div></div>'
+    +'</div>'
+    +(d.erect?'':'<div class="rdy-hint">先填吊裝期，後面的日期會自動推算；白板排的上線時段跟推算的不同時，直接改「預計上線」。</div>')
+    +rdyCardsHtml(ev,proj,zone,canEdit);
+}
+function rdyCardsHtml(ev,proj,zone,canEdit){
+  const icon={done:'●',part:'◐',todo:'○',na:'—'};
+  return '<div class="rdy-cards">'+ev.items.map(it=>{
+    let act='';
+    if(it.k==='rev' && canEdit) act='<button class="btn'+(it.st==='done'?'':' btn-primary')+' rdy-act" onclick="rdyOpenReview()">'+(it.st==='done'?'修改':'審核 OK')+'</button>';
+    if(it.k==='jig'){
+      const lines=[];
+      if(it.uNeed) lines.push('<div class="rdy-line">水電：'+({done:'<span class="rdy-ok">已開單</span>',part:'已產生、<b>未開單</b>',todo:'<b>未產生</b>'})[it.uSt]
+        +' <a class="rdy-link" onclick="rdyGoDxf(\''+esc(proj)+'\',\''+esc(zone)+'\')">'+(it.logs.length?'產生紀錄 →':'去產生 →')+'</a></div>');
+      if(it.bNeed) lines.push('<label class="rdy-line rdy-chk"><input type="checkbox"'+(it.bSt==='done'?' checked':'')+(canEdit?'':' disabled')
+        +' onchange="rdySetBevelJig(this.checked)">削翼靠模已開單'+(it.bSt==='done'&&ev.z?('<small>'+esc(rdyWho(ev.z.bevel_jig_at,ev.z.bevel_jig_by))+'</small>'):'')+'</label>');
+      act=lines.join('');
+    }
+    return '<div class="rdy-card rdy-c-'+it.light+'">'
+      +'<div class="rdy-card-h"><span class="rdy-ic">'+icon[it.st]+'</span><b>'+esc(it.label)+'</b>'+(it.name?'<span class="rdy-name">'+esc(it.name)+'</span>':'')+'</div>'
+      +(it.k==='jig'&&act?'':'<div class="rdy-card-t">'+esc(it.text)+'</div>')   // 靠模卡下面已逐項列出,不重複摘要
+      +(act?'<div class="rdy-card-a">'+act+'</div>':'')+'</div>';
+  }).join('')+'</div>';
+}
+function rdyCtxZone(){ return rdyZoneRec(prodDetailCtx.proj, prodDetailCtx.zone); }
+async function rdyPatchZone(zid, patch, what){
+  const r=await sbFetch('/rest/v1/zones?id=eq.'+encodeURIComponent(zid)+'&select=id',{method:'PATCH',headers:{'Prefer':'return=representation'},body:JSON.stringify(patch)});
+  if(!r.ok || !Array.isArray(r.data) || !r.data.length){
+    alert(what+'儲存失敗('+(r.status||'?')+')：'+((r.data&&(r.data.message||r.data.hint))||'沒有權限或資料不存在')+'\n若是缺欄位，請先在 Supabase SQL Editor 執行 readiness_migration.sql。');
+    return false;
+  }
+  prodReceiptZones.forEach(z=>{ if(String(z.id)===String(zid)) Object.assign(z,patch); });
+  if(Array.isArray(ldZones)) ldZones.forEach(z=>{ if(String(z.id)===String(zid)) Object.assign(z,patch); });
+  if(typeof prodMemoReset==='function') prodMemoReset();
+  return true;
+}
+async function rdySetDate(zid, field, val){
+  const v=String(val||'').slice(0,10)||null;
+  const label={erect_date:'吊裝期',handover_date:'交管料日',online_date:'預計上線日'}[field]||field;
+  await rdyPatchZone(zid,{[field]:v},label);
+  rdyRenderZone();   // 失敗也重畫,把輸入框還原成資料庫的值
+}
+async function rdyResetDate(zid, field){
+  if(await rdyPatchZone(zid,{[field]:null},'還原自動')) rdyRenderZone();
+}
+async function rdySetBevelJig(on){
+  const z=rdyCtxZone(); if(!z) return;
+  const who=(typeof currentUser!=='undefined'&&currentUser&&currentUser.name)||null;
+  await rdyPatchZone(z.id, on?{bevel_jig_at:new Date().toISOString(), bevel_jig_by:who}:{bevel_jig_at:null, bevel_jig_by:null}, '削翼靠模開單');
+  rdyRenderZone();
+}
+// 審核 OK:同時確認本區要不要水電／削翼靠模(預設帶自動判斷,削翼通圖 = 整個工程都有,個別沒有的在這裡取消)
+function rdyOpenReview(){
+  const {proj,zone}=prodDetailCtx, z=rdyCtxZone(); if(!z) return;
+  const logs=rdyJigLogs(proj,zone), uAuto=rdyUtilAuto(z,logs), bAuto=rdyBevelAuto(proj);
+  const uNeed=rdyUtilNeed(z,logs), bNeed=rdyBevelNeed(z,bAuto);
+  const done=!!z.drawing_ok_at;
+  const overlay=document.createElement('div'); overlay.className='input-modal-overlay';
+  overlay.innerHTML='<div class="input-modal ld-note-modal rdy-rev-modal" style="width:440px">'
+    +'<div class="input-modal-title">'+esc(proj)+'-'+esc(zone)+'　圖面審核</div>'
+    +(done?'<div class="rdy-hint" style="margin:6px 0 2px">已於 '+esc(rdyWho(z.drawing_ok_at,z.drawing_ok_by))+' 審核 OK</div>':'')
+    +'<label>本區需要哪些靠模？</label>'
+    +'<label class="rdy-chk"><input type="checkbox" id="rdy-rev-util"'+(uNeed?' checked':'')+'>水電靠模<small>（系統判斷：'+(uAuto?'有水電':'沒有水電')+'）</small></label>'
+    +'<label class="rdy-chk"><input type="checkbox" id="rdy-rev-bevel"'+(bNeed?' checked':'')+'>削翼靠模<small>（系統判斷：'+(bAuto?'此工程有削翼圖':'沒有削翼圖')+'）</small></label>'
+    +'<div class="input-modal-actions">'
+      +(done?'<button class="input-modal-btn cancel rdy-rev-undo" style="margin-right:auto">取消審核</button>':'')
+      +'<button class="input-modal-btn cancel rdy-rev-close">取消</button><button class="input-modal-btn ok">'+(done?'儲存':'審核 OK')+'</button></div></div>';
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  overlay.querySelector('.rdy-rev-close').onclick=close;
+  overlay.onclick=e=>{ if(e.target===overlay) close(); };
+  const undo=overlay.querySelector('.rdy-rev-undo');
+  if(undo) undo.onclick=async()=>{ if(await rdyPatchZone(z.id,{drawing_ok_at:null,drawing_ok_by:null},'取消審核')){ close(); rdyRenderZone(); } };
+  overlay.querySelector('.ok').onclick=async()=>{
+    const who=(typeof currentUser!=='undefined'&&currentUser&&currentUser.name)||null;
+    const patch={jig_util:overlay.querySelector('#rdy-rev-util').checked, jig_bevel:overlay.querySelector('#rdy-rev-bevel').checked};
+    if(!done){ patch.drawing_ok_at=new Date().toISOString(); patch.drawing_ok_by=who; }
+    if(await rdyPatchZone(z.id,patch,'圖面審核')){ close(); rdyRenderZone(); }
+  };
+}
+// 去水電靠模生產器:帶入工程編號與工程區,並把產生紀錄篩到這一區
+function rdyGoDxf(proj,zone){
+  navTo('dxf');
+  const a=document.getElementById('dxf-proj-name'), b=document.getElementById('dxf-proj-num');
+  if(a) a.value=proj||''; if(b) b.value=zone||'';
+  if(typeof updateFname==='function') updateFname();
+  const f=document.getElementById('log-filter'); if(f){ f.value=zone||''; if(typeof filterLog==='function') filterLog(); }
+}
+
+// ── 主頁「上線準備」分頁 ─────────────────────────────────────
+// CP 頁的資料只有進那一頁才會載,主頁自己抓:只看有吊裝期、未完成/未轉包/未上線的工程區。
+// 只列紅燈、黃燈與「全部完成可上線」的;還早(灰)的收起來,按一下才展開。
+let rdyDashRows=[], rdyDashShowAll=false;
+async function rdyDashLoad(){
+  const box=document.getElementById('dash-ready'); if(!box) return;
+  const cnt=document.getElementById('dash-sp-count');
+  const msg=t=>{ box.innerHTML='<span class="rdy-dash-empty">'+t+'</span>'; if(cnt){ cnt.textContent=''; cnt.classList.remove('ld-hot'); } };
+  try{
+    const [rz,rp,ro]=await Promise.all([
+      sbFetchAll('/rest/v1/zones?select=*&erect_date=not.is.null'),
+      sbFetchAll('/rest/v1/projects?select=id,proj_num'),
+      sbFetch('/rest/v1/sp_online?select=proj_no,zone')
+    ]);
+    if(!rz.ok) return msg('尚未啟用（請先執行 loading_plan_migration.sql）');
+    const projById={}; (Array.isArray(rp.data)?rp.data:[]).forEach(p=>projById[String(p.id)]=String(p.proj_num||'').trim());
+    const online=new Set((ro.ok&&Array.isArray(ro.data)?ro.data:[]).map(o=>rdyUp(o.proj_no)+'|'+rdyUp(o.zone)));
+    const zs=(Array.isArray(rz.data)?rz.data:[]).map(z=>({z, proj:projById[String(z.project_id)]||'', zone:String(z.zone_code||'').trim()}))
+      .filter(x=>x.proj && x.zone && !['已完成','轉包'].includes(String(x.z.status||'').trim()) && !online.has(rdyUp(x.proj)+'|'+rdyUp(x.zone)));
+    if(!zs.length){ rdyDashRows=[]; return msg('還沒有設定吊裝期的工程區（在月產量排程或工程區詳情頁填）'); }
+    const inP='('+[...new Set(zs.map(x=>x.proj))].map(p=>'"'+p.replace(/"/g,'')+'"').join(',')+')';
+    const [rt,rr,rpm,rc,rg]=await Promise.all([
+      sbFetchAll('/rest/v1/sp_track?select=proj_no,zone,dwg_no,order_no,make,status,remark&proj_no=in.'+inP),
+      sbFetchAll('/rest/v1/reserved_material?select=*'),
+      sbFetchAll('/rest/v1/product_material?select=*'),
+      sbFetchAll('/rest/v1/cp_receipts?select=project_no,categories&project_no=in.'+inP),
+      sbFetchAll('/rest/v1/gen_logs?select=*')
+    ]);
+    const arr=r=>(r&&r.ok&&Array.isArray(r.data))?r.data:[];
+    const spBy={}; arr(rt).forEach(r=>{ const k=rdyUp(r.proj_no); (spBy[k]=spBy[k]||[]).push(r); });
+    const reservedAll=arr(rr), productAll=arr(rpm), logsAll=arr(rg);
+    const receipts=arr(rc).map(r=>({...r, categories:(typeof cprNormalizeCategories==='function')?cprNormalizeCategories(r.categories):(r.categories||[])}));
+    rdyDashRows=zs.map(x=>{
+      const Z=rdyUp(x.zone);
+      // 比對規則同看板 prodZoneMatched:SP 依工程區、保留料/成品材依工程區或本區 CP編號
+      const sp=(spBy[rdyUp(x.proj)]||[]).filter(r=>spTrackZones(r.zone).includes(Z));
+      const docs=[...new Set(sp.map(r=>{ const a=String(r.dwg_no||'').trim(), b=String(r.order_no||'').trim(); return (a&&b)?(a+'-'+b):(a||b); }).filter(Boolean))];
+      const reserved=reservedAll.filter(r=>{ const pj=String(r.proj_no||'').trim(); return (!pj||pj===x.proj) && (rdyUp(r.zone)===Z || docs.includes(String(r.order_no||''))); });
+      const product=productAll.filter(p=>!pmIsWelding(p) && prodProductProjMatch(p.proj_no,x.proj) && (pmZoneMatch(p,x.zone) || docs.some(d=>String(p.remark||'').includes(d))));
+      const ev=rdyEvalCore(x.z,{logs:rdyJigLogs(x.proj,x.zone,logsAll), bevelAuto:rdyBevelAuto(x.proj,receipts), sp, reserved, product});
+      const ready=ev.need>0 && ev.done>=ev.need;
+      return {proj:x.proj, zone:x.zone, ev, ready, hot:!ready && (ev.worst==='red'||ev.worst==='yellow')};
+    });
+    rdyDashRender();
+  }catch(e){ console.error(e); msg('上線準備載入失敗：'+e.message); }
+}
+function rdyDashRender(){
+  const box=document.getElementById('dash-ready'); if(!box) return;
+  const cnt=document.getElementById('dash-sp-count');
+  const byDue=(a,b)=>String(a.ev.d.due||'9999').localeCompare(String(b.ev.d.due||'9999')) || a.proj.localeCompare(b.proj,undefined,{numeric:true}) || a.zone.localeCompare(b.zone,undefined,{numeric:true});
+  const hot=rdyDashRows.filter(r=>r.hot).sort(byDue), ready=rdyDashRows.filter(r=>r.ready).sort(byDue);
+  const later=rdyDashRows.filter(r=>!r.hot && !r.ready).sort(byDue);
+  if(cnt){
+    cnt.textContent=hot.length?('· '+hot.length+' 區'):'';
+    cnt.classList.toggle('ld-hot', hot.some(r=>r.ev.worst==='red'));   // 有紅燈 → 分頁件數標紅,停在月排程分頁也看得見
+  }
+  const list=hot.concat(ready, rdyDashShowAll?later:[]);
+  let html=list.map(rdyDashItemHtml).join('');
+  if(!hot.length && !ready.length) html='<div class="rdy-dash-empty">目前沒有需要注意的工程區 👍</div>'+(rdyDashShowAll?later.map(rdyDashItemHtml).join(''):'');
+  if(later.length) html+='<div class="rdy-dash-more" onclick="rdyDashShowAll=!rdyDashShowAll;rdyDashRender()">'
+    +(rdyDashShowAll?'收起還早的工程區 ▲':('另有 '+later.length+' 區還早（準備期限在 '+RDY_WARN_DAYS+' 天後）▼'))+'</div>';
+  box.innerHTML=html;
+}
+function rdyDashItemHtml(r){
+  const d=r.ev.d, w=r.ready?'green':r.ev.worst;
+  const chips=r.ev.items.map(it=>'<i class="rdy-chip rdy-k-'+it.light+'" title="'+esc(it.label+'：'+it.text)+'">'+esc(it.short)+'</i>').join('');
+  const due=!d.due?'<span class="rdy-dash-due">未排期</span>'
+    :(d.left<0?'<span class="rdy-dash-due over">逾期 '+Math.abs(d.left)+' 天</span>':'<span class="rdy-dash-due">'+(d.left===0?'今天到期':('剩 '+d.left+' 天'))+'</span>');
+  const tail=r.ready?'<button class="spp-go rdy-dash-go" onclick="event.stopPropagation();rdyDashOnline(this)" title="標記已上線 → 從清單移除(可在 CP 頁看板取消)">可上線 ✓</button>':due;
+  return '<div class="rdy-dash-item" data-proj="'+esc(r.proj)+'" data-zone="'+esc(r.zone)+'" onclick="dashGoSP(this.dataset.proj,this.dataset.zone)"'
+    +' title="'+esc(r.proj+'-'+r.zone+'　預計上線 '+rdyMD(d.online)+'　準備期限 '+rdyMD(d.due)+'　準備完成 '+r.ev.done+'/'+r.ev.need)+'">'
+    +'<span class="rdy-dot rdy-'+w+'"></span><span class="rdy-dash-name">'+esc(r.proj)+'-'+esc(r.zone)+'</span>'
+    +'<span class="rdy-dash-chips">'+chips+'</span>'+tail+'</div>';
+}
+// 全部準備好 → 「可上線」:沿用 sp_online(看板的已上線歸檔),從主頁清單移除
+async function rdyDashOnline(btn){
+  const it=btn.closest('.rdy-dash-item'); if(!it) return;
+  const proj=it.dataset.proj||'', zone=it.dataset.zone||'';
+  btn.disabled=true; btn.textContent='上線中…';
+  const r=await sbFetch('/rest/v1/sp_online',{method:'POST',headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify({proj_no:proj, zone:zone, online_by:(currentUser&&currentUser.name)||null})});
+  if(!(r.ok || r.status===409)){ btn.disabled=false; btn.textContent='可上線 ✓'; alert('上線失敗('+r.status+')'); return; }
+  if(typeof prodOnline!=='undefined' && Array.isArray(prodOnline)){
+    if(!prodOnline.some(o=>(o.proj_no||'')===proj && (o.zone||'')===zone)) prodOnline.push({proj_no:proj, zone:zone});
+    if(typeof prodRebuildOnline==='function') prodRebuildOnline();
+  }
+  rdyDashRows=rdyDashRows.filter(x=>!(x.proj===proj && x.zone===zone));
+  rdyDashRender();
+}
+
+// ── 主頁產量卡:月排程達成率(與月產量排程頁 KPI 同一口徑)──
+// 產量月 = 上月 26 日 ~ 當月 25 日;26 號起就算下個月的產量月。排定留白/0 → 以整區 BOM 重量計。
+async function ldDashPlan(){
+  const box=document.getElementById('dash-plan'); if(!box) return;
+  try{
+    const t=ldToday(), ym=(+t.slice(8,10)>=26)?ldYMAdd(t.slice(0,7),1):t.slice(0,7), rg=ldMonthRange(ym);
+    const rpl=await sbFetchAll('/rest/v1/loading_plan?select=zone_id,plan_tons&ym=eq.'+encodeURIComponent(ym));
+    const plans=(rpl.ok&&Array.isArray(rpl.data))?rpl.data:[];
+    if(!plans.length){ box.hidden=true; return; }
+    const ids=[...new Set(plans.map(p=>p.zone_id).filter(x=>x!=null))];
+    const [rz,rp]=await Promise.all([
+      sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code&id=in.('+ids.join(',')+')'),
+      sbFetchAll('/rest/v1/projects?select=id,proj_num')
+    ]);
+    const projById={}; (Array.isArray(rp.data)?rp.data:[]).forEach(p=>projById[String(p.id)]=String(p.proj_num||'').trim());
+    const zById={}; (Array.isArray(rz.data)?rz.data:[]).forEach(z=>zById[String(z.id)]=z);
+    const noPlan=plans.filter(p=>!(Number(p.plan_tons)>0)).map(p=>p.zone_id);
+    if(noPlan.length) await ldFetchBom(noPlan);
+    const keys=new Set(), projs=new Set(); let plan=0;
+    plans.forEach(p=>{
+      const z=zById[String(p.zone_id)]; if(!z) return;
+      const proj=projById[String(z.project_id)]||''; if(proj) projs.add(proj);
+      keys.add(rdyUp(proj)+'|'+rdyUp(z.zone_code));
+      plan+=(Number(p.plan_tons)>0)?Number(p.plan_tons):ldT((ldBom[p.zone_id]||{}).kg||0);
+    });
+    let done=0;
+    if(projs.size){
+      const rd=await sbFetchAll('/rest/v1/daily_output?select=proj_num,zone_code,net_weight&date=gte.'+rg.from+'&date=lte.'+rg.to
+        +'&proj_num=in.('+[...projs].map(p=>'"'+p.replace(/"/g,'')+'"').join(',')+')');
+      (Array.isArray(rd.data)?rd.data:[]).forEach(r=>{ if(keys.has(rdyUp(r.proj_num)+'|'+rdyUp(r.zone_code))) done+=ldNum(r.net_weight); });
+      done=ldT(done);
+    }
+    const pct=plan>0?Math.round(done/plan*100):0;
+    document.getElementById('dash-plan-tons').textContent=ldFix(done,1)+' / '+ldFix(plan,1)+' t';
+    const pe=document.getElementById('dash-plan-pct'); pe.textContent=pct+'%';
+    pe.style.color=pct>=100?'var(--green)':(pct>=60?'var(--accent2)':'var(--yellow)');
+    document.getElementById('dash-plan-bar').style.width=Math.min(100,pct)+'%';
+    box.title=ym+' 產量月（'+ldMonthRangeTxt(ym)+'）排定 '+ldFix(plan)+' t，已完成 '+ldFix(done)+' t。點一下看月產量排程';
+    box.hidden=false;
+  }catch(e){ console.warn('ldDashPlan failed',e); box.hidden=true; }
 }
 
 </script>
