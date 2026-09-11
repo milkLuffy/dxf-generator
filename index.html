@@ -2822,6 +2822,12 @@ window.normalizeFullWidth=function(value){
   function editableTarget(t){
     return !!t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable);
   }
+  // 直接改 value 會把游標丟到最後(在文字中間補字時很明顯);全形轉半形是一字換一字,原位置可直接還原
+  function setValueKeepCaret(t,next){
+    var s=null,e=null; try{ s=t.selectionStart; e=t.selectionEnd; }catch(_){}
+    t.value=next;
+    if(s!=null&&document.activeElement===t){ try{ t.setSelectionRange(Math.min(s,next.length),Math.min(e,next.length)); }catch(_){} }
+  }
   // 必須比各功能的 keydown 更早註冊：組字期間只讓瀏覽器/輸入法處理，不讓表格換格、複製或送出。
   document.addEventListener('keydown',function(e){
     if(editableTarget(e.target)&&(e.isComposing||e.keyCode===229)) e.stopImmediatePropagation();
@@ -2839,7 +2845,7 @@ window.normalizeFullWidth=function(value){
     setTimeout(function(){
       var normalized=window.normalizeFullWidth(raw),cur=String(t.value||''),next=window.normalizeFullWidth(cur);
       if((t.getAttribute&&t.getAttribute('type')||'').toLowerCase()==='number'&&!cur&&s) next=window.normalizeFullWidth(s.value)+normalized;
-      if(next!==cur){ t.value=next; t.dispatchEvent(new Event('input',{bubbles:true})); }
+      if(next!==cur){ setValueKeepCaret(t,next); t.dispatchEvent(new Event('input',{bubbles:true})); }
     },0);
   },true);
   // number 欄位可能在 input 事件前就拒絕全形內容；貼上時先轉半形再交給既有儲存邏輯。
@@ -2856,7 +2862,7 @@ window.normalizeFullWidth=function(value){
   function normalizeElementValue(e){
     var t=e.target; if(!editableTarget(t)||t.isContentEditable) return;
     var v=String(t.value||''),n=window.normalizeFullWidth(v);
-    if(n!==v) t.value=n;
+    if(n!==v) setValueKeepCaret(t,n);
   }
   document.addEventListener('input',normalizeElementValue,true);
   document.addEventListener('change',normalizeElementValue,true);
@@ -3751,6 +3757,7 @@ window.normalizeFullWidth=function(value){
     /* 上線準備(工程區詳情頁):日期鏈＋六盞燈 */
     .rdy-sum{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
     .rdy-sum b{font-family:var(--mono);color:var(--text)}
+    .rdy-ma-btn{flex:none;white-space:nowrap}
     .rdy-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--text3)}
     .rdy-dot.rdy-green{background:var(--green)} .rdy-dot.rdy-yellow{background:var(--yellow)} .rdy-dot.rdy-red{background:var(--danger)}
     .rdy-dates{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:4px 0 10px}
@@ -6419,6 +6426,7 @@ window.normalizeFullWidth=function(value){
           <div class="pd-sec-head">
             <span class="pd-sec-title">上線準備</span>
             <span class="rdy-sum" id="rdySum"></span>
+            <button type="button" class="btn rdy-act rdy-ma-btn" title="開啟此工程區最新一筆已儲存的多階資料分析；尚未建立時帶你到匯入頁" onclick="maOpenForZone(prodDetailCtx.proj,prodDetailCtx.zone,this)">🧩 多階資料分析</button>
           </div>
           <div id="rdyBody"></div>
         </div>
@@ -42349,6 +42357,26 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     });
     return order.map(function(k){return map[k];});
   }
+  // 完整明細表:不分構件,同一種零件(零件編號/品名/規格/材質/單位皆相同)合併成一列、數量加總
+  function maQtyFmt(n){return Math.round(n*10000)/10000;}
+  function maMergeParts(items){
+    var map={},order=[];
+    items.forEach(function(i){
+      var key=[i.partNo,i.description,i.specification,i.material,i.unit].map(function(v){return String(v==null?'':v).trim();}).join('\u0001');
+      var m=map[key];
+      if(!m){m=map[key]={item:i,qty:0,hasQty:false,rows:0};order.push(key);}
+      var q=Number(i.quantity);
+      if(i.quantity!==''&&i.quantity!=null&&!isNaN(q)){m.qty+=q;m.hasQty=true;}
+      m.rows++;
+    });
+    var catRank=function(i){var n=MA_PART_ORDER.indexOf(maPartCategory(i));return n<0?99:n;};
+    return order.map(function(k){var m=map[k];return {item:m.item,quantity:m.hasQty?maQtyFmt(m.qty):'',rows:m.rows};})
+      .sort(function(a,b){return catRank(a.item)-catRank(b.item)||String(a.item.partNo||'').localeCompare(String(b.item.partNo||''),undefined,{numeric:true});});
+  }
+  function maMergedTable(title,merged,rawCount,showCategory){
+    var total=maQtyFmt(merged.reduce(function(s,m){var q=Number(m.quantity);return s+(m.quantity===''||isNaN(q)?0:q);},0));
+    return '<div class="ma-flat-title">'+maEsc(title)+' · '+merged.length+' 種零件（原 '+rawCount+' 筆，同名零件已合併、數量加總）</div><div class="ma-table-wrap"><table class="ma-table ma-flat-table"><thead><tr><th>零件編號</th><th>品名</th><th>規格</th><th>材質</th><th>單位</th><th>數量</th>'+(showCategory?'<th>分類</th>':'')+'</tr></thead><tbody>'+merged.map(function(m){var i=m.item;return '<tr><td class="code">'+maEsc(i.partNo)+'</td><td>'+maEsc(i.description)+'</td><td class="code">'+maEsc(i.specification)+'</td><td>'+maEsc(i.material)+'</td><td>'+maEsc(i.unit)+'</td><td'+(m.rows>1?' title="由 '+m.rows+' 筆合併"':'')+'>'+maEsc(m.quantity)+'</td>'+(showCategory?'<td>'+maCatTag(maPartCategory(i))+'</td>':'')+'</tr>';}).join('')+'</tbody><tfoot><tr class="ma-total-row"><td colspan="5">數量加總</td><td>'+total+'</td>'+(showCategory?'<td></td>':'')+'</tr></tfoot></table></div>';
+  }
   function maSpecDisplay(item,c){
     var s=String(item.specification==null?'':item.specification),cs=String(c&&c.componentSpec!=null?c.componentSpec:'');
     return s.trim()!==''&&s.trim()===cs.trim()?'':s;
@@ -42593,7 +42621,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     if(maPartsMode==='grouped'){
       body.innerHTML=groups.map(function(g){return maComponentBlock(g.c,g.items,maPartsCat==='ALL'||!!MA_CAT_GROUP[maPartsCat],false);}).join('')+'<div class="ma-total-line">數量加總：'+totalQty+'</div>';
     }else{
-      body.innerHTML='<div class="ma-flat-title">第一層零件完整明細 · '+allItems.length+' 筆</div><div class="ma-table-wrap"><table class="ma-table ma-flat-table"><thead><tr><th>構件編號</th><th>圖號</th><th>項次</th><th>零件編號</th><th>品名</th><th>規格</th><th>材質</th><th>單位</th><th>數量</th><th>分類</th></tr></thead><tbody>'+allItems.map(function(row){var i=row.item,c=row.c;return '<tr><td class="code">'+maEsc(c.componentNo)+'</td><td class="code">'+maEsc(c.drawingNo||'—')+'</td><td>'+maEsc(i.sequence)+'</td><td class="code">'+maEsc(i.partNo)+'</td><td>'+maEsc(i.description)+'</td><td class="code">'+maEsc(maSpecDisplay(i,c))+'</td><td>'+maEsc(i.material)+'</td><td>'+maEsc(i.unit)+'</td><td>'+maEsc(i.quantity)+'</td><td>'+maCatTag(maPartCategory(i))+'</td></tr>';}).join('')+'</tbody><tfoot><tr class="ma-total-row"><td colspan="8">數量加總</td><td>'+totalQty+'</td><td></td></tr></tfoot></table></div>';
+      body.innerHTML=maMergedTable('第一層零件完整明細',maMergeParts(allItems.map(function(r){return r.item;})),allItems.length,maPartsCat==='ALL'||!!MA_CAT_GROUP[maPartsCat]);
     }
   }
   window.maSetPartsCat=function(key){maPartsCat=key;maRenderPartsView();};
@@ -42607,8 +42635,8 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     document.getElementById(targetId).innerHTML=groups.length?groups.map(function(g){return maComponentBlock(g.c,g.items,false,false);}).join(''):'<div class="ma-empty">沒有 '+maEsc(label)+'（代碼 '+code+'）資料</div>';
     var flatId=code==='Q'?'ma-curtain-flat-result':'ma-mep-flat-result';
     var rows=[];
-    groups.forEach(function(g){g.items.forEach(function(item){rows.push({c:g.c,item:item});});});
-    document.getElementById(flatId).innerHTML=rows.length?'<div class="ma-flat-title">'+maEsc(label)+'完整明細 · '+rows.length+' 筆</div><div class="ma-table-wrap"><table class="ma-table ma-flat-table"><thead><tr><th>構件編號</th><th>圖號</th><th>項次</th><th>零件編號</th><th>品名</th><th>規格</th><th>材質</th><th>單位</th><th>數量</th></tr></thead><tbody>'+rows.map(function(row){var i=row.item,c=row.c;return '<tr><td class="code">'+maEsc(c.componentNo)+'</td><td class="code">'+maEsc(c.drawingNo||'—')+'</td><td>'+maEsc(i.sequence)+'</td><td class="code">'+maEsc(i.partNo)+'</td><td>'+maEsc(i.description)+'</td><td class="code">'+maEsc(i.specification)+'</td><td>'+maEsc(i.material)+'</td><td>'+maEsc(i.unit)+'</td><td>'+maEsc(i.quantity)+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="ma-empty">沒有 '+maEsc(label)+'（代碼 '+code+'）資料</div>';
+    groups.forEach(function(g){g.items.forEach(function(item){rows.push(item);});});
+    document.getElementById(flatId).innerHTML=rows.length?maMergedTable(label+'完整明細',maMergeParts(rows),rows.length,false):'<div class="ma-empty">沒有 '+maEsc(label)+'（代碼 '+code+'）資料</div>';
     if(code==='H')maRenderMepHoleSizes();
   }
   function maGetMepHoleSizes(){
@@ -42860,6 +42888,31 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var r=await sbFetch('/rest/v1/multilevel_analyses?id=eq.'+encodeURIComponent(id),{method:'DELETE'});
     if(!r.ok){maSetSaveStatus('刪除失敗：'+maDbError(r),true);return;}
     if(String(maCurrentAnalysisId)===String(id))maCurrentAnalysisId=null;maHistoryLoaded=false;maSetSaveStatus('已刪除紀錄 #'+id);await window.maLoadHistory(true);
+  };
+  // CP 看板工程區詳情「上線準備」的快速連結:找這個工程區最新一筆已儲存的分析直接開啟;沒有就停在匯入頁提示建立
+  window.maOpenForZone=async function(proj,zone,btn){
+    proj=String(proj||'').trim();zone=String(zone||'').trim();
+    var up=function(v){return String(v==null?'':v).trim().toUpperCase();},label=proj+'-'+zone;
+    if(typeof pagePerm==='function'&&pagePerm('multilevel')==='hide'){alert('你沒有「多階資料分析」頁面的權限');return;}
+    var hit=null,err='';
+    if(!isGuest&&currentSession&&proj&&zone){
+      if(btn){btn.disabled=true;btn.dataset.label=btn.textContent;btn.textContent='查詢中…';}
+      var r=await sbFetch('/rest/v1/multilevel_analyses?select=id,project_no,zone_code,mother_no,created_at&project_no=ilike.'+encodeURIComponent(proj)+'&order=created_at.desc&limit=200');
+      if(btn){btn.disabled=false;btn.textContent=btn.dataset.label||btn.textContent;}
+      if(!r.ok)err=maDbError(r);
+      else{
+        var rows=(Array.isArray(r.data)?r.data:[]).filter(function(a){return up(a.project_no)===up(proj);});
+        hit=rows.find(function(a){return up(a.zone_code)===up(zone);})||rows.find(function(a){return up(a.mother_no)===up(zone);})||null;
+      }
+    }
+    navTo('multilevel');
+    if(hit){await window.maOpenAnalysis(hit.id);return;}
+    if(isGuest||!currentSession)maSetSaveStatus('訪客模式無法讀取已儲存的分析；登入後即可從 CP 看板直接開啟',true);
+    else if(err)maSetSaveStatus('查詢 '+label+' 的分析紀錄失敗：'+err,true);
+    else{
+      maSetSaveStatus('「'+label+'」尚未建立多階資料分析：請貼上多階資料 → 開始分析 → 儲存分析結果，之後就能從 CP 看板直接開啟',true);
+      var raw=document.getElementById('ma-raw-input');if(raw&&!raw.value.trim())setTimeout(function(){raw.focus();},300);
+    }
   };
 
   window.maClearAll=function(){
