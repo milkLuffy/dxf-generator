@@ -11419,6 +11419,7 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
   if(showAdmin) refreshPendingBadge(); else { const b=document.getElementById('rail-admin-badge'); if(b) b.style.display='none'; }
   initPanel();
   applyPermsUI();   // 依帳號權限顯示/隱藏各頁面與分類
+  navPrefsCloudLoad();   // 常用功能/側邊欄偏好:用資料庫存的覆蓋本機快取(換電腦也一樣)
   // 操作紀錄:只有「真的登入」才記一筆;restore=true 是重新整理,記了只會洗版
   if(!restore) auditWrite({action:'login', ok:true});
   presenceStart();   // 開始回報/抓取線上狀態(右上角頭像)
@@ -11541,6 +11542,37 @@ function readNavPreferences(){
 }
 function writeNavPreferences(value){
   try{localStorage.setItem(navPreferenceKey(),JSON.stringify(value));}catch(e){}
+  navPrefsCloudSave(value);
+}
+// 常用功能/側邊欄偏好原本只存在這台瀏覽器(換電腦、手機、清瀏覽資料就回到預設)→ 另存到資料庫 user_prefs,跟著帳號走。
+// localStorage 仍當快取(畫面先用它秒畫),登入後再用雲端的覆蓋。個人偏好走 _sbRaw:
+// 不受唯讀頁面的寫入攔截、也不記進操作紀錄。表還沒建(未跑 user_prefs_migration.sql)就只用本機,不報錯。
+let navPrefsCloudOk=null;   // null=還不知道, true=可用, false=表不存在或沒權限
+function navPrefsCloudSave(value){
+  // 還沒讀過雲端(null)就不上傳:新電腦剛登入時本機是預設值,先傳會把帳號原本的設定蓋掉
+  if(isGuest||!currentUser?.id||navPrefsCloudOk!==true) return;
+  _sbRaw('/rest/v1/user_prefs?on_conflict=user_id',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify({user_id:currentUser.id, nav:value, updated_at:new Date().toISOString()})})
+    .then(r=>{ if(r&&!r.ok&&(r.status===404||r.status===400||r.status===401||r.status===403)) navPrefsCloudOk=false; })
+    .catch(()=>{});
+}
+async function navPrefsCloudLoad(){
+  if(isGuest||!currentUser?.id) return;
+  try{
+    const r=await _sbRaw('/rest/v1/user_prefs?select=nav&user_id=eq.'+encodeURIComponent(currentUser.id));
+    if(!r||!r.ok){ navPrefsCloudOk=false; return; }
+    navPrefsCloudOk=true;
+    const rows=await r.json(), nav=Array.isArray(rows)&&rows[0]?rows[0].nav:null;
+    if(nav&&typeof nav==='object'&&Array.isArray(nav.favorites)){
+      try{localStorage.setItem(navPreferenceKey(),JSON.stringify({favorites:nav.favorites,panel:nav.panel||null,version:NAV_PREFERENCE_VERSION}));}catch(e){}
+      if(nav.panel) setPanelPinned(nav.panel==='expanded',false);
+      renderFavoriteNav();
+    }else{
+      // 雲端還沒有 → 把這台電腦現有的設定傳上去,原本設好的不會被預設值蓋掉
+      let local=null; try{local=JSON.parse(localStorage.getItem(navPreferenceKey())||'null');}catch(e){}
+      if(local&&Array.isArray(local.favorites)) navPrefsCloudSave(local);
+    }
+  }catch(e){ console.warn('常用功能雲端設定讀取失敗,改用本機',e); }
 }
 // 從「常用功能」進入的頁面,側邊欄要留在常用功能(不要跳去該功能原本的分類)。
 // navTo 會取用這個旗標一次,之後從一般選單進入就恢復正常行為。
@@ -37454,6 +37486,8 @@ function prodRenderDetailHeader(){
   const t=document.getElementById('pdTitle'); if(t) t.innerHTML='<span class="pd-proj">'+esc(proj||'—')+'</span>-'+esc(zone||'—');
   const b=document.getElementById('pdBadges'); if(b) b.innerHTML='<span class="chip '+ov.cls+'">'+esc(ov.label)+'</span>'+
     '<span class="pd-frac">'+m.us.length+' 個 CP編號 · '+ready+'/'+m.us.length+' 完成</span>';
+  // 詳情頁的 SP 列一有修改(狀態/新增/刪除/復原)都會呼叫這裡 → 上線準備的燈號跟著即時更新
+  if(typeof rdyRenderZone==='function') rdyRenderZone();
 }
 // ── 詳情頁「領取狀態」就地編輯 ──
 // 改的是同一份陣列(prodReserved/prodProduct/prodManual),再交給 spxMarkDirty 走
@@ -37526,8 +37560,7 @@ function prodRenderDetail(){
   const {proj,zone}=prodDetailCtx;
   cprRenderZoneDetail();
   ['reserved','product','manual'].forEach(k=>spxKeyRows(k));   // 就地編輯要靠 _key 對回資料列
-  prodRenderDetailHeader();
-  if(typeof rdyRenderZone==='function') rdyRenderZone();   // 上線準備(模組在檔案最末)
+  prodRenderDetailHeader();   // 內含上線準備段落 rdyRenderZone(模組在檔案最末)
   const m=prodZoneMatched(proj,zone);
   // 保留料(領取狀態可就地編輯)
   const rc=document.getElementById('pdResCount'); if(rc) rc.textContent=m.reserved.length+' 筆';
@@ -44731,6 +44764,7 @@ function rdyLight(st,d){
 function rdyRenderZone(){
   const box=document.getElementById('rdyBody'); if(!box) return;
   const {proj,zone}=prodDetailCtx; if(!proj||!zone){ box.innerHTML=''; return; }
+  if(typeof prodMemoReset==='function') prodMemoReset();   // 剛改過 SP/領料,不能用同一輪重繪的舊快取
   const ev=rdyEval(proj,zone), z=ev.z, d=ev.d;
   const canEdit=(typeof pagePerm!=='function'||pagePerm('prod')==='edit') && !!z;
   const dis=canEdit?'':' disabled';
