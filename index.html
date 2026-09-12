@@ -252,6 +252,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .pr-sum-row input{width:110px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:13px;padding:5px 7px;text-align:right;outline:none}
 .pr-sum-row input:focus{border-color:var(--accent)}
 .pr-saved{font-family:var(--mono);font-size:12px;color:var(--success)}
+.pr-cadd{padding:6px 2px 2px;text-align:center}
+.pr-cadd .btn{font-size:11px;padding:4px 10px;min-height:26px}
+.pr-sideon{display:inline-block;font-size:11px;color:var(--accent2);border:1px dashed var(--border-hi);border-radius:6px;padding:2px 8px;cursor:pointer}
+.pr-sideon:hover{background:var(--bg3);color:var(--accent)}
 .pr-tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-top:8px}
 .pr-zones{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px;font-family:var(--mono);font-size:12px;color:var(--text3)}
 .pr-zchip{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:3px 9px;color:var(--text2)}
@@ -4333,10 +4337,19 @@ window.normalizeFullWidth=function(value){
       <div class="page-title">計價</div>
       <div class="proj-section">
         <div class="section-label">① 選擇工程（工程區依代號尾字自動分類：G 大樑 · B 小樑 · C 柱 · 其餘雜項；含「水電」者歸大小樑水電）</div>
+        <div class="ov-neg-seg" style="margin-bottom:8px">
+          <button class="ov-neg-btn active" id="pr-flt-open" onclick="pricingSetFilter('open')">未議價</button>
+          <button class="ov-neg-btn" id="pr-flt-done" onclick="pricingSetFilter('done')">已議價（唯讀）</button>
+          <button class="ov-neg-btn" id="pr-flt-all" onclick="pricingSetFilter('all')">全部</button>
+        </div>
         <div class="proj-row">
           <select class="filter-select" id="pricing-proj" onchange="pricingLoadProject()" style="width:100%;padding:9px 12px;font-size:14px">
             <option value="">— 選擇工程 —</option>
           </select>
+        </div>
+        <div id="pricing-ro-bar" style="display:none;margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px">
+          <span id="pricing-ro-msg"></span>
+          <button class="btn" style="margin-left:10px" onclick="pricingUnlock()">🔓 解鎖重新議價</button>
         </div>
       </div>
       <div class="pr-tabs" id="pricing-tabs" style="display:none">
@@ -26926,7 +26939,9 @@ async function openPricingReview() {
 }
 function collectPricingReview() {
   if(!SP_PRICING_CONTEXT) return [];
-  return SP_PRICING_CONTEXT.matched.filter(z=>z.db).map((z,zi)=>{
+  // data-zone-index 用的是 matched「未過濾」的索引,這裡必須沿用原始索引,
+  // 否則只要有工程區對不到資料庫,後面每一區都會抓到別區的勾選與數量。
+  return SP_PRICING_CONTEXT.matched.map((z,i)=>({z,i})).filter(o=>o.z.db).map(({z,i:zi})=>{
     const confirmed={},selections={},parsed=z.values;
     document.querySelectorAll('#spPricingReview tr[data-zone-index="'+zi+'"]').forEach(tr=>{
       const key=tr.getAttribute('data-metric');
@@ -28660,6 +28675,12 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   var CAT='beam';
   var SHEETS={};    // groupKey -> {header, util, summary, items}
   var IMPORTED_QTY={}; // zone_id -> {item_name: confirmed qty}
+  // 已議價工程原本完全不列出,議完就再也開不回來。改成可切換檢視:
+  // PR_FILTER 決定下拉列哪些工程,PR_VIEW_ONLY 開啟時整張計價表唯讀(不寫雲端、不寫 localStorage)。
+  var PR_FILTER='open';     // open=未議價 / done=已議價 / all=全部
+  var PR_VIEW_ONLY=false;   // 目前這張表是否唯讀
+  var PR_UNLOCKED=false;    // 使用者按過「解鎖重新議價」(換工程或換篩選就失效)
+  var PR_PRICED={}, PR_UNPRICED={};   // project_id -> 是否有已/未議價的工程區
   // ── 雲端儲存(pricing_sheets)。localStorage 仍然照寫,當作離線備援。 ──
   var REMOTE={};              // sheet_key -> data(本次載入時從 DB 抓下來的)
   var REMOTE_TABLE_OK=true;   // 尚未執行 migration 時關掉,免得每次輸入都打一次注定失敗的請求
@@ -28684,8 +28705,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     });
     return total;
   }
-  function ensureImportedRows(g,items){
-    if(!g||!g.multi) return items;
+  function ensureImportedRows(g,items,force){
+    if(!g||(!g.multi&&!force)) return items;
     var known={};
     items.forEach(function(it){ if(!it.cat&&it.name) known[it.name]=true; });
     var names={};
@@ -28795,7 +28816,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     GROUPS={beam:[],misc:[],col:[]};
     var byKey={};
     ZONES.forEach(function(z){
-      if(z.neg) return;                              // 只收未議價
+      // 一般模式只收未議價;唯讀檢視只收已議價;解鎖重新議價時兩種都收
+      if(PR_VIEW_ONLY ? !z.neg : (z.neg && !PR_UNLOCKED)) return;
       var cat=catOfLast(z.last); if(!cat) return;    // 'U' 水電不列
       var key=cat==='misc'
         ? 'misc|zone|'+z.id                          // 雜項不可預先綁組：每區各一顆按鈕
@@ -29071,6 +29093,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   // ── 雲端讀寫 ────────────────────────────────────────────────
   function canSync(){
     if(!PROJ||!REMOTE_TABLE_OK) return false;
+    if(PR_VIEW_ONLY) return false;                                        // 已議價唯讀檢視
     if(window._roActive) return false;                                    // 唯讀頁面
     if(typeof isGuest!=='undefined' && isGuest) return false;             // 訪客沒有寫入權
     return true;
@@ -29153,6 +29176,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   // 這裡改成寫入後立刻讀回核對,失敗就把原因記下來讓上層明講。
   function persist(){
     var k=PICK[CAT];
+    if(PR_VIEW_ONLY) return false;                                        // 已議價唯讀檢視:連本機都不覆蓋
     if(!(PROJ&&k&&SHEETS[k])) return false;
     var storeKey=keyOf(k), json;
     try{ json=JSON.stringify(SHEETS[k]); }
@@ -29184,6 +29208,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     document.getElementById('pricing-tabs').style.display='none';
     document.getElementById('pricing-sheet').innerHTML='<div class="empty-state">請先選擇工程</div>';
     PROJ=null; ZONES=[]; SHEETS={}; IMPORTED_QTY={}; GROUPS={beam:[],misc:[],col:[]}; PICK={beam:null,misc:null,col:null};
+    PR_VIEW_ONLY=false; PR_UNLOCKED=false; pricingRoBar();
     MISC_PICK=[]; MISC_GROUP=null; MISC_GROUPS={};
     BEAM_PICK=[]; COL_PICK=[]; BEAM_GROUP=null; COL_GROUP=null; BEAM_GROUPS={}; COL_GROUPS={};
     sel.innerHTML='<option value="">載入工程中…</option>';
@@ -29193,23 +29218,51 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       var pr=await sbFetchAll('/rest/v1/projects?select=id,proj_num,proj_name&order=proj_num');
       plist=Array.isArray(pr.data)?pr.data:[];
     }
-    // 只列「未議價」工程：任一工程區的單價/水電單價尚未定 → 該工程視為未議價
+    // 任一工程區的單價尚未定 → 該工程「有未議價」;有任一區已議價 → 該工程「有已議價紀錄」
     var zr=await sbFetchAll('/rest/v1/zones?select=project_id,unit_price,util_price,util_weight_kg,util_proc_code,price_note');
-    var zs=Array.isArray(zr.data)?zr.data:[], unpriced={};
-    zs.forEach(function(z){ if(!zNegotiated(z)) unpriced[z.project_id]=true; });
-    var list=plist.filter(function(p){ return unpriced[p.id]; });
-    if(!list.length){ sel.innerHTML='<option value="">— 沒有未議價的工程 —</option>'; return; }
+    var zs=Array.isArray(zr.data)?zr.data:[], unpriced={}, priced={};
+    zs.forEach(function(z){ if(zNegotiated(z)) priced[z.project_id]=true; else unpriced[z.project_id]=true; });
+    PR_PRICED=priced; PR_UNPRICED=unpriced;
+    var list=plist.filter(function(p){
+      return PR_FILTER==='done' ? !!priced[p.id]
+           : PR_FILTER==='all'  ? (!!priced[p.id]||!!unpriced[p.id])
+           :                      !!unpriced[p.id];
+    });
+    var word=PR_FILTER==='done'?'已議價':PR_FILTER==='all'?'':'未議價';
+    if(!list.length){ sel.innerHTML='<option value="">— 沒有'+word+'的工程 —</option>'; return; }
     list.sort(function(a,b){ return String(a.proj_num||'').localeCompare(String(b.proj_num||''),undefined,{numeric:true,sensitivity:'base'}); });
-    sel.innerHTML='<option value="">— 選擇工程（未議價） —</option>'+
-      list.map(function(p){ return '<option value="'+p.id+'">'+esc(p.proj_num)+(p.proj_name?' — '+esc(p.proj_name):'')+'</option>'; }).join('');
+    sel.innerHTML='<option value="">— 選擇工程'+(word?'（'+word+'）':'')+' —</option>'+
+      list.map(function(p){
+        var tag=PR_FILTER==='all'?(priced[p.id]?(unpriced[p.id]?'［部分已議價］':'［已議價］'):'［未議價］')+' ':'';
+        return '<option value="'+p.id+'">'+tag+esc(p.proj_num)+(p.proj_name?' — '+esc(p.proj_name):'')+'</option>';
+      }).join('');
+  };
+  // 切換「未議價 / 已議價 / 全部」。已議價一律先進唯讀,避免手滑改到談定的價。
+  window.pricingSetFilter=async function(mode){
+    if(PR_FILTER===mode) return;
+    flushSync();
+    PR_FILTER=mode; PR_UNLOCKED=false;
+    ['open','done','all'].forEach(function(m){
+      var b=document.getElementById('pr-flt-'+m); if(b) b.classList.toggle('active', m===mode);
+    });
+    await window.pricingInit();
+  };
+  // 解鎖:回到可編輯狀態(下拉維持在同一個工程,重新載入一次即可)
+  window.pricingUnlock=async function(){
+    if(!PR_VIEW_ONLY) return;
+    if(!await uiConfirm('這個工程已經議定價格。\n解鎖後修改會直接覆蓋雲端的計價表,確定要重新議價嗎?')) return;
+    PR_UNLOCKED=true;
+    await window.pricingLoadProject();
   };
   window.pricingLoadProject=async function(){
     var pid=document.getElementById('pricing-proj').value;
     var sheetEl=document.getElementById('pricing-sheet');
     var tabsEl=document.getElementById('pricing-tabs');
-    if(!pid){ PROJ=null; tabsEl.style.display='none'; sheetEl.innerHTML='<div class="empty-state">請先選擇工程</div>'; return; }
+    if(!pid){ PROJ=null; PR_VIEW_ONLY=false; PR_UNLOCKED=false; pricingRoBar(); tabsEl.style.display='none'; sheetEl.innerHTML='<div class="empty-state">請先選擇工程</div>'; return; }
     var opt=document.getElementById('pricing-proj').selectedOptions[0];
     PROJ={id:pid, txt:opt?opt.text:''};
+    // 已議價的工程預設唯讀:只看不改,要改得先按「解鎖重新議價」。
+    PR_VIEW_ONLY = !PR_UNLOCKED && (PR_FILTER==='done' || (!!PR_PRICED[pid] && !PR_UNPRICED[pid]));
     tabsEl.style.display='none';
     sheetEl.innerHTML='<div class="empty-state">載入工程區與構件資料中…</div>';
     var zr=await sbFetch('/rest/v1/zones?select=id,zone_code,unit_price,util_proc_code,util_weight_kg,util_price,price_note&project_id=eq.'+pid+'&order=zone_code');
@@ -29304,7 +29357,18 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   };
   window.pricingApplyImported=async function(){
     var g=curGroup(), st=S(); if(!g||!st) return;
-    ensureImportedRows(g,st.items);
+    // IMPORTED_QTY 只在選工程時抓過一次;S/P 剖析若之後又重新核對過,這裡要重抓才拿得到新數量。
+    if(PROJ&&PROJ.id){
+      var rq=await sbFetchAll('/rest/v1/pricing_zone_items?select=zone_id,item_name,qty&project_id=eq.'+PROJ.id);
+      if(rq.ok&&Array.isArray(rq.data)){
+        IMPORTED_QTY={};
+        rq.data.forEach(function(r){
+          var byName=IMPORTED_QTY[String(r.zone_id)]||(IMPORTED_QTY[String(r.zone_id)]={});
+          byName[r.item_name]=num(r.qty);
+        });
+      }
+    }
+    ensureImportedRows(g,st.items,true);
     var found=0;
     st.items.forEach(function(it){
       if(it.cat||!it.name) return;
@@ -29334,7 +29398,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   function fld(id,label,val,ro){ return '<div class="pr-field"><label>'+label+'</label><input id="'+id+'" '+(ro?'readonly':'oninput="pricingRecalc()"')+' value="'+escAttr(val==null?'':val)+'"></div>'; }
   function groupsBar(cat){
     var gs=GROUPS[cat]||[];
-    if(!gs.length) return '<div class="pr-zones"><span class="pr-zempty">（此工程沒有未議價的「'+esc(CATS[cat].label)+'」工程區）</span></div>';
+    if(!gs.length) return '<div class="pr-zones"><span class="pr-zempty">（此工程沒有'+(PR_VIEW_ONLY?'已':PR_UNLOCKED?'':'未')+'議價的「'+esc(CATS[cat].label)+'」工程區）</span></div>';
     var btns=gs.map(function(g){
       var picks=cat==='misc'?MISC_PICK:(cat==='beam'?BEAM_PICK:COL_PICK);
       var active=picks.indexOf(g.key)>=0;
@@ -29357,7 +29421,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   var tagCls=function(tag){ return tag==='大樑'?'pr-tag-lg':tag==='小樑'?'pr-tag-sb':'pr-tag-x'; };
   // 單側卡片：標題 + 公斤/支數/計算噸數 + 項目清單 + 彙總（工時→管銷→每噸→場地調整後單價）
   function cardHTML(g, side, st){
-    var k=side.k, h=st.header;
+    var k=side.k, h=st.header, multiSide=(g.sides||[]).length>1;
     var title='<div class="pr-cardh"><span class="pr-tag '+tagCls(side.tag)+'">'+esc(side.tag)+'</span><span class="pr-code">'+esc(side.code||'')+'</span></div>';
     var hdr='<div class="pr-chead">'+
       '<div class="pr-cf"><label>公斤數 (KG)</label>'+inp('pr-h-kg-'+k, h[side.hkg])+'</div>'+
@@ -29373,17 +29437,24 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         ? '<input class="pr-iname" value="'+escAttr(it.name||'')+'" oninput="pricingCell('+i+',\'name\',this.value)" placeholder="自訂項目名稱">'
         : esc(it.name||'');
       var delc = it.custom ? ' <span class="pr-del" onclick="pricingDelRow('+i+')" title="刪除">✕</span>' : '';
+      // 自訂項目可以只屬於其中一側(例如只有 9BG 要的加工)。另一側維持「—」,按「＋ 本側也加」就補回來。
+      var onBtn  = (it.custom&&multiSide) ? '<span class="pr-sideon" onclick="pricingSideOn('+i+',\''+k+'\')" title="本側也加這個項目">＋ 本側也加</span>' : '';
+      var offBtn = (it.custom&&multiSide) ? ' <span class="pr-del" onclick="pricingSideOff('+i+',\''+k+'\')" title="本側不用這個項目">⊘</span>' : '';
       if(na){
-        rows+='<tr><td class="pr-name">'+nameCell+delc+'</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-amtc">—</td></tr>';
+        rows+= onBtn
+          ? '<tr><td class="pr-name">'+nameCell+delc+'</td><td class="pr-nap" colspan="4">'+onBtn+'</td></tr>'
+          : '<tr><td class="pr-name">'+nameCell+delc+'</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-amtc">—</td></tr>';
       } else {
-        rows+='<tr><td class="pr-name">'+nameCell+delc+'</td>'+
+        rows+='<tr><td class="pr-name">'+nameCell+delc+offBtn+'</td>'+
           '<td><input class="pr-price" value="'+escAttr(pv)+'" oninput="pricingCell('+i+',\''+side.priceF+'\',this.value)"></td>'+
           '<td class="pr-mhc"><span id="pr-mh-'+k+'-'+i+'">0</span></td>'+
           '<td><input class="pr-qty" id="pr-qty-'+k+'-'+i+'" value="'+escAttr(num(it[side.qtyF])?it[side.qtyF]:'')+'" oninput="pricingCell('+i+',\''+side.qtyF+'\',this.value)"></td>'+
           '<td class="pr-amtc"><span id="pr-amt-'+k+'-'+i+'">$0</span></td></tr>';
       }
     }
-    var tbl='<div class="pr-citems"><table class="pr-ctbl"><thead><tr><th class="pr-name">項目</th><th>單價</th><th>工時mh</th><th>數量</th><th>金額</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    var addBtn = multiSide
+      ? '<div class="pr-cadd"><button class="btn" onclick="pricingAddRow(\''+k+'\')">＋ 只加「'+esc(side.code||side.tag)+'」的項目</button></div>' : '';
+    var tbl='<div class="pr-citems"><table class="pr-ctbl"><thead><tr><th class="pr-name">項目</th><th>單價</th><th>工時mh</th><th>數量</th><th>金額</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+addBtn;
     var summ='<div class="pr-csum">'+
       '<div class="pr-csrow"><span>工時金額合計</span><b id="pr-s-total-'+k+'">$0</b></div>'+
       '<div class="pr-csrow"><span>管銷 × <span id="pr-s-adminx-'+k+'">1.1</span></span><b id="pr-s-after-'+k+'">$0</b></div>'+
@@ -29410,7 +29481,9 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         '<td><input class="pr-qty" value="'+escAttr(num(it[side.qtyF])?it[side.qtyF]:'')+'" oninput="pricingCell('+i+',\''+side.qtyF+'\',this.value)"></td>'+
         '<td class="pr-amtc"><span id="pr-amt-'+k+'-'+i+'">$0</span></td></tr>';
     });
-    var tbl='<div class="pr-citems"><table class="pr-ctbl"><thead><tr><th class="pr-name">加工項目</th><th>單價</th><th>工時mh</th><th>數量</th><th>金額</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    var addBtn=((g.sides||[]).length>1)
+      ? '<div class="pr-cadd"><button class="btn" onclick="pricingAddRow(' + Q + "'+k+'" + Q + ')">＋ 只加「'+esc(side.code||'本區')+'」的項目</button></div>' : '';
+    var tbl='<div class="pr-citems"><table class="pr-ctbl"><thead><tr><th class="pr-name">加工項目</th><th>單價</th><th>工時mh</th><th>數量</th><th>金額</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+addBtn;
     var summ='<div class="pr-csum">'+
       '<div class="pr-csrow"><span>A 基本加工費</span><b id="pr-col-a-'+k+'">$0</b></div>'+
       '<div class="pr-csrow"><span>B 實作加工費</span><b id="pr-col-b-'+k+'">$0</b></div>'+
@@ -29424,7 +29497,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   }
   function colMultiFooter(st){
     return '<div class="pr-card"><div class="pr-toolbar">'+
-      '<button class="btn" onclick="pricingAddRow()">＋ 自訂加工項目</button>'+
+      '<button class="btn" onclick="pricingAddRow()">＋ 自訂加工項目（每側都加）</button>'+
       '<button class="btn" onclick="pricingReset()">↺ 恢復表定項目</button>'+
       '<button class="btn" onclick="pricingReautofill()">↻ 重新帶入公斤/支數</button>'+
       '<button class="btn" onclick="pricingApplyImported()">↧ 帶入已核對數量</button>'+
@@ -29505,7 +29578,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   function footerHTML(g, st){
     var isBeam=g.cat==='beam', multi=g.sides.length>=2;
     var toolbar='<div class="pr-toolbar">'+
-      '<button class="btn" onclick="pricingAddRow()">＋ 新增項目</button>'+
+      '<button class="btn" onclick="pricingAddRow()">＋ 新增項目'+(multi?'（每側都加）':'')+'</button>'+
       '<button class="btn" onclick="pricingReset()">↺ 重設為表定</button>'+
       '<button class="btn" onclick="pricingReautofill()">↻ 重新帶入公斤/支數</button>'+
       '<button class="btn" onclick="pricingApplyImported()">↧ 帶入已核對數量</button>'+
@@ -29545,14 +29618,45 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         'H 每噸單價 =（C 工時金額 ＋ D 管理費 ＋ E 查驗因素 ＋ 基本柱金額）÷ 本區噸數（依「柱公式.xlsx / CBC」）。'+
       '</div></div>';
   }
+  // 唯讀檢視:輸入欄設 readonly/disabled,會改資料的按鈕隱藏;選工程區的按鈕保持可按。
+  function pricingRoBar(){
+    var bar=document.getElementById('pricing-ro-bar'), msg=document.getElementById('pricing-ro-msg');
+    if(!bar) return;
+    var btn=bar.querySelector('button');
+    bar.style.display = (PR_VIEW_ONLY||PR_UNLOCKED) ? '' : 'none';
+    if(!msg) return;
+    if(PR_VIEW_ONLY){
+      msg.textContent='🔒 唯讀檢視:這個工程已議定價格,顯示的是當初存下來的計價表,任何修改都不會存檔。';
+      if(btn){ btn.style.display=''; btn.textContent='🔓 解鎖重新議價'; }
+    } else if(PR_UNLOCKED){
+      msg.textContent='🔓 已解鎖:這是已議價工程,現在的修改會覆蓋雲端的計價表。';
+      if(btn) btn.style.display='none';
+    }
+  }
+  function pricingLockInputs(){
+    if(!PR_VIEW_ONLY) return;
+    var host=document.getElementById('pricing-sheet'); if(!host) return;
+    host.querySelectorAll('input,textarea').forEach(function(el){ el.readOnly=true; el.style.background='var(--bg3)'; });
+    host.querySelectorAll('select').forEach(function(el){ el.disabled=true; });
+    host.querySelectorAll('button').forEach(function(el){
+      var fn=el.getAttribute('onclick')||'';
+      if(/pricingPickGroup|pricingTab|pricingReport/.test(fn)) return;   // 切換與列印保留
+      el.style.display='none';
+    });
+    // 刪除列與單側開關是 <span>,不在上面那輪裡,要另外拿掉
+    host.querySelectorAll('.pr-del,.pr-sideon').forEach(function(el){ el.style.display='none'; });
+  }
   function pricingRender(){
     if(!PROJ) return;
+    pricingRoBar();   // 唯讀/解鎖提示列跟著目前狀態走
     var head='<div style="font-family:var(--mono);font-size:13px;color:var(--text2);margin-bottom:12px">計價對象：<strong style="color:var(--accent)">'+esc(PROJ.txt)+'</strong> ／ 類別 <strong style="color:var(--accent2)">'+esc(CATS[CAT].label)+'</strong></div>';
     var html=head+groupsBar(CAT);
     var g=curGroup(), st=S();
     if(!g||!st){
       if((GROUPS[CAT]||[]).length) html+='<div class="empty-state">請按上方按鈕選擇一個或多個工程區</div>';
+      else if(PR_VIEW_ONLY) html+='<div class="empty-state">這個工程沒有已議價的「'+esc(CATS[CAT].label)+'」工程區</div>';
       document.getElementById('pricing-sheet').innerHTML=html;
+      pricingLockInputs();
       return;
     }
     if(g.cat==='col'&&g.multi){
@@ -29565,6 +29669,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     }
     document.getElementById('pricing-sheet').innerHTML=html;
     pricingRecalc();
+    pricingLockInputs();
   }
 
   // ── 即時更新單格 ──
@@ -29573,17 +29678,45 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     st.items[idx][field]=val;
     pricingRecalc();
   };
-  window.pricingAddRow=function(){
+  // onlyK 有給時,只有那一側可填,其餘側留空(=不適用,畫面顯示「—」)。不給就兩側都加,維持原行為。
+  window.pricingAddRow=function(onlyK){
     var st=S(), g=curGroup(); if(!st||!g) return;
     var row={name:'',custom:true};
-    if(g.multi){
-      g.sides.forEach(function(side){ row[side.priceF]=0; row[side.qtyF]=0; });
+    var sides=g.sides||[];
+    if(sides.length){
+      sides.forEach(function(side){
+        var on=!onlyK||side.k===onlyK;
+        row[side.priceF]=on?0:''; row[side.qtyF]=on?0:'';
+      });
     } else if(curDual()){
-      row.bg=0; row.sb=0; row.qbg=0; row.qsb=0;
+      row.bg=(!onlyK||onlyK==='bg')?0:''; row.qbg=(!onlyK||onlyK==='bg')?0:'';
+      row.sb=(!onlyK||onlyK==='sb')?0:''; row.qsb=(!onlyK||onlyK==='sb')?0:'';
     } else {
       row.bg=0; row.qbg=0;
     }
     st.items.push(row);
+    pricingRender();
+  };
+  // 自訂項目的單側開關:開=該側填 0 變成可輸入;關=該側清空變「—」,不計入金額與報價單。
+  function prSideOf(k){
+    var g=curGroup(); if(!g) return null;
+    var sides=g.sides||[];
+    for(var i=0;i<sides.length;i++) if(sides[i].k===k) return sides[i];
+    return {k:k, priceF:k, qtyF:(k==='sb'?'qsb':'qbg')};
+  }
+  window.pricingSideOn=function(idx,k){
+    var st=S(), side=prSideOf(k); if(!st||!side||!st.items[idx]) return;
+    st.items[idx][side.priceF]=0; st.items[idx][side.qtyF]=0;
+    pricingRender();
+  };
+  window.pricingSideOff=function(idx,k){
+    var st=S(), g=curGroup(), side=prSideOf(k); if(!st||!g||!side||!st.items[idx]) return;
+    var it=st.items[idx], sides=g.sides||[];
+    // 最後一側不能再關,否則這列哪一邊都不適用,等於空白列
+    var live=0;
+    sides.forEach(function(sd){ var v=it[sd.priceF]; if(!(v==null||v==='')) live++; });
+    if(sides.length && live<=1){ alert('這個項目只剩這一側在用,不能再關掉。不需要的話請按名稱旁的「✕」整列刪除。'); return; }
+    it[side.priceF]=''; it[side.qtyF]='';
     pricingRender();
   };
   window.pricingDelRow=function(idx){
@@ -29716,6 +29849,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
 
   window.pricingSave=async function(){
     if(!S()) return;
+    if(PR_VIEW_ONLY){ alert('目前是已議價的唯讀檢視,不會存檔。要修改請先按上方「🔓 解鎖重新議價」。'); return; }
     var k=PICK[CAT];
     pricingRecalc();               // 內含 persist()
     var localOk=persist();         // 本機備援,並取得明確結果
@@ -30008,12 +30142,15 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       var it=st.items[i];
       if(it.cat){ aoa.push(['【'+it.cat+'】']); continue; }
       seq++;
-      var bgP=num(it.bg),bgQ=num(it.qbg),bgAmt=bgP*bgQ; bgTotal+=bgAmt;
+      var bgna=(it.bg===null||it.bg===undefined||it.bg==='');
+      var bgP=bgna?0:num(it.bg),bgQ=bgna?0:num(it.qbg),bgAmt=bgna?0:bgP*bgQ;
+      if(!bgna) bgTotal+=bgAmt;
       if(dual){
         var sbna=(it.sb===null||it.sb===undefined||it.sb==='');
         var sbP=sbna?'':num(it.sb), sbQ=sbna?'':num(it.qsb), sbAmt=sbna?'':num(it.sb)*num(it.qsb);
         if(!sbna) sbTotal+=num(it.sb)*num(it.qsb);
-        aoa.push([seq,it.name||'',bgP,bgP/345,bgQ,bgAmt,
+        aoa.push([seq,it.name||'',
+          bgna?'—':bgP, bgna?'—':bgP/345, bgna?'—':bgQ, bgna?'—':bgAmt,
           sbna?'—':sbP, sbna?'—':sbP/345, sbna?'—':sbQ, sbna?'—':sbAmt]);
       } else {
         var mhOut = isCol
@@ -30178,14 +30315,17 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var dual=g.dual, isBeam=g.cat==='beam', items2=[], bgTotal=0, sbTotal=0, curSec2=null;
     for(var k=0;k<st.items.length;k++){
       var it2=st.items[k]; if(it2.cat){ curSec2=it2.cat; continue; }
-      var bgP=num(it2.bg), bgQ=num(it2.qbg), bgAmt=bgP*bgQ; bgTotal+=bgAmt;
-      var row={name:it2.name||'', sec:curSec2, bgP:bgP, bgQ:bgQ, bgAmt:bgAmt, sbna:false};
+      // 單價留空＝這一側不適用。自訂項目可以只掛在其中一側,所以兩側都要判。
+      var bgna=(it2.bg===null||it2.bg===undefined||it2.bg==='');
+      var bgP=bgna?0:num(it2.bg), bgQ=bgna?0:num(it2.qbg), bgAmt=bgna?0:bgP*bgQ;
+      if(!bgna) bgTotal+=bgAmt;
+      var row={name:it2.name||'', sec:curSec2, bgna:bgna, bgP:bgP, bgQ:bgQ, bgAmt:bgAmt, sbna:false};
       if(dual){
         var sbna=(it2.sb===null||it2.sb===undefined||it2.sb==='');
         if(sbna){ row.sbna=true; }
         else { var sbP=num(it2.sb), sbQ=num(it2.qsb), sbAmt=sbP*sbQ; sbTotal+=sbAmt; row.sbP=sbP; row.sbQ=sbQ; row.sbAmt=sbAmt; }
       }
-      if(bgQ>0 || (dual && !row.sbna && num(row.sbQ)>0)) items2.push(row);
+      if((!bgna&&bgQ>0) || (dual && !row.sbna && num(row.sbQ)>0)) items2.push(row);
     }
     var admin=num(s.admin)||1.1, total=bgTotal+sbTotal, after=total*admin, cdong=num(s.cdong);
     var cheRate=num(s.che), cheFactor=(cheRate>0)?cheRate:1;
@@ -30317,8 +30457,10 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
           var sb = it.sbna
             ? '<td class="r na gl">—</td><td class="r na">—</td><td class="r na">—</td><td class="r na">—</td>'
             : '<td class="r gl">'+money(it.sbP)+'</td><td class="r">'+n3(it.sbP/345)+'</td><td class="r">'+qfmt(it.sbQ)+'</td><td class="r">'+money(it.sbAmt)+'</td>';
-          body+='<tr><td class="c">'+seq+'</td><td class="nm gl">'+esc(it.name)+'</td>'+
-            '<td class="r gl">'+money(it.bgP)+'</td><td class="r">'+n3(it.bgP/345)+'</td><td class="r">'+qfmt(it.bgQ)+'</td><td class="r">'+money(it.bgAmt)+'</td>'+sb+'</tr>';
+          var bg = it.bgna
+            ? '<td class="r na gl">—</td><td class="r na">—</td><td class="r na">—</td><td class="r na">—</td>'
+            : '<td class="r gl">'+money(it.bgP)+'</td><td class="r">'+n3(it.bgP/345)+'</td><td class="r">'+qfmt(it.bgQ)+'</td><td class="r">'+money(it.bgAmt)+'</td>';
+          body+='<tr><td class="c">'+seq+'</td><td class="nm gl">'+esc(it.name)+'</td>'+bg+sb+'</tr>';
         });
         if(!res.items.length) body='<tr><td colspan="10" class="empty">此工程區無加工項目</td></tr>';
         var ub=(res.util&&res.util.bg)||{}, us=(res.util&&res.util.sb)||{};
@@ -42951,7 +43093,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     if(isGuest||!currentSession){maHistoryRows=[];host.innerHTML='<div class="ma-empty">訪客模式不提供雲端儲存；登入後即可查看歷史紀錄。</div>';return;}
     if(!maHistoryRows.length){host.innerHTML='<div class="ma-empty">尚無已儲存的分析紀錄</div>';return;}
     host.innerHTML=maHistoryRows.map(function(r){
-      var title=[r.project_no,r.zone_code,r.mother_no].filter(Boolean).join(' · ')||'未命名分析';
+      var title=[r.project_no,r.zone_code,r.mother_no].filter(Boolean).filter(function(v,i,a){return a.indexOf(v)===i;}).join(' · ')||'未命名分析';
       return '<div class="ma-history-item" role="button" tabindex="0" title="點一下載入此分析" onclick="maOpenAnalysis('+r.id+')" onkeydown="if(event.target===this&&(event.key===\'Enter\'||event.key===\' \')){event.preventDefault();maOpenAnalysis('+r.id+');}"><div class="ma-history-main"><div class="ma-history-title">'+maEsc(title)+'</div><div class="ma-history-meta">'+maEsc(maHistoryDate(r.created_at))+(r.created_by_name?' · '+maEsc(r.created_by_name):'')+'</div></div><div class="ma-history-actions"><button class="btn btn-add-row" style="color:var(--danger)" title="刪除此紀錄" onclick="event.stopPropagation();maDeleteAnalysis('+r.id+')">刪除</button></div></div>';
     }).join('');
   }
