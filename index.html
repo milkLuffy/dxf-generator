@@ -806,6 +806,29 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .mat-add-grid .lf input{width:100%}
 .mat-sum{font-family:var(--mono);font-size:13px;color:var(--text2);margin-bottom:6px}
 .mat-sum b{color:var(--accent2)}
+/* 托樑 A201 上線登記視窗(一支一列打勾)與批次登記列 */
+#zone-beam input.ba-open{cursor:pointer;color:var(--accent3)}
+#zone-beam input.ba-open:hover{text-decoration:underline}
+.mat-add-grid.ba-quick{grid-template-columns:1.2fr .8fr auto}
+.ba-list{max-height:min(46vh,420px);overflow:auto;border:1px solid var(--border);border-radius:var(--rad);margin:4px 0 10px}
+.ba-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 10px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:13px;color:var(--text3)}
+.ba-row:last-child{border-bottom:0}
+.ba-row label{display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0}
+.ba-row input[type=checkbox]{width:16px;height:16px;flex:none}
+.ba-row input[type=date]{background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 6px;font-family:var(--mono);font-size:12px}
+.ba-row input[type=date]:disabled{opacity:.35}
+.ba-row.on{color:var(--text)}
+.ba-row.over{background:rgba(255,69,58,.08)}
+.ba-row.over label{color:var(--red)}
+.ba-text{margin:0 0 6px;font-size:12px;color:var(--text3)}
+.ba-text summary{cursor:pointer;user-select:none}
+.ba-text-row{display:flex;gap:8px;margin-top:8px}
+.ba-text-row input{flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 9px;font-family:var(--mono);font-size:12px;outline:none}
+.ba-text-row input:focus{border-color:var(--accent2)}
+.beam-batch-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-4px 0 10px;padding:8px 12px;background:rgba(10,132,255,.08);border:1px solid rgba(10,132,255,.28);border-radius:var(--rad)}
+.beam-batch-bar[hidden]{display:none}   /* 上面的 display:flex 會蓋掉 hidden,沒開批次登記時整條藍框要藏起來 */
+.beam-batch-tip{font-size:11px;color:var(--text3)}
+@media(max-width:768px){.mat-add-grid.ba-quick{grid-template-columns:1fr 1fr}.mat-add-grid.ba-quick .btn-modal-ok{grid-column:1/-1}}
 @media(max-width:900px){
   .dash-kpi-row{grid-template-columns:1fr 1fr}
   .dash-zone-row{grid-template-columns:72px 56px 1fr 40px 62px;gap:6px;font-size:12px}
@@ -1192,6 +1215,33 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 #zone-components .layout-table input, #zone-beam .layout-table input{field-sizing:content;width:auto;min-width:4ch;max-width:44ch;text-align:center;box-sizing:border-box}
 /* 加工機 常態留空,4ch 會讓輸入框(藍色焦點框)過小難點,給較大的最小寬度接近一般儲存格 */
 #zone-components .layout-table input[data-col="加工機"], #zone-beam .layout-table input[data-col="加工機"]{min-width:12ch}
+/* 構件總表縮放列(截圖用):只在手機顯示,見下方 @media */
+.zt-zoom-bar{display:none}
+/* 工程區詳情頁工具列(搜尋/篩選/勾選非本公司/更新BOM/輸入進料…):排不下就換行。
+   原本內層不換行會把整頁撐寬 → 變成整個視窗左右捲、表格外框沒在捲,凍結的序號/構件編號就沒作用 */
+#page-zone-detail .bom-result-bar > div{flex-wrap:wrap;justify-content:flex-end;min-width:0}
+#page-zone-detail .bom-result-actions{flex-wrap:wrap}
+/* 手機:表格不再撐滿(不平均分配剩餘寬度)、字放大、內距與篩選鈕縮小;電腦版維持撐滿 */
+@media(max-width:768px){
+  /* 只有手機凍結左欄(序號/構件編號;勾選模式含勾選欄,由 zoneTblStick 加 class 與 left),電腦版不凍結(使用者指定)。
+     底色要不透明,捲動時底下的格子才不會透出來;用 background-color 保留整列 hover 的 background-image 疊色 */
+  #zone-components .layout-table .zt-stk{position:sticky;z-index:2;background-color:var(--bg2)}
+  #zone-components .layout-table th{z-index:3}
+  #zone-components .layout-table th.zt-stk{z-index:5;background-color:var(--bg3)}
+  #zone-components .layout-table tr.total-row td{z-index:3}
+  #zone-components .layout-table .zt-stk-edge{box-shadow:inset -1px 0 0 var(--border-hi)}
+  #zone-components .layout-table td.zt-stk.cell-selected{background:linear-gradient(rgba(255,159,10,.10),rgba(255,159,10,.10)),var(--bg2)!important;box-shadow:inset 0 0 0 1px rgba(255,159,10,.65)!important}
+  .zt-zoom-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 8px;font-size:12px;color:var(--text3)}
+  .zt-zoom-bar button{background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:5px 10px;font-size:13px;min-width:34px}
+  .zt-zoom-bar .zt-zoom-val{min-width:42px;text-align:center;font-family:var(--mono);color:var(--text)}
+  #zone-components .layout-table, #zone-beam .layout-table{width:auto;font-size:14px}
+  #zone-components .layout-table td, #zone-beam .layout-table td{padding:2px 4px}
+  #zone-components .layout-table th, #zone-beam .layout-table th{padding:6px 4px;font-size:12px}
+  #zone-components .layout-table input, #zone-beam .layout-table input{font-size:14px;padding:4px 2px}
+  #zone-components .layout-table input[data-col="加工機"], #zone-beam .layout-table input[data-col="加工機"]{min-width:5ch}
+  #zone-components .cf-th-btn, #zone-beam .cf-th-btn{margin-left:1px;padding:0 1px}
+  #zone-components .layout-table tr.total-row td, #zone-beam .layout-table tr.total-row td{padding:6px 4px}
+}
 .layout-table input::placeholder{color:var(--text3)}
 .layout-table select{cursor:pointer}
 .layout-table select option{background:var(--bg2)}
@@ -2158,6 +2208,30 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
     </div>
     <div class="modal-actions">
       <button class="btn-modal-cancel" onclick="closeModal('material-modal')">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 托樑 A201 上線登記(點托樑零件表的 A201 格開啟) ── -->
+<div class="modal-overlay" id="beam-a201-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title">托樑上線登記 — <span id="ba-title" style="color:var(--accent2)">—</span></div>
+    <div class="mat-sum" id="ba-sum">—</div>
+    <div class="mat-add-grid ba-quick">
+      <div class="lf"><label>上線日期（打勾也用這天）</label><input type="date" id="ba-date"/></div>
+      <div class="lf"><label>本次上線(支)</label><input type="number" id="ba-qty" min="1" placeholder="1"/></div>
+      <button class="btn-modal-ok" style="flex:none;padding:9px 14px" onclick="beamA201QuickAdd()">＋ 登記</button>
+    </div>
+    <div class="login-divider"><span>逐支勾選（打勾＝上線，日期可改）</span></div>
+    <div class="ba-list" id="ba-list"></div>
+    <details class="ba-text">
+      <summary>直接用文字輸入（例：8/18*2、8/19）</summary>
+      <div class="ba-text-row"><input type="text" id="ba-text" placeholder="日期*支數，多批用逗號分開"/><button class="btn-sm btn-export" onclick="beamA201TextApply()">套用</button></div>
+    </details>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="beamA201FillRest()">未上線的全部用這天登記</button>
+      <button class="btn-modal-cancel" style="color:var(--red)" onclick="beamA201ClearAll()">清除全部</button>
+      <button class="btn-modal-cancel" onclick="closeModal('beam-a201-modal')">關閉</button>
     </div>
   </div>
 </div>
@@ -3256,10 +3330,12 @@ window.normalizeFullWidth=function(value){
           <button class="btn-sm btn-export" onclick="beamAddRow()">＋ 新增列</button>
           <button class="btn-sm btn-export" onclick="beamAddCol()">＋ 新增欄位</button>
           <button class="btn-sm btn-export" onclick="clearColFilters('beam')">清除篩選</button>
+          <button class="btn-sm btn-export" id="beam-batch-btn" onclick="beamBatchToggle()" title="勾選多種托樑，一次登記同一天上線">☑ 批次上線登記</button>
           <span id="beam-saved" style="font-family:var(--mono);font-size:12px;color:var(--text3);align-self:center">自動儲存</span>
           <button class="btn-sm btn-export" onclick="beamExportExcel()">⬇ 匯出 Excel</button>
         </div>
       </div>
+      <div class="beam-batch-bar" id="beam-batch-bar" hidden></div>
       <div id="zone-beam"></div>
     </div>
 
@@ -3350,6 +3426,13 @@ window.normalizeFullWidth=function(value){
 .ma-result-help{font-size:11px;color:var(--text3);margin-top:4px}
 .ma-result-topbar .btn-gen{background:var(--bg3);border-color:var(--border-hi);color:var(--text);box-shadow:none}
 .ma-result-topbar .btn-gen:hover{background:var(--bg4);border-color:var(--text3)}
+/* 結果頁頂端也能直接儲存(不用返回匯入頁):狀態文字 + 儲存 + 下載 Excel */
+.ma-result-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end}
+.ma-result-actions .ma-save-status{white-space:nowrap}
+.ma-result-topbar .btn-gen.ma-save-top{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.ma-result-topbar .btn-gen.ma-save-top:hover{filter:brightness(1.08);background:var(--accent2);border-color:var(--accent2)}
+.ma-result-topbar .btn-gen.ma-save-top:disabled{background:var(--bg3);border-color:var(--border);color:var(--text3);filter:none}
+@media(max-width:620px){.ma-result-actions{flex-basis:100%;justify-content:flex-start}}
 #page-multilevel.ma-results-mode>.page-title,#page-multilevel.ma-results-mode>.ma-entry-only{display:none!important}
 #page-multilevel.ma-results-mode .ma-result-topbar{display:flex}
 #page-multilevel.ma-entry-mode .ma-result-topbar,#page-multilevel.ma-entry-mode #ma-summary,#page-multilevel.ma-entry-mode #ma-workspace{display:none!important}
@@ -3486,7 +3569,11 @@ window.normalizeFullWidth=function(value){
           <div class="ma-result-title" id="ma-result-title">尚未載入工程</div>
           <div class="ma-result-help">結果已依構件收合；使用下方頁籤查看零件、帷幕、水電或 Word Prompt。</div>
         </div>
-        <button type="button" class="btn btn-gen" onclick="maDownloadExcel()">⬇ 下載 Excel</button>
+        <div class="ma-result-actions">
+          <span class="ma-save-status" id="ma-save-status-top"></span>
+          <button type="button" class="btn btn-gen ma-save-top" onclick="maSaveAnalysis()" id="ma-save-btn-top" disabled>☁ 儲存分析結果</button>
+          <button type="button" class="btn btn-gen" onclick="maDownloadExcel()">⬇ 下載 Excel</button>
+        </div>
       </div>
 
       <div class="ma-summary" id="ma-summary" style="display:none">
@@ -3618,6 +3705,15 @@ window.normalizeFullWidth=function(value){
     #page-namelabels .nl-type{display:block;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:13px;cursor:pointer;transition:.15s}
     #page-namelabels .nl-type:has(input:checked){border-color:var(--accent2);box-shadow:0 0 0 2px rgba(10,132,255,.13)}
     #page-namelabels .nl-type input{margin-right:7px}.nl-type strong{font-size:14px}.nl-type small{display:block;color:var(--text3);font-size:11px;line-height:1.55;margin:7px 0 0 22px}
+    #page-namelabels .nl-type-pick{display:block;cursor:pointer}
+    #page-namelabels .nl-font{display:flex;align-items:center;gap:6px;margin:10px 0 0 22px;font-size:12px;color:var(--text2)}
+    #page-namelabels .nl-font-box{position:relative;display:inline-flex;align-items:stretch;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+    #page-namelabels .nl-font-box:focus-within{border-color:var(--accent2)}
+    #page-namelabels .nl-font-in{width:52px;background:transparent;border:0;color:var(--text);padding:5px 6px;font-size:13px;font-family:var(--mono);outline:none;text-align:right}
+    #page-namelabels .nl-font-drop{position:relative;width:22px;border-left:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:9px}
+    #page-namelabels .nl-font-drop select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+    #page-namelabels .nl-font-box.is-locked{opacity:.6}
+    #page-namelabels .nl-font-saved{color:var(--green);font-size:11px}
     #page-namelabels .nl-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
     #page-namelabels .nl-list{display:flex;flex-direction:column;gap:8px}.nl-row{display:grid;grid-template-columns:32px minmax(160px,1fr) minmax(180px,1fr) 96px 38px;gap:8px;align-items:center}
     #page-namelabels .nl-row-no{font-family:var(--mono);font-size:12px;color:var(--text3);text-align:center}.nl-row input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:9px 10px;font-size:13px;outline:none}.nl-row input:focus{border-color:var(--accent2)}
@@ -3632,10 +3728,11 @@ window.normalizeFullWidth=function(value){
       <div class="nl-card">
         <div class="section-label" style="margin-bottom:10px">姓名條格式</div>
         <div class="nl-type-grid">
-          <label class="nl-type"><input type="checkbox" name="nl-type" value="helmet" checked onchange="nlTypeChanged()"><strong>安全帽貼條</strong><small>14.23 × 1.43 cm<br>固定「鎮山」＋姓名</small></label>
-          <label class="nl-type"><input type="checkbox" name="nl-type" value="clock" onchange="nlTypeChanged()"><strong>打卡姓名條</strong><small>一般 4.71 × 1.22 cm<br>外勞可加英文姓名</small></label>
-          <label class="nl-type"><input type="checkbox" name="nl-type" value="locker" onchange="nlTypeChanged()"><strong>鐵櫃姓名條</strong><small>5.95 × 2.55 cm<br>大字置中</small></label>
+          <div class="nl-type"><label class="nl-type-pick"><input type="checkbox" name="nl-type" value="helmet" checked onchange="nlTypeChanged()"><strong>安全帽貼條</strong><small>14.23 × 1.43 cm<br>固定「鎮山」＋姓名</small></label><div class="nl-font" data-nl-font="helmet"></div></div>
+          <div class="nl-type"><label class="nl-type-pick"><input type="checkbox" name="nl-type" value="clock" onchange="nlTypeChanged()"><strong>打卡姓名條</strong><small>一般 4.71 × 1.22 cm<br>外勞可加英文姓名</small></label><div class="nl-font" data-nl-font="clock"></div></div>
+          <div class="nl-type"><label class="nl-type-pick"><input type="checkbox" name="nl-type" value="locker" onchange="nlTypeChanged()"><strong>鐵櫃姓名條</strong><small>5.95 × 2.55 cm<br>大字置中</small></label><div class="nl-font" data-nl-font="locker"></div></div>
         </div>
+        <div class="nl-note" id="nl-font-note" style="margin-top:8px">字體大小可直接輸入或從 ▼ 選擇（單位 pt，同 Word）；改過後全公司共用、之後一律用這個大小。</div>
       </div>
       <div class="nl-card">
         <div class="nl-toolbar"><div><div class="section-label">姓名清單</div><div class="nl-note">可同時勾選多種格式，合併成一份 Word；每種格式會從新頁開始。一列可設定多份。</div></div><button class="btn btn-add-row" onclick="nlAddRow()">＋ 新增姓名</button></div>
@@ -11808,6 +11905,7 @@ function navTo(page, viewState) {
   if(page==='dashboard') loadDashboard();
   if(page==='mypage') myPageInit();
   if(page==='sop') sopInit();
+  if(page==='namelabels'&&typeof window.nlInit==='function') window.nlInit();
   if(page==='todo') todoInit();
   if(page==='dxf') { dxfFillProjNums(); loadLog(); }   // 產生紀錄每次進頁重抓(別人勾的已開單才看得到)
   if(page==='bom') { if(allBOM.length) setBomView(bomView); loadBOM(); }
@@ -14814,6 +14912,32 @@ function fmtDateWk(v){
 }
 function setDateWk(inp){ if(!inp||!inp.dataset) return; const lab=document.getElementById(inp.dataset.wk); if(lab) lab.textContent=fmtDateWk(inp.value); }
 function refreshDateWk(root){ (root||document).querySelectorAll('input.date-wk[data-wk]').forEach(setDateWk); }
+// ── 全站日期顯示統一用「/」:只改「畫面上看到的字」,資料庫/查詢/<input type=date> 的 ISO 值一律不動 ──
+// dateSlash:給表格引擎的日期輸入框顯示用(存檔前各引擎本來就用 prodDate/toISODate 解析,兩種寫法都吃)
+function dateSlash(v){ const s=String(v==null?'':v); return s.replace(/^(\d{4})-(\d{2})-(\d{2})(?=$|[T\s])/,'$1/$2/$3').replace(/^(\d{2})-(\d{2})$/,'$1/$2'); }
+// 全域文字層:任何頁面畫出來的 YYYY-MM-DD 文字自動改成 YYYY/MM/DD(不含輸入框內容、可編輯區、檔名如 _2026-09-13)
+// 只處理完整年月日;單獨的「MM-DD」可能是構件/圖號代碼,由各格式化函式(zoneDateShort 等)自行輸出「/」。
+(function(){
+  const QUICK=/\d{4}-\d{2}-\d{2}/, RE=/(^|[^\w\-\/.])(\d{4})-(\d{2})-(\d{2})(?![\d\-\/])/g;
+  const SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,INPUT:1,NOSCRIPT:1};
+  function fix(node){
+    const t=node.nodeValue; if(!t||t.length<10||!QUICK.test(t)) return;
+    const p=node.parentNode; if(!p||SKIP[p.nodeName]||p.isContentEditable) return;
+    const n=t.replace(RE,(m,pre,y,mo,d)=>(+mo>=1&&+mo<=12&&+d>=1&&+d<=31)?pre+y+'/'+mo+'/'+d:m);
+    if(n!==t) node.nodeValue=n;
+  }
+  function walk(root){
+    if(root.nodeType===3){ fix(root); return; }
+    if(root.nodeType!==1||SKIP[root.nodeName]) return;
+    const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT); let n; while((n=w.nextNode())) fix(n);
+  }
+  function start(){
+    walk(document.body);
+    new MutationObserver(ms=>{ for(const m of ms){ if(m.type==='characterData') fix(m.target); else m.addedNodes.forEach(walk); } })
+      .observe(document.body,{subtree:true,childList:true,characterData:true});
+  }
+  if(document.body) start(); else document.addEventListener('DOMContentLoaded',start);
+})();
 document.addEventListener('change', function(e){ const t=e.target; if(t && t.matches && t.matches('input.date-wk[data-wk]')) setDateWk(t); });
 
 function dashOnDateChange() { refreshDateWk(); dashRenderDaily(); dashRenderProgress(); }
@@ -16249,7 +16373,7 @@ function compAllExtCols(extraMap){return COMP_BASE_EXT_COLS.concat(compRevisionC
 // 'yyyy-mm-dd' -> 'mm-dd',節省空間(篩選/顯示都用同一個值,才會一致)
 function zoneDateShort(d) {
   d = String(d || '');
-  return d.length >= 10 ? d.slice(5) : d;
+  return d.length >= 10 ? d.slice(5, 10).replace('-', '/') : d.replace(/^(\d{2})-(\d{2})$/, '$1/$2');
 }
 // 單支構件已有進料紀錄時，進料欄直接顯示 MM/DD。
 function zoneSingleReceiptDate(r) {
@@ -16269,8 +16393,8 @@ function zoneDateQtyText(batches, need) {
   if (!rows.length) return '';
   const done = rows.reduce((s,[,q]) => s + (parseInt(q) || 0), 0);
   if (rows.length === 1 && done === 1 && (parseInt(need) || 0) <= 1) return zoneDateShort(rows[0][0]);
-  const detail = rows.map(([d,q]) => zoneDateShort(d) + ' ×' + q).join('、');
-  return detail + ((parseInt(need) || 0) ? '（' + done + '/' + parseInt(need) + '）' : '');
+  // 不再附「（累計/BOM）」:太佔欄寬(使用者要求),只顯示 日期 ×支數
+  return rows.map(([d,q]) => zoneDateShort(d) + ' ×' + q).join('、');
 }
 // 統一取得「構件總表」某欄位的實際顯示值(渲染與篩選共用同一份邏輯,避免像進料/A201/A202/出貨/流水編號
 // 這種自動帶入的欄位,篩選抓不到畫面上實際顯示的值)
@@ -16720,6 +16844,125 @@ async function includeAll(checked) {
   await persistAllExt();
   await applyCurrentZoneStatus();
 }
+// ── 構件總表／托樑零件表:欄寬與固定左欄 ──
+// 1) 輸入框寬度由程式量「該欄最長內容」決定,不靠 field-sizing(iPhone 不支援,會退回約 20 字寬造成大片空白);
+//    新增的自訂欄位自動適用。size=1 讓瀏覽器預設寬度不再撐大欄位,實際寬度交給 min-width。
+// 2) 手機版:序號、構件編號(勾選模式連同勾選欄)固定在左側,左右滑動時不跑掉;電腦版不凍結(使用者指定)。
+let _ztCtx = null;
+function _ztMeasure(inp) {
+  const cs = getComputedStyle(inp);
+  if (!_ztCtx) _ztCtx = document.createElement('canvas').getContext('2d');
+  _ztCtx.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+  const pad = ['paddingLeft','paddingRight','borderLeftWidth','borderRightWidth'].reduce((s,k)=>s+(parseFloat(cs[k])||0),0) + 4;
+  return text => _ztCtx.measureText(text || '').width + pad;
+}
+function zoneTblFit(table) {
+  if (!table || !table.isConnected) return;
+  table._ztMobile = zoneCompIsMobile();   // 記住這次用哪一版算的,跨斷點 resize 時用來判斷要不要重算
+  const inputs = Array.from(table.querySelectorAll('tbody td > input')).filter(i => i.type === 'text');
+  if (inputs.length) {
+    inputs.forEach(i => { i.style.minWidth = ''; });
+    const measure = _ztMeasure(inputs[0]), need = {};
+    inputs.forEach(i => {
+      const k = i.dataset.col || '';
+      if (!(k in need)) need[k] = parseFloat(getComputedStyle(i).minWidth) || 0;   // 保留 CSS 的最小寬(如 加工機)
+      need[k] = Math.max(need[k], measure(i.value));
+    });
+    inputs.forEach(i => { i.size = 1; i.style.minWidth = Math.ceil(need[i.dataset.col || '']) + 'px'; });
+  }
+  if (!table._ztBound) {
+    table._ztBound = true;
+    // 打字超過目前欄寬 → 整欄一起加寬(不重畫整表,避免失焦)
+    table.addEventListener('input', e => {
+      const t = e.target;
+      if (!t || t.tagName !== 'INPUT' || t.type !== 'text') return;
+      const w = Math.ceil(_ztMeasure(t)(t.value));
+      if (w <= (parseFloat(t.style.minWidth) || 0)) return;
+      const k = t.dataset.col || '';
+      table.querySelectorAll('tbody td > input').forEach(i => { if (i.type === 'text' && (i.dataset.col || '') === k) i.style.minWidth = w + 'px'; });
+      zoneTblStick(table);
+    });
+  }
+  zoneTblStick(table);
+  const host = table.closest('#zone-components,#zone-beam');
+  if (host && !host._ztRO && window.ResizeObserver) {   // 頁面由隱藏變顯示、視窗改變時重算固定欄位置
+    host._ztRO = new ResizeObserver(() => { const t = host.querySelector('.layout-table'); if (t) zoneTblStick(t); });
+    host._ztRO.observe(host);
+  }
+}
+function zoneTblStick(table) {
+  if (!table || !table.isConnected || !table.offsetParent) return;   // 頁面隱藏中量不到位置,等 ResizeObserver 再算
+  if (table.closest('#zone-beam')) return;   // 托樑零件表不凍結(使用者指定;欄寬自動量與手機字級仍套用)
+  if (!zoneCompIsMobile()) return;           // 電腦版不凍結(CSS 也只在手機生效)
+  const head = table.tHead && table.tHead.rows[0];
+  if (!head || !head.cells.length) return;
+  const cols = head.cells.length;
+  const n = Math.min(cols, head.cells[0].classList.contains('chk-col') ? 3 : 2);
+  // 用前面各欄寬度累加(offsetLeft 會算到表格外層的位移,第一欄不是 0 → 左邊留縫)。
+  // 縮放中先暫時還原成 100% 再量:left 是表格自己的座標,不能用縮放後的寬度
+  const z = table.style.zoom;
+  if (z) table.style.zoom = '';
+  const lefts = [0];
+  for (let i = 1; i < n; i++) lefts.push(lefts[i-1] + head.cells[i-1].offsetWidth);
+  if (z) table.style.zoom = z;
+  for (const tr of table.rows) {
+    if (tr.cells.length !== cols) continue;   // 合計列/分頁列/空白提示列有合併儲存格,不固定
+    for (let i = 0; i < n; i++) {
+      const c = tr.cells[i];
+      c.classList.add('zt-stk');
+      c.classList.toggle('zt-stk-edge', i === n - 1);
+      c.style.left = lefts[i] + 'px';
+    }
+  }
+}
+function zoneCompIsMobile() { return !!(window.matchMedia && window.matchMedia('(max-width:768px)').matches); }
+// ── 手機版構件總表縮放(截圖用,像 Google Sheets 把整張表縮小):CSS zoom 只套在表格本身,外框寬度不變;
+//    電腦版不套。網站 viewport 設 minimum-scale=1 不能雙指縮小,所以改用按鈕。比例記在這台裝置 ──
+let zoneCompZoom = 1;
+try { const z = parseFloat(localStorage.getItem('zt-comp-zoom')); if (z >= 0.2 && z <= 1) zoneCompZoom = z; } catch (e) {}
+function zoneCompZoomBarHtml() {
+  return '<div class="zt-zoom-bar">縮放'
+    + '<button type="button" onclick="zoneCompZoomSet(zoneCompZoom-0.1)" title="縮小">－</button>'
+    + '<span class="zt-zoom-val" id="zt-zoom-val">' + Math.round(zoneCompZoom * 100) + '%</span>'
+    + '<button type="button" onclick="zoneCompZoomSet(zoneCompZoom+0.1)" title="放大">＋</button>'
+    + '<button type="button" onclick="zoneCompZoomFit()">整張符合寬度</button>'
+    + '<button type="button" onclick="zoneCompZoomSet(1)">100%</button></div>';
+}
+function zoneCompZoomApply() {
+  const t = document.querySelector('#zone-components .layout-table');
+  if (t) t.style.zoom = (zoneCompIsMobile() && zoneCompZoom < 1) ? String(zoneCompZoom) : '';
+  const v = document.getElementById('zt-zoom-val'); if (v) v.textContent = Math.round(zoneCompZoom * 100) + '%';
+}
+function zoneCompZoomSet(z) {
+  zoneCompZoom = Math.min(1, Math.max(0.2, Math.round(z * 100) / 100));   // 下限 20%:欄位多的表(含 R0～R6)手機要約 27% 才塞得下
+  try { localStorage.setItem('zt-comp-zoom', String(zoneCompZoom)); } catch (e) {}
+  zoneCompZoomApply();
+}
+function zoneCompZoomFit() {
+  const t = document.querySelector('#zone-components .layout-table'), wrap = t && t.parentElement;
+  if (!t || !wrap) return;
+  const prev = t.style.zoom; t.style.zoom = '';
+  const w = t.offsetWidth; t.style.zoom = prev;
+  if (w) zoneCompZoomSet(Math.floor((wrap.clientWidth - 2) / w * 100) / 100);
+  wrap.scrollLeft = 0;
+}
+(function(){   // 跨過手機/電腦斷點時字級會變,要重新量欄寬(也重新判斷要不要凍結/縮放)
+  const mq = window.matchMedia && window.matchMedia('(max-width:768px)');
+  if (!mq) return;
+  let timer = null;
+  const refit = () => { document.querySelectorAll('#zone-components .layout-table,#zone-beam .layout-table').forEach(zoneTblFit); zoneCompZoomApply(); };
+  if (mq.addEventListener) mq.addEventListener('change', refit); else if (mq.addListener) mq.addListener(refit);
+  // 後備:有些環境跨斷點不觸發 matchMedia change。比對「這張表上次是用手機還是電腦版算的」(zoneTblFit 記在 _ztMobile),
+  // 不一樣才重算;避免 iPhone 捲動時網址列伸縮觸發 resize 就重量整張表
+  window.addEventListener('resize', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const t = document.querySelector('#zone-components .layout-table');
+      if (t && t._ztMobile !== mq.matches) refit();
+    }, 150);
+  });
+})();
+
 function renderCompTable() {
   const el = document.getElementById('zone-components');
   compSyncA201Btn();
@@ -16858,9 +17101,9 @@ function renderCompTable() {
   extCols.forEach(()=> html += '<td></td>');
   html += '</tr>';
   html += '</tbody></table></div>';
-  el.innerHTML = html;
+  el.innerHTML = zoneCompZoomBarHtml() + html;   // 縮放列只在手機顯示(CSS)
   const ct = el.querySelector('.layout-table');
-  if (ct) tblInitSelection(ct);
+  if (ct) { tblInitSelection(ct); zoneTblFit(ct); zoneCompZoomApply(); }
   // 底部「非本公司製作構件」表
   renderExcludedTable(excluded);
 }
@@ -17115,6 +17358,8 @@ async function loadBeam(zoneId) {
   // 切換工程區時清空復原/重做,避免把別區的狀態還原到本區
   beamHistory = []; beamRedoStack = []; beamDeletedIds = new Set();
   clearTimeout(beamHistTimer); beamHistTimer = null;
+  beamBatchMode = false; beamBatchPicked = new Map(); renderBeamBatchBar();   // 換區就結束批次上線登記
+  if (beamA201Row) { beamA201Row = null; closeModal('beam-a201-modal'); }
   const r = await sbFetch(`/rest/v1/beam_parts?select=*&zone_id=eq.${zoneId}&order=id`);
   zoneBeamRows = (Array.isArray(r.data)?r.data:[]).map(b => ({
     id:b.id, seq:b.seq||'', part_no:b.part_no||'', common_no:b.common_no||'', spec:b.spec||'',
@@ -17159,7 +17404,7 @@ function beamRowWeight(r) {
   return (parseFloat(r.qty)||0) * (parseFloat((r.extra||{})['單重'])||0);
 }
 
-// 托樑 A201 手動批次格式：8/18*2,8/19*1 → 08-18 ×2、08-19 ×1。
+// 托樑 A201 批次格式(存檔與顯示一律用「/」):8/18*2,8/19*1 → 08/18 ×2、08/19。舊資料的「08-18」也讀得懂。
 // 無法完整辨識時保留原文，避免舊備註型資料被改寫。
 function beamA201Parse(raw) {
   const src = String(raw == null ? '' : raw).trim().replace(/（\s*\d+\s*\/\s*\d+\s*）\s*$/,'');
@@ -17170,59 +17415,252 @@ function beamA201Parse(raw) {
     if (!m) return null;
     const mon = parseInt(m[2],10), day = parseInt(m[3],10), qty = Math.max(1,parseInt(m[4],10)||1);
     if (mon<1 || mon>12 || day<1 || day>31) return null;
-    const date = (m[1] ? m[1]+'-' : '') + String(mon).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    const date = (m[1] ? m[1]+'/' : '') + String(mon).padStart(2,'0') + '/' + String(day).padStart(2,'0');
     const found=out.find(x=>x.date===date); if(found) found.qty+=qty; else out.push({date,qty});
   }
   return out;
-}
-function beamA201Stored(raw) {
-  const rows=beamA201Parse(raw); if(rows===null) return String(raw==null?'':raw).trim();
-  return rows.map(x=>x.date+(x.qty>1?' ×'+x.qty:'')).join('、');
 }
 function beamA201Display(raw, need) {
   const rows=beamA201Parse(raw); if(rows===null) return String(raw==null?'':raw);
   if(!rows.length) return '';
   const showQty=(parseInt(need)||0)>1 || rows.length>1;
-  const done=rows.reduce((s,x)=>s+x.qty,0), detail=rows.map(x=>x.date+((showQty||x.qty>1)?' ×'+x.qty:'')).join('、');
-  return detail+((parseInt(need)||0)>1?'（'+done+'/'+parseInt(need)+'）':'');
+  // 不再附「（累計/數量）」:太佔欄寬(使用者要求)。replace 是讓尚未重存的舊資料「08-18」也顯示成「/」
+  return rows.map(x=>x.date.replace(/-/g,'/')+((showQty||x.qty>1)?' ×'+x.qty:'')).join('、');
 }
-function beamA201Commit(i, el) {
-  const stored=beamA201Stored(el.value); beamExtEdit(i,'A201',stored);
-  el.value=beamA201Display(stored,zoneBeamRows[i]&&zoneBeamRows[i].qty);
+const beamEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function beamRowLabel(r, i) { return [r.common_no, r.spec].filter(x => String(x || '').trim()).join(' / ') || ('第 ' + (i + 1) + ' 列'); }
+// A201 文字 → 每支一個 ISO 日期(沒寫年份視為今年),排序後回傳;不是日期格式回 null
+function beamA201Pieces(raw) {
+  const rows = beamA201Parse(raw);
+  if (rows === null) return null;
+  const y = new Date().getFullYear(), out = [];
+  rows.forEach(x => {
+    const p = x.date.split('/'), iso = (p.length === 3 ? p[0] : y) + '-' + p[p.length - 2] + '-' + p[p.length - 1];
+    for (let n = 0; n < x.qty; n++) out.push(iso);
+  });
+  return out.sort();
+}
+// 每支 ISO 日期 → A201 文字(同一天合併成 ×支數;今年省略年份,沿用手打格式)
+function beamA201FromPieces(pieces) {
+  const cnt = new Map(), y = String(new Date().getFullYear());
+  pieces.filter(Boolean).slice().sort().forEach(d => cnt.set(d, (cnt.get(d) || 0) + 1));
+  return Array.from(cnt.entries()).map(([d, q]) => {
+    const [yy, mm, dd] = d.split('-');
+    return (yy === y ? '' : yy + '/') + mm + '/' + dd + (q > 1 ? ' ×' + q : '');
+  }).join('、');
+}
+
+// ── 托樑 A201 上線登記視窗:點 A201 格開啟;一支一列打勾(帶上方日期,預設今天)、一次登記 N 支、或直接打字 ──
+// 資料仍存成同一格 A201 文字,不改資料庫結構;每顆托樑都一樣,#1、#2 只用來算支數。
+let beamA201Row = null;   // 視窗正在編輯的列:存物件參照(新增/刪除列後索引會變)
+const beamA201Raw = r => beamVal(r || {}, {ext:'A201'});
+function beamA201Cur() { return beamA201Pieces(beamA201Raw(beamA201Row)) || []; }
+function beamA201PickDate() { const v = (document.getElementById('ba-date') || {}).value; return v || dashTodayStr(); }
+function openBeamA201Modal(i) {
+  const r = zoneBeamRows[i]; if (!r) return;
+  beamA201Row = r;
+  document.getElementById('ba-date').value = dashTodayStr();
+  document.getElementById('ba-qty').value = '';
+  renderBeamA201Modal();
+  openModal('beam-a201-modal');
+}
+function renderBeamA201Modal() {
+  const r = beamA201Row, i = zoneBeamRows.indexOf(r);
+  if (!r || i < 0) { closeModal('beam-a201-modal'); return; }   // 復原/切區後原列已不存在
+  const raw = beamA201Raw(r), pieces = beamA201Pieces(raw);
+  const need = parseInt(r.qty) || 0, list = pieces || [], done = list.length;
+  document.getElementById('ba-title').textContent = beamRowLabel(r, i);
+  let sum = '數量 <b>' + (need || '未填') + '</b> 支 ｜ 已上線 <b>' + done + '</b> 支';
+  if (need) sum += done > need
+    ? ' ｜ <b style="color:var(--red)">超出 ' + (done - need) + ' 支，請確認數量</b>'
+    : ' ｜ 未上線 <b style="color:' + (need - done ? 'var(--red)' : 'var(--green)') + '">' + (need - done) + '</b> 支';
+  if (pieces === null) sum += '<div style="color:var(--yellow);font-size:12px;margin-top:4px">目前內容「' + beamEsc(raw) + '」不是日期格式，登記後會被取代</div>';
+  document.getElementById('ba-sum').innerHTML = sum;
+  const n = Math.max(need, done), name = beamEsc(String(r.common_no || '').trim() || '托樑');
+  let h = n ? '' : '<div class="empty-state" style="padding:14px">數量未填，請用上方「登記」輸入上線支數</div>';
+  for (let k = 0; k < n; k++) {
+    const d = list[k] || '', over = need && k >= need;
+    h += '<div class="ba-row' + (d ? ' on' : '') + (over ? ' over' : '') + '">'
+      + '<label><input type="checkbox"' + (d ? ' checked' : '') + ' onchange="beamA201Toggle(' + k + ',this.checked)">' + name + ' #' + (k + 1) + (over ? '（超出數量）' : '') + '</label>'
+      + '<input type="date" value="' + d + '"' + (d ? '' : ' disabled') + ' title="上線日期" onchange="beamA201SetDate(' + k + ',this.value)">'
+      + '</div>';
+  }
+  document.getElementById('ba-list').innerHTML = h;
+  document.getElementById('ba-text').value = beamA201Display(raw, r.qty);
+}
+// 每個動作各算一步復原,寫回 A201 後自動儲存並重畫表格與視窗
+function beamA201Write(pieces) {
+  const i = zoneBeamRows.indexOf(beamA201Row);
+  if (i < 0) { closeModal('beam-a201-modal'); return; }
+  beamSnapshotNow();
+  if (!beamA201Row.extra) beamA201Row.extra = {};
+  beamA201Row.extra['A201'] = beamA201FromPieces(pieces);
+  beamMarkDirty(i);
+  renderBeamTable();
+  renderBeamA201Modal();
+}
+function beamA201Toggle(k, on) {
+  const p = beamA201Cur();
+  if (on) p.push(beamA201PickDate()); else p.splice(k, 1);
+  beamA201Write(p);
+}
+function beamA201SetDate(k, v) {
+  const p = beamA201Cur(); if (k >= p.length) return;
+  if (v) p[k] = v; else p.splice(k, 1);
+  beamA201Write(p);
+}
+function beamA201QuickAdd() {
+  const r = beamA201Row; if (!r) return;
+  const add = parseInt(document.getElementById('ba-qty').value) || 0;
+  if (add <= 0) { alert('本次上線支數需大於 0'); return; }
+  const p = beamA201Cur(), need = parseInt(r.qty) || 0;
+  if (need > 0 && p.length + add > need) { alert('超過數量！\n數量 ' + need + ' 支，已上線 ' + p.length + ' 支，最多再登記 ' + Math.max(0, need - p.length) + ' 支'); return; }
+  const d = beamA201PickDate();
+  for (let n = 0; n < add; n++) p.push(d);
+  document.getElementById('ba-qty').value = '';
+  beamA201Write(p);
+}
+function beamA201FillRest() {
+  const r = beamA201Row; if (!r) return;
+  const need = parseInt(r.qty) || 0, p = beamA201Cur();
+  if (!need) { alert('數量未填，無法判斷還有幾支未上線'); return; }
+  if (p.length >= need) { alert('已全部上線'); return; }
+  const d = beamA201PickDate();
+  while (p.length < need) p.push(d);
+  beamA201Write(p);
+}
+async function beamA201ClearAll() {
+  if (!String(beamA201Raw(beamA201Row)).trim()) return;
+  if (!await uiConfirm('清除這筆托樑的所有上線紀錄?')) return;
+  beamA201Write([]);
+}
+function beamA201TextApply() {
+  const p = beamA201Pieces(document.getElementById('ba-text').value);
+  if (p === null) { alert('格式看不懂，請用「日期*支數」，多批用逗號分開\n例：8/18*2、8/19'); return; }
+  beamA201Write(p);
+}
+
+// ── 托樑 A201 批次上線登記:勾選多種托樑 → 選日期 → 一次套用(每列可調本次支數,預設補到數量) ──
+let beamBatchMode = false;
+let beamBatchPicked = new Map();   // 列物件 → 本次上線支數
+let beamVisibleIdx = [];           // 目前表格顯示中的列索引(全選只選篩選後看得到的)
+function beamBatchToggle(force) {
+  beamBatchMode = typeof force === 'boolean' ? force : !beamBatchMode;
+  beamBatchPicked = new Map();
+  renderBeamBatchBar();
+  renderBeamTable();
+}
+function beamBatchDefaultQty(r) {
+  const need = parseInt(r.qty) || 0, done = (beamA201Pieces(beamA201Raw(r)) || []).length;
+  return need > 0 ? Math.max(0, need - done) : 1;
+}
+function beamBatchPick(i, on) {
+  const r = zoneBeamRows[i]; if (!r) return;
+  if (on) { if (!beamBatchPicked.has(r)) beamBatchPicked.set(r, beamBatchDefaultQty(r)); }
+  else beamBatchPicked.delete(r);
+  const inp = document.querySelector('#zone-beam input[data-bqty="' + i + '"]');
+  if (inp) inp.value = on ? beamBatchPicked.get(r) : '';
+  renderBeamBatchBar(true);
+}
+function beamBatchQty(i, el) {
+  const r = zoneBeamRows[i]; if (!r) return;
+  let v = parseInt(el.value); if (isNaN(v) || v < 0) v = 0;
+  if (v > 0) beamBatchPicked.set(r, v); else beamBatchPicked.delete(r);   // 打支數即自動勾選,清空則取消
+  const chk = el.closest('tr').querySelector('input.nonco-chk'); if (chk) chk.checked = v > 0;
+  renderBeamBatchBar(true);
+}
+function beamBatchAll(on) { beamVisibleIdx.forEach(i => beamBatchPick(i, on)); renderBeamTable(); }
+function renderBeamBatchBar(countOnly) {
+  const bar = document.getElementById('beam-batch-bar'), btn = document.getElementById('beam-batch-btn');
+  if (btn) btn.textContent = beamBatchMode ? '✕ 結束批次登記' : '☑ 批次上線登記';
+  if (!bar) return;
+  bar.hidden = !beamBatchMode;
+  if (!beamBatchMode) { bar.innerHTML = ''; return; }
+  let kinds = 0, pcs = 0;
+  beamBatchPicked.forEach((q, r) => { if (q > 0 && zoneBeamRows.includes(r)) { kinds++; pcs += q; } });
+  const stat = '已勾選 <b>' + kinds + '</b> 種 · 共 <b>' + pcs + '</b> 支';
+  const statEl = document.getElementById('beam-batch-stat');
+  if (countOnly && statEl) { statEl.innerHTML = stat; return; }
+  bar.innerHTML = '<span class="insp-sel-stat" id="beam-batch-stat">' + stat + '</span>'
+    + '<input type="date" id="beam-batch-date" class="dash-date" value="' + dashTodayStr() + '" title="上線日期">'
+    + '<button class="btn-sm btn-nonco-on" onclick="applyBeamBatch()">✓ 套用上線日期</button>'
+    + '<span class="beam-batch-tip">勾選要上線的托樑；支數預設補到數量，可改少</span>';
+}
+function applyBeamBatch() {
+  const date = (document.getElementById('beam-batch-date') || {}).value;
+  if (!date) { alert('請先選擇上線日期'); return; }
+  const picks = [];
+  beamBatchPicked.forEach((q, r) => { const i = zoneBeamRows.indexOf(r); if (i >= 0 && q > 0) picks.push([r, i, q]); });
+  if (!picks.length) { alert('請先勾選要登記上線的托樑'); return; }
+  beamSnapshotNow();   // 整批算一步復原
+  let ok = 0;
+  const capped = [];
+  picks.forEach(([r, i, q]) => {
+    const p = beamA201Pieces(beamA201Raw(r)) || [], need = parseInt(r.qty) || 0;
+    const add = need > 0 ? Math.min(q, Math.max(0, need - p.length)) : q;   // 擋超量:最多補到數量
+    if (add < q) capped.push(beamRowLabel(r, i));
+    if (add <= 0) return;
+    for (let n = 0; n < add; n++) p.push(date);
+    if (!r.extra) r.extra = {};
+    r.extra['A201'] = beamA201FromPieces(p);
+    beamMarkDirty(i);
+    ok++;
+  });
+  if (!ok) { beamHistory.pop(); beamHistoryButtons(); }
+  alert('已登記 ' + ok + ' 種托樑上線（' + dateSlash(date) + '）' + (capped.length ? '\n\n以下已達數量上限，超出的支數沒有登記：\n' + capped.join('\n') : ''));
+  beamBatchToggle(false);
 }
 
 function renderBeamTable() {
   const el = document.getElementById('zone-beam');
   const cols = beamCols();
   // distinct values per column for filters
+  // A201 的篩選值用畫面顯示文字(舊資料「08-18」與新資料「08/18」才不會分成兩種)
+  const cellText = (r, col) => col.ext === 'A201' ? beamA201Display(beamVal(r, col), r.qty) : beamVal(r, col);
   const beamColVals = {};
-  cols.forEach(col => { beamColVals[col.label] = zoneBeamRows.map(r => beamVal(r, col)); });
+  cols.forEach(col => { beamColVals[col.label] = zoneBeamRows.map(r => cellText(r, col)); });
   // apply column filters
   const rows = zoneBeamRows.map((r,idx)=>({r,idx})).filter(({r}) => {
     return rowPassesColFilters('beam', (label) => {
       const col = cols.find(c => c.label === label);
-      return col ? beamVal(r, col) : '';
+      return col ? cellText(r, col) : '';
     });
   });
-  let html = '<div class="layout-table-wrap"><table class="layout-table" onkeydown="beamTableKey(event)"><thead><tr>';
+  beamVisibleIdx = rows.map(x => x.idx);
+  const bm = beamBatchMode;
+  let html = '<div class="layout-table-wrap"><table class="layout-table'+(bm?' has-chk':'')+'" onkeydown="beamTableKey(event)"><thead><tr>';
+  if (bm) html += '<th class="chk-col"><input type="checkbox" class="nonco-chk" title="全選顯示中的托樑" onchange="beamBatchAll(this.checked)"></th>';
   cols.forEach(col => {
     const active = colFilterActive('beam', col.label) ? ' active' : '';
     html += '<th>'+col.label+'<button class="cf-th-btn'+active+'" onclick=\'openColFilter(event,"beam","'+col.label.replace(/"/g,'')+'",'+JSON.stringify(beamColVals[col.label]).replace(/'/g,"&#39;")+')\'>▼</button></th>';
   });
   html += '<th></th></tr></thead><tbody>';
   if (!zoneBeamRows.length) {
-    html += '<tr><td colspan="'+(cols.length+1)+'" class="empty-state">尚無資料,點「新增列」或按 Enter 開始</td></tr>';
+    html += '<tr><td colspan="'+(cols.length+1+(bm?1:0))+'" class="empty-state">尚無資料,點「新增列」或按 Enter 開始</td></tr>';
   }
   rows.forEach(({r, idx}) => {
     html += '<tr data-bkey="'+idx+'">';
+    if (bm) html += '<td class="chk-col"><input type="checkbox" class="nonco-chk"'+(beamBatchPicked.has(r)?' checked':'')+' onchange="beamBatchPick('+idx+',this.checked)"></td>';
     cols.forEach(col => {
       const rawVal = beamVal(r, col);
-      const val = ((col.ext==='A201'?beamA201Display(rawVal,r.qty):rawVal)+'').replace(/"/g,'&quot;');
+      if (col.ext === 'A201') {
+        if (bm) {
+          // 批次模式:顯示已上線/數量,並可填這次要登記的支數(填了就自動勾選)
+          const need = parseInt(r.qty) || 0, done = (beamA201Pieces(rawVal) || []).length;
+          const q = beamBatchPicked.has(r) ? beamBatchPicked.get(r) : '';
+          html += '<td><span class="mat-cell-note" style="color:var(--text3);font-size:10px">已上'+done+(need?'/'+need:'')+'</span> '+
+            '<input type="number" min="0" value="'+q+'" data-bqty="'+idx+'" style="width:52px" oninput="beamBatchQty('+idx+',this)" title="本次要登記上線的支數">支</td>';
+        } else {
+          // 唯讀:點一下開啟上線登記視窗(全域打字/貼上層會略過唯讀格,避免誤改)
+          html += '<td><input type="text" class="ba-open" value="'+beamEsc(beamA201Display(rawVal, r.qty))+'" data-col="A201" readonly onclick="openBeamA201Modal('+idx+')" title="點一下開啟上線登記（可逐支打勾，或一次登記多支）"/></td>';
+        }
+        return;
+      }
+      const val = (rawVal+'').replace(/"/g,'&quot;');
       const oc = col.key
         ? 'beamEdit('+idx+',&#39;'+col.key+'&#39;,this.value)'
         : 'beamExtEdit('+idx+',&#39;'+col.ext.replace(/'/g,'')+'&#39;,this.value)';
-      const editAttr = col.ext==='A201' ? 'onchange="beamA201Commit('+idx+',this)"' : 'oninput="'+oc+'"';
-      html += '<td><input type="text" value="'+val+'" data-col="'+col.label.replace(/"/g,'&quot;')+'" '+editAttr+'/></td>';
+      html += '<td><input type="text" value="'+val+'" data-col="'+col.label.replace(/"/g,'&quot;')+'" oninput="'+oc+'"/></td>';
     });
     html += '<td class="del-col"><button class="btn-del-row" onclick="beamDelRow('+idx+')">✕</button></td>';
     html += '</tr>';
@@ -17233,7 +17671,7 @@ function renderBeamTable() {
     rows.forEach(({r}) => { tQty += parseFloat(r.qty)||0; tW += beamRowWeight(r); });
     const filtered = rows.length !== zoneBeamRows.length;
     const label = '合計' + (filtered ? '（顯示中 '+rows.length+' 列）' : '（'+rows.length+' 列）');
-    html += '<tr class="total-row"><td colspan="2">'+label+'</td>'+
+    html += '<tr class="total-row">'+(bm?'<td></td>':'')+'<td colspan="2">'+label+'</td>'+
             '<td>'+(Math.round(tQty*100)/100)+'</td><td></td>'+
             '<td class="total-weight">'+tW.toFixed(2)+' ('+(tW/1000).toFixed(2)+'t)</td>'+
             '<td colspan="'+(cols.length-5+1)+'"></td></tr>';
@@ -17241,7 +17679,7 @@ function renderBeamTable() {
   html += '</tbody></table></div>';
   el.innerHTML = html;
   const bt = el.querySelector('.layout-table');
-  if (bt) tblInitSelection(bt);
+  if (bt) { tblInitSelection(bt); zoneTblFit(bt); }
   beamHistoryButtons();
 }
 
@@ -17329,7 +17767,7 @@ function beamPasteGrid(cells2d, anchor) {
   const cols = beamCols();
   const table = document.querySelector('#zone-beam .layout-table');
   const domRows = table ? Array.from(table.querySelectorAll('tbody tr[data-bkey]')) : [];
-  const startC = anchor.c;
+  const startC = anchor.c - (beamBatchMode ? 1 : 0);   // 批次上線登記模式最前面多一個勾選欄
   let added = 0;
   cells2d.forEach((line, dr) => {
     const dom = domRows[anchor.r + dr];
@@ -17346,7 +17784,12 @@ function beamPasteGrid(cells2d, anchor) {
       if (!col) return;                 // 超出最後一欄的內容直接忽略
       const v = String(val == null ? '' : val).trim();
       if (col.key) row[col.key] = v;
-      else { row.extra = row.extra || {}; row.extra[col.ext] = v; }
+      else {
+        row.extra = row.extra || {};
+        // A201 貼上也整理成統一格式(08/18 ×2、08/19);看不懂的原文照存
+        if (col.ext === 'A201') { const p = beamA201Pieces(v); row.extra[col.ext] = p === null ? v : beamA201FromPieces(p); }
+        else row.extra[col.ext] = v;
+      }
     });
     beamMarkDirty(idx);
   });
@@ -17415,11 +17858,6 @@ function beamTableKey(e) {
   const tr = e.target.closest('tr');
   const td = e.target.closest('td');
   const cellIdx = tr && td ? Array.from(tr.children).indexOf(td) : 0;
-  // A201 使用 onchange 才正規化；按 Enter 導覽前先立即提交目前內容。
-  if (e.target && e.target.dataset && e.target.dataset.col === 'A201') {
-    const rowIdx = parseInt(tr && tr.dataset ? tr.dataset.bkey : '', 10);
-    if (!isNaN(rowIdx)) beamA201Commit(rowIdx, e.target);
-  }
   const next = tr ? tr.nextElementSibling : null;
   // 合計列固定在最後,不算「下一列」
   const isLast = !next || next.classList.contains('total-row');
@@ -36990,7 +37428,7 @@ function prodPmCell(pred){
   const pm=prodProduct.filter(pred);
   if(!pm.length) return '<span class="prod-no">—</span>';
   const last=pm.map(p=>p.pick_date).filter(Boolean).sort().pop()||'';
-  return '<span class="prod-yes" title="'+esc(pm.map(p=>p.serial+' '+(p.reason||'')).join('\n'))+'">✓ '+pm.length+'筆'+(last?' '+esc(last.slice(5)):'')+'</span>';
+  return '<span class="prod-yes" title="'+esc(pm.map(p=>p.serial+' '+(p.reason||'')).join('\n'))+'">✓ '+pm.length+'筆'+(last?' '+esc(last.slice(5,10).replace('-','/')):'')+'</span>';
 }
 // ── 保留料的狀態判定 ──
 // 整筆完成 = 已領取 且 (不需退還 或 已退還)。
@@ -38893,7 +39331,7 @@ function spxRowHtml(key,i){ const cfg=SPX[key], arr=prodArr(key), r=arr[i], blan
       const opts=c.sel.map(o=>'<option value="'+esc(o)+'"'+((cur===o)?' selected':'')+'>'+esc((c.labels&&c.labels[o])||o||'—')+'</option>').join('');
       h+=td+'<select class="lt-edit-sel" onchange="spxEdit(\''+key+'\','+i+',\''+c.k+'\',this.value)">'+opts+'</select></td>';
     } else {
-      h+=td+'<input type="text" class="lt-edit"'+RO+' value="'+esc(spxColStr(r,c))+'" placeholder="'+esc(c.h)+'" oninput="spxEditText(\''+key+'\','+i+',\''+c.k+'\',this)" onblur="spxCompletionCommit(\''+key+'\','+i+',\''+c.k+'\')" autocomplete="off"/></td>';
+      h+=td+'<input type="text" class="lt-edit"'+RO+' value="'+esc(c.date?dateSlash(spxColStr(r,c)):spxColStr(r,c))+'" placeholder="'+esc(c.h)+'" oninput="spxEditText(\''+key+'\','+i+',\''+c.k+'\',this)" onblur="spxCompletionCommit(\''+key+'\','+i+',\''+c.k+'\')" autocomplete="off"/></td>';
     }
   });
   h+='<td class="del-col"><button class="btn-del-row" title="刪除整列" onclick="spxDelRow(\''+key+'\','+i+')">✕</button></td></tr>';
@@ -39313,7 +39751,7 @@ function rowHtml(key,i){ const cfg=cfgOf(key), arr=arrOf(key), r=arr[i], blank=r
       const opts=c.sel.map(o=>'<option value="'+esc(o)+'"'+((cur===o)?' selected':'')+'>'+esc(o||'—')+'</option>').join('');
       h+=td+'<select class="lt-edit-sel" onchange="GridXL.edit(\''+key+'\','+i+',\''+c.k+'\',this.value)">'+opts+'</select></td>';
     } else {
-      h+=td+'<input type="text" class="lt-edit"'+RO+' value="'+esc(c.fmt?c.fmt(r,colStr(r,c)):colStr(r,c))+'" placeholder="'+esc(c.h)+'" oninput="GridXL.editText(\''+key+'\','+i+',\''+c.k+'\',this)" autocomplete="off"/></td>';
+      h+=td+'<input type="text" class="lt-edit"'+RO+' value="'+esc(c.fmt?c.fmt(r,colStr(r,c)):(c.date&&typeof dateSlash==='function')?dateSlash(colStr(r,c)):colStr(r,c))+'" placeholder="'+esc(c.h)+'" oninput="GridXL.editText(\''+key+'\','+i+',\''+c.k+'\',this)" autocomplete="off"/></td>';
     }
   });
   h+='<td class="del-col"><button class="btn-del-row" title="刪除整列" onclick="GridXL.delRow(\''+key+'\','+i+')">✕</button></td></tr>';
@@ -39530,8 +39968,8 @@ GridXL.register('ded',{
   // editText 逐鍵觸發、正在打字,不能整表重畫(會失焦),直接改該列的日期輸入格。
   onEdit:(r,field)=>{
     const setCell=(k,v)=>{const tr=document.querySelector('#gxBody-ded tr[data-key="'+r._key+'"]');
-      const ci=GridXL._cfg.ded.cols.findIndex(c=>c.k===k);
-      const inp=tr&&ci>=0?tr.children[ci]?.querySelector('input'):null;if(inp)inp.value=v;};
+      const cols=GridXL._cfg.ded.cols, ci=cols.findIndex(c=>c.k===k);
+      const inp=tr&&ci>=0?tr.children[ci]?.querySelector('input'):null;if(inp)inp.value=cols[ci].date?dateSlash(v):v;};
     // 勾作廢:扣款日期=勾選當天、扣款金額顯示「-」;取消作廢:清掉作廢日期、金額恢復原值
     if(field==='voided'){
       if(r.voided===true){r.deduction_date=GridXL.today();setCell('deduction_date',r.deduction_date);setCell('actual_amount','-');}
@@ -42803,9 +43241,9 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     document.getElementById('ma-stat-q').textContent=maCodeCount('Q');
     document.getElementById('ma-stat-h').textContent=maCodeCount('H');
     document.getElementById('ma-excel-btn').disabled=false;
-    var saveBtn=document.getElementById('ma-save-btn');if(saveBtn)saveBtn.disabled=!!isGuest||!currentSession;
+    maSetSaveDisabled(!!isGuest||!currentSession);
     maCurrentAnalysisId=null;
-    var saveStatus=document.getElementById('ma-save-status');if(saveStatus)saveStatus.textContent=isGuest?'訪客模式不可儲存':'分析完成，尚未儲存';
+    maSetSaveStatus(isGuest?'訪客模式不可儲存':'分析完成，尚未儲存');
     maRenderParts();
     maRenderCategory('Q','ma-curtain-result','帷幕');
     maRenderCategory('H','ma-mep-result','水電');
@@ -43086,7 +43524,9 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
 
   function maDbError(r){return (r&&r.data&&(r.data.message||r.data.hint||r.data.details))||('HTTP '+((r&&r.status)||'?'));}
   function maHistoryDate(v){try{return new Intl.DateTimeFormat('zh-TW',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v));}catch(e){return String(v||'');}}
-  function maSetSaveStatus(text,error){var el=document.getElementById('ma-save-status');if(el){el.textContent=text;el.style.color=error?'var(--danger)':'var(--text3)';}}
+  // 儲存按鈕/狀態有兩組:匯入頁(ma-save-*)與結果頁頂端(ma-save-*-top),一律同步更新
+  function maSetSaveStatus(text,error){['ma-save-status','ma-save-status-top'].forEach(function(id){var el=document.getElementById(id);if(el){el.textContent=text;el.style.color=error?'var(--danger)':'var(--text3)';}});}
+  function maSetSaveDisabled(disabled){['ma-save-btn','ma-save-btn-top'].forEach(function(id){var b=document.getElementById(id);if(b)b.disabled=!!disabled;});}
   function maHistoryRender(rows){
     var host=document.getElementById('ma-history-list');if(!host)return;
     if(Array.isArray(rows))maHistoryRows=rows;
@@ -43110,15 +43550,15 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   window.maSaveAnalysis=async function(){
     if(isGuest||!currentSession){maSetSaveStatus('請先登入後再儲存',true);return;}
     if(!maComponents.length){maSetSaveStatus('請先開始分析',true);return;}
-    var btn=document.getElementById('ma-save-btn');if(btn)btn.disabled=true;maSetSaveStatus('儲存中…');
+    maSetSaveDisabled(true);maSetSaveStatus('儲存中…');
     var raw=document.getElementById('ma-raw-input').value||'';
     var parent={project_no:maProject.工程編號||'',zone_code:maProject.工程區||'',mother_no:maProject.母件編號||'',raw_text:raw,component_count:maComponents.length,part_count:maPartCount(),q_count:maCodeCount('Q'),h_count:maCodeCount('H'),created_by:currentUser&&currentUser.id||null,created_by_name:currentUser&&currentUser.name||''};
     var pr=await sbFetch('/rest/v1/multilevel_analyses',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(parent)});
-    if(!pr.ok||!pr.data||!pr.data[0]){if(btn)btn.disabled=false;maSetSaveStatus('儲存失敗：'+maDbError(pr)+'（請確認已執行 migration）',true);return;}
+    if(!pr.ok||!pr.data||!pr.data[0]){maSetSaveDisabled(false);maSetSaveStatus('儲存失敗：'+maDbError(pr)+'（請確認已執行 migration）',true);return;}
     var id=pr.data[0].id,items=[];
     maComponents.forEach(function(c){maPartItems(c).forEach(function(i){items.push({analysis_id:id,component_no:c.componentNo,drawing_no:c.drawingNo,component_spec:c.componentSpec,sequence_no:i.sequence,part_no:i.partNo,description:i.description,specification:i.specification,material:i.material,unit:i.unit,quantity:i.quantity===''?null:Number(i.quantity),category:maPartCategory(i),code:i.code||''});});});
-    if(items.length){var ir=await sbFetch('/rest/v1/multilevel_analysis_items',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(items)});if(!ir.ok){await sbFetch('/rest/v1/multilevel_analyses?id=eq.'+id,{method:'DELETE'});if(btn)btn.disabled=false;maSetSaveStatus('明細儲存失敗：'+maDbError(ir),true);return;}}
-    maCurrentAnalysisId=id;maHistoryLoaded=false;maSetSaveStatus('✓ 已儲存分析紀錄 #'+id);if(btn)btn.disabled=false;await window.maLoadHistory(true);
+    if(items.length){var ir=await sbFetch('/rest/v1/multilevel_analysis_items',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(items)});if(!ir.ok){await sbFetch('/rest/v1/multilevel_analyses?id=eq.'+id,{method:'DELETE'});maSetSaveDisabled(false);maSetSaveStatus('明細儲存失敗：'+maDbError(ir),true);return;}}
+    maCurrentAnalysisId=id;maHistoryLoaded=false;maSetSaveStatus('✓ 已儲存分析紀錄 #'+id);maSetSaveDisabled(false);await window.maLoadHistory(true);
   };
   window.maOpenAnalysis=async function(id){
     var r=await sbFetch('/rest/v1/multilevel_analyses?id=eq.'+encodeURIComponent(id)+'&select=id,raw_text&limit=1');
@@ -43164,7 +43604,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var summary=document.getElementById('ma-summary');if(summary)summary.style.display='none';
     var workspace=document.getElementById('ma-workspace');if(workspace)workspace.style.display='none';
     var excel=document.getElementById('ma-excel-btn');if(excel)excel.disabled=true;
-    var save=document.getElementById('ma-save-btn');if(save)save.disabled=true;maCurrentAnalysisId=null;maSetSaveStatus('');
+    maSetSaveDisabled(true);maCurrentAnalysisId=null;maSetSaveStatus('');
     ['ma-parts-body','ma-curtain-result','ma-curtain-flat-result','ma-mep-result','ma-mep-flat-result'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerHTML='';});
     var holes=document.getElementById('ma-mep-hole-values');if(holes)holes.value='';
     window.maShowEntryView();
@@ -43178,6 +43618,63 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     clock:{label:'打卡姓名條',w:4.71,h:1.22,font:18},
     locker:{label:'鐵櫃姓名條',w:5.95,h:2.55,font:26}
   };
+  /* 字體大小(pt):像 Word 可輸入或下拉選;主存 app_config(全公司共用,有人改過就固定用那個),localStorage 只當離線快取 */
+  var NL_FONT_KEY='namelabel_font_sizes';
+  var NL_FONT_CHOICES=[8,9,10,10.5,11,12,14,16,18,20,22,24,26,28,36,48,72];
+  var nlFontLoaded=false,nlFontTouched=false;
+  function nlFontNorm(v){var n=Number(String(v==null?'':v).trim());if(!isFinite(n)||n<=0)return null;return Math.min(400,Math.max(1,Math.round(n*2)/2));}
+  function nlFontApply(map){if(!map||typeof map!=='object')return;Object.keys(NL_TYPES).forEach(function(t){var n=nlFontNorm(map[t]);if(n)NL_TYPES[t].font=n;});}
+  function nlFontMap(){var m={};Object.keys(NL_TYPES).forEach(function(t){m[t]=NL_TYPES[t].font;});return m;}
+  function nlFontCache(){try{localStorage.setItem(NL_FONT_KEY,JSON.stringify(nlFontMap()));}catch(e){}}
+  try{nlFontApply(JSON.parse(localStorage.getItem(NL_FONT_KEY)||'null'));}catch(e){}
+  function nlFontCanEdit(){try{return typeof pagePerm==='function'?pagePerm('namelabels')==='edit':true;}catch(e){return true;}}
+  function nlFontRender(){
+    var canEdit=nlFontCanEdit();
+    document.querySelectorAll('#page-namelabels .nl-font[data-nl-font]').forEach(function(host){
+      var type=host.getAttribute('data-nl-font'),cfg=NL_TYPES[type];if(!cfg)return;
+      var cur=cfg.font,opts=NL_FONT_CHOICES.slice();if(opts.indexOf(cur)<0){opts.push(cur);opts.sort(function(a,b){return a-b;});}
+      var saved=host.querySelector('.nl-font-saved'),savedHtml=saved?saved.outerHTML:'<span class="nl-font-saved"></span>';
+      host.innerHTML='<span>字體大小</span><span class="nl-font-box'+(canEdit?'':' is-locked')+'" title="'+(canEdit?'可直接輸入數字，或按 ▼ 選擇':'目前帳號為唯讀，無法修改字體大小')+'">'
+        +'<input class="nl-font-in" inputmode="decimal" aria-label="'+nlEsc(cfg.label)+'字體大小" value="'+cur+'"'+(canEdit?'':' disabled')+' onchange="nlFontSet(\''+type+'\',this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}">'
+        +'<span class="nl-font-drop">▼<select aria-label="選擇'+nlEsc(cfg.label)+'字體大小"'+(canEdit?'':' disabled')+' onchange="nlFontSet(\''+type+'\',this.value)">'
+        +opts.map(function(n){return '<option value="'+n+'"'+(n===cur?' selected':'')+'>'+n+'</option>';}).join('')
+        +'</select></span></span><span>pt</span>'+savedHtml;
+    });
+  }
+  function nlFontFlash(type,text,kind){
+    var el=document.querySelector('#page-namelabels .nl-font[data-nl-font="'+type+'"] .nl-font-saved');if(!el)return;
+    el.textContent=text;el.style.color=kind==='err'?'var(--red)':'';clearTimeout(el._t);if(kind!=='err')el._t=setTimeout(function(){el.textContent='';},2500);
+  }
+  async function nlFontSaveCloud(type){
+    nlFontCache();
+    if(typeof sbFetch!=='function'){nlFontFlash(type,'已存本機','err');return;}
+    try{
+      var r=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:NL_FONT_KEY,value:JSON.stringify(nlFontMap())})});
+      if(!r||!r.ok){nlFontFlash(type,'已存本機，雲端同步失敗','err');return;}
+      nlFontFlash(type,'✓ 已儲存','ok');
+    }catch(e){console.warn('nlFontSaveCloud',e);nlFontFlash(type,'已存本機，雲端同步失敗','err');}
+  }
+  window.nlFontSet=function(type,value){
+    var cfg=NL_TYPES[type];if(!cfg)return;
+    if(!nlFontCanEdit()){nlFontRender();return;}
+    var n=nlFontNorm(value);
+    if(!n){nlFontRender();nlFontFlash(type,'請輸入 1~400 的數字','err');return;}
+    if(n===cfg.font){nlFontRender();return;}
+    cfg.font=n;nlFontTouched=true;
+    nlFontRender();nlRenderPreview();nlSetStatus('尚未產生','');
+    nlFontSaveCloud(type);
+  };
+  async function nlFontLoad(){
+    if(typeof sbFetch!=='function')return;
+    try{
+      var r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+encodeURIComponent(NL_FONT_KEY));
+      if(!r||!r.ok)return;
+      nlFontLoaded=true;
+      var row=Array.isArray(r.data)?r.data[0]:null;
+      if(row&&!nlFontTouched){var map=null;try{map=JSON.parse(row.value);}catch(e){}nlFontApply(map);nlFontCache();nlFontRender();nlRenderPreview();}
+    }catch(e){console.warn('nlFontLoad',e);}
+  }
+  window.nlInit=function(){nlFontRender();if(!nlFontLoaded)nlFontLoad();};
   function nlEsc(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});}
   function nlXml(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&apos;','"':'&quot;'}[c];});}
   function nlSelectedTypes(){return Array.from(document.querySelectorAll('input[name="nl-type"]:checked')).map(function(x){return x.value;});}
@@ -43232,7 +43729,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       a.href=url;a.download='姓名貼_'+new Date().toISOString().slice(0,10)+'.docx';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);nlSetStatus('✓ Word 已產生','ok');
     }catch(e){console.error(e);nlSetStatus('產生失敗：'+(e.message||e),'err');}
   };
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){if(!nlRows.length)window.nlAddRow();});else if(!nlRows.length)window.nlAddRow();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){nlFontRender();if(!nlRows.length)window.nlAddRow();});else{nlFontRender();if(!nlRows.length)window.nlAddRow();}
 })();
 </script>
 <!-- SOP 工作流程:主題詳細內容彈窗(ESC 或點背景關閉) -->
@@ -44707,7 +45204,7 @@ async function ldDashLoad(){
     const cls=(over||x.left<=LD_BACK_WORKDAYS)?'ld-l-red':'ld-l-yellow';
     return '<div class="ld-due-item" onclick="navTo(\'loading\')" title="'+ldEsc(x.h)+'（'+ldWk(x.h)+'）交管料">'
       +'<span class="ld-due-name">'+ldEsc(x.proj)+'-'+ldEsc(x.z.zone_code||'')+'</span>'
-      +'<span class="ld-due-date">'+ldEsc(String(x.h).slice(5))+'</span>'
+      +'<span class="ld-due-date">'+ldEsc(String(x.h).slice(5,10).replace('-','/'))+'</span>'
       +'<span class="ld-light '+cls+'">'+tag+'</span></div>';
   }).join('')+(rows.length>12?('<div class="ld-due-more">另有 '+(rows.length-12)+' 區…</div>'):'');
 }
