@@ -444,10 +444,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .rdy-chip.rdy-k-na{opacity:.35;border-style:dashed}
 .rdy-dash-due{flex:none;min-width:58px;text-align:right;font-family:var(--mono);font-size:11.5px;color:var(--text3)}
 .rdy-dash-due.over{color:var(--danger);font-weight:700}
+.rdy-dash-feed{flex:none;font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap}
+.rdy-dash-feed b{font-weight:600}
 .rdy-dash-item .rdy-dash-go{display:inline-flex;flex:none}   /* .spp-go 預設隱藏(hover 才出現),這裡要常駐 */
 .rdy-dash-more{padding:5px 8px;font-size:11.5px;color:var(--text3);cursor:pointer}
 .rdy-dash-more:hover{color:var(--accent2)}
 .rdy-dash-empty{display:block;padding:4px 8px 6px;color:var(--text3);font-size:13px}
+@media(max-width:768px),(pointer:coarse) and (max-width:1100px){   /* 手機／平板:進料換到名稱下一行,不擠掉工程區名稱 */
+  .rdy-dash-item{flex-wrap:wrap;row-gap:2px}
+  .rdy-dash-feed{order:9;flex:1 1 100%;padding-left:17px;font-size:12px}
+}
 /* 主頁產量卡:月排程達成率 */
 .dash-plan{margin-top:8px;cursor:pointer}
 .dash-plan[hidden]{display:none}
@@ -3942,6 +3948,8 @@ window.normalizeFullWidth=function(value){
     .rdy-card.rdy-c-yellow{border-left-color:var(--yellow);background:color-mix(in srgb,var(--yellow) 7%,var(--bg3))}
     .rdy-card.rdy-c-red{border-left-color:var(--danger);background:color-mix(in srgb,var(--danger) 8%,var(--bg3))}
     .rdy-card.rdy-c-na{opacity:.6;border-left-color:var(--border)}
+    .rdy-card.rdy-c-info{border-left-color:var(--border-hi)}   /* 進料:只是資料,不用紅黃綠 */
+    .rdy-c-info .rdy-card-t b{font-family:var(--mono);color:var(--text)}
     .rdy-card-h{display:flex;align-items:center;gap:6px;font-size:12.5px}
     .rdy-card-h b{font-size:13px}
     .rdy-ic{font-size:12px;color:var(--text3)}
@@ -47006,7 +47014,7 @@ function rdyCardsHtml(ev,proj,zone,canEdit){
       +'<div class="rdy-card-h"><span class="rdy-ic">'+icon[it.st]+'</span><b>'+esc(it.label)+'</b>'+(it.name?'<span class="rdy-name">'+esc(it.name)+'</span>':'')+'</div>'
       +(it.k==='jig'&&act?'':'<div class="rdy-card-t">'+esc(it.text)+'</div>')   // 靠模卡下面已逐項列出,不重複摘要
       +(act?'<div class="rdy-card-a">'+act+'</div>':'')+'</div>';
-  }).join('')+'</div>';
+  }).join('')+rdyFeedCardHtml(ev)+'</div>';
 }
 function rdyCtxZone(){ return rdyZoneRec(prodDetailCtx.proj, prodDetailCtx.zone); }
 async function rdyPatchZone(zid, patch, what){
@@ -47110,7 +47118,8 @@ async function rdyFetchRowsNow(){
     sbFetchAll('/rest/v1/reserved_material?select=*'),
     sbFetchAll('/rest/v1/product_material?select=*'),
     sbFetchAll('/rest/v1/cp_receipts?select=project_no,categories&project_no=in.'+inP),
-    sbFetchAll('/rest/v1/gen_logs?select=*')
+    sbFetchAll('/rest/v1/gen_logs?select=*'),
+    rdyFeedFetch(zs.map(x=>x.z.id)).catch(e=>console.warn('readiness feed failed',e))   // 進料／BOM(只是資料,不影響燈號)
   ]);
   const arr=r=>(r&&r.ok&&Array.isArray(r.data))?r.data:[];
   const spBy={}; arr(rt).forEach(r=>{ const k=rdyUp(r.proj_no); (spBy[k]=spBy[k]||[]).push(r); });
@@ -47146,6 +47155,76 @@ function rdyDueHtml(d,cls){
   return '<span class="'+cls+'">'+(d.left===0?'今天到期':('剩 '+d.left+' 天'))+'</span>';
 }
 
+// ── 上線準備「進料」:累計進料支數／BOM 總支數(算法同主頁線上進度統計:非本公司製作構件不列入)。只是資料,不算燈號 ──
+let rdyFeedById={}, _rdyFeedP={};
+async function rdyFeedFetch(ids){
+  ids=[...new Set((ids||[]).filter(v=>v!=null&&v!=='').map(String))];
+  if(!ids.length) return rdyFeedById;
+  const inZ='('+ids.join(',')+')', arr=r=>(r&&r.ok&&Array.isArray(r.data))?r.data:[];
+  const [rc,rm,re]=await Promise.all([
+    sbFetchAll('/rest/v1/components?select=zone_id,part_no,qty&zone_id=in.'+inZ),
+    sbFetchAll('/rest/v1/material_receipts?select=zone_id,part_no,qty&zone_id=in.'+inZ),
+    sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no,extra&zone_id=in.'+inZ)
+  ]);
+  const now=Date.now();
+  if(!(rc&&rc.ok)){   // 抓失敗:保留舊值、只更新時間,詳情頁重畫時才不會一直重抓
+    ids.forEach(id=>{ rdyFeedById[id]=Object.assign({feed:0,need:0,parts:0,err:true},rdyFeedById[id]||{},{at:now}); });
+    return rdyFeedById;
+  }
+  const nonco=new Set(arr(re).filter(e=>{ const x=e.extra||{}; return x[NONCO_KEY]==='1'||x[NONCO_KEY]===true; }).map(e=>e.zone_id+'|'+e.part_no));
+  const got={}; arr(rm).forEach(m=>{ const k=m.zone_id+'|'+m.part_no; got[k]=(got[k]||0)+(parseInt(m.qty)||0); });
+  const out={}; ids.forEach(id=>{ out[id]={feed:0,need:0,parts:0,at:now}; });
+  arr(rc).forEach(c=>{
+    const o=out[String(c.zone_id)], k=c.zone_id+'|'+c.part_no; if(!o||nonco.has(k)) return;
+    o.parts++; o.need+=parseInt(c.qty)||0; o.feed+=got[k]||0;
+  });
+  Object.assign(rdyFeedById,out);
+  return rdyFeedById;
+}
+function rdyFeedOf(z){ return (z&&z.id!=null)?(rdyFeedById[String(z.id)]||null):null; }
+function rdyFeedColor(f){ return (f&&f.need&&f.feed>=f.need)?'var(--green)':((f&&f.feed>0)?'var(--yellow)':'var(--text3)'); }
+function rdyFeedTxt(f){ if(!f) return '…'; if(!f.need) return f.err?'—':'無BOM'; return f.feed+'/'+f.need; }
+function rdyDashFeedHtml(r){
+  const f=rdyFeedOf(r.z);
+  return '<span class="rdy-dash-feed" title="進料：累計進料支數／BOM 總支數（非本公司製作不列入）">進料 <b style="color:'+rdyFeedColor(f)+'">'+rdyFeedTxt(f)+'</b></span>';
+}
+// 工程區詳情頁:沒資料或超過 30 秒就背景重抓,抓完只重畫上線準備段落
+function rdyFeedEnsure(z){
+  if(!z||z.id==null) return;
+  const k=String(z.id), f=rdyFeedById[k];
+  if(_rdyFeedP[k] || (f && Date.now()-f.at<30000)) return;
+  _rdyFeedP[k]=rdyFeedFetch([k]).catch(e=>console.warn('readiness feed failed',e)).finally(()=>{
+    delete _rdyFeedP[k];
+    if(!rdyFeedById[k]) rdyFeedById[k]={feed:0,need:0,parts:0,err:true,at:Date.now()};
+    const cz=(prodDetailCtx&&prodDetailCtx.proj)?rdyCtxZone():null;
+    if(cz && String(cz.id)===k) rdyRenderZone();
+  });
+}
+function rdyFeedCardHtml(ev){
+  const z=ev&&ev.z;
+  let t, btn='';
+  if(!z) t='BOM 工程總表沒有這個工程區';
+  else {
+    rdyFeedEnsure(z);
+    const f=rdyFeedOf(z);
+    t=!f?'載入中…':(f.need?('進料 <b>'+f.feed+'</b> / '+f.need+' 支'+(f.feed>=f.need?'　已到齊':('　還差 '+(f.need-f.feed)+' 支'))):(f.err?'讀取失敗':'這區還沒有 BOM 構件'));
+    if(typeof pagePerm!=='function' || pagePerm('bom')!=='hide')
+      btn='<div class="rdy-card-a"><button type="button" class="btn rdy-act" data-pid="'+esc(z.project_id)+'" data-zid="'+esc(z.id)+'" onclick="rdyGoBom(this)">📋 BOM 構件總表</button></div>';
+  }
+  return '<div class="rdy-card rdy-c-info"><div class="rdy-card-h"><span class="rdy-ic">▤</span><b>進料</b><span class="rdy-name">累計進料／BOM</span></div>'
+    +'<div class="rdy-card-t">'+t+'</div>'+btn+'</div>';
+}
+// 開這個工程區的 BOM 構件總表(同重新整理還原畫面:工程詳細 → 工程區詳細)
+async function rdyGoBom(btn){
+  if(typeof pagePerm==='function' && pagePerm('bom')==='hide'){ alert('你沒有「BOM 工程列表」頁面的權限'); return; }
+  const num=v=>(/^\d+$/.test(String(v))?Number(v):v);
+  const pid=num(btn.dataset.pid), zid=num(btn.dataset.zid);
+  btn.disabled=true;
+  try{ await showProjectDetail(pid); await showZoneDetail(zid); }
+  finally{ btn.disabled=false; }
+  if(!document.getElementById('page-zone-detail')?.classList.contains('active')) alert('找不到這個工程區的 BOM 構件總表');
+}
+
 // ── 主頁「上線準備」分頁:只列紅燈、黃燈與「全部完成可上線」;還早(灰)的收起來,按一下才展開 ──
 async function rdyDashLoad(){
   const box=document.getElementById('dash-ready'); if(!box) return;
@@ -47175,7 +47254,7 @@ function rdyDashItemHtml(r){
   return '<div class="rdy-dash-item" data-proj="'+esc(r.proj)+'" data-zone="'+esc(r.zone)+'" onclick="dashGoSP(this.dataset.proj,this.dataset.zone)"'
     +' title="'+esc(r.proj+'-'+r.zone+'　預計上線 '+rdyMD(d.online)+'　準備期限 '+rdyMD(d.due)+'　準備完成 '+r.ev.done+'/'+r.ev.need)+'">'
     +'<span class="rdy-dot rdy-'+w+'"></span><span class="rdy-dash-name">'+esc(r.proj)+'-'+esc(r.zone)+'</span>'
-    +'<span class="rdy-dash-chips">'+rdyChipsHtml(r.ev)+'</span>'+tail+'</div>';
+    +'<span class="rdy-dash-chips">'+rdyChipsHtml(r.ev)+'</span>'+rdyDashFeedHtml(r)+tail+'</div>';
 }
 // 全部準備好 → 「可上線」:沿用 sp_online(看板的已上線歸檔),從主頁清單與白板移除
 async function rdyDashOnline(btn){
