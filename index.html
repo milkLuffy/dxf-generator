@@ -6844,9 +6844,18 @@ window.normalizeFullWidth=function(value){
     .att-m-row-go{flex:none;font-size:20px;color:var(--text3)}
     .att-m-bar{position:sticky;bottom:12px;z-index:5;display:flex;gap:8px;margin:16px -6px 0;padding:8px;border:1px solid var(--border-hi);border-radius:16px;background:color-mix(in srgb,var(--bg2) 92%,transparent);box-shadow:0 8px 24px rgba(0,0,0,.25);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
     @media(max-width:768px){.att-m-bar{bottom:calc(76px + env(safe-area-inset-bottom))}}
-    .att-m-bar button{flex:1;min-height:48px;border-radius:12px;font:600 15px var(--sans);cursor:pointer}
+    .att-m-bar{flex-wrap:wrap}
+    .att-m-bar button{flex:1 1 40%;min-height:46px;border-radius:12px;font:600 15px var(--sans);cursor:pointer}
+    .att-m-bar .att-m-bento-btn{flex-basis:100%;border:1px solid rgba(255,159,10,.5);background:rgba(255,159,10,.12);color:var(--accent)}
     .att-m-done{border:0;background:var(--accent);color:#fff}
     .att-m-line{border:1px solid rgba(6,199,85,.55);background:rgba(6,199,85,.14);color:#06c755}
+    .att-m-bento{display:flex;align-items:center;justify-content:center;gap:18px;margin:18px 0 6px}
+    .att-m-step{flex:none;width:64px;height:64px;border:1px solid var(--border-hi);border-radius:50%;background:var(--bg3);color:var(--text);font:600 30px/1 var(--sans);cursor:pointer;touch-action:manipulation}
+    .att-m-bento-n{min-width:96px;text-align:center}
+    .att-m-bento-n b{display:block;font:600 48px/1.1 var(--mono);color:var(--accent)}
+    .att-m-bento-n span{font-size:13px;color:var(--text3)}
+    .att-m-link{padding:0;border:0;background:none;color:var(--accent2);font:inherit;text-decoration:underline;cursor:pointer}
+    .att-m-line-text.att-m-bento-text{height:calc(8em + 24px);min-height:0;margin-top:10px}   /* 訊息固定 5 行，整段都看得到 */
     .att-m-sheet .sp-sheet-panel{display:flex;flex-direction:column;overflow:hidden}
     .att-m-sheet :is(.sp-sheet-grip,.spx-m-head){flex:none}
     .att-m-sheet .sp-sheet-title small{display:block;margin-top:2px;font:400 12px var(--sans);color:var(--text3)}
@@ -29066,7 +29075,8 @@ async function attLineCopy(){
 let attMView=null, attMViewDate='', attMEditName=null, attMFinishNames=[], attMLeaveDraft={}, _attMLineSeq=0;
 let attMOtHours=3;
 try{ const h=parseFloat(localStorage.getItem('attMOtHours')); if(h>0) attMOtHours=h; }catch(_){}
-const ATT_M_GROUP_LABEL={西:'西工',焊:'焊工',研:'研磨',本:'本工',外:'外勞',辦:'辦公人員'};
+const ATT_M_GROUPS=['西','焊','研','本','自','長','辦'];   // 手機版分組：外勞拆成自有／長榮（LINE 文字仍合併為「外」）
+const ATT_M_GROUP_LABEL={西:'西工',焊:'焊工',研:'研磨',本:'本工',自:'自有外勞',長:'長榮外勞',辦:'辦公人員'};
 const ATT_M_LEAVE_TOP=['事假','病假','特休','補休'];
 
 function attMRow(name){ return Array.from(document.querySelectorAll('#att-daily-body tr[data-name]')).find(tr=>tr.getAttribute('data-name')===name)||null; }
@@ -29093,7 +29103,7 @@ function attMPeople(){
     const has=r.work>0||r.ot>0||lt||r.leave_hours>0||String(r.note||'').trim();
     const s=staffArr.find(x=>x.name===r.name);
     if(!has && s && ((s.hire_date&&d10(s.hire_date)>date)||(s.resign_date&&d10(s.resign_date)<date))) return null;
-    return Object.assign({},r,{leave_type:lt, boss:(r.cat==='辦公人員'&&r.team==='老闆'), group:attLineGroup(p)||'辦',
+    return Object.assign({},r,{leave_type:lt, boss:(r.cat==='辦公人員'&&r.team==='老闆'), group:(r.cat==='自有外勞'?'自':r.cat==='長榮外勞'?'長':(attLineGroup(p)||'辦')),
       state:(r.work>0||r.ot>0)?'in':(lt?'leave':'none')});
   }).filter(Boolean);
 }
@@ -29111,7 +29121,7 @@ function attMRender(){
   if(attMViewDate!==date||!attMView){ attMViewDate=date; attMView=cnt.none?'roll':'list'; }
   const v=attMView;
   let h='<div class="att-m-seg">'+[['roll','點名'],['ot','加班'],['list','明細']].map(([k,l])=>'<button type="button" class="'+(k===v?'on':'')+'" onclick="attMSetView(\''+k+'\')">'+l+'</button>').join('')+'</div>';
-  const groups=ATT_LINE_GROUPS.map(g=>({g,list:people.filter(x=>x.group===g)})).filter(x=>x.list.length);
+  const groups=ATT_M_GROUPS.map(g=>({g,list:people.filter(x=>x.group===g)})).filter(x=>x.list.length);
   const chip=(x,cls,sub)=>'<button type="button" class="att-m-chip '+cls+'" data-name="'+attEsc(x.name)+'" onclick="attMTap(this.dataset.name)"><span class="nm">'+attEsc(x.name)+'</span><span class="sub">'+(sub||'&nbsp;')+'</span></button>';
   const ghead=(g,right)=>'<div class="att-m-ghead"><span>'+ATT_M_GROUP_LABEL[g]+'</span><span>'+right+'</span></div>';
   if(v==='roll'){
@@ -29167,11 +29177,13 @@ function attMRender(){
     });
   }
   h+='<div class="att-m-bar">'+(v==='roll'&&cnt.none?'<button type="button" class="att-m-done" onclick="attMOpenFinish()">完成點名</button>':'')
-    +'<button type="button" class="att-m-line" onclick="attMOpenLine()">💬 LINE 回報</button></div>';
+    +'<button type="button" class="att-m-line" onclick="attMOpenLine()">💬 LINE 回報</button>'
+    +'<button type="button" class="att-m-bento-btn" onclick="attMOpenBento(attMView===\'ot\'?\'night\':\'noon\')">🍱 訂便當</button></div>';
   wrap.innerHTML=h;
   const s=document.getElementById('attMSheet');
   if(s&&s.dataset.kind==='edit') attMOpenEdit(attMEditName,true);
   else if(s&&s.dataset.kind==='finish') attMOpenFinish(true);
+  else if(s&&s.dataset.kind==='bento') attMOpenBento(null,true);
 }
 function attMSetView(k){ attMView=k; attMRender(); }
 function attMSetOtHours(v){
@@ -29346,6 +29358,43 @@ async function attMLineCopy(){
     try{ box.setAttribute('readonly',''); box.blur(); }catch(_){}
   }
   if(st) st.textContent=ok?'已複製 ✓ 到 LINE 貼上就好':'無法自動複製，請長按文字框全選後複製';
+}
+// 訂便當：自動統計「本工」便當數（中午＝出工且有便當、晚上＝加班且有便當），可用 −／＋ 改數量，一樣用 LINE 傳
+let attMBentoMode='noon', attMBentoN={};
+try{ attMBentoN=JSON.parse(localStorage.getItem('attMBentoN')||'{}')||{}; }catch(_){ attMBentoN={}; }
+function attMBentoAuto(mode){
+  return attMPeople().filter(x=>x.cat==='本工').reduce((a,x)=>a+(mode==='night'
+    ? ((x.ot>0&&(x.bento>=2||(x.work<=0&&x.bento>=1)))?1:0)
+    : ((x.work>0&&x.bento>=1)?1:0)),0);
+}
+function attMBentoText(n,mode){ return '您好 \n\n鎮山今日'+(mode==='night'?'晚上':'中午')+'需要'+n+'個便當\n\n謝謝您'; }
+function attMBentoKey(){ return ((document.getElementById('att-date')||{}).value||'')+'|'+attMBentoMode; }
+function attMOpenBento(mode,refresh){
+  if(mode) attMBentoMode=mode;
+  const date=(document.getElementById('att-date')||{}).value||''; if(!date) return;
+  const m=attMBentoMode, auto=attMBentoAuto(m), key=attMBentoKey();
+  const n=(attMBentoN[key]!=null)?attMBentoN[key]:auto;
+  const b='<div class="att-m-seg">'+[['noon','中午'],['night','晚上（加班）']].map(([k,l])=>
+      '<button type="button" class="'+(k===m?'on':'')+'" onclick="attMOpenBento(\''+k+'\',true)">'+l+'</button>').join('')+'</div>'
+    +'<div class="att-m-bento"><button type="button" class="att-m-step" aria-label="減少一個" onclick="attMBentoStep(-1)">−</button>'
+      +'<div class="att-m-bento-n"><b>'+n+'</b><span>個便當</span></div>'
+      +'<button type="button" class="att-m-step" aria-label="增加一個" onclick="attMBentoStep(1)">＋</button></div>'
+    +'<div class="att-m-hint">自動統計：本工'+(m==='night'?'加班':'出工')+'且有便當 '+auto+' 人'
+      +(n!==auto?'，已手動改成 '+n+' 個 <button type="button" class="att-m-link" onclick="attMBentoStep(0)">改回自動</button>':'。有人不吃就按 − 減少')+'</div>'
+    +'<textarea id="att-m-line-text" class="att-m-line-text att-m-bento-text" readonly>'+attEsc(attMBentoText(n,m))+'</textarea>'
+    +'<div class="att-m-hint" id="att-m-line-status">確認數量後按「分享到 LINE」傳給便當店。</div>';
+  const foot='<button type="button" class="cpr-m-ghost" onclick="attMLineCopy()">📋 複製</button><button type="button" class="att-m-share" onclick="attMLineShare()">分享到 LINE</button>';
+  attMSheet('bento','訂便當','🍱 訂便當',attLineMD(date)+'（'+attWeekdayShort(new Date(date+'T00:00:00'))+'）',b,foot,refresh);
+}
+// d=±1 調整數量；d=0 改回自動。手動數量依「日期＋中午/晚上」記在這台裝置
+function attMBentoStep(d){
+  const key=attMBentoKey(), auto=attMBentoAuto(attMBentoMode);
+  const cur=(attMBentoN[key]!=null)?attMBentoN[key]:auto;
+  const n=d?Math.max(0,cur+d):auto;
+  if(n===auto) delete attMBentoN[key]; else attMBentoN[key]=n;
+  const keys=Object.keys(attMBentoN).sort(); keys.slice(0,Math.max(0,keys.length-40)).forEach(k=>delete attMBentoN[k]);
+  try{ localStorage.setItem('attMBentoN',JSON.stringify(attMBentoN)); }catch(_){}
+  attMOpenBento(null,true);
 }
 function attMLineShare(){
   const txt=attMLineTxt(); if(!txt) return;
