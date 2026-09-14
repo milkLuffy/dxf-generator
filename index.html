@@ -6484,6 +6484,60 @@ window.normalizeFullWidth=function(value){
     #page-prod .sp-allocation-cell input{width:15px;height:15px;margin:0;accent-color:var(--accent2)}
     @media(max-width:900px){:is(#prodview-receipt,#pdCPSection) .cpr-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}:is(#prodview-receipt,#pdCPSection) .cpr-note-row{grid-template-columns:1fr}:is(#prodview-receipt,#pdCPSection) .cpr-form-actions{justify-content:flex-end}}
     @media(max-width:620px){:is(#prodview-receipt,#pdCPSection) .cpr-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}:is(#prodview-receipt,#pdCPSection) .cpr-form-grid{grid-template-columns:1fr}:is(#prodview-receipt,#pdCPSection) .cpr-toolbar>*{width:100%!important}:is(#prodview-receipt,#pdCPSection) .cpr-form-actions{flex-wrap:wrap}:is(#prodview-receipt,#pdCPSection) .cpr-browse-head,:is(#prodview-receipt,#pdCPSection) .cpr-detail-head{align-items:flex-start;flex-wrap:wrap}:is(#prodview-receipt,#pdCPSection) .cpr-project-search{width:100%;min-width:0}:is(#prodview-receipt,#pdCPSection) .cpr-project-cards{grid-template-columns:1fr}}
+    /* 手機版收圖登記：精簡工程卡、工程頁頂部收合、收圖改卡片＋底部編輯面板、選擇清單改底部滑出 */
+    @media(hover:none){#page-prod .cpr-project-card:hover,#page-prod .prod-mini:hover{transform:none;box-shadow:none}}   /* 觸控點完 hover 會卡住，卡片不能浮動 */
+    .cpr-m-more-btn{display:none}
+    #layout-save-hint{z-index:13000!important}   /* 儲存成功／失敗提示要蓋在手機底部面板（12050）之上 */
+    .cpr-m-list{display:flex;flex-direction:column;gap:10px}
+    .cpr-m-add{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:46px;border:1px dashed var(--accent2);border-radius:12px;background:rgba(10,132,255,.08);color:var(--accent2);font:600 15px var(--sans);cursor:pointer}
+    .cpr-m-card .sp-l-top{align-items:flex-start}
+    .cpr-m-date{flex:none;padding-top:3px;font:12px var(--mono);color:var(--text2)}
+    .cpr-m-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+    .cpr-m-pick{display:flex;align-items:center;justify-content:space-between;gap:8px;box-sizing:border-box;width:100%;min-height:46px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);text-align:left;cursor:pointer}
+    .cpr-m-pick::after{content:'›';flex:none;font-size:20px;color:var(--text3)}
+    .cpr-m-actions{display:flex;gap:10px;grid-column:1/-1;margin-top:4px}
+    .cpr-m-actions button{flex:1;min-height:46px;border-radius:12px;font:600 15px var(--sans);cursor:pointer}
+    .cpr-m-save{border:0;background:var(--accent2);color:#fff}
+    .cpr-m-danger{border:1px solid rgba(255,69,58,.4);background:transparent;color:var(--red)}
+    .cpr-m-ghost{border:1px solid var(--border);background:transparent;color:var(--text2)}
+    @media(max-width:768px){
+      #prodview-receipt .cpr-browse-head{flex-wrap:wrap;gap:8px;margin:8px 0}
+      #prodview-receipt .cpr-browse-sub,#prodview-receipt #cprAddProject,#prodview-receipt #cprCardView{display:none!important}
+      #prodview-receipt .cpr-browse-head>div[style*="flex:1"]{display:none}
+      #prodview-receipt .cpr-project-search{flex:1 1 100%;width:100%;min-width:0;height:44px;font-size:16px}
+      #prodview-receipt .cpr-project-cards{grid-template-columns:1fr!important;gap:8px}
+      #prodview-receipt .cpr-project-card{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:2px;height:auto;min-height:0;padding:12px 14px}
+      #prodview-receipt .cpr-project-card-top{display:contents}
+      #prodview-receipt .cpr-project-card .cpr-project-no{grid-column:1;grid-row:1;font-size:17px}
+      #prodview-receipt .cpr-project-card .cpr-project-count{grid-column:2;grid-row:1/3;align-self:center}
+      #prodview-receipt .cpr-project-card .cpr-project-name{grid-column:1;grid-row:2;margin:0;overflow:hidden;text-overflow:ellipsis}
+      #prodview-receipt .cpr-project-card .cpr-project-company{display:none}
+      #prodview-receipt .cpr-detail-head{flex-wrap:wrap;gap:8px;margin:8px 0}
+      #prodview-receipt .cpr-detail-head>div:nth-child(2){flex:1 1 0;min-width:0}
+      #prodview-receipt .cpr-detail-head>div[style*="flex:1"]{display:none}
+      #prodview-receipt .cpr-detail-title{font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      #prodview-receipt .cpr-detail-meta{font-size:11px}
+      #prodview-receipt .cpr-m-more-btn{display:inline-flex;align-items:center;min-height:38px}
+      #prodview-receipt .cpr-m-more-btn[hidden]{display:none}
+      #prodview-receipt #cprDetailHeader:not(.m-open) .cpr-detail-actions{display:none}
+      #prodview-receipt .cpr-detail-actions{flex:1 1 100%}
+      #prodview-receipt .cpr-group-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+      #prodview-receipt .cpr-group-tabs::-webkit-scrollbar{display:none}
+      #prodview-receipt .cpr-group-tab{flex:none;min-height:36px}
+      #prodview-receipt .cpr-toolbar{gap:8px;margin-bottom:10px;padding:0;border:0;background:transparent}
+      #prodview-receipt .cpr-toolbar>*{width:auto!important}
+      #prodview-receipt .cpr-toolbar input[type=search]{flex:1 1 0;min-width:0;height:42px;font-size:16px}
+      #prodview-receipt .cpr-toolbar:not(.m-open)>:not(input[type=search]):not(.cpr-m-more-btn){display:none!important}
+      #prodview-receipt .cpr-toolbar.m-open>:not(input[type=search]):not(.cpr-m-more-btn){flex:1 1 40%;min-height:40px}
+      #prodview-receipt .cpr-table-wrap.cpr-m-mode{max-height:none;overflow:visible;border:0;background:transparent}
+      #prodview-receipt .cpr-table-wrap.cpr-m-mode :is(table,tbody,tr,td){display:block;width:100%;min-width:0!important;padding:0!important;border:0!important;background:transparent!important;text-align:left!important;white-space:normal}
+      #prodview-receipt .cpr-table-wrap.cpr-m-mode thead{display:none}
+      /* 工程區／項目選擇清單：不貼著按鈕跳出，改從畫面底部滑出（蓋在編輯面板之上） */
+      #cprInlineDrop.cpr-zone-picker{left:0!important;right:0!important;top:auto!important;bottom:0!important;width:auto!important;min-width:0!important;max-height:70vh!important;z-index:12100!important;padding-bottom:env(safe-area-inset-bottom)!important;border-radius:16px 16px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.45)}
+      #cprInlineDrop .cpr-zone-options{max-height:calc(70vh - 110px)}
+      #cprInlineDrop .cpr-zone-option{min-height:46px;font-size:15px}
+      #cprInlineDrop .cpr-zone-search{height:42px;font-size:16px}
+    }
     #pmPrintArea{display:none}
     @media print{
       /* 具名頁面:只有細項彈窗列印套 A4 直式,不動到全站預設的橫式 @page(床位配置圖等) */
@@ -37058,7 +37112,12 @@ function cprEditProject(){
   const p=cprProjectByNo(cprViewProjectNo);if(!p){alert('找不到這筆工程主檔');return;}
   openBOMModal(p,'receipt');
 }
+// 手機版一律用卡片版面（精簡樣式由 CSS 處理），但不改動使用者存的顯示方式
 function cprRenderProjectCards(){
+  if(!spTrackIsMobile()||cprCardView==='card')return cprRenderProjectCardsView();
+  const saved=cprCardView;cprCardView='card';try{cprRenderProjectCardsView();}finally{cprCardView=saved;}
+}
+function cprRenderProjectCardsView(){
   const wrap=cprEl('cprProjectCards');if(!wrap)return;
   wrap.classList.toggle('is-mini',cprCardView==='mini');wrap.classList.toggle('is-detail',cprCardView==='detail');const view=cprEl('cprCardView');if(view)view.value=cprCardView;
   if(!cprSchemaOk){wrap.innerHTML='<div class="cpr-empty">請先部署 cp_receipts 資料表。</div>';return;}
@@ -37123,8 +37182,9 @@ async function cprDeleteProjectZone(zone){
   for(const change of changes){const r=change.row;if(change.remain.length){const zoneText=cprNormalizeZone(change.remain.join('.')),res=await sbFetch('/rest/v1/cp_receipts?id=eq.'+r.id,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({zone_scope:'selected',zone_text:zoneText})});if(!res.ok){alert('工程區刪除失敗（HTTP '+res.status+'）');return;}r.zone_scope='selected';r.zone_text=zoneText;}else{const res=await sbFetch('/rest/v1/cp_receipts?id=eq.'+r.id,{method:'DELETE',headers:{Prefer:'return=minimal'}});if(!res.ok){alert('工程區刪除失敗（HTTP '+res.status+'）');return;}prodReceipts=prodReceipts.filter(x=>String(x.id)!==String(r.id));}}
   cprCloseZoneManager();cprRender();spxHint('✓ 已移除工程區 '+zone);
 }
-function cprOpenProject(projectNo){cprViewProjectNo=String(projectNo||'').trim();cprDetailGroup='all';cprPage=1;cprNewDraft=cprBlankInlineDraft();cprEditDraft=null;cprResetHistory();const f=cprEl('cprFilterProject');if(f)f.value=cprViewProjectNo;['cprFilterFrom','cprFilterTo','cprSearch'].forEach(id=>{const el=cprEl(id);if(el)el.value='';});cprRender();setView({page:'prod',ptab:'receipt',preceipt:1,pproj:cprViewProjectNo,cpgroup:cprDetailGroup,cpstatus:cprStatusFilter});}
-function cprGoHome(){cprViewProjectNo='';cprDetailGroup='all';cprPage=1;cprEditDraft=null;cprResetHistory();const f=cprEl('cprFilterProject');if(f)f.value='';cprRender();setView({page:'prod',ptab:'receipt',cphome:1,cpstatus:cprStatusFilter});}
+let cprHomeScrollY=0;   // 手機版：點進工程回到頂端，返回工程列表時回到原本位置
+function cprOpenProject(projectNo){if(spTrackIsMobile()){cprHomeScrollY=window.scrollY;window.scrollTo(0,0);}cprViewProjectNo=String(projectNo||'').trim();cprDetailGroup='all';cprPage=1;cprNewDraft=cprBlankInlineDraft();cprEditDraft=null;cprResetHistory();const f=cprEl('cprFilterProject');if(f)f.value=cprViewProjectNo;['cprFilterFrom','cprFilterTo','cprSearch'].forEach(id=>{const el=cprEl(id);if(el)el.value='';});cprRender();setView({page:'prod',ptab:'receipt',preceipt:1,pproj:cprViewProjectNo,cpgroup:cprDetailGroup,cpstatus:cprStatusFilter});}
+function cprGoHome(){cprViewProjectNo='';cprDetailGroup='all';cprPage=1;cprEditDraft=null;cprResetHistory();const f=cprEl('cprFilterProject');if(f)f.value='';cprRender();setView({page:'prod',ptab:'receipt',cphome:1,cpstatus:cprStatusFilter});if(spTrackIsMobile())requestAnimationFrame(()=>window.scrollTo(0,cprHomeScrollY||0));}
 function cprSetGroup(group){cprDetailGroup=CPR_GROUPS.some(x=>x[0]===group)?group:'all';cprPage=1;cprRender();setView({page:'prod',ptab:'receipt',preceipt:1,pproj:cprViewProjectNo,cpgroup:cprDetailGroup,cpstatus:cprStatusFilter});}
 async function cprDelete(id){
   const r=prodReceipts.find(x=>String(x.id)===String(id));if(!r||!await uiConfirm('確定刪除 '+(r.project_no||'')+' / '+(r.cp_no||'')+' 的收圖紀錄？'))return;
@@ -37211,7 +37271,7 @@ document.addEventListener('keydown',function(event){
   if(document.getElementById('spTrackItemDrop'))spTrackCloseItemDropdown();
   drops.forEach(el=>{if(el.isConnected)el.remove();});
 },true);
-function cprRefreshItemPicker(context,focus){const d=cprEl('cprInlineDrop');if(!d)return;d.innerHTML=cprItemPickerHTML(context);if(focus)setTimeout(()=>d.querySelector('.cpr-zone-search')?.focus(),0);}
+function cprRefreshItemPicker(context,focus){const d=cprEl('cprInlineDrop');if(!d)return;d.innerHTML=cprItemPickerHTML(context);if(focus)if(!spTrackIsMobile())setTimeout(()=>d.querySelector('.cpr-zone-search')?.focus(),0);}
 function cprItemPickerToggle(context,value){const x=cprItemContext(context),on=!x.selected.includes(value);if(x.row){if(value==='__subcontract__')cprDirectSetSubcontract(x.id,on);else cprDirectToggleItem(x.id,value,on,null);}else{if(value==='__subcontract__')cprInlineSetSubcontract(x.kind,on);else cprInlineToggleItem(x.kind,value,on);}cprRefreshItemPicker(context,false);}
 function cprItemPickerRemove(event,context,value){event.preventDefault();event.stopPropagation();const x=cprItemContext(context);if(x.row){if(value==='__subcontract__')cprDirectSetSubcontract(x.id,false);else cprDirectToggleItem(x.id,value,false,null);}else{if(value==='__subcontract__')cprInlineSetSubcontract(x.kind,false);else cprInlineToggleItem(x.kind,value,false);}cprRefreshItemPicker(context,false);}
 function cprOpenInlinePicker(ev,kind,type){
@@ -37221,7 +37281,7 @@ function cprOpenInlinePicker(ev,kind,type){
   }else{
     d.dataset.context='inline:'+kind;d.className+=' cpr-zone-picker';d.style.maxHeight='410px';d.innerHTML=cprItemPickerHTML(d.dataset.context);
   }
-  document.body.appendChild(d);const r=ev.currentTarget.getBoundingClientRect();let left=r.left,top=r.bottom+4;if(left+d.offsetWidth>innerWidth-8)left=innerWidth-d.offsetWidth-8;if(top+d.offsetHeight>innerHeight-8)top=Math.max(8,r.top-d.offsetHeight-4);d.style.left=Math.max(8,left)+'px';d.style.top=top+'px';setTimeout(()=>d.querySelector('.cpr-zone-search')?.focus(),0);setTimeout(()=>document.addEventListener('mousedown',cprInlinePickerOutside,true),0);
+  document.body.appendChild(d);const r=ev.currentTarget.getBoundingClientRect();let left=r.left,top=r.bottom+4;if(left+d.offsetWidth>innerWidth-8)left=innerWidth-d.offsetWidth-8;if(top+d.offsetHeight>innerHeight-8)top=Math.max(8,r.top-d.offsetHeight-4);d.style.left=Math.max(8,left)+'px';d.style.top=top+'px';if(!spTrackIsMobile())setTimeout(()=>d.querySelector('.cpr-zone-search')?.focus(),0);setTimeout(()=>document.addEventListener('mousedown',cprInlinePickerOutside,true),0);
 }
 function cprRefreshInlineDraft(kind){const d=cprInlineDraft(kind),z=cprEl('cpr-'+kind+'-zone-btn'),i=cprEl('cpr-'+kind+'-item-btn');if(z)z.innerHTML=cprInlineZoneTags(d);if(i)i.innerHTML=cprInlineItemTags(d);}
 function cprInlineToggleZone(kind,zone,on){const d=cprInlineDraft(kind);if(!d)return;let values=new Set(d.zones||[]);if(zone==='全區')values=on?new Set(['全區']):new Set();else{values.delete('全區');if(on)values.add(zone);else values.delete(zone);}d.zones=[...values];cprRefreshInlineDraft(kind);const box=cprEl('cprInlineDrop');if(box)box.querySelectorAll('input[data-zone]').forEach(el=>el.checked=d.zones.includes(el.dataset.zone));}
@@ -37249,7 +37309,7 @@ function cprOpenRowPicker(ev,id,type){
   }else{
     d.dataset.context='row:'+id;d.className+=' cpr-zone-picker';d.style.maxHeight='410px';d.innerHTML=cprItemPickerHTML(d.dataset.context);
   }
-  document.body.appendChild(d);const box=ev.currentTarget.getBoundingClientRect();let left=box.left,top=box.bottom+4;if(left+d.offsetWidth>innerWidth-8)left=innerWidth-d.offsetWidth-8;if(top+d.offsetHeight>innerHeight-8)top=Math.max(8,box.top-d.offsetHeight-4);d.style.left=Math.max(8,left)+'px';d.style.top=top+'px';setTimeout(()=>d.querySelector('.cpr-zone-search')?.focus(),0);setTimeout(()=>document.addEventListener('mousedown',cprInlinePickerOutside,true),0);
+  document.body.appendChild(d);const box=ev.currentTarget.getBoundingClientRect();let left=box.left,top=box.bottom+4;if(left+d.offsetWidth>innerWidth-8)left=innerWidth-d.offsetWidth-8;if(top+d.offsetHeight>innerHeight-8)top=Math.max(8,box.top-d.offsetHeight-4);d.style.left=Math.max(8,left)+'px';d.style.top=top+'px';if(!spTrackIsMobile())setTimeout(()=>d.querySelector('.cpr-zone-search')?.focus(),0);setTimeout(()=>document.addEventListener('mousedown',cprInlinePickerOutside,true),0);
 }
 function cprDirectToggleZone(id,zone,on,el){const r=cprDirectRow(id);if(!r)return;let values=new Set(cprDirectZoneValues(r));if(zone==='全區')values=on?new Set(['全區']):new Set();else{values.delete('全區');if(on)values.add(zone);else values.delete(zone);}if(!values.size){if(el)el.checked=true;spxHint('至少要保留一個工程區',true);return;}cprRecordSnapshot(r.project_no);const arr=[...values];r.zone_scope=arr.includes('全區')?'all':'selected';r.zone_text=arr.includes('全區')?'全區':cprNormalizeZone(arr.join('.'));cprDirectRefreshCell(id,'zone');cprDirectSet(id,'zone_text',r.zone_text,false,true);const d=cprEl('cprInlineDrop');if(d)d.querySelectorAll('input[data-zone]').forEach(x=>x.checked=cprDirectZoneValues(r).includes(x.dataset.zone));}
 function cprDirectAddZone(id){return cprCreateZoneOption('row:'+id);}
@@ -37334,11 +37394,69 @@ function cprRender(){
   const banner=cprEl('cprSchemaBanner');if(banner)banner.style.display=cprSchemaOk?'none':'block';const isDetail=!!cprViewProjectNo,home=cprEl('cprProjectHome'),homeHead=cprEl('cprHomeHeader'),detail=cprEl('cprProjectDetail'),detailHead=cprEl('cprDetailHeader'),addProject=cprEl('cprAddProject');if(home)home.style.display=isDetail?'none':'';if(homeHead)homeHead.style.display=isDetail?'none':'';if(detail)detail.style.display=isDetail?'':'none';if(detailHead)detailHead.style.display=isDetail?'':'none';if(addProject)addProject.style.display=pagePerm('prod')==='edit'?'':'none';cprRenderProjectCards();cprUpdateHistoryButtons();if(!isDetail)return;cprRenderDetailHeader();
   const body=cprEl('cprBody');if(!body)return;if(!cprSchemaOk){body.innerHTML='<tr><td colspan="6" class="cpr-empty">請先部署 cp_receipts 資料表。</td></tr>';return;}
   const rows=cprFilteredRows(),pages=Math.max(1,Math.ceil(rows.length/CPR_PAGE_SIZE));if(cprPage>pages)cprPage=pages;const slice=rows.slice((cprPage-1)*CPR_PAGE_SIZE,cprPage*CPR_PAGE_SIZE),canEdit=pagePerm('prod')==='edit';
-  const dataHtml=slice.length?slice.map(r=>cprReceiptRowHtml(r,canEdit)).join(''):'<tr><td colspan="6" class="cpr-empty">此分類沒有收圖紀錄。</td></tr>';
-  body.innerHTML=(canEdit?cprInlineRowHtml('new',cprEnsureInlineDraft()):'')+dataHtml;
+  const mobile=spTrackIsMobile(),wrap=body.closest('.cpr-table-wrap');if(wrap)wrap.classList.toggle('cpr-m-mode',mobile);cprMobileChromeInit();
+  if(mobile)body.innerHTML='<tr><td>'+cprMobileListHtml(slice,canEdit)+'</td></tr>';
+  else{
+    const dataHtml=slice.length?slice.map(r=>cprReceiptRowHtml(r,canEdit)).join(''):'<tr><td colspan="6" class="cpr-empty">此分類沒有收圖紀錄。</td></tr>';
+    body.innerHTML=(canEdit?cprInlineRowHtml('new',cprEnsureInlineDraft()):'')+dataHtml;
+  }
   const info=cprEl('cprPageInfo');if(info)info.textContent=rows.length.toLocaleString()+' 筆 · 第 '+cprPage+' / '+pages+' 頁';if(cprEl('cprPrev'))cprEl('cprPrev').disabled=cprPage<=1;if(cprEl('cprNext'))cprEl('cprNext').disabled=cprPage>=pages;
 }
 function cprInitUI(){cprPopulateProjects();cprEnsureInlineDraft();cprRender();}
+// ── 手機版收圖登記：工程頁頂部與工具列收合、收圖卡片、底部編輯面板 ──
+function cprMobileChromeInit(){
+  const head=document.querySelector('#cprDetailHeader .cpr-detail-head'),actions=cprEl('cprDetailActions');
+  if(head&&actions){
+    let btn=head.querySelector('.cpr-m-more-btn');
+    if(!btn){btn=document.createElement('button');btn.type='button';btn.className='btn cpr-m-more-btn';btn.textContent='⋯';btn.setAttribute('aria-label','工程設定');btn.setAttribute('aria-expanded','false');
+      btn.onclick=()=>{const open=cprEl('cprDetailHeader').classList.toggle('m-open');btn.setAttribute('aria-expanded',String(open));};head.insertBefore(btn,actions);}
+    btn.hidden=actions.style.display==='none';
+  }
+  const bar=document.querySelector('#cprProjectDetail .cpr-toolbar');
+  if(bar&&!bar.querySelector('.cpr-m-more-btn')){const btn=document.createElement('button');btn.type='button';btn.className='btn cpr-m-more-btn';btn.textContent='⋯ 更多';
+    btn.onclick=()=>{const open=bar.classList.toggle('m-open');btn.textContent=open?'收起':'⋯ 更多';};bar.appendChild(btn);}
+}
+function cprMobileListHtml(rows,canEdit){
+  const add=canEdit?'<button type="button" class="cpr-m-add" onclick="cprOpenMobileSheet(\'new\')">＋ 新增收圖</button>':'';
+  if(!rows.length)return '<div class="cpr-m-list">'+add+'<div class="sp-m-empty">此分類沒有收圖紀錄。</div></div>';
+  return '<div class="cpr-m-list">'+add+rows.map(r=>{
+    const zones=cprDirectZoneValues(r).map(z=>'<span class="sp-zone-tag">'+esc(z)+'</span>').join(''),items=(r.categories||[]).map(cprItemTag).join(''),open='cprOpenMobileSheet('+Number(r.id)+')';
+    return '<div class="sp-l-card cpr-m-card" role="button" tabindex="0" onclick="'+open+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+open+'}">'+
+      '<div class="sp-l-top"><span class="sp-l-cp">'+esc(r.cp_no||'（未填 CP 單號）')+'</span><span class="cpr-m-date">'+esc(dateSlash(String(r.received_date||'').slice(0,10))||'—')+'</span></div>'+
+      '<div class="cpr-m-tags">'+(zones||'<span class="prod-no">未選工程區</span>')+'</div>'+
+      '<div class="cpr-m-tags">'+(items||'<span class="prod-no">未選項目</span>')+(r.is_subcontract?'<span class="chip st-sub">轉包</span>':'')+'</div>'+
+      '<span class="sp-l-go" aria-hidden="true">›</span></div>';
+  }).join('')+'</div>';
+}
+// 新增沿用 cprCommitInline('new')；編輯沿用逐欄自動儲存（cprDirectSetCP／cprDirectSet／工程區與項目選擇清單）
+function cprOpenMobileSheet(id){
+  cprCloseInlinePicker();document.getElementById('cprMobileSheet')?.remove();
+  const isNew=id==='new',r=isNew?null:cprDirectRow(id);if(!isNew&&!r)return;
+  const canEdit=pagePerm('prod')==='edit',dis=canEdit?'':' disabled';let body='';
+  if(isNew){const d=cprEnsureInlineDraft();
+    body='<label class="spx-m-field wide"><span>CP單號</span><input value="'+esc(d.cp_no||'')+'" placeholder="例如 A15-101" autocomplete="off" oninput="cprInlineDraft(\'new\').cp_no=this.value.toUpperCase()"></label>'+
+      '<label class="spx-m-field wide"><span>收圖日期</span><input type="date" value="'+esc(d.received_date||'')+'" oninput="cprInlineDraft(\'new\').received_date=this.value" onchange="cprInlineDraft(\'new\').received_date=this.value"></label>'+
+      '<div class="spx-m-field wide"><span>工程區</span><button type="button" id="cpr-new-zone-btn" class="cpr-m-pick" onclick="cprOpenInlinePicker(event,\'new\',\'zone\')">'+cprInlineZoneTags(d)+'</button></div>'+
+      '<div class="spx-m-field wide"><span>項目</span><button type="button" id="cpr-new-item-btn" class="cpr-m-pick" onclick="cprOpenInlinePicker(event,\'new\',\'item\')">'+cprInlineItemTags(d)+'</button></div>'+
+      '<div class="cpr-m-actions"><button type="button" class="cpr-m-ghost" onclick="cprCancelMobileNew()">清除</button><button type="button" class="cpr-m-save" onclick="cprSaveMobileNew()">儲存收圖</button></div>';
+  }else{
+    body='<label class="spx-m-field wide"><span>CP單號</span><input value="'+esc(r.cp_no||'')+'" autocomplete="off"'+dis+' oninput="this.value=this.value.toUpperCase()" onchange="cprDirectSetCP('+r.id+',this.value,this)"></label>'+
+      '<label class="spx-m-field wide"><span>收圖日期</span><input type="date" value="'+esc(String(r.received_date||'').slice(0,10))+'"'+dis+' onchange="cprDirectSet('+r.id+',\'received_date\',this.value,true)"></label>'+
+      '<div class="spx-m-field wide"><span>工程區</span><button type="button" id="cpr-row-zone-'+r.id+'" class="cpr-m-pick"'+dis+' onclick="cprOpenRowPicker(event,'+r.id+',\'zone\')">'+cprInlineZoneTags({zones:cprDirectZoneValues(r)})+'</button></div>'+
+      '<div class="spx-m-field wide"><span>項目</span><button type="button" id="cpr-row-item-'+r.id+'" class="cpr-m-pick"'+dis+' onclick="cprOpenRowPicker(event,'+r.id+',\'item\')">'+cprInlineItemTags({items:new Set(r.categories||[]),is_subcontract:!!r.is_subcontract})+'</button></div>'+
+      (canEdit?'<div class="cpr-m-actions">'+(cprRevisionEligible(r)?'<button type="button" class="cpr-m-ghost" onclick="cprCloseMobileSheet(false);cprOpenRevision('+r.id+')">BOM 修訂</button>':'')+'<button type="button" class="cpr-m-danger" onclick="cprMobileDelete('+r.id+')">刪除這筆</button></div>':'');
+  }
+  const sheet=document.createElement('div');sheet.className='sp-sheet spx-m-sheet';sheet.id='cprMobileSheet';
+  sheet.innerHTML='<div class="sp-sheet-panel" role="dialog" aria-modal="true" aria-label="'+(isNew?'新增收圖':'編輯收圖')+'"><div class="sp-sheet-grip"></div>'+
+    '<div class="spx-m-head"><div class="sp-sheet-title">'+(isNew?'新增收圖・'+esc(cprViewProjectNo):esc(r.cp_no||'收圖紀錄'))+'</div><button type="button" class="spx-m-close" aria-label="關閉" onclick="cprCloseMobileSheet(true)">✕</button></div>'+
+    (canEdit?'':'<div class="spx-m-readonly">目前帳號為唯讀，無法修改。</div>')+'<div class="spx-m-form">'+body+'</div>'+(!isNew&&canEdit?'<div class="spx-m-note">修改會自動儲存</div>':'')+'</div>';
+  sheet.addEventListener('click',e=>{if(e.target===sheet)cprCloseMobileSheet(true);});
+  document.body.appendChild(sheet);
+}
+function cprCloseMobileSheet(rerender){cprCloseInlinePicker();const sheet=document.getElementById('cprMobileSheet');if(!sheet)return;sheet.remove();if(rerender)cprRender();}
+async function cprSaveMobileNew(){const before=prodReceipts.length;await cprCommitInline('new');if(prodReceipts.length>before)cprCloseMobileSheet(true);}
+function cprCancelMobileNew(){cprNewDraft=cprBlankInlineDraft();cprCloseMobileSheet(true);}
+async function cprMobileDelete(id){const before=prodReceipts.length;await cprDelete(id);if(prodReceipts.length<before)cprCloseMobileSheet(true);}
 // 項目:DB 存的仍是既有代碼(SP/L/FB/P/Q/Z 不可更動,舊資料與 sp_progress view 依賴),
 // 畫面一律顯示中文全名;後四項沒有現成代碼,直接以名稱本身當值。
 const PROD_ITEMS=['FB','L','P','Q','Z','U','H','BT','RH&BH','板組托樑','板組BT','SP'];
@@ -39123,11 +39241,11 @@ function spTrackNotionHTML(context){
 }
 function spTrackNotionSearch(value){const d=document.getElementById('spTrackItemDrop');if(!d)return;const q=String(value||'').trim().toLowerCase(),normalized=cprNormalizeZone(value).split('.')[0]||'',rows=[...d.querySelectorAll('.cpr-zone-option')];let exact=false;rows.forEach(row=>{const hit=!q||String(row.dataset.zoneSearch||'').includes(q);row.style.display=hit?'':'none';if(String(row.dataset.value||'').toUpperCase()===normalized)exact=true;});const create=d.querySelector('.cpr-zone-create');if(create){create.style.display=normalized&&!exact?'block':'none';create.dataset.value=normalized;create.textContent=normalized?'＋ 建立「'+normalized+'」':'';}}
 function spTrackNotionKeydown(event){event.stopPropagation();if(event.key==='Enter'){const d=document.getElementById('spTrackItemDrop'),create=d?.querySelector('.cpr-zone-create');if(create&&create.style.display!=='none'){event.preventDefault();spTrackNotionCreate(d.dataset.context);}}else if(event.key==='Escape'){event.preventDefault();spTrackCloseItemDropdown();}}
-function spTrackNotionRefresh(context,focus){const d=document.getElementById('spTrackItemDrop');if(!d)return;d.innerHTML=spTrackNotionHTML(context);if(focus)setTimeout(()=>d.querySelector('.cpr-zone-search')?.focus(),0);}
+function spTrackNotionRefresh(context,focus){const d=document.getElementById('spTrackItemDrop');if(!d)return;d.innerHTML=spTrackNotionHTML(context);if(focus)if(!spTrackIsMobile())setTimeout(()=>d.querySelector('.cpr-zone-search')?.focus(),0);}
 async function spTrackNotionToggle(context,value){const x=spTrackNotionContext(context),on=!x.selected.includes(value);if(context==='draft-zone'){const set=new Set(x.selected);if(on)set.add(value);else set.delete(value);spTrackDraft.zone=spTrackZoneText([...set]);spTrackRenderCurrentList();}else if(context==='draft-item')spTrackDraftToggleItem(value,on);else if(context==='modal-zone'){const set=new Set(x.selected);if(on)set.add(value);else set.delete(value);const saving=spTrackSetGroupZones([...set]);spTrackNotionRefresh(context,false);await saving;return;}else{const saving=spTrackToggleItem(value,on,{checked:on},true);spTrackNotionRefresh(context,false);await saving;return;}spTrackNotionRefresh(context,false);}
 function spTrackNotionRemove(event,context,value){event.preventDefault();event.stopPropagation();spTrackNotionToggle(context,value);}
 async function spTrackNotionCreate(context){const d=document.getElementById('spTrackItemDrop'),value=d?.querySelector('.cpr-zone-create')?.dataset.value;if(!value)return;if(context==='draft-zone'){const set=new Set(spTrackZones(spTrackDraft?.zone));set.add(value);spTrackDraft.zone=spTrackZoneText([...set]);spTrackRenderCurrentList();}else if(context==='modal-zone')await spTrackSetGroupZones([...(spTrackModalGroup?.zones||[]),value]);spTrackNotionRefresh(context,true);}
-function spTrackOpenNotionPicker(ev,context){ev.stopPropagation();spTrackCloseItemDropdown();const d=document.createElement('div');d.id='spTrackItemDrop';d.dataset.context=context;d.className='hw-fdrop cpr-zone-picker';d.style.cssText='position:fixed;z-index:10050;max-height:410px;overflow:hidden;padding:0';d.innerHTML=spTrackNotionHTML(context);document.body.appendChild(d);const r=ev.currentTarget.getBoundingClientRect();let left=r.left,top=r.bottom+4;if(left+d.offsetWidth>innerWidth-8)left=innerWidth-d.offsetWidth-8;if(top+d.offsetHeight>innerHeight-8)top=Math.max(8,r.top-d.offsetHeight-4);d.style.left=Math.max(8,left)+'px';d.style.top=top+'px';setTimeout(()=>d.querySelector('.cpr-zone-search')?.focus(),0);setTimeout(()=>document.addEventListener('mousedown',spTrackItemDropOutside,true),0);}
+function spTrackOpenNotionPicker(ev,context){ev.stopPropagation();spTrackCloseItemDropdown();const d=document.createElement('div');d.id='spTrackItemDrop';d.dataset.context=context;d.className='hw-fdrop cpr-zone-picker';d.style.cssText='position:fixed;z-index:10050;max-height:410px;overflow:hidden;padding:0';d.innerHTML=spTrackNotionHTML(context);document.body.appendChild(d);const r=ev.currentTarget.getBoundingClientRect();let left=r.left,top=r.bottom+4;if(left+d.offsetWidth>innerWidth-8)left=innerWidth-d.offsetWidth-8;if(top+d.offsetHeight>innerHeight-8)top=Math.max(8,r.top-d.offsetHeight-4);d.style.left=Math.max(8,left)+'px';d.style.top=top+'px';if(!spTrackIsMobile())setTimeout(()=>d.querySelector('.cpr-zone-search')?.focus(),0);setTimeout(()=>document.addEventListener('mousedown',spTrackItemDropOutside,true),0);}
 function spTrackDraftRowHtml(detail){
   if(!spTrackDraft)return '';
   // Array.map 會額外傳入索引；不可直接把 prodItemTag 當 callback，否則第 2 個以後的項目會把索引誤當成完成狀態。
@@ -39264,7 +39382,7 @@ function spTrackMobileCardsHtml(groups,detail){
   }).join('')+'</div>';
 }
 // 手機／電腦寬度切換時（例如平板轉向）重繪 SP 清單，改用對應版面
-if(window.matchMedia){const spListMq=window.matchMedia('(max-width:768px)'),spListMqChange=()=>{try{spTrackRenderCurrentList();['reserved','product','manual'].forEach(k=>{if(document.getElementById('spxBody-'+k))spxRender(k);});}catch(e){}};if(spListMq.addEventListener)spListMq.addEventListener('change',spListMqChange);else if(spListMq.addListener)spListMq.addListener(spListMqChange);}
+if(window.matchMedia){const spListMq=window.matchMedia('(max-width:768px)'),spListMqChange=()=>{try{spTrackRenderCurrentList();['reserved','product','manual'].forEach(k=>{if(document.getElementById('spxBody-'+k))spxRender(k);});if(typeof cprRender==='function'&&typeof cprSchemaOk!=='undefined'&&cprSchemaOk)cprRender();}catch(e){}};if(spListMq.addEventListener)spListMq.addEventListener('change',spListMqChange);else if(spListMq.addListener)spListMq.addListener(spListMqChange);}
 function spTrackRenderOuter(){
   prodMemoReset();
   const head=document.getElementById('spxHead-track'),body=document.getElementById('spxBody-track'); if(!head||!body)return;
