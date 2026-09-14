@@ -6156,7 +6156,7 @@ window.normalizeFullWidth=function(value){
     .spx-detail-btn:hover{background:rgba(10,132,255,.20)}
     .pm-detail-backdrop{position:fixed;inset:0;z-index:12000;background:rgba(0,0,0,.58);display:flex;align-items:center;justify-content:center;padding:24px}
     .pm-detail-modal{width:min(1120px,96vw);max-height:88vh;overflow:auto;background:var(--bg2);border:1px solid var(--border-hi);border-radius:14px;box-shadow:0 24px 80px rgba(0,0,0,.45)}
-    .pm-detail-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--bg2);border-bottom:1px solid var(--border)}
+    .pm-detail-head{position:sticky;top:0;left:0;z-index:2;display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--bg2);border-bottom:1px solid var(--border)}
     .pm-detail-title{font:700 16px var(--mono);color:var(--text)}
     .pm-detail-meta{color:var(--text3);font:12px var(--mono)}
     .pm-detail-close{margin-left:auto;border:0;background:none;color:var(--text2);font-size:20px;cursor:pointer;padding:2px 8px}
@@ -6220,6 +6220,32 @@ window.normalizeFullWidth=function(value){
     .pm-summary-title{padding:10px 12px;background:var(--bg3);color:var(--text);font:700 13px var(--mono);border-bottom:1px solid var(--border)}
     .pm-summary .pm-detail-table th{position:static}
     .pm-summary-total td{font-weight:700;background:rgba(10,132,255,.08);color:var(--accent2)}
+    /* 手工單細項：欄寬固定比例，手機上不必左右捲動 */
+    .mo-detail-table{table-layout:fixed}
+    .mo-detail-table .mo-col-no,.mo-detail-table .mo-col-del{width:46px}
+    .mo-detail-table .mo-col-qty{width:152px}
+    .mo-detail-input{box-sizing:border-box;max-width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text);font:12px var(--mono);outline:none}
+    .mo-detail-input:focus{border-color:var(--accent2)}
+    .mo-detail-input.sp{width:240px}
+    .mo-detail-input.qty{width:130px;text-align:right}
+    /* 手機版：細項彈窗改接近滿版、縮小內距 */
+    @media(max-width:768px){
+      .pm-detail-backdrop{padding:10px}
+      .pm-detail-modal,.pm-sp-modal,.cpr-rev-modal{width:100%!important;max-height:92vh;max-height:calc(100dvh - 20px);border-radius:12px}
+      .pm-detail-head{padding:12px 14px;gap:8px}
+      .pm-detail-title{font-size:15px}
+      .pm-detail-meta{white-space:normal;line-height:1.5}
+      .pm-detail-table th,.pm-detail-table td{padding:8px}
+      .pm-detail-modal:not(.pm-sp-modal) .pm-detail-table th{position:static}  /* 標題列換行後高度不固定，表頭不再黏在 52px 處以免重疊 */
+      .pm-summary{margin:12px}
+      .cpr-rev-setup{grid-template-columns:1fr}
+      .cpr-rev-bom-tools input{min-width:0}
+      .mo-detail-table .mo-col-no{width:28px}
+      .mo-detail-table .mo-col-del{width:36px}
+      .mo-detail-table .mo-col-qty{width:34%}
+      .mo-detail-table th,.mo-detail-table td{padding:7px 6px}
+      .mo-detail-input.sp,.mo-detail-input.qty{width:100%;font-size:16px}  /* 16px 以上，iPhone 點輸入框才不會自動放大畫面 */
+    }
     /* CP 收圖登記 */
     :is(#prodview-receipt,#pdCPSection) .cpr-schema{display:none;margin-bottom:12px;padding:12px 14px;border:1px solid rgba(255,69,58,.38);border-radius:10px;background:rgba(255,69,58,.08);color:var(--red);font-size:12px;line-height:1.7}
     :is(#prodview-receipt,#pdCPSection) .cpr-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
@@ -38741,20 +38767,19 @@ function moOpenDetails(rowKey){
 }
 function moTotalQty(){ const t=moDraft.reduce((n,d)=>n+(moDetailQty(d.qty)||0),0); return Math.round(t*100)/100; }
 function moFilledCount(){ return moDraft.filter(d=>String(d.sp||'').trim()!==''||moDetailQty(d.qty)!=null).length; }
-const MO_INPUT_CSS='padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text);font:12px var(--mono);outline:none';
 function moRenderDetails(focusLast){
   const row=moCurRow(), modal=document.getElementById('pmDetailModal'); if(!row||!modal) return;
   const rows=moDraft.map((d,i)=>'<tr>'+
-      '<td style="width:46px;color:var(--text2)">'+(i+1)+'</td>'+
-      '<td><input id="moD-'+i+'-sp" type="text" value="'+esc(d.sp)+'" placeholder="SP編號" autocomplete="off" style="width:240px;'+MO_INPUT_CSS+'" oninput="moEditDetail('+i+',\'sp\',this.value)" onkeydown="moDetailKey(event,'+i+')"></td>'+
-      '<td class="num"><input id="moD-'+i+'-qty" type="text" value="'+esc(d.qty)+'" placeholder="數量" autocomplete="off" style="width:130px;text-align:right;'+MO_INPUT_CSS+'" oninput="moEditDetail('+i+',\'qty\',this.value)" onkeydown="moDetailKey(event,'+i+')"></td>'+
-      '<td style="width:46px"><button class="btn-del-row" title="刪除這列" onclick="moDelDetail('+i+')">✕</button></td>'+
+      '<td style="color:var(--text2)">'+(i+1)+'</td>'+
+      '<td><input id="moD-'+i+'-sp" class="mo-detail-input sp" type="text" value="'+esc(d.sp)+'" placeholder="SP編號" autocomplete="off" oninput="moEditDetail('+i+',\'sp\',this.value)" onkeydown="moDetailKey(event,'+i+')"></td>'+
+      '<td class="num"><input id="moD-'+i+'-qty" class="mo-detail-input qty" type="text" inputmode="decimal" value="'+esc(d.qty)+'" placeholder="數量" autocomplete="off" oninput="moEditDetail('+i+',\'qty\',this.value)" onkeydown="moDetailKey(event,'+i+')"></td>'+
+      '<td><button class="btn-del-row" title="刪除這列" onclick="moDelDetail('+i+')">✕</button></td>'+
     '</tr>').join('');
   modal.innerHTML='<div class="pm-detail-backdrop" onclick="if(event.target===this)moCloseDetails()"><div class="pm-detail-modal" style="width:min(680px,96vw)">'+
     '<div class="pm-detail-head"><div><div class="pm-detail-title">'+esc(row.manual_no||'手工單')+'－細項</div>'+
       '<div class="pm-detail-meta">'+esc(row.proj_no||'')+'　'+esc(row.zone||'')+'　'+esc(String(row.issue_date||'').slice(0,10))+'　改動自動儲存</div></div>'+
       '<button class="pm-detail-close" onclick="moCloseDetails()">✕</button></div>'+
-    '<table class="pm-detail-table"><thead><tr><th style="width:46px">#</th><th>SP編號</th><th class="num">數量</th><th style="width:46px"></th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<table class="pm-detail-table mo-detail-table"><thead><tr><th class="mo-col-no">#</th><th>SP編號</th><th class="num mo-col-qty">數量</th><th class="mo-col-del"></th></tr></thead><tbody>'+rows+'</tbody></table>'+
     '<div style="padding:12px 18px"><button class="btn" onclick="moAddDetail()">＋ 新增一列</button></div>'+
     '<div class="pm-summary"><div class="pm-summary-title">合計</div><table class="pm-detail-table"><tbody>'+
       '<tr class="pm-summary-total"><td>合計數量（<span id="moTotalCnt">'+moFilledCount()+'</span> 筆）</td><td class="num" id="moTotalQty">'+moTotalQty()+'</td></tr>'+
