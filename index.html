@@ -6803,6 +6803,85 @@ window.normalizeFullWidth=function(value){
       #leave-table td:nth-child(9){grid-column:1/-1}
       #leave-table td:nth-child(9) .btn-icon{width:100%;min-height:42px}
     }
+    /* ── 出勤回報 手機版：點名／加班／明細＋LINE 回報（attMRender，只在手機與觸控平板出現）── */
+    #att-m-wrap:empty{display:none}
+    .att-m-mode :is(#att-daily-wrap,#att-line-panel,#att-line-btn){display:none!important}
+    .att-m-seg{display:flex;gap:4px;padding:4px;border:1px solid var(--border);border-radius:12px;background:var(--bg3)}
+    .att-m-seg button{flex:1;min-width:0;min-height:42px;border:0;border-radius:9px;background:transparent;color:var(--text2);font:600 15px var(--sans);cursor:pointer;touch-action:manipulation}
+    .att-m-seg button.on{background:var(--accent);color:#fff}
+    .att-m-stats{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;margin:12px 2px 2px;font-size:14px;color:var(--text2)}
+    .att-m-stats b{margin:0 2px 0 5px;font:600 20px var(--mono);color:var(--text)}
+    .att-m-stats .in b{color:var(--green)}
+    .att-m-stats .leave b{color:var(--yellow)}
+    .att-m-stats .ot b{color:var(--accent2)}
+    .att-m-stats .none b{color:var(--text3)}
+    .att-m-stats .none.has b{color:var(--red)}
+    .att-m-hint{margin:6px 2px 0;font-size:12px;line-height:1.6;color:var(--text3)}
+    .att-m-empty{padding:18px 8px;text-align:center;font-size:14px;color:var(--text3)}
+    .att-m-allin{width:100%;min-height:46px;margin-top:10px;border:1px dashed rgba(50,215,75,.6);border-radius:12px;background:rgba(50,215,75,.08);color:var(--green);font:600 15px var(--sans);cursor:pointer}
+    .att-m-group{margin-top:16px}
+    .att-m-ghead{display:flex;justify-content:space-between;margin:0 2px 8px;font:600 13px var(--sans);color:var(--text3)}
+    .att-m-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    @media(min-width:600px){.att-m-chips{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
+    .att-m-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;min-height:62px;padding:6px 4px;border:1px solid var(--border);border-radius:12px;background:var(--bg3);color:var(--text);font:600 16px/1.25 var(--sans);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+    .att-m-chip .nm{display:-webkit-box;max-width:100%;overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical;text-align:center;overflow-wrap:anywhere}
+    .att-m-chip .sub{max-width:100%;overflow:hidden;font:500 11px var(--sans);color:var(--text3);white-space:nowrap;text-overflow:ellipsis}
+    .att-m-chip.is-in{border-color:rgba(50,215,75,.6);background:rgba(50,215,75,.16);color:var(--green)}
+    .att-m-chip.is-in .nm::before{content:'✓ '}
+    .att-m-chip.is-leave{border-color:rgba(255,214,10,.45);background:rgba(255,214,10,.12);color:var(--yellow)}
+    .att-m-chip.is-ot{border-color:rgba(10,132,255,.6);background:rgba(10,132,255,.16);color:var(--accent2)}
+    .att-m-chip:is(.is-in,.is-leave,.is-ot) .sub{color:inherit;opacity:.85}
+    .att-m-list{display:flex;flex-direction:column;gap:6px}
+    .att-m-row{display:flex;align-items:center;gap:10px;box-sizing:border-box;width:100%;min-height:54px;padding:8px 10px 8px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg3);color:var(--text);text-align:left;cursor:pointer;font-family:var(--sans)}
+    .att-m-row-name{flex:0 1 auto;min-width:56px;max-width:42%;font:600 16px/1.3 var(--sans);overflow-wrap:anywhere}
+    .att-m-row-name small{display:block;font:400 11px var(--sans);color:var(--text3)}
+    .att-m-tags{display:flex;flex:1;flex-wrap:wrap;justify-content:flex-end;gap:4px}
+    .att-m-tag{padding:3px 8px;border:1px solid var(--border);border-radius:999px;background:var(--bg2);color:var(--text2);font:600 12px var(--sans);white-space:nowrap}
+    .att-m-tag.in{border-color:rgba(50,215,75,.45);color:var(--green)}
+    .att-m-tag.ot{border-color:rgba(10,132,255,.45);color:var(--accent2)}
+    .att-m-tag.lv{border-color:rgba(255,214,10,.45);color:var(--yellow)}
+    .att-m-tag.none{border-color:rgba(255,69,58,.45);color:var(--red)}
+    .att-m-row-go{flex:none;font-size:20px;color:var(--text3)}
+    .att-m-bar{position:sticky;bottom:12px;z-index:5;display:flex;gap:8px;margin:16px -6px 0;padding:8px;border:1px solid var(--border-hi);border-radius:16px;background:color-mix(in srgb,var(--bg2) 92%,transparent);box-shadow:0 8px 24px rgba(0,0,0,.25);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+    @media(max-width:768px){.att-m-bar{bottom:calc(76px + env(safe-area-inset-bottom))}}
+    .att-m-bar button{flex:1;min-height:48px;border-radius:12px;font:600 15px var(--sans);cursor:pointer}
+    .att-m-done{border:0;background:var(--accent);color:#fff}
+    .att-m-line{border:1px solid rgba(6,199,85,.55);background:rgba(6,199,85,.14);color:#06c755}
+    .att-m-sheet .sp-sheet-panel{display:flex;flex-direction:column;overflow:hidden}
+    .att-m-sheet :is(.sp-sheet-grip,.spx-m-head){flex:none}
+    .att-m-sheet .sp-sheet-title small{display:block;margin-top:2px;font:400 12px var(--sans);color:var(--text3)}
+    .att-m-body{flex:1 1 auto;min-height:0;margin:0 -16px;padding:0 16px 4px;overflow:auto;-webkit-overflow-scrolling:touch}
+    .att-m-body>.att-m-seg{margin-bottom:10px}
+    .att-m-foot{display:flex;flex:none;gap:10px;margin-top:10px;padding-top:12px;border-top:1px solid var(--border)}
+    .att-m-foot button{flex:1;min-height:48px;border-radius:12px;font:600 15px var(--sans);cursor:pointer}
+    .att-m-foot .cpr-m-save:disabled{opacity:.45;cursor:default}
+    .att-m-share{border:0;background:#06c755;color:#fff}
+    .att-m-sec{margin-top:14px}
+    .att-m-sec>.lbl{margin-bottom:6px;font-size:12px;color:var(--text3)}
+    .att-m-opts{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+    .att-m-opt{min-height:42px;padding:0 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);color:var(--text);font:600 15px var(--sans);cursor:pointer;touch-action:manipulation}
+    .att-m-opt.on{border-color:var(--accent2);background:rgba(10,132,255,.18);color:var(--accent2)}
+    .att-m-opts :is(input,select){box-sizing:border-box;height:42px;min-width:0;padding:0 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);color:var(--text);font:16px var(--sans)}
+    .att-m-opts input[type=number]{width:80px}
+    .att-m-opts select{flex:1 1 90px}
+    .att-m-opts select.on{border-color:var(--accent2);color:var(--accent2)}
+    .att-m-opts .unit{font-size:13px;color:var(--text3)}
+    .att-m-leave-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+    .att-m-leave-grid .att-m-opt{padding:0 4px}
+    .att-m-fin{margin-top:10px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--bg)}
+    .att-m-fin.ok{border-color:rgba(50,215,75,.55)}
+    .att-m-fin-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+    .att-m-fin-head b{font:600 16px var(--sans);color:var(--text)}
+    .att-m-fin-head small{font-size:12px;color:var(--text3)}
+    .att-m-fin-h{margin-top:8px}
+    .att-m-line-text{box-sizing:border-box;width:100%;height:40vh;min-height:200px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);color:var(--text);font:16px/1.6 var(--sans);resize:none}
+    @media(max-width:768px),(pointer:coarse) and (max-width:1100px){
+      /* 本月回報彙總 KPI：手機一排兩格、iPad 依寬度多格 */
+      #att-kpi-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+      #att-kpi-grid .att-kpi{padding:10px 12px}
+      #att-kpi-grid .att-kpi .k-val{font-size:20px}
+      #att-tab-main .card:has(#att-kpi-grid) .section-header>span{display:none}
+    }
     /* ── 全站行動版 第四批：待辦事項／五金庫存／點工單／個人頁面（手機與觸控平板） ── */
     @media(max-width:768px),(pointer:coarse) and (max-width:1100px){
       /* 待辦事項：工具列滿版，每筆一張卡（勾選在左、標題在上，其餘欄位加標籤，空白欄位隱藏） */
@@ -7504,7 +7583,8 @@ window.normalizeFullWidth=function(value){
             <div style="margin-top:6px;font-size:10.5px;color:var(--text3);line-height:1.6">※ 依上方日期的出勤明細產生：出勤＝上班工數＞0、加班＝加班工數＞0。西／焊／研＝本工職稱，外＝自有＋長榮外勞，辦＝辦公人員（不含老闆）。中文姓名省略姓氏，外勞用全名；有請假的人列在最下面（* 開頭）。</div>
           </div>
           <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:8px">※ 人員、部門、職稱皆來自「公司名冊」，於名冊修改後即時同步。上班/加班/請假可輸入工數(左)或時數(右)，時數預設＝工數×8。<br>※ 可用方向鍵移動儲存格、Enter 跳到下一格，輸入即時儲存（離開儲存格立刻寫入資料庫）。</div>
-          <div style="overflow:auto">
+          <div id="att-m-wrap"></div>
+          <div id="att-daily-wrap" style="overflow:auto">
             <table class="project-table att-grid" id="att-daily-grid" onkeydown="attGridKey(event)">
               <thead>
                 <tr>
@@ -28492,8 +28572,8 @@ function attRenderDailyGrid(){
   refreshDateWk();   // 更新「日期（星期）」顯示
   const date=document.getElementById('att-date').value;
   const body=document.getElementById('att-daily-body');
-  if(!date){ body.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:16px">請選擇日期</td></tr>'; document.getElementById('att-daily-foot').innerHTML=''; return; }
-  if(!attRoster.length){ body.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:16px">尚無人員，請至「公司名冊」新增</td></tr>'; document.getElementById('att-daily-foot').innerHTML=''; return; }
+  if(!date){ body.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:16px">請選擇日期</td></tr>'; document.getElementById('att-daily-foot').innerHTML=''; attMRender(); return; }
+  if(!attRoster.length){ body.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:16px">尚無人員，請至「公司名冊」新增</td></tr>'; document.getElementById('att-daily-foot').innerHTML=''; attMRender(); return; }
   // 工數/時數成對輸入：左工數(role=u) 右時數(role=h，即實際儲存時數)。正常/請假 時數＝工數×8;加班半薪 時數＝工數×6(3HR=0.5工)
   const wDiv=f=>f==='ot'?6:8;
   const uVal=(v,f)=>{ const n=parseFloat(v); return isNaN(n)?'':attN(n/wDiv(f)); };
@@ -28537,6 +28617,7 @@ function attRenderDailyGrid(){
   attUpdateDayFoot();
   attRenderLeaveBar();    // 當天有人事先登記請假 → 上方提示 + 一鍵帶入
   attLineRefresh();       // LINE 回報面板開著就跟著換日期
+  attMRender();           // 手機版點名／明細
 }
 
 // 「請假類別」下拉的操作增強：
@@ -28955,18 +29036,21 @@ async function attLineRefresh(){
   const date=document.getElementById('att-date').value;
   if(!date){ box.value='請先選擇日期'; return; }
   const seq=++_attLineSeq;
-  const today=await attLineRecsOf(date);
-  let txt;
-  if(attLineMode==='ot') txt=attLineBlock(date,'加班',today,'ot_hours',false);
-  else if(attLineMode==='ot_next'){
-    const d=new Date(date+'T00:00:00'); d.setDate(d.getDate()+1);
-    const next=attLocalISO(d);
-    const nextRecs=await attLineRecsOf(next);
-    txt=attLineBlock(date,'加班',today,'ot_hours',false)+'\n\n-\n\n'+attLineBlock(next,'預計出勤',nextRecs,'work_hours',true);
-  }
-  else txt=attLineBlock(date,'出勤',today,'work_hours',true);
+  const txt=await attLineText(date,attLineMode);
   if(seq!==_attLineSeq) return;   // 期間又換了日期/模式,以最新的為準
   box.value=txt;
+}
+async function attLineText(date,mode,recsOf){
+  recsOf=recsOf||attLineRecsOf;
+  const today=await recsOf(date);
+  if(mode==='ot') return attLineBlock(date,'加班',today,'ot_hours',false);
+  if(mode==='ot_next'){
+    const d=new Date(date+'T00:00:00'); d.setDate(d.getDate()+1);
+    const next=attLocalISO(d);
+    const nextRecs=await recsOf(next);
+    return attLineBlock(date,'加班',today,'ot_hours',false)+'\n\n-\n\n'+attLineBlock(next,'預計出勤',nextRecs,'work_hours',true);
+  }
+  return attLineBlock(date,'出勤',today,'work_hours',true);
 }
 async function attLineCopy(){
   const box=document.getElementById('att-line-text'), st=document.getElementById('att-line-status');
@@ -28975,6 +29059,297 @@ async function attLineCopy(){
   try{ if(navigator.clipboard&&navigator.clipboard.writeText){ await navigator.clipboard.writeText(box.value); ok=true; } }catch(_){}
   if(!ok){ try{ box.select(); ok=document.execCommand('copy'); window.getSelection&&window.getSelection().removeAllRanges(); }catch(_){} }
   if(st){ st.textContent=ok?'已複製 ✓ 可以貼到 LINE 了':'瀏覽器未允許自動複製，請點文字框後按 Ctrl+A、Ctrl+C'; setTimeout(()=>{ st.textContent=''; },3500); }
+}
+
+// ── 出勤回報 手機版：點名／加班／明細＋LINE 回報（電腦版維持 Excel 式表格）──
+// 手機上直接改隱藏中的明細表格欄位，沿用原本的工數換算、便當預設、請假扣上班與自動儲存。
+let attMView=null, attMViewDate='', attMEditName=null, attMFinishNames=[], attMLeaveDraft={}, _attMLineSeq=0;
+let attMOtHours=3;
+try{ const h=parseFloat(localStorage.getItem('attMOtHours')); if(h>0) attMOtHours=h; }catch(_){}
+const ATT_M_GROUP_LABEL={西:'西工',焊:'焊工',研:'研磨',本:'本工',外:'外勞',辦:'辦公人員'};
+const ATT_M_LEAVE_TOP=['事假','病假','特休','補休'];
+
+function attMRow(name){ return Array.from(document.querySelectorAll('#att-daily-body tr[data-name]')).find(tr=>tr.getAttribute('data-name')===name)||null; }
+function attMFire(el,type){ if(el) el.dispatchEvent(new Event(type||'input',{bubbles:true})); }
+function attMNum(tr,f){ const e=tr&&tr.querySelector('[data-role="h"][data-f="'+f+'"]'); return e?(parseFloat(e.value)||0):0; }
+function attMSetWork(tr,h){ attSetPair(tr,'work',h); attMFire(tr.querySelector('[data-role="h"][data-f="work"]')); }
+function attMSetOt(tr,h){ attSetPair(tr,'ot',h); attMFire(tr.querySelector('[data-role="h"][data-f="ot"]')); }
+function attMSetLeave(tr,type,h){
+  const sel=tr.querySelector('select[data-f="leave_type"]'); if(!sel) return;
+  attSetPair(tr,'leave_hours',type?(h>0?h:8):0);
+  sel.value=type||'';
+  attMFire(sel,'change');   // 觸發 attCapWorkByLeave：上班壓到 8−請假時數、沒上班便當歸 0
+}
+function attMHours(h){ return h>=8?'全天':attN(h)+'h'; }
+function attMGong(h){ return (h>0&&h%8)?attN(h)+'h':attN(h/8)+'工'; }   // 整天用「工」，不足一天用小時（避免 6h 顯示成 0.8 工）
+// 當天名單＋狀態：in＝出工、leave＝請假、none＝未點名。還沒到職／已離職的日子沒資料就不列入
+function attMPeople(){
+  const date=(document.getElementById('att-date')||{}).value||'';
+  const staffArr=Array.isArray(allStaff)?allStaff:[];
+  const d10=v=>String(v||'').slice(0,10);
+  return attReadDayRows().map(r=>{
+    const p=attRoster.find(x=>x.name===r.name)||{name:r.name,cat:r.cat,team:r.team};
+    const lt=String(r.leave_type||'').trim();
+    const has=r.work>0||r.ot>0||lt||r.leave_hours>0||String(r.note||'').trim();
+    const s=staffArr.find(x=>x.name===r.name);
+    if(!has && s && ((s.hire_date&&d10(s.hire_date)>date)||(s.resign_date&&d10(s.resign_date)<date))) return null;
+    return Object.assign({},r,{leave_type:lt, boss:(r.cat==='辦公人員'&&r.team==='老闆'), group:attLineGroup(p)||'辦',
+      state:(r.work>0||r.ot>0)?'in':(lt?'leave':'none')});
+  }).filter(Boolean);
+}
+
+function attMRender(){
+  const wrap=document.getElementById('att-m-wrap'); if(!wrap) return;
+  const card=wrap.closest('.card'), mobile=spTrackIsMobile();
+  if(card) card.classList.toggle('att-m-mode',mobile);
+  if(!mobile){ wrap.innerHTML=''; attMCloseSheet(); return; }
+  const date=(document.getElementById('att-date')||{}).value||'';
+  if(!date||!attRoster.length){ wrap.innerHTML='<div class="att-m-empty">'+(date?'尚無人員，請至「公司名冊」新增':'請選擇日期')+'</div>'; return; }
+  const people=attMPeople(), cnt={in:0,leave:0,none:0};
+  people.forEach(x=>cnt[x.state]++);
+  // 換日期時決定預設畫面：還有人沒點名 → 點名；每個人都有結果 → 明細
+  if(attMViewDate!==date||!attMView){ attMViewDate=date; attMView=cnt.none?'roll':'list'; }
+  const v=attMView;
+  let h='<div class="att-m-seg">'+[['roll','點名'],['ot','加班'],['list','明細']].map(([k,l])=>'<button type="button" class="'+(k===v?'on':'')+'" onclick="attMSetView(\''+k+'\')">'+l+'</button>').join('')+'</div>';
+  const groups=ATT_LINE_GROUPS.map(g=>({g,list:people.filter(x=>x.group===g)})).filter(x=>x.list.length);
+  const chip=(x,cls,sub)=>'<button type="button" class="att-m-chip '+cls+'" data-name="'+attEsc(x.name)+'" onclick="attMTap(this.dataset.name)"><span class="nm">'+attEsc(x.name)+'</span><span class="sub">'+(sub||'&nbsp;')+'</span></button>';
+  const ghead=(g,right)=>'<div class="att-m-ghead"><span>'+ATT_M_GROUP_LABEL[g]+'</span><span>'+right+'</span></div>';
+  if(v==='roll'){
+    h+='<div class="att-m-stats"><span class="in">出工<b>'+cnt.in+'</b></span><span class="leave">請假<b>'+cnt.leave+'</b></span><span class="none'+(cnt.none?' has':'')+'">未點<b>'+cnt.none+'</b></span></div>';
+    h+='<div class="att-m-hint">點人名＝今日出工（上班 1 工），再點一次取消；請假的人點了可以修改。</div>';
+    if(cnt.none) h+='<button type="button" class="att-m-allin" onclick="attMAllIn()">全部出工（'+cnt.none+' 人）</button>';
+    groups.forEach(({g,list})=>{
+      h+='<div class="att-m-group">'+ghead(g,list.filter(x=>x.state==='in').length+' / '+list.length)+'<div class="att-m-chips">'
+        +list.map(x=>{
+          if(x.state==='in'){
+            const s=[];
+            if(x.work>0&&x.work<8) s.push(attN(x.work)+'h');
+            if(x.leave_type) s.push(x.leave_type+attN(x.leave_hours)+'h');
+            if(x.ot>0) s.push('加'+attN(x.ot)+'h');
+            return chip(x,'is-in',attEsc(s.join('・')));
+          }
+          if(x.state==='leave') return chip(x,'is-leave',attEsc(x.leave_type+' '+attMHours(x.leave_hours)));
+          return chip(x,'','');
+        }).join('')+'</div></div>';
+    });
+  } else if(v==='ot'){
+    const ins=people.filter(x=>x.state==='in'), otN=people.filter(x=>x.ot>0), otH=otN.reduce((a,x)=>a+x.ot,0);
+    h+='<div class="att-m-stats"><span class="ot">加班<b>'+otN.length+'</b>人</span><span>合計<b>'+attN(otH)+'</b>h</span></div>';
+    h+='<div class="att-m-sec"><div class="lbl">點人名時每人加班</div><div class="att-m-opts">'
+      +[2,3,4].map(n=>'<button type="button" class="att-m-opt'+(attMOtHours===n?' on':'')+'" onclick="attMSetOtHours('+n+')">'+n+'h</button>').join('')
+      +'<input type="number" inputmode="decimal" step="0.5" min="0.5" value="'+attN(attMOtHours)+'" onchange="attMSetOtHours(this.value)" aria-label="自訂加班時數"><span class="unit">小時</span></div></div>';
+    h+='<div class="att-m-hint">點人名＝加班，再點一次取消。只列今天有出工的人。</div>';
+    if(!ins.length&&!otN.length) h+='<div class="att-m-empty">還沒有人出工，先到「點名」點人。</div>';
+    groups.forEach(({g,list})=>{
+      const l=list.filter(x=>x.state==='in'||x.ot>0); if(!l.length) return;
+      h+='<div class="att-m-group">'+ghead(g,l.filter(x=>x.ot>0).length+' / '+l.length)+'<div class="att-m-chips">'
+        +l.map(x=>chip(x,x.ot>0?'is-ot':'',x.ot>0?attN(x.ot)+'h':'')).join('')+'</div></div>';
+    });
+  } else {
+    const wh=people.reduce((a,x)=>a+x.work,0), oh=people.reduce((a,x)=>a+x.ot,0);
+    h+='<div class="att-m-stats"><span class="in">出工<b>'+cnt.in+'</b></span><span class="leave">請假<b>'+cnt.leave+'</b></span>'
+      +(cnt.none?'<span class="none has">未點<b>'+cnt.none+'</b></span>':'')
+      +'<span>上班<b>'+attN(wh/8)+'</b>工</span><span>加班<b>'+attN(oh)+'</b>h</span></div>';
+    h+='<div class="att-m-hint">點一列可以修改上班、加班、請假、便當與備註。</div>';
+    groups.forEach(({g,list})=>{
+      h+='<div class="att-m-group">'+ghead(g,list.length+' 人')+'<div class="att-m-list">'
+        +list.map(x=>{
+          const t=[];
+          if(x.work>0) t.push('<span class="att-m-tag in">上班 '+attMGong(x.work)+'</span>');
+          if(x.ot>0) t.push('<span class="att-m-tag ot">加班 '+attN(x.ot)+'h</span>');
+          if(x.leave_type) t.push('<span class="att-m-tag lv">'+attEsc(x.leave_type)+' '+attMHours(x.leave_hours)+'</span>');
+          if(x.state==='none') t.push('<span class="att-m-tag none">未點名</span>');
+          if(String(x.note||'').trim()) t.push('<span class="att-m-tag">📝</span>');
+          return '<button type="button" class="att-m-row" data-name="'+attEsc(x.name)+'" onclick="attMOpenEdit(this.dataset.name)">'
+            +'<span class="att-m-row-name">'+attEsc(x.name)+(x.team?'<small>'+attEsc(x.team)+'</small>':'')+'</span>'
+            +'<span class="att-m-tags">'+t.join('')+'</span><span class="att-m-row-go">›</span></button>';
+        }).join('')+'</div></div>';
+    });
+  }
+  h+='<div class="att-m-bar">'+(v==='roll'&&cnt.none?'<button type="button" class="att-m-done" onclick="attMOpenFinish()">完成點名</button>':'')
+    +'<button type="button" class="att-m-line" onclick="attMOpenLine()">💬 LINE 回報</button></div>';
+  wrap.innerHTML=h;
+  const s=document.getElementById('attMSheet');
+  if(s&&s.dataset.kind==='edit') attMOpenEdit(attMEditName,true);
+  else if(s&&s.dataset.kind==='finish') attMOpenFinish(true);
+}
+function attMSetView(k){ attMView=k; attMRender(); }
+function attMSetOtHours(v){
+  v=parseFloat(v); if(!(v>0)) return;
+  attMOtHours=Math.min(12,Math.round(v*2)/2);
+  try{ localStorage.setItem('attMOtHours',attMOtHours); }catch(_){}
+  attMRender();
+}
+function attMTap(name){
+  const tr=attMRow(name), x=attMPeople().find(q=>q.name===name); if(!tr||!x) return;
+  if(attMView==='ot') attMSetOt(tr,x.ot>0?0:attMOtHours);
+  else if(x.state==='leave'){ attMOpenEdit(name); return; }
+  else if(x.state==='in'){ attMSetWork(tr,0); if(x.ot>0) attMSetOt(tr,0); }
+  else attMSetWork(tr,8);
+  attMRender();
+}
+function attMAllIn(){
+  attMPeople().filter(x=>x.state==='none').forEach(x=>{ const tr=attMRow(x.name); if(tr) attMSetWork(tr,8); });
+  attMRender();
+}
+
+// 底部面板（同一時間只開一個：edit 編輯／finish 完成點名／line LINE 回報）
+function attMCloseSheet(){ const s=document.getElementById('attMSheet'); if(s) s.remove(); }
+function attMSheet(kind,label,title,sub,body,foot,refresh){
+  const inner='<div class="sp-sheet-grip"></div>'
+    +'<div class="spx-m-head"><div class="sp-sheet-title">'+title+(sub?'<small>'+sub+'</small>':'')+'</div><button type="button" class="spx-m-close" aria-label="關閉" onclick="attMCloseSheet()">✕</button></div>'
+    +'<div class="att-m-body">'+body+'</div>'+(foot?'<div class="att-m-foot">'+foot+'</div>':'');
+  let s=document.getElementById('attMSheet');
+  if(refresh&&s&&s.dataset.kind===kind){
+    const old=s.querySelector('.att-m-body'), top=old?old.scrollTop:0;
+    s.querySelector('.sp-sheet-panel').innerHTML=inner;
+    const b=s.querySelector('.att-m-body'); if(b) b.scrollTop=top;
+    return s;
+  }
+  if(refresh) return null;
+  attMCloseSheet();
+  s=document.createElement('div'); s.className='sp-sheet spx-m-sheet att-m-sheet'; s.id='attMSheet'; s.dataset.kind=kind;
+  s.innerHTML='<div class="sp-sheet-panel" role="dialog" aria-modal="true" aria-label="'+label+'">'+inner+'</div>';
+  s.addEventListener('click',e=>{ if(e.target===s) attMCloseSheet(); });
+  document.body.appendChild(s);
+  return s;
+}
+function attMOpt(on,label,js){ return '<button type="button" class="att-m-opt'+(on?' on':'')+'" onclick="'+js+'">'+label+'</button>'; }
+
+function attMOpenEdit(name,refresh){
+  const x=attMPeople().find(q=>q.name===name);
+  if(!x){ if(refresh) attMCloseSheet(); return; }
+  attMEditName=name;
+  const o=attMOpt, migrant=x.cat==='自有外勞'||x.cat==='長榮外勞';
+  const num=(f,val)=>'<input type="number" inputmode="decimal" step="0.5" min="0" value="'+(val>0?attN(val):'')+'" placeholder="0" onchange="attMEdit(\''+f+'\',this.value)"><span class="unit">小時</span>';
+  let b='<div class="att-m-sec"><div class="lbl">上班 · '+attMGong(x.work)+'</div><div class="att-m-opts">'
+      +o(x.work===8,'全天 8h',"attMEdit('work',8)")+o(x.work===4,'半天 4h',"attMEdit('work',4)")+o(x.work===0,'沒上班',"attMEdit('work',0)")+num('work',x.work)+'</div></div>'
+    +'<div class="att-m-sec"><div class="lbl">加班</div><div class="att-m-opts">'
+      +o(x.ot===0,'無',"attMEdit('ot',0)")+[2,3,4].map(n=>o(x.ot===n,n+'h',"attMEdit('ot',"+n+")")).join('')+num('ot',x.ot)+'</div></div>'
+    +'<div class="att-m-sec"><div class="lbl">請假類別</div><div class="att-m-leave-grid">'
+      +ATT_LEAVE.map(t=>o(x.leave_type===t,t||'無',"attMEdit('leave_type','"+t+"')")).join('')+'</div></div>';
+  if(x.leave_type) b+='<div class="att-m-sec"><div class="lbl">請假時數'+(x.work>0?'（上班會自動扣掉）':'')+'</div><div class="att-m-opts">'
+      +o(x.leave_hours>=8,'全天 8h',"attMEdit('leave_hours',8)")+o(x.leave_hours===4,'半天 4h',"attMEdit('leave_hours',4)")+num('leave_hours',x.leave_hours)+'</div></div>';
+  b+='<div class="spx-m-form att-m-sec">'
+    +(migrant?'':'<label class="spx-m-field"><span>'+(x.boss?'老闆便當金額（元）':'便當（個）')+'</span><input type="number" inputmode="numeric" step="1" min="0" value="'+(x.bento>0?attN(x.bento):'')+'" placeholder="0" onchange="attMEdit(\'bento\',this.value)"></label>')
+    +'<label class="spx-m-field'+(migrant?' wide':'')+'"><span>備註</span><input type="text" value="'+attEsc(x.note||'')+'" autocomplete="off" onchange="attMEdit(\'note\',this.value)"></label></div>';
+  attMSheet('edit','編輯出勤',attEsc(x.name),attEsc([x.cat,x.team].filter(Boolean).join('・')),b,
+    '<button type="button" class="cpr-m-save" onclick="attMCloseSheet()">完成</button>',refresh);
+}
+function attMEdit(f,v){
+  const tr=attMRow(attMEditName); if(!tr) return;
+  v=(f==='leave_type'||f==='note')?String(v||''):Math.max(0,parseFloat(v)||0);
+  const work=attMNum(tr,'work');
+  if(f==='work') attMSetWork(tr,Math.min(v,24));
+  else if(f==='ot') attMSetOt(tr,Math.min(v,24));
+  else if(f==='leave_type'){
+    if(!v) attMSetLeave(tr,'',0);
+    else {
+      // 有上班的人臨時請假 → 預設半天，上班補成 8−請假時數；沒上班的人預設全天
+      const cur=attMNum(tr,'leave_hours'), lh=cur>0?cur:(work>0?4:8);
+      attMSetLeave(tr,v,lh); if(work>0) attMSetWork(tr,Math.max(0,8-lh));
+    }
+  }
+  else if(f==='leave_hours'){
+    const sel=tr.querySelector('select[data-f="leave_type"]'); if(!sel||!sel.value) return;
+    const lh=Math.min(8,v>0?v:8);
+    attMSetLeave(tr,sel.value,lh); if(work>0) attMSetWork(tr,Math.max(0,8-lh));
+  }
+  else if(f==='bento'){ const b=tr.querySelector('input[data-f="bento"]'); if(b){ b.value=attN(v); attMFire(b,'change'); } }
+  else if(f==='note'){ const n=tr.querySelector('input[data-f="note"]'); if(n){ n.value=v; attMFire(n,'change'); } }
+  attMRender();
+}
+
+// 完成點名：沒點到的人一定要選假別（或改成有來）才能確認
+function attMOpenFinish(refresh){
+  const none=attMPeople().filter(x=>x.state==='none');
+  if(!none.length){ if(refresh) attMCloseSheet(); return; }
+  if(!refresh) attMLeaveDraft={};
+  attMFinishNames=none.map(x=>x.name);
+  const o=attMOpt, others=ATT_LEAVE.filter(t=>t&&ATT_M_LEAVE_TOP.indexOf(t)<0);
+  let done=0;
+  let b='<div class="att-m-hint">沒點到的人請選假別，上班工數會設為 0。其實有來的點「✓ 有來」。</div>'
+    +'<div class="att-m-sec"><div class="lbl">全部設為</div><div class="att-m-opts">'+ATT_M_LEAVE_TOP.map(t=>o(false,t,"attMDraftAll('"+t+"')")).join('')+'</div></div>';
+  b+=none.map((x,i)=>{
+    const d=attMLeaveDraft[x.name]||null; if(d) done++;
+    const other=!!(d&&d.type&&others.indexOf(d.type)>=0);
+    return '<div class="att-m-fin'+(d?' ok':'')+'"><div class="att-m-fin-head"><b>'+attEsc(x.name)+'</b><small>'+attEsc(x.team||x.cat||'')+'</small></div>'
+      +'<div class="att-m-opts">'+o(!!(d&&d.in),'✓ 有來',"attMDraft("+i+",'in')")
+        +ATT_M_LEAVE_TOP.map(t=>o(!!(d&&d.type===t),t,"attMDraft("+i+",'"+t+"')")).join('')
+        +'<select class="'+(other?'on':'')+'" onchange="attMDraft('+i+',this.value)"><option value="">其他…</option>'+others.map(t=>'<option'+(d&&d.type===t?' selected':'')+'>'+t+'</option>').join('')+'</select></div>'
+      +(d&&d.type?'<div class="att-m-opts att-m-fin-h">'+o(d.hours>=8,'全天 8h',"attMDraftH("+i+",8)")+o(d.hours===4,'半天 4h',"attMDraftH("+i+",4)")
+        +'<input type="number" inputmode="decimal" step="0.5" min="0.5" max="8" value="'+attN(d.hours)+'" onchange="attMDraftH('+i+',this.value)"><span class="unit">小時</span></div>':'')
+      +'</div>';
+  }).join('');
+  const left=none.length-done;
+  const foot='<button type="button" class="cpr-m-ghost" onclick="attMCloseSheet()">先不要</button>'
+    +'<button type="button" class="cpr-m-save" '+(left?'disabled':'')+' onclick="attMFinish()">'+(left?'還有 '+left+' 人沒選':'確認完成')+'</button>';
+  attMSheet('finish','完成點名','完成點名',none.length+' 人沒點到',b,foot,refresh);
+}
+function attMDraft(i,v){
+  const n=attMFinishNames[i]; if(n==null) return;
+  if(!v) delete attMLeaveDraft[n];
+  else if(v==='in') attMLeaveDraft[n]={in:true};
+  else attMLeaveDraft[n]={type:v,hours:(attMLeaveDraft[n]&&attMLeaveDraft[n].hours)||8};
+  attMOpenFinish(true);
+}
+function attMDraftAll(t){
+  attMFinishNames.forEach(n=>{ const d=attMLeaveDraft[n]; if(!(d&&d.in)) attMLeaveDraft[n]={type:t,hours:(d&&d.hours)||8}; });
+  attMOpenFinish(true);
+}
+function attMDraftH(i,v){
+  const d=attMLeaveDraft[attMFinishNames[i]]; if(!d||!d.type) return;
+  v=parseFloat(v); if(!(v>0)) return;
+  d.hours=Math.min(8,v); attMOpenFinish(true);
+}
+function attMFinish(){
+  const names=attMFinishNames.slice();
+  if(names.some(n=>!attMLeaveDraft[n])) return;
+  names.forEach(n=>{
+    const tr=attMRow(n), d=attMLeaveDraft[n]; if(!tr||!d) return;
+    if(d.in) attMSetWork(tr,8);
+    else { attMSetLeave(tr,d.type,d.hours); if(attMNum(tr,'work')>0) attMSetWork(tr,0); }
+  });
+  attMLeaveDraft={}; attMCloseSheet(); attSaveNow();
+  attMView='list'; attMRender();
+  attMOpenLine();
+}
+
+// LINE 回報：當天直接讀畫面上的明細（不必等存檔完成），其他日期照舊讀資料庫
+function attMLineRecsOf(iso){
+  if(iso===((document.getElementById('att-date')||{}).value||''))
+    return Promise.resolve(attReadDayRows().map(r=>({staff_name:r.name,category:r.cat,team:r.team,work_hours:r.work,ot_hours:r.ot,leave_type:r.leave_type||null,leave_hours:r.leave_hours})));
+  return attLineRecsOf(iso);
+}
+async function attMOpenLine(){
+  const date=(document.getElementById('att-date')||{}).value||''; if(!date) return;
+  const b='<div class="att-m-seg">'+[['work','出勤'],['ot','加班'],['ot_next','加班＋隔天預計']].map(([k,l])=>
+      '<button type="button" class="'+(k===attLineMode?'on':'')+'" onclick="attLineSetMode(\''+k+'\');attMOpenLine()">'+l+'</button>').join('')+'</div>'
+    +'<textarea id="att-m-line-text" class="att-m-line-text" readonly>產生中…</textarea>'
+    +'<div class="att-m-hint" id="att-m-line-status">確認內容後按「分享到 LINE」選聊天室送出。</div>';
+  const foot='<button type="button" class="cpr-m-ghost" onclick="attMLineCopy()">📋 複製</button><button type="button" class="att-m-share" onclick="attMLineShare()">分享到 LINE</button>';
+  const s=document.getElementById('attMSheet');
+  attMSheet('line','LINE 回報','LINE 回報',attLineMD(date)+'（'+attWeekdayShort(new Date(date+'T00:00:00'))+'）',b,foot,!!(s&&s.dataset.kind==='line'));
+  const seq=++_attMLineSeq;
+  const txt=await attLineText(date,attLineMode,attMLineRecsOf);
+  if(seq!==_attMLineSeq) return;
+  const box=document.getElementById('att-m-line-text'); if(box) box.value=txt;
+}
+function attMLineTxt(){ const b=document.getElementById('att-m-line-text'); return (b&&b.value!=='產生中…')?b.value:''; }
+async function attMLineCopy(){
+  const txt=attMLineTxt(), st=document.getElementById('att-m-line-status'); if(!txt) return;
+  let ok=false;
+  try{ if(navigator.clipboard&&navigator.clipboard.writeText){ await navigator.clipboard.writeText(txt); ok=true; } }catch(_){}
+  if(!ok){
+    const box=document.getElementById('att-m-line-text');
+    try{ box.removeAttribute('readonly'); box.select(); box.setSelectionRange(0,txt.length); ok=document.execCommand('copy'); }catch(_){}
+    try{ box.setAttribute('readonly',''); box.blur(); }catch(_){}
+  }
+  if(st) st.textContent=ok?'已複製 ✓ 到 LINE 貼上就好':'無法自動複製，請長按文字框全選後複製';
+}
+function attMLineShare(){
+  const txt=attMLineTxt(); if(!txt) return;
+  window.open('https://line.me/R/share?text='+encodeURIComponent(txt),'_blank');
 }
 
 async function attSaveDay(){
@@ -39873,7 +40248,7 @@ function spTrackMobileCardsHtml(groups,detail){
   }).join('')+'</div>';
 }
 // 手機／電腦寬度切換時（例如平板轉向）重繪 SP 清單，改用對應版面
-if(window.matchMedia){const spListMq=window.matchMedia('(max-width:768px),(pointer:coarse) and (max-width:1100px)'),spListMqChange=()=>{try{spTrackRenderCurrentList();['reserved','product','manual'].forEach(k=>{if(document.getElementById('spxBody-'+k))spxRender(k);});if(typeof cprRender==='function'&&typeof cprSchemaOk!=='undefined'&&cprSchemaOk)cprRender();if(document.getElementById('page-modparts')?.classList.contains('active'))modpartsRender();if(document.getElementById('page-layout')?.classList.contains('active'))renderLayoutInput();if(document.getElementById('page-loading')?.classList.contains('active')&&typeof ldRender==='function')ldRender();}catch(e){}};if(spListMq.addEventListener)spListMq.addEventListener('change',spListMqChange);else if(spListMq.addListener)spListMq.addListener(spListMqChange);}
+if(window.matchMedia){const spListMq=window.matchMedia('(max-width:768px),(pointer:coarse) and (max-width:1100px)'),spListMqChange=()=>{try{spTrackRenderCurrentList();['reserved','product','manual'].forEach(k=>{if(document.getElementById('spxBody-'+k))spxRender(k);});if(typeof cprRender==='function'&&typeof cprSchemaOk!=='undefined'&&cprSchemaOk)cprRender();if(document.getElementById('page-modparts')?.classList.contains('active'))modpartsRender();if(document.getElementById('page-layout')?.classList.contains('active'))renderLayoutInput();if(document.getElementById('page-loading')?.classList.contains('active')&&typeof ldRender==='function')ldRender();if(typeof attMRender==='function')attMRender();}catch(e){}};if(spListMq.addEventListener)spListMq.addEventListener('change',spListMqChange);else if(spListMq.addListener)spListMq.addListener(spListMqChange);}
 function spTrackRenderOuter(){
   prodMemoReset();
   const head=document.getElementById('spxHead-track'),body=document.getElementById('spxBody-track'); if(!head||!body)return;
