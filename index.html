@@ -450,9 +450,27 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .rdy-dash-more{padding:5px 8px;font-size:11.5px;color:var(--text3);cursor:pointer}
 .rdy-dash-more:hover{color:var(--accent2)}
 .rdy-dash-empty{display:block;padding:4px 8px 6px;color:var(--text3);font-size:13px}
+/* 所有工程區共用同一組欄寬(subgrid):燈號｜名稱｜五個小燈｜進料｜剩幾天/可上線 → 每一列上下對齊,不因字數長短跑位 */
+@supports (grid-template-columns:subgrid){
+  #dash-ready{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;align-content:start}
+  #dash-ready>*{grid-column:1/-1}
+  #dash-ready>.rdy-dash-item{display:grid;grid-template-columns:subgrid;column-gap:8px;align-items:center}
+  .rdy-dash-item>.rdy-dot{grid-column:1}
+  .rdy-dash-item>.rdy-dash-name{grid-column:2}
+  .rdy-dash-item>.rdy-dash-chips{grid-column:3}
+  .rdy-dash-item>.rdy-dash-feed{grid-column:4;display:flex;justify-content:space-between;gap:6px}   /* 「進料」靠左、數字靠右 */
+  .rdy-dash-item>:is(.rdy-dash-due,.rdy-dash-go){grid-column:5;justify-self:end}
+}
 @media(max-width:768px),(pointer:coarse) and (max-width:1100px){   /* 手機／平板:進料換到名稱下一行,不擠掉工程區名稱 */
   .rdy-dash-item{flex-wrap:wrap;row-gap:2px}
   .rdy-dash-feed{order:9;flex:1 1 100%;padding-left:17px;font-size:12px}
+  @supports (grid-template-columns:subgrid){
+    #dash-ready{grid-template-columns:auto minmax(0,1fr) auto auto}
+    #dash-ready>.rdy-dash-item{row-gap:2px}
+    .rdy-dash-item>:is(.rdy-dot,.rdy-dash-name,.rdy-dash-chips,.rdy-dash-due,.rdy-dash-go){grid-row:1}
+    .rdy-dash-item>:is(.rdy-dash-due,.rdy-dash-go){grid-column:4}
+    .rdy-dash-item>.rdy-dash-feed{grid-column:2/-1;grid-row:2;padding-left:0;justify-content:flex-start}
+  }
 }
 /* 主頁產量卡:月排程達成率 */
 .dash-plan{margin-top:8px;cursor:pointer}
