@@ -6317,10 +6317,11 @@ window.normalizeFullWidth=function(value){
       #page-prod .pd-row .pdr-chk{min-height:38px;font-size:14px}
       #page-prod .pd-row .pdr-chk input{width:20px;height:20px}
     }
-    /* 總表看板小卡：窄螢幕一列兩張、字放大，高度隨內容 */
-    @media(max-width:900px){
-      #page-prod .prod-cards.is-mini{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-      #page-prod #prodCardWrap .prod-mini{height:auto!important;min-height:0!important;max-height:none!important;grid-template-rows:auto auto auto minmax(0,1fr) 6px auto;gap:6px;padding:12px}
+    /* 總表看板小卡：手機一列一張、iPad 依寬度 2～3 張（每張至少 260px）；字放大；
+       同一看板所有小卡等高（prodFitMiniHeight 以 --prod-mini-base 為基準，依項目最多的卡片一起加高） */
+    @media(max-width:1100px){
+      #page-prod .prod-cards.is-mini{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;--prod-mini-base:210px}
+      #page-prod #prodCardWrap .prod-mini{height:var(--prod-mini-height,var(--prod-mini-base));min-height:var(--prod-mini-height,var(--prod-mini-base));max-height:var(--prod-mini-height,var(--prod-mini-base));grid-template-rows:auto auto auto minmax(0,1fr) 6px auto;gap:6px;padding:12px 14px}
       #page-prod #prodCardWrap .prod-mini .pm-title{font-size:18px}
       #page-prod #prodCardWrap .prod-mini .pm-head .chip{font-size:12px}
       #page-prod #prodCardWrap .prod-mini .pm-sub{height:auto;line-height:1.4;overflow:visible;font-size:13px}
@@ -38014,8 +38015,11 @@ function prodFitMiniHeight(){
   let extra=0;
   cards.forEach(card=>{const tags=card.querySelector(':scope > .sp-notion-tags');if(tags)extra=Math.max(extra,tags.scrollHeight-tags.clientHeight);});
   // 同一看板全部小卡等高；項目較多時共同加高，項目區不使用捲軸。
-  if(extra>0)wrap.style.setProperty('--prod-mini-height',(200+Math.ceil(extra))+'px');
+  const base=parseFloat(getComputedStyle(wrap).getPropertyValue('--prod-mini-base'))||200;   // 手機／iPad 字較大，基準高度由 CSS 指定
+  if(extra>0)wrap.style.setProperty('--prod-mini-height',(base+Math.ceil(extra))+'px');
 }
+let prodFitMiniTimer=null;   // 轉向或調整視窗後欄寬改變，重新等高
+window.addEventListener('resize',()=>{clearTimeout(prodFitMiniTimer);prodFitMiniTimer=setTimeout(prodFitMiniHeight,150);});
 function prodBulkSubRefreshUI(){
   prodFitMiniHeight();
   const start=document.getElementById('prodBulkSubBtn'),apply=document.getElementById('prodBulkSubApply'),cancel=document.getElementById('prodBulkSubCancel'),status=document.getElementById('prodBulkStatus'),labels={'-':'未開始','清點中':'進行中','OK':'完成','送工地':'已送工地','轉包':'轉包'};
