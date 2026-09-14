@@ -6643,6 +6643,38 @@ window.normalizeFullWidth=function(value){
       #page-layout #layout-input-panel>.layout-toolbar:first-child button:not([onclick^="layoutMultiOpen"]){display:none}
       #page-layout button[onclick^="layoutMultiOpen"]{flex:1 1 100%;min-height:44px;font-size:15px}
     }
+    /* ── 全站行動版 第二批：月產量排程（月排程卡片＋底部面板）／上線白板（直排週段） ── */
+    .ld-m-more{display:none}
+    .ld-m-prog{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--text2)}
+    .ld-m-prog .ld-bar-wrap{flex:1 1 auto;display:block;width:auto;height:6px;border-radius:20px;background:var(--bg4);overflow:hidden}
+    .ld-m-prog .ld-bar-wrap>i{display:block;height:100%;background:var(--accent2)}
+    .ld-m-card .sp-l-meta .status-badge{font-size:11px}
+    @media(max-width:768px),(pointer:coarse) and (max-width:1100px){
+      #page-loading .page-header{flex-wrap:wrap;gap:10px}
+      #page-loading .page-subtitle,#page-loading .ld-legend{display:none}
+      #page-loading .page-header .btn-add-new{min-height:42px}
+      #page-loading .ld-bar{gap:8px}
+      #page-loading .ld-bar .dash-nav-btn{flex:1 1 auto;min-height:40px}
+      #page-loading .ld-bar input[type=month]{flex:1 1 150px;min-height:40px;font-size:16px}
+      #page-loading .ld-m-more{display:inline-flex;align-items:center;justify-content:center;flex:1 1 100%;min-height:40px}
+      #page-loading .ld-bar:not(.m-open)>:is(button[onclick^="ldCarryOver"],button[onclick^="ldFillPlans"]){display:none}
+      #page-loading .ld-bar>:is(.ld-range,.ld-hint){flex:1 1 100%}
+      #page-loading .card:has(>.table-scroll.ld-m-mode){background:transparent;border:0;overflow:visible}
+      #page-loading .table-scroll.ld-m-mode{overflow:visible}
+      #page-loading .table-scroll.ld-m-mode :is(table,tbody,tr,td){display:block;width:100%;min-width:0;padding:0;border:0;background:transparent!important;white-space:normal;text-align:left}
+      #page-loading .table-scroll.ld-m-mode thead{display:none}
+      /* 上線白板：iOS 不支援拖曳，改一週一段往下排，空的週收起（本週保留），用 ‹ › 換週 */
+      .wb-tip{display:none}
+      .wb-board{flex-direction:column;align-items:stretch;overflow-x:visible;gap:12px}
+      .wb-col{flex:none;width:auto;max-height:none;min-height:0}
+      .wb-col:not(.wb-now):has(.wb-col-empty){display:none}
+      .wb-col-b{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;overflow:visible}
+      .wb-card{padding:10px 12px}
+      .wb-card-h b{font-size:15px}
+      .wb-card-d{font-size:13px}
+      .wb-card-f{font-size:12px}
+      .wb-move .rdy-mini{min-width:36px;min-height:34px;font-size:16px}
+    }
     #pmPrintArea{display:none}
     @media print{
       /* 具名頁面:只有細項彈窗列印套 A4 直式,不動到全站預設的橫式 @page(床位配置圖等) */
@@ -39556,7 +39588,7 @@ function spTrackMobileCardsHtml(groups,detail){
   }).join('')+'</div>';
 }
 // 手機／電腦寬度切換時（例如平板轉向）重繪 SP 清單，改用對應版面
-if(window.matchMedia){const spListMq=window.matchMedia('(max-width:768px),(pointer:coarse) and (max-width:1100px)'),spListMqChange=()=>{try{spTrackRenderCurrentList();['reserved','product','manual'].forEach(k=>{if(document.getElementById('spxBody-'+k))spxRender(k);});if(typeof cprRender==='function'&&typeof cprSchemaOk!=='undefined'&&cprSchemaOk)cprRender();if(document.getElementById('page-modparts')?.classList.contains('active'))modpartsRender();if(document.getElementById('page-layout')?.classList.contains('active'))renderLayoutInput();}catch(e){}};if(spListMq.addEventListener)spListMq.addEventListener('change',spListMqChange);else if(spListMq.addListener)spListMq.addListener(spListMqChange);}
+if(window.matchMedia){const spListMq=window.matchMedia('(max-width:768px),(pointer:coarse) and (max-width:1100px)'),spListMqChange=()=>{try{spTrackRenderCurrentList();['reserved','product','manual'].forEach(k=>{if(document.getElementById('spxBody-'+k))spxRender(k);});if(typeof cprRender==='function'&&typeof cprSchemaOk!=='undefined'&&cprSchemaOk)cprRender();if(document.getElementById('page-modparts')?.classList.contains('active'))modpartsRender();if(document.getElementById('page-layout')?.classList.contains('active'))renderLayoutInput();if(document.getElementById('page-loading')?.classList.contains('active')&&typeof ldRender==='function')ldRender();}catch(e){}};if(spListMq.addEventListener)spListMq.addEventListener('change',spListMqChange);else if(spListMq.addListener)spListMq.addListener(spListMqChange);}
 function spTrackRenderOuter(){
   prodMemoReset();
   const head=document.getElementById('spxHead-track'),body=document.getElementById('spxBody-track'); if(!head||!body)return;
@@ -45601,8 +45633,53 @@ function ldMissing(){
 }
 
 // ── 畫面 ────────────────────────────────────────────────────
+// ── 手機／平板：月排程改卡片，點卡片從底部面板編輯（沿用 ldSetDate／ldSetPlan／ldSetNote／ldRemove）──
+function ldMobileChromeInit(){
+  const bar=document.querySelector('#page-loading .ld-bar'); if(!bar||bar.querySelector('.ld-m-more')) return;
+  const btn=document.createElement('button'); btn.type='button'; btn.className='dash-nav-btn ld-m-more'; btn.textContent='⋯ 更多';
+  btn.onclick=()=>{ const open=bar.classList.toggle('m-open'); btn.textContent=open?'收起':'⋯ 更多'; };
+  const range=ldEl('ld-range'); bar.insertBefore(btn, range||null);
+}
+function ldMobileCardsHtml(rows){
+  return '<div class="sp-l-list">'+rows.map(r=>{
+    const lt=ldLight(r), sp=ldSPpct(r), zid=r.z.id, pid=r.plan?r.plan.id:'', open='ldOpenMobileSheet(\''+zid+'\',\''+pid+'\')';
+    const left=r.left==null?'':(r.left<0?'<b class="ld-over">逾期 '+Math.abs(r.left)+' 天</b>':('剩 '+r.left+' 天'));
+    const note=r.plan&&String(r.plan.note||'').trim(), issue=r.plan&&String(r.plan.issue||'').trim();
+    return '<div class="sp-l-card ld-m-card" role="button" tabindex="0" onclick="'+open+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+open+'}">'
+      +'<div class="sp-l-top"><span class="sp-l-cp">'+ldEsc(r.proj)+'-'+ldEsc(r.z.zone_code||'')+'</span><span class="ld-light ld-l-'+lt.cls+'">'+ldEsc(lt.txt)+'</span></div>'
+      +'<div class="sp-l-meta">'+(String(r.z.status||'').trim()?'<span class="status-badge '+ldEsc(r.z.status)+'">'+ldEsc(r.z.status)+'</span>':'')
+        +'<span>交管料 '+(r.handover?ldEsc(dateSlash(r.handover))+'（'+ldWk(r.handover)+'）':'—')+'</span>'+(left?'<span>'+left+'</span>':'')+'</div>'
+      +'<div class="ld-m-prog"><div class="ld-bar-wrap"><i style="width:'+Math.min(100,r.pct)+'%"></i></div><span>本月 '+ldFix(r.doneMonT)+' / '+ldFix(r.target)+' t · '+r.pct+'%</span></div>'
+      +'<div class="spx-m-lines"><span><b>整區</b>'+(r.bomT>0?ldFix(r.doneAllT)+' / '+ldFix(r.bomT)+' t':'尚無 BOM')+'</span><span><b>CP</b>'+(r.cp?'✓':'—')+'</span><span><b>SP備料</b>'+(sp==null?'—':sp+'%')+'</span></div>'
+      +(note?'<div class="sp-l-note">備註：'+ldEsc(note)+'</div>':'')+(issue?'<div class="sp-l-note">狀況：'+ldEsc(issue)+'</div>':'')
+      +'<span class="sp-l-go" aria-hidden="true">›</span></div>';
+  }).join('')+'</div>';
+}
+function ldOpenMobileSheet(zid,pid){
+  const r=ldRows().find(x=>String(x.z.id)===String(zid)&&String(x.plan?x.plan.id:'')===String(pid)); if(!r) return;
+  ldCloseMobileSheet();
+  const canGo=typeof pagePerm!=='function' || pagePerm('prod')!=='hide', zc=String(r.z.zone_code||'').trim();
+  const form=
+    '<label class="spx-m-field"><span>吊裝期</span><input type="date" value="'+ldEsc(r.erect)+'" onchange="ldSetDate('+zid+',\'erect_date\',this.value)"></label>'
+    +'<label class="spx-m-field"><span>交管料日'+(r.auto?'（自動）':'')+'</span><input type="date" value="'+ldEsc(r.handover)+'" onchange="ldSetDate('+zid+',\'handover_date\',this.value)"></label>'
+    +'<label class="spx-m-field"><span>本月排定（噸）</span><input type="number" inputmode="decimal" step="0.01" min="0" value="'+(r.planT==null?'':ldFix(r.planT))+'" placeholder="'+ldFix(r.bomT)+'" onchange="ldSetPlan(\''+pid+'\',this.value)"></label>'
+    +'<label class="spx-m-field"><span>本月完成（噸）</span><input readonly value="'+ldFix(r.doneMonT)+'"></label>'
+    +'<label class="spx-m-field wide"><span>會議備註</span><input value="'+ldEsc(r.plan&&r.plan.note||'')+'" placeholder="會議備註" autocomplete="off" onchange="ldSetNote(\''+pid+'\',this.value)"></label>'
+    +'<div class="cpr-m-actions"><button type="button" class="cpr-m-ghost" onclick="ldCloseMobileSheet();ldOpenNote(\''+pid+'\')">狀況說明</button>'
+      +(canGo?'<button type="button" class="cpr-m-ghost" data-proj="'+ldEsc(r.proj)+'" data-zone="'+ldEsc(zc)+'" onclick="const p=this.dataset.proj,z=this.dataset.zone;ldCloseMobileSheet();ldGoZone(p,z)">工程區詳情</button>':'')+'</div>'
+    +'<div class="cpr-m-actions">'+(r.auto?'':'<button type="button" class="cpr-m-ghost" onclick="ldCloseMobileSheet();ldResetHandover('+zid+')">↺ 交管料改回自動</button>')
+      +'<button type="button" class="cpr-m-danger" onclick="ldCloseMobileSheet();ldRemove(\''+pid+'\')">從本月移除</button></div>';
+  const sheet=document.createElement('div'); sheet.className='sp-sheet spx-m-sheet'; sheet.id='ldMobileSheet';
+  sheet.innerHTML='<div class="sp-sheet-panel" role="dialog" aria-modal="true" aria-label="編輯月排程"><div class="sp-sheet-grip"></div>'
+    +'<div class="spx-m-head"><div class="sp-sheet-title">'+ldEsc(r.proj)+'-'+ldEsc(zc)+'</div><button type="button" class="spx-m-close" aria-label="關閉" onclick="ldCloseMobileSheet()">✕</button></div>'
+    +'<div class="spx-m-form">'+form+'</div><div class="spx-m-note">修改會自動儲存</div></div>';
+  sheet.addEventListener('click',e=>{ if(e.target===sheet) ldCloseMobileSheet(); });
+  document.body.appendChild(sheet);
+}
+function ldCloseMobileSheet(){ const s=document.getElementById('ldMobileSheet'); if(s) s.remove(); }
 function ldRender(){
   const body=ldEl('ld-body'); if(!body) return;
+  ldMobileChromeInit();
   const rangeEl=ldEl('ld-range');
   if(rangeEl) rangeEl.textContent='產量月 '+ldMonthRangeTxt()+'（上月 26 日～當月 25 日）';
   if(ldErr){
@@ -45620,6 +45697,8 @@ function ldRender(){
     return;
   }
   const canGo=typeof pagePerm!=='function' || pagePerm('prod')!=='hide';   // 沒有 CP 收圖頁權限就不給連結
+  const ldCompact=spTrackIsMobile(), ldWrap=body.closest('.table-scroll'); if(ldWrap) ldWrap.classList.toggle('ld-m-mode', ldCompact);
+  if(ldCompact){ body.innerHTML='<tr><td>'+ldMobileCardsHtml(rows)+'</td></tr>'; return; }
   body.innerHTML=rows.map(r=>{
     const lt=ldLight(r), sp=ldSPpct(r);
     const zid=r.z.id, pid=r.plan?r.plan.id:'', zc=String(r.z.zone_code||'').trim();
