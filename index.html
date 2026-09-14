@@ -6286,6 +6286,50 @@ window.normalizeFullWidth=function(value){
       #page-prod .spx-wrap.sp-l-mode :is(table,tbody,tr,td){display:block;width:100%;padding:0;border:0;white-space:normal;background:transparent}
       #page-prod .spx-wrap.sp-l-mode thead{display:none}
     }
+    /* 手機版 保留料／成品材／手工單：卡片＋底部編輯面板（spxOpenMobileSheet） */
+    .spx-m-lines{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font:12px var(--mono);color:var(--text2)}
+    .spx-m-lines b{margin-right:4px;font-weight:400;color:var(--text3)}
+    .spx-m-sheet .sp-sheet-panel{max-height:88vh;max-height:calc(100dvh - 40px);overflow:auto}
+    .spx-m-sheet.no-anim .sp-sheet-panel{animation:none}
+    .spx-m-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .spx-m-head .sp-sheet-title{flex:1;margin:0;overflow-wrap:anywhere}
+    .spx-m-close{flex:none;width:36px;height:36px;border:0;border-radius:10px;background:var(--bg3);color:var(--text2);font-size:18px;cursor:pointer}
+    .spx-m-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .spx-m-field{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:11px;color:var(--text3)}
+    .spx-m-field.wide{grid-column:1/-1}
+    .spx-m-field>input,.spx-m-field>select{box-sizing:border-box;width:100%;height:42px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font:16px var(--sans);outline:none}
+    .spx-m-field>input:focus,.spx-m-field>select:focus{border-color:var(--accent2)}
+    .spx-m-field>input[readonly]{background:var(--bg);color:var(--text2)}
+    .spx-m-toggle{display:flex;align-items:center;gap:10px;min-height:42px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font:600 15px var(--sans);cursor:pointer}
+    .spx-m-toggle input[type=checkbox]{width:22px!important;height:22px!important;margin:0;accent-color:var(--green)}
+    .spx-m-toggle label{justify-content:flex-start!important;width:100%;font-size:15px}
+    .spx-m-toggle.is-locked{opacity:.6;pointer-events:none}
+    .spx-m-note{margin:12px 0 0;font-size:12px;color:var(--text3);text-align:center}
+    .spx-m-readonly{margin-bottom:10px;font-size:12px;color:var(--yellow)}
+    @media(max-width:768px){
+      #page-prod button[onclick^="spxAddRow"]{display:none!important}   /* 新增列是表格格式，手機卡片模式先不提供 */
+      #prodview-product .prod-paste,#reserved-complete-rule,#prodview-manual>.section-label,#prodview-welding>.section-label{display:none}
+      /* 工程區詳情頁的保留料／成品材／手工單清單：取消橫向對齊格線，改直排卡片 */
+      #page-prod .pd-list.pdl-grid{display:flex!important;flex-direction:column;overflow:visible}
+      #page-prod .pd-list.pdl-grid .pd-row{display:flex!important;flex-wrap:wrap;gap:8px 10px;padding:12px}
+      #page-prod .pd-row .pdr-gstart{border-left:0;padding-left:0}
+      #page-prod .pd-row input[type=date],#page-prod .pd-row .pdr-sel{min-height:38px;font-size:16px}
+      #page-prod .pd-row .pdr-chk{min-height:38px;font-size:14px}
+      #page-prod .pd-row .pdr-chk input{width:20px;height:20px}
+    }
+    /* 總表看板小卡：窄螢幕一列兩張、字放大，高度隨內容 */
+    @media(max-width:900px){
+      #page-prod .prod-cards.is-mini{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      #page-prod #prodCardWrap .prod-mini{height:auto!important;min-height:0!important;max-height:none!important;grid-template-rows:auto auto auto minmax(0,1fr) 6px auto;gap:6px;padding:12px}
+      #page-prod #prodCardWrap .prod-mini .pm-title{font-size:18px}
+      #page-prod #prodCardWrap .prod-mini .pm-head .chip{font-size:12px}
+      #page-prod #prodCardWrap .prod-mini .pm-sub{height:auto;line-height:1.4;overflow:visible;font-size:13px}
+      #page-prod #prodCardWrap .prod-mini .sp-priority{font-size:12px}
+      #page-prod #prodCardWrap .prod-mini .sp-notion-tags>*{font-size:12px}
+      #page-prod #prodCardWrap .prod-mini .pm-bar{height:6px}
+      #page-prod #prodCardWrap .prod-mini .pm-foot{font-size:13px}
+      #page-prod #prodCardWrap .prod-mini .pm-foot .pm-pct{font-size:16px}
+    }
     .pm-summary{margin:18px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
     .pm-summary-title{padding:10px 12px;background:var(--bg3);color:var(--text);font:700 13px var(--mono);border-bottom:1px solid var(--border)}
     .pm-summary .pm-detail-table th{position:static}
@@ -39029,7 +39073,7 @@ async function spxFlush(key){
       else { const r=await sbFetch('/rest/v1/'+cfg.tbl,{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)}); if(r.ok&&r.data&&r.data[0]){const localKey=row._key;Object.assign(row,r.data[0]);row._key=localKey;row._dirty=false;saved++;} else if(r.status===401||r.status===403){ spxHint('需登入才能儲存',true); break; } }
     }
   } finally { s.busy=false; if(s.again){ s.again=false; spxFlush(key); } }
-  if(saved){ spxAfterChange(key); if(!failed)spxHint('✓ 已自動儲存'); if(typeof prodAutoDoneAfter==='function') prodAutoDoneAfter(key,dirty); }
+  if(saved){ spxAfterChange(key); if(typeof prodReadinessChanged==='function') prodReadinessChanged(true); if(!failed)spxHint('✓ 已自動儲存'); if(typeof prodAutoDoneAfter==='function') prodAutoDoneAfter(key,dirty); }
 }
 function spxHint(msg,err){
   // 高頻率的欄位／狀態更新不再彈出右下角成功提示；失敗與其他操作結果仍會顯示。
@@ -39220,7 +39264,7 @@ function spTrackMobileCardsHtml(groups,detail){
   }).join('')+'</div>';
 }
 // 手機／電腦寬度切換時（例如平板轉向）重繪 SP 清單，改用對應版面
-if(window.matchMedia){const spListMq=window.matchMedia('(max-width:768px)'),spListMqChange=()=>{try{spTrackRenderCurrentList();}catch(e){}};if(spListMq.addEventListener)spListMq.addEventListener('change',spListMqChange);else if(spListMq.addListener)spListMq.addListener(spListMqChange);}
+if(window.matchMedia){const spListMq=window.matchMedia('(max-width:768px)'),spListMqChange=()=>{try{spTrackRenderCurrentList();['reserved','product','manual'].forEach(k=>{if(document.getElementById('spxBody-'+k))spxRender(k);});}catch(e){}};if(spListMq.addEventListener)spListMq.addEventListener('change',spListMqChange);else if(spListMq.addListener)spListMq.addListener(spListMqChange);}
 function spTrackRenderOuter(){
   prodMemoReset();
   const head=document.getElementById('spxHead-track'),body=document.getElementById('spxBody-track'); if(!head||!body)return;
@@ -39362,7 +39406,7 @@ async function spTrackSetReceiptAllocation(item,zone,on,el){
   const g=spTrackModalGroup;if(!g?.receiptMeta)return;el.disabled=true;const key=g.key,matching=g.rows.filter(r=>!r._receiptVirtual&&String(r.item||'')===item&&spTrackZones(r.zone).includes(zone));
   if(on&&!matching.length){const payload={proj_no:g.proj,zone,dwg_no:g.dwg,order_no:g.ord,item,make:'',status:'-',remark:'',cp_receipt_id:g.receiptMeta.itemReceiptIds[item]||null};let res=await sbFetch('/rest/v1/sp_track',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)});if(!res.ok&&res.status===400){delete payload.cp_receipt_id;res=await sbFetch('/rest/v1/sp_track',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)});}if(!res.ok||!Array.isArray(res.data)||!res.data[0]){el.checked=false;el.disabled=false;spxHint('工程區項目配置儲存失敗',true);return;}const row=res.data[0];row._key=++spxSeq;prodTrack.push(row);
   }else if(!on&&matching.length){const progressed=matching.some(r=>!['','-'].includes(String(r.status||'')));if(progressed&&!await uiConfirm('「'+prodItemLabel(item)+' / '+zone+'」已有進度，確定取消配置？')){el.checked=true;el.disabled=false;return;}for(const row of matching){const remain=spTrackZones(row.zone).filter(z=>z!==zone);if(row.id!=null){const res=remain.length?await sbFetch('/rest/v1/sp_track?id=eq.'+encodeURIComponent(row.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({zone:spTrackZoneText(remain)})}):await sbFetch('/rest/v1/sp_track?id=eq.'+encodeURIComponent(row.id),{method:'DELETE'});if(!res.ok){el.checked=true;el.disabled=false;spxHint('工程區項目配置儲存失敗',true);return;}}if(remain.length)row.zone=spTrackZoneText(remain);else prodTrack=prodTrack.filter(x=>x!==row);}}
-  spTrackRenderCurrentList();spTrackModalGroup=spTrackOuterGroups.find(x=>x.key===key)||spTrackBuildGroups().find(x=>x.key===key)||null;if(spTrackModalGroup)spTrackRenderCPModal();else spTrackCloseCP();prodRenderBoard();spxHint('✓ 工程區項目配置已儲存');
+  spTrackRenderCurrentList();spTrackModalGroup=spTrackOuterGroups.find(x=>x.key===key)||spTrackBuildGroups().find(x=>x.key===key)||null;if(spTrackModalGroup)spTrackRenderCPModal();else spTrackCloseCP();prodRenderBoard();prodReadinessChanged(true);spxHint('✓ 工程區項目配置已儲存');
 }
 function spTrackReceiptCategoryForItem(item){const pair=Object.entries(CPR_TO_SP_ITEM).find(([,mapped])=>mapped===item);return pair?pair[0]:item;}
 let spTrackReceiptItemSaveChain=Promise.resolve();
@@ -39383,7 +39427,7 @@ async function spTrackReceiptToggleItem(g,item,checked,el,fromDropdown){
   if(saved.some(r=>!r.ok)){oldCategories.forEach(x=>x.row.categories=x.categories);g.receiptMeta.items=oldItems;if(optimisticRemoved.length){prodTrack.push(...optimisticRemoved);g.rows.push(...optimisticRemoved);}if(el)el.checked=!checked;spTrackRenderCurrentList();prodRenderBoard();spTrackNotionRefresh('modal-item',false);spxHint('項目同步失敗，已恢復原資料',true);return;}
   const related=optimisticRemoved.length?optimisticRemoved:g.rows.filter(r=>!r._receiptVirtual&&String(r.item||'')===item);if(!checked&&related.length){const ids=related.map(r=>r.id).filter(id=>id!=null);if(ids.length){const del=await sbFetch('/rest/v1/sp_track?id=in.('+ids.join(',')+')',{method:'DELETE'});if(!del.ok){prodTrack.push(...optimisticRemoved);g.rows.push(...optimisticRemoved);spTrackRenderCurrentList();prodRenderBoard();spxHint('收圖項目已更正，但舊 SP 明細清除失敗，已恢復畫面；請重新整理再處理',true);return;}}}
   if(checked&&(g.receiptMeta?.zones?.size||0)===1){const zone=[...g.receiptMeta.zones][0],target=changed[0].row,payload={proj_no:g.proj,zone,dwg_no:g.dwg,order_no:g.ord,item,make:'',status:'-',remark:'',cp_receipt_id:target.id};let add=await sbFetch('/rest/v1/sp_track',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)});if(!add.ok&&add.status===400){delete payload.cp_receipt_id;add=await sbFetch('/rest/v1/sp_track',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)});}if(add.ok&&Array.isArray(add.data)&&add.data[0]){add.data[0]._key=++spxSeq;prodTrack.push(add.data[0]);}}
-  spTrackRenderCurrentList();spTrackModalGroup=spTrackFindContextGroup(g.key);if(!spTrackDirectFieldEdit){if(spTrackModalGroup)spTrackRenderCPModal();else spTrackCloseCP();}cprRender();prodRenderBoard();if(fromDropdown&&spTrackModalGroup)spTrackNotionRefresh('modal-item',false);spxHint('✓ 項目已同步更正至收圖登記');
+  spTrackRenderCurrentList();spTrackModalGroup=spTrackFindContextGroup(g.key);if(!spTrackDirectFieldEdit){if(spTrackModalGroup)spTrackRenderCPModal();else spTrackCloseCP();}cprRender();prodRenderBoard();if(fromDropdown&&spTrackModalGroup)spTrackNotionRefresh('modal-item',false);prodReadinessChanged(true);spxHint('✓ 項目已同步更正至收圖登記');
 }
 async function spTrackSetGroupZones(zones){
   const g=spTrackModalGroup;if(!g)return false;const clean=spTrackZones(spTrackZoneText(zones));if(!clean.length){alert('至少要保留一個工程區');return false;}
@@ -39417,6 +39461,18 @@ async function spTrackToggleItem(item,checked,el,fromDropdown){
   else if(!spTrackModalGroup)spTrackCloseItemDropdown();
   prodRenderBoard();
 }
+// SP／領料資料一改就重算上線準備燈號：詳情頁立即重畫；refetch=true（已確認寫入）時，
+// 主頁／上線白板／鈴鐺用的 rdyRows 在背景重抓一次（只在已經載入過時才抓）
+let prodReadyRefreshTimer=null;
+function prodReadinessChanged(refetch){
+  try{ if(prodDetailCtx&&prodDetailCtx.proj&&prodDetailCtx.zone&&typeof rdyRenderZone==='function') rdyRenderZone(); }catch(e){ console.warn('rdyRenderZone',e); }
+  if(!refetch||typeof rdyFetchRows!=='function'||typeof rdyRowsLoaded==='undefined'||!rdyRowsLoaded) return;
+  clearTimeout(prodReadyRefreshTimer);
+  prodReadyRefreshTimer=setTimeout(()=>{
+    rdyFetchRows().then(()=>{ if(typeof rdyDashRender==='function') rdyDashRender(); if(typeof wbRender==='function') wbRender(); if(typeof updateNotifBadge==='function') updateNotifBadge(true); })
+      .catch(e=>console.warn('readiness refresh failed',e));
+  },800);
+}
 let spTrackEditTimers={},spTrackEditVersions={};
 function spTrackGroupRemarkEdit(i,value){
   const g=spTrackOuterGroups[i];if(!g)return;
@@ -39429,19 +39485,19 @@ function spTrackGroupRemarkEdit(i,value){
   },350);
 }
 function spTrackChildEdit(identity,field,value){
-  identity=String(identity||'');let rows=spTrackModalEditGroups[identity];if(!rows){const byId=identity.startsWith('id:'),needle=identity.slice(identity.indexOf(':')+1),row=prodTrack.find(r=>String(byId?r.id:r._key)===needle);rows=row?[row]:[];}if(!rows.length){spxHint('找不到要修改的 SP 資料列',true);return;}const editKey=identity+'|'+field,previous=rows.map(r=>r[field]),version=(spTrackEditVersions[editKey]||0)+1;spTrackEditVersions[editKey]=version;rows.forEach(r=>r[field]=value);
+  identity=String(identity||'');let rows=spTrackModalEditGroups[identity];if(!rows){const byId=identity.startsWith('id:'),needle=identity.slice(identity.indexOf(':')+1),row=prodTrack.find(r=>String(byId?r.id:r._key)===needle);rows=row?[row]:[];}if(!rows.length){spxHint('找不到要修改的 SP 資料列',true);return;}const editKey=identity+'|'+field,previous=rows.map(r=>r[field]),version=(spTrackEditVersions[editKey]||0)+1;spTrackEditVersions[editKey]=version;rows.forEach(r=>r[field]=value);if(field!=='remark')prodReadinessChanged(false);
   clearTimeout(spTrackEditTimers[editKey]);spTrackEditTimers[editKey]=setTimeout(async()=>{
     const ids=rows.map(r=>r.id).filter(id=>id!=null);if(ids.length!==rows.length){spxHint('部分 SP 資料尚未建立，無法同步儲存',true);return;}const body={};body[field]=value,path='/rest/v1/sp_track?id=in.('+ids.map(encodeURIComponent).join(',')+')';
     const write=await sbFetch(path+'&select=*',{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(body)}),written=Array.isArray(write.data)?write.data:[];
-    if(!write.ok||written.length!==ids.length){if(spTrackEditVersions[editKey]===version){rows.forEach((r,i)=>r[field]=previous[i]);spTrackRenderCurrentList();if(spTrackModalGroup)spTrackRenderCPModal();}spxHint('SP 狀態儲存失敗（HTTP '+(write.status||'?')+'）',true);return;}
+    if(!write.ok||written.length!==ids.length){if(spTrackEditVersions[editKey]===version){rows.forEach((r,i)=>r[field]=previous[i]);spTrackRenderCurrentList();prodReadinessChanged(false);if(spTrackModalGroup)spTrackRenderCPModal();}spxHint('SP 狀態儲存失敗（HTTP '+(write.status||'?')+'）',true);return;}
     // 再讀回一次，確認不是只有 PATCH 回應看似成功，實際資料卻被規則或其他寫入改回。
     const verify=await sbFetch(path+'&select=id,'+encodeURIComponent(field)),verified=Array.isArray(verify.data)?verify.data:[],valid=verify.ok&&verified.length===ids.length&&verified.every(x=>String(x[field]??'')===String(value??''));
     if(!valid){
-      if(spTrackEditVersions[editKey]===version){const actualById=new Map(verified.map(x=>[String(x.id),x[field]]));rows.forEach((r,i)=>r[field]=actualById.has(String(r.id))?actualById.get(String(r.id)):previous[i]);spTrackRenderCurrentList();if(spTrackModalGroup)spTrackRenderCPModal();}
+      if(spTrackEditVersions[editKey]===version){const actualById=new Map(verified.map(x=>[String(x.id),x[field]]));rows.forEach((r,i)=>r[field]=actualById.has(String(r.id))?actualById.get(String(r.id)):previous[i]);spTrackRenderCurrentList();prodReadinessChanged(false);if(spTrackModalGroup)spTrackRenderCPModal();}
       spxHint('SP 狀態寫入後核對不一致，未視為成功',true);return;
     }
     if(spTrackEditVersions[editKey]!==version)return;
-    const verifiedById=new Map(verified.map(x=>[String(x.id),x]));rows.forEach(r=>{const actual=verifiedById.get(String(r.id));if(actual)r[field]=actual[field];r._dirty=false;});spTrackRenderCurrentList();prodRenderBoard();
+    const verifiedById=new Map(verified.map(x=>[String(x.id),x]));rows.forEach(r=>{const actual=verifiedById.get(String(r.id));if(actual)r[field]=actual[field];r._dirty=false;});spTrackRenderCurrentList();prodRenderBoard();if(field!=='remark')prodReadinessChanged(true);
   },250);
 }
 function spTrackCloseCP(){spTrackModalGroup=null;spTrackCloseStatusSheet();pmCloseDetails();const d=document.getElementById('prodview-detail');if(d&&d.style.display!=='none')spTrackRenderDetailOuter();else spTrackRenderOuter();}
@@ -39462,6 +39518,77 @@ function spxRenderHead(key){ const cfg=SPX[key], head=document.getElementById('s
   }).join('')+'<th></th></tr>';
   const t=document.getElementById('spx-'+key); if(t && head.offsetHeight) t.style.setProperty('--lt-head-h', head.offsetHeight+'px');
 }
+// 手機版 保留料／成品材／手工單：每筆一張卡，點卡片從底部開啟編輯面板（沿用 spxEdit／spxEditText 自動儲存）
+const SPX_MOBILE={
+  reserved:{title:r=>r.spec||r.mat_no||'（未填規格）', status:r=>prodResDone(r)?['完成','st-ok']:(prodResTaken(r)?['待退還','st-count']:['未領取','st-none']),
+    meta:['proj_no','zone','order_no'], lines:[['mat_no','餘料'],['qty','數量'],['work_form','長度'],['comp_no','構件'],['issue_date','給單'],['take_date','領取']], note:'remark'},
+  product:{title:r=>String(r.reason||'').trim()||r.serial||'（未填細目）', status:r=>r.is_picked===true?['已領料','st-ok']:['未領料','st-none'],
+    meta:['proj_no','_zone','serial'], lines:[['pick_date','日期'],['pickup_date','領料']], note:'remark', checkText:['已領料','未領料']},
+  manual:{title:r=>r.manual_no||'（未填編號）', status:r=>r.completed===true?['完成','st-ok']:['未完成','st-none'],
+    meta:['proj_no','zone'], lines:[['issue_date','開單'],['take_date','領取']], note:'content', checkText:['已完成','未完成']}
+};
+function spxMobileVal(key,r,k){
+  if(k==='_zone') return pmZonesOfRow(r).join('.');
+  const c=SPX[key].cols.find(x=>x.k===k); if(!c) return '';
+  const v=spxColStr(r,c); return /_date$/.test(k)?dateSlash(v):v;
+}
+function spxMobileCardsHtml(key,idx){
+  const m=SPX_MOBILE[key], arr=prodArr(key);
+  if(!idx.length) return '<div class="sp-m-empty">尚無資料</div>';
+  return '<div class="sp-l-list">'+idx.map(i=>{
+    const r=arr[i], st=m.status(r), meta=m.meta.map(k=>spxMobileVal(key,r,k)).filter(Boolean), note=spxMobileVal(key,r,m.note);
+    const lines=m.lines.map(([k,l])=>{ const v=spxMobileVal(key,r,k); return v?'<span><b>'+esc(l)+'</b>'+esc(v)+'</span>':''; }).join('');
+    const open='spxOpenMobileSheet(\''+key+'\','+i+')';
+    return '<div class="sp-l-card" role="button" tabindex="0" onclick="'+open+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+open+'}">'+
+      '<div class="sp-l-top"><span class="sp-l-cp">'+esc(m.title(r))+'</span><span class="chip '+st[1]+'">'+esc(st[0])+'</span></div>'+
+      (meta.length?'<div class="sp-l-meta">'+meta.map(v=>'<span>'+esc(v)+'</span>').join('<span>·</span>')+'</div>':'')+
+      (lines?'<div class="spx-m-lines">'+lines+'</div>':'')+
+      (note?'<div class="sp-l-note">'+(m.note==='content'?'內容':'備註')+'：'+esc(note)+'</div>':'')+
+      '<span class="sp-l-go" aria-hidden="true">›</span></div>';
+  }).join('')+'</div>';
+}
+let spxSheetCtx=null;
+function spxOpenMobileSheet(key,i,refresh){
+  const r=prodArr(key)[i], m=SPX_MOBILE[key]; if(!r||!m) return;
+  const oldPanel=document.querySelector('#spxMobileSheet .sp-sheet-panel'), keepTop=refresh&&oldPanel?oldPanel.scrollTop:0;
+  document.getElementById('spxMobileSheet')?.remove();
+  spxSheetCtx={key,i};
+  const canEdit=typeof pagePerm!=='function'||pagePerm('prod')==='edit', dis=canEdit?'':' disabled';
+  const call=(fn,field,arg)=>fn+'(\''+key+'\','+i+',\''+field+'\','+arg+')', refreshSoon='setTimeout(spxRefreshMobileSheet,0)';
+  const fields=spxCols(key).map(c=>{
+    const label='<span>'+esc(c.h)+'</span>';
+    if(c.virtual){
+      if(c.render===pmZoneText) return '<label class="spx-m-field">'+label+'<input readonly value="'+esc(pmZonesOfRow(r).join('.'))+'"></label>';
+      if(c.render===pdResReturnCheck) return '<div class="spx-m-field wide">'+label+'<div class="spx-m-toggle'+(canEdit?'':' is-locked')+'" onchange="'+refreshSoon+'">'+pdResReturnCheck(r)+'</div></div>';
+      if(c.k==='_details'){
+        const n=key==='manual'?moDetails(r).length:((pmMeta(r.remark)||{}).details||[]).length, fn=key==='manual'?'moOpenDetails':'pmOpenDetails';
+        if(!n&&key!=='manual') return '<div class="spx-m-field wide">'+label+'<div class="spx-m-toggle" style="cursor:default;color:var(--text3)">沒有細項</div></div>';
+        return '<div class="spx-m-field wide">'+label+'<button type="button" class="sp-sheet-cancel" style="margin:0" onclick="spxCloseMobileSheet(false);'+fn+'('+r._key+')">'+(n?'查看細項（'+n+' 筆）':'新增細項')+'</button></div>';
+      }
+      return '';
+    }
+    if(c.check){ const on=r[c.k]===true, txt=m.checkText||['完成','未完成'];
+      return '<label class="spx-m-field wide">'+label+'<span class="spx-m-toggle"><input type="checkbox"'+(on?' checked':'')+dis+' onchange="'+call('spxEdit',c.k,'this.checked')+';'+refreshSoon+'">'+esc(on?txt[0]:txt[1])+'</span></label>';
+    }
+    if(c.status||c.sel){ const cur=c.labels?(r[c.k]==null?'':String(r[c.k])):spxColStr(r,c);
+      const opts=c.sel.map(o=>'<option value="'+esc(o)+'"'+(cur===o?' selected':'')+'>'+esc((c.labels&&c.labels[o])||SPX_STATUS_LABEL[o]||o||'—')+'</option>').join('');
+      return '<label class="spx-m-field">'+label+'<select'+dis+' onchange="'+call('spxEdit',c.k,'this.value')+';'+refreshSoon+'">'+opts+'</select></label>';
+    }
+    const val=c.date?String(r[c.k]||'').slice(0,10).replace(/\//g,'-'):spxColStr(r,c);
+    return '<label class="spx-m-field'+(c.wide?' wide':'')+'">'+label+'<input type="'+(c.date?'date':'text')+'"'+(c.num?' inputmode="decimal"':'')+' value="'+esc(val)+'" autocomplete="off"'+dis+
+      ' oninput="'+call('spxEditText',c.k,'this')+'" onchange="'+call('spxEditText',c.k,'this')+'" onblur="spxCompletionCommit(\''+key+'\','+i+',\''+c.k+'\')"></label>';
+  });
+  const sheet=document.createElement('div');sheet.className='sp-sheet spx-m-sheet'+(refresh?' no-anim':'');sheet.id='spxMobileSheet';
+  sheet.innerHTML='<div class="sp-sheet-panel" role="dialog" aria-modal="true" aria-label="編輯'+esc(m.title(r))+'"><div class="sp-sheet-grip"></div>'+
+    '<div class="spx-m-head"><div class="sp-sheet-title">'+esc(m.title(r))+'</div><button type="button" class="spx-m-close" aria-label="關閉" onclick="spxCloseMobileSheet(true)">✕</button></div>'+
+    (canEdit?'':'<div class="spx-m-readonly">目前帳號為唯讀，無法修改。</div>')+
+    '<div class="spx-m-form">'+fields.join('')+'</div><div class="spx-m-note">'+(canEdit?'修改會自動儲存':'')+'</div></div>';
+  sheet.addEventListener('click',e=>{ if(e.target===sheet) spxCloseMobileSheet(true); });
+  document.body.appendChild(sheet);
+  if(keepTop) sheet.querySelector('.sp-sheet-panel').scrollTop=keepTop;
+}
+function spxRefreshMobileSheet(){ if(spxSheetCtx&&document.getElementById('spxMobileSheet')) spxOpenMobileSheet(spxSheetCtx.key,spxSheetCtx.i,true); }
+function spxCloseMobileSheet(rerender){ const sheet=document.getElementById('spxMobileSheet'), ctx=spxSheetCtx; spxSheetCtx=null; if(!sheet) return; sheet.remove(); if(rerender&&ctx) spxRender(ctx.key); }
 function spxRenderBody(key){ const cfg=SPX[key], body=document.getElementById('spxBody-'+key); if(!body) return;
   spxKeyRows(key); spxEnsureBlank(key);
   const arr=prodArr(key), kw=spxFilterText[key];
@@ -39469,6 +39596,8 @@ function spxRenderBody(key){ const cfg=SPX[key], body=document.getElementById('s
   const blankIdx=vis.filter(i=>spxRowIsBlank(cfg,arr[i]));
   const dataIdx=vis.filter(i=>!spxRowIsBlank(cfg,arr[i]));
   if(cfg.sort) dataIdx.sort((a,b)=>cfg.sort(arr[a],arr[b]));
+  const cardMode=!!SPX_MOBILE[key]&&spTrackIsMobile();spTrackListMode(body,cardMode);
+  if(cardMode){ const head=document.getElementById('spxHead-'+key); if(head) head.innerHTML=''; body.innerHTML='<tr><td>'+spxMobileCardsHtml(key,dataIdx)+'</td></tr>'; const cnt=document.getElementById('spxCount-'+key); if(cnt) cnt.textContent=dataIdx.length+' 列'; return; }
   let html=''; blankIdx.forEach(i=>html+=spxRowHtml(key,i)); dataIdx.forEach(i=>html+=spxRowHtml(key,i));
   if(!dataIdx.length && !blankIdx.length) html='<tr><td colspan="'+(spxCols(key).length+1)+'" style="text-align:center;color:var(--text3);padding:24px">尚無資料</td></tr>';
   body.innerHTML=html;
