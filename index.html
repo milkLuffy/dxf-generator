@@ -6604,6 +6604,45 @@ window.normalizeFullWidth=function(value){
       #page-inspect .dxf-actions{flex-wrap:wrap}
       #page-inspect .dxf-actions .btn{flex:1 1 100%;justify-content:center;min-height:44px}
     }
+    /* ── 全站行動版 第一批（二）：修改構件／線上進度表 ── */
+    .lt-m-chip{flex:none;padding:3px 10px;border-radius:999px;background:var(--bg4);color:var(--text3);font-size:12px;white-space:nowrap}
+    .lt-m-chip.lt-m-上線中{background:rgba(255,214,10,.16);color:var(--yellow)}
+    .lt-m-chip.lt-m-待出貨{background:rgba(10,132,255,.16);color:var(--accent2)}
+    .lt-m-chip.lt-m-已出貨{background:rgba(50,215,75,.14);color:var(--green)}
+    .lt-m-chip.lt-m-HOLD{background:rgba(255,69,58,.14);color:var(--red)}
+    .lt-m-chip.lt-m-預報{background:rgba(191,90,242,.16);color:var(--purple)}
+    .lt-m-sum{margin:0 0 10px;font-size:13px;color:var(--text2)}
+    .lt-m-pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;font-size:12px;color:var(--text2)}
+    .lt-m-pager button{min-height:40px;padding:0 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);color:var(--text);cursor:pointer}
+    .lt-m-pager button:disabled{opacity:.4;cursor:default}
+    .spx-m-field>select[style]{width:100%!important;color:var(--text)!important}   /* 數量下拉原本寫死 56px */
+    @media(max-width:768px),(pointer:coarse) and (max-width:1100px){
+      .layout-table-wrap.lt-m-mode{max-height:none;overflow:visible;border:0;background:transparent}
+      .layout-table-wrap.lt-m-mode :is(table,tbody,tr,td){display:block;width:100%;min-width:0;padding:0;border:0;background:transparent!important;white-space:normal;text-align:left}
+      .layout-table-wrap.lt-m-mode :is(thead,tfoot){display:none}
+      /* 線上進度表原本以 ID 寫死 min-width:1160px 與各欄寬，卡片模式要蓋掉，否則整頁被撐到 1160px、卡片被壓在第一欄 */
+      #layout-input-wrap.lt-m-mode #layout-input-table{min-width:0!important;width:100%!important}
+      #layout-input-wrap.lt-m-mode #layout-input-table td{width:100%!important}
+      /* 修改構件：只留搜尋與新增 */
+      #page-modparts .layout-toolbar{gap:8px}
+      #page-modparts #mp-search{flex:1 1 100%;width:auto;height:44px;font-size:16px}
+      #page-modparts .layout-toolbar>span[style*="flex:1"],#page-modparts #mp-undo-btn,#page-modparts #mp-redo-btn,#page-modparts .layout-toolbar .btn-export{display:none}
+      #page-modparts .layout-toolbar .btn-gen{flex:1 1 100%;min-height:44px;justify-content:center}
+      #page-modparts #mp-tab-list>.card .section-label{display:none}
+      #page-modparts .dash-date-nav{flex-wrap:wrap;gap:8px}
+      #page-modparts .dash-date-nav :is(input,button){min-height:40px;font-size:16px}
+      #page-modparts .dash-date-nav>span[style*="flex:1"]{display:none}
+      /* 線上進度表：搜尋滿版、統計兩欄、工具列只留多選輸入 */
+      #page-layout .page-header{flex-wrap:wrap;gap:10px}
+      #page-layout .page-header>div[style]{flex:1 1 100%}
+      #page-layout #layout-search{width:100%!important;height:44px;font-size:16px}
+      #page-layout .layout-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      #page-layout .lstat{padding:10px 12px}
+      #page-layout #layout-input-panel>.layout-toolbar:first-child .layout-hint{display:none}
+      #page-layout #layout-input-panel>.layout-toolbar:first-child>div{flex:1 1 100%}
+      #page-layout #layout-input-panel>.layout-toolbar:first-child button:not([onclick^="layoutMultiOpen"]){display:none}
+      #page-layout button[onclick^="layoutMultiOpen"]{flex:1 1 100%;min-height:44px;font-size:15px}
+    }
     #pmPrintArea{display:none}
     @media print{
       /* 具名頁面:只有細項彈窗列印套 A4 直式,不動到全站預設的橫式 @page(床位配置圖等) */
@@ -7552,7 +7591,7 @@ window.normalizeFullWidth=function(value){
       <div class="page-header"><div><div class="page-title">修改構件</div><div class="page-subtitle">修改構件總表與區間回報</div></div></div>
       <div class="layout-tabs"><button class="layout-tab active" id="mp-tabbtn-list" onclick="modpartsTab('list')">總表登記</button><button class="layout-tab" id="mp-tabbtn-report" onclick="modpartsTab('report')">區間回報</button></div>
       <div id="mp-tab-list">
-        <div class="card" style="margin-bottom:14px"><div class="layout-toolbar"><input id="mp-search" class="search-input" placeholder="搜尋 CP、構件、工程…" oninput="modpartsRender()"/><span style="flex:1"></span><button class="btn-sm btn-export" id="mp-undo-btn" onclick="modpartsUndo()" title="回復 (Ctrl+Z)" disabled>↶ 回復</button><button class="btn-sm btn-export" id="mp-redo-btn" onclick="modpartsRedo()" title="重做 (Ctrl+Y)" disabled>↷ 重做</button><button class="btn-sm btn-gen" style="flex:none" onclick="modpartsAdd()">＋ 新增</button><button class="btn-sm btn-export" onclick="modpartsExport(false)">⬇ 匯出 Excel</button></div><div class="section-label" style="margin-top:8px">輸入「構件編號＋工程編號」後，工程區、單重與圖號會由 BOM 自動帶入。支援 Ctrl/Cmd+Z 回復、Ctrl/Cmd+Y 重做，修改後自動儲存。</div></div>
+        <div class="card" style="margin-bottom:14px"><div class="layout-toolbar"><input id="mp-search" class="search-input" placeholder="搜尋 CP、構件、工程…" oninput="modpartsRender()"/><span style="flex:1"></span><button class="btn-sm btn-export" id="mp-undo-btn" onclick="modpartsUndo()" title="回復 (Ctrl+Z)" disabled>↶ 回復</button><button class="btn-sm btn-export" id="mp-redo-btn" onclick="modpartsRedo()" title="重做 (Ctrl+Y)" disabled>↷ 重做</button><button class="btn-sm btn-gen" style="flex:none" onclick="spTrackIsMobile()?modpartsMobileAdd():modpartsAdd()">＋ 新增</button><button class="btn-sm btn-export" onclick="modpartsExport(false)">⬇ 匯出 Excel</button></div><div class="section-label" style="margin-top:8px">輸入「構件編號＋工程編號」後，工程區、單重與圖號會由 BOM 自動帶入。支援 Ctrl/Cmd+Z 回復、Ctrl/Cmd+Y 重做，修改後自動儲存。</div></div>
         <div class="layout-table-wrap"><table class="layout-table" id="mp-grid" onkeydown="modpartsKey(event)"><thead><tr><th>CP編號</th><th>構件編號</th><th>工程編號</th><th>工程區</th><th class="num">數量</th><th class="num">單重(kg)</th><th>圖號</th><th>上線日期</th><th>出貨日期</th><th>操作</th></tr></thead><tbody id="mp-body"></tbody><tfoot id="mp-foot"></tfoot></table></div>
       </div>
       <div id="mp-tab-report" style="display:none">
@@ -21066,6 +21105,52 @@ function layoutRowIsInput(row) {
   return !!(row && row._isInput);
 }
 
+// ── 手機／平板：線上進度表卡片與底部編輯面板（沿用 layoutEdit／layoutQtyChange／layoutDelRow 自動儲存）──
+function layoutMobileCardsHtml(pg) {
+  const cards = pg.slice.map(i => {
+    const r = layoutRows[i], st = (r.part_no||'').trim() ? (r.status||'-') : '-', open = 'layoutOpenMobileSheet(' + i + ')';
+    const meta = [r.proj_num, r.zone_code].filter(Boolean).map(esc).join(' · ');
+    const lines = [['床位', r.bed], ['數量', r.qty], ['上線', r.work_date ? dateSlash(r.work_date) : ''], ['圖號', r.drawing_no], ['尺寸', r.spec], ['出貨', r.ship_date ? dateSlash(r.ship_date) : '']]
+      .filter(x => x[1] != null && x[1] !== '').map(([k, v]) => '<span><b>' + k + '</b>' + esc(v) + '</span>').join('');
+    return '<div class="sp-l-card" role="button" tabindex="0" onclick="' + open + '" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();' + open + '}">' +
+      '<div class="sp-l-top"><span class="sp-l-cp">' + esc(r.part_no || '（未填構件編號）') + '</span><span class="lt-m-chip lt-m-' + esc(st) + '">' + esc(st) + '</span></div>' +
+      (meta ? '<div class="sp-l-meta">' + meta + '</div>' : '') + (lines ? '<div class="spx-m-lines">' + lines + '</div>' : '') +
+      '<span class="sp-l-go" aria-hidden="true">›</span></div>';
+  }).join('');
+  if (!cards) return '<div class="sp-m-empty">🔍 查無符合的資料</div>';
+  const pager = pg.pages > 1 ? '<div class="lt-m-pager"><button type="button"' + (pg.page <= 0 ? ' disabled' : '') + ' onclick="pagerGo(\'layout\',-1);window.scrollTo(0,0)">‹ 上一頁</button>' +
+    '<span>第 ' + (pg.page + 1) + ' / ' + pg.pages + ' 頁 · 共 ' + pg.total + ' 筆</span>' +
+    '<button type="button"' + (pg.page >= pg.pages - 1 ? ' disabled' : '') + ' onclick="pagerGo(\'layout\',1);window.scrollTo(0,0)">下一頁 ›</button></div>' : '';
+  return '<div class="sp-l-list">' + cards + '</div>' + pager;
+}
+function layoutOpenMobileSheet(i, refresh) {
+  const row = layoutRows[i]; if (!row) return;
+  const old = document.getElementById('layoutMobileSheet'), keepTop = refresh && old ? old.querySelector('.sp-sheet-panel').scrollTop : 0; if (old) old.remove();
+  const again = 'setTimeout(()=>layoutOpenMobileSheet(' + i + ',true),0)';
+  const bedOpts = '<option value=""></option>' + BEDS.map(b => '<option value="' + b + '"' + (row.bed === b ? ' selected' : '') + '>' + b + '</option>').join('');
+  const statusList = (row.status && STATUSES.indexOf(row.status) < 0) ? STATUSES.concat([row.status]) : STATUSES;
+  const statusOpts = statusList.map(s => '<option value="' + s + '"' + (row.status === s ? ' selected' : '') + '>' + s + '</option>').join('');
+  const info = [['工程編號', row.proj_num], ['工程區', row.zone_code], ['圖號', row.drawing_no], ['尺寸', row.spec], ['單重', row.net_weight]]
+    .filter(x => x[1] != null && x[1] !== '').map(([k, v]) => '<span><b>' + k + '</b>' + esc(v) + '</span>').join('');
+  const form =
+    (info ? '<div class="spx-m-field wide"><div class="spx-m-lines" style="margin:0">' + info + '</div></div>' : '') +
+    '<label class="spx-m-field"><span>上線日期</span><input type="date" value="' + esc(row.work_date || '') + '" onchange="layoutEdit(' + i + ',\'work_date\',this.value)"></label>' +
+    '<div class="spx-m-field"><span>數量</span>' + layoutQtySelect(i) + '</div>' +
+    '<label class="spx-m-field"><span>床位</span><select onchange="layoutEdit(' + i + ',\'bed\',this.value);' + again + '">' + bedOpts + '</select></label>' +
+    ((row.part_no || '').trim() ? '<label class="spx-m-field"><span>狀態</span><select onchange="layoutEdit(' + i + ',\'status\',this.value)">' + statusOpts + '</select></label>'
+      : '<label class="spx-m-field"><span>狀態</span><input readonly value="-"></label>') +
+    // 出貨日期：選擇器關閉（blur）後才重畫，避免手機上日期選擇器一開就被重畫關掉
+    '<label class="spx-m-field wide"><span>出貨日期</span><input type="date" value="' + esc(row.ship_date || '') + '" onchange="layoutEdit(' + i + ',\'ship_date\',this.value)" onblur="' + again + '"></label>' +
+    '<div class="cpr-m-actions"><button type="button" class="cpr-m-danger" onclick="layoutMobileDelete(' + i + ')">刪除這筆</button></div>';
+  const sheet = document.createElement('div'); sheet.className = 'sp-sheet spx-m-sheet' + (refresh ? ' no-anim' : ''); sheet.id = 'layoutMobileSheet';
+  sheet.innerHTML = '<div class="sp-sheet-panel" role="dialog" aria-modal="true" aria-label="編輯線上進度"><div class="sp-sheet-grip"></div>' +
+    '<div class="spx-m-head"><div class="sp-sheet-title">' + esc(row.part_no || '（未填構件編號）') + '</div><button type="button" class="spx-m-close" aria-label="關閉" onclick="layoutCloseMobileSheet()">✕</button></div>' +
+    '<div class="spx-m-form">' + form + '</div><div class="spx-m-note">修改會自動儲存</div></div>';
+  sheet.addEventListener('click', e => { if (e.target === sheet) layoutCloseMobileSheet(); });
+  document.body.appendChild(sheet); if (keepTop) sheet.querySelector('.sp-sheet-panel').scrollTop = keepTop;
+}
+function layoutCloseMobileSheet() { const s = document.getElementById('layoutMobileSheet'); if (!s) return; s.remove(); renderLayoutInput(); }
+async function layoutMobileDelete(i) { const row = layoutRows[i]; await layoutDelRow(i); if (!layoutRows.includes(row)) { const s = document.getElementById('layoutMobileSheet'); if (s) s.remove(); } }
 function renderLayoutInput() {
   renderLayoutHead();
   const tbody = document.getElementById('layout-input-body');
@@ -21093,6 +21178,14 @@ function renderLayoutInput() {
     if (!aNew && Number(ra.id) !== Number(rb.id)) return Number(rb.id) - Number(ra.id);
     return (rb._key || 0) - (ra._key || 0);
   });
+  // 手機／平板：明細改卡片（出貨勾選模式仍用表格），點卡片從底部面板編輯
+  const layoutCompact = spTrackIsMobile() && !layoutShipMode;
+  const lwrap = document.getElementById('layout-input-wrap'); if (lwrap) lwrap.classList.toggle('lt-m-mode', layoutCompact);
+  if (layoutCompact) {
+    tbody.innerHTML = '<tr><td>' + layoutMobileCardsHtml(pagerSlice('layout', dataIdx, shippedView ? 50 : undefined)) + '</td></tr>';
+    renderLayoutShipBar();
+    return;
+  }
   blankIdx.forEach(i => { html += layoutRowHtml(i); });
   const pg = pagerSlice('layout', dataIdx, shippedView ? 50 : undefined);
   pg.slice.forEach(i => { html += layoutRowHtml(i); });
@@ -39463,7 +39556,7 @@ function spTrackMobileCardsHtml(groups,detail){
   }).join('')+'</div>';
 }
 // 手機／電腦寬度切換時（例如平板轉向）重繪 SP 清單，改用對應版面
-if(window.matchMedia){const spListMq=window.matchMedia('(max-width:768px),(pointer:coarse) and (max-width:1100px)'),spListMqChange=()=>{try{spTrackRenderCurrentList();['reserved','product','manual'].forEach(k=>{if(document.getElementById('spxBody-'+k))spxRender(k);});if(typeof cprRender==='function'&&typeof cprSchemaOk!=='undefined'&&cprSchemaOk)cprRender();}catch(e){}};if(spListMq.addEventListener)spListMq.addEventListener('change',spListMqChange);else if(spListMq.addListener)spListMq.addListener(spListMqChange);}
+if(window.matchMedia){const spListMq=window.matchMedia('(max-width:768px),(pointer:coarse) and (max-width:1100px)'),spListMqChange=()=>{try{spTrackRenderCurrentList();['reserved','product','manual'].forEach(k=>{if(document.getElementById('spxBody-'+k))spxRender(k);});if(typeof cprRender==='function'&&typeof cprSchemaOk!=='undefined'&&cprSchemaOk)cprRender();if(document.getElementById('page-modparts')?.classList.contains('active'))modpartsRender();if(document.getElementById('page-layout')?.classList.contains('active'))renderLayoutInput();}catch(e){}};if(spListMq.addEventListener)spListMq.addEventListener('change',spListMqChange);else if(spListMq.addListener)spListMq.addListener(spListMqChange);}
 function spTrackRenderOuter(){
   prodMemoReset();
   const head=document.getElementById('spxHead-track'),body=document.getElementById('spxBody-track'); if(!head||!body)return;
@@ -41320,7 +41413,41 @@ async function modpartsInit(){
   modpartsRender();
 }
 function modpartsTab(t){document.getElementById('mp-tab-list').style.display=t==='list'?'':'none';document.getElementById('mp-tab-report').style.display=t==='report'?'':'none';document.getElementById('mp-tabbtn-list').classList.toggle('active',t==='list');document.getElementById('mp-tabbtn-report').classList.toggle('active',t==='report');if(t==='report')modpartsReport();}
-function modpartsRender(){const q=(document.getElementById('mp-search')?.value||'').toLowerCase(),rows=mpRows.filter(r=>!q||MP_KEYS.some(k=>String(r[k]||'').toLowerCase().includes(q)));document.getElementById('mp-body').innerHTML=rows.map(r=>{const i=mpRows.indexOf(r),oc=k=>`modpartsChange(${i},'${k}',this.value)`;return '<tr>'+MP_KEYS.map(k=>'<td>'+xCell(k.includes('date')?'date':(['qty','unit_weight'].includes(k)?'number':''),r[k]??'',oc(k),['zone_code','unit_weight','drawing_no'].includes(k))+'</td>').join('')+'<td><button class="btn-sm btn-danger" onclick="modpartsDelete('+i+')">刪除</button></td></tr>';}).join('')||'<tr><td colspan="10" class="empty-state">尚無修改構件資料</td></tr>';const qty=rows.reduce((s,r)=>s+xNum(r.qty),0),w=rows.reduce((s,r)=>s+xNum(r.qty)*xNum(r.unit_weight),0);document.getElementById('mp-foot').innerHTML='<tr><td colspan="4"><b>合計 '+rows.length+' 筆</b></td><td class="num"><b>'+qty+'</b></td><td class="num"><b>'+w.toFixed(2)+'</b></td><td colspan="4"></td></tr>';tblInitSelection(document.getElementById('mp-grid'));modpartsHistoryButtons();}
+// ── 手機／平板：修改構件改卡片，點卡片從底部面板編輯（沿用 modpartsChange：BOM 自動帶入、自動儲存、可復原）──
+const MP_LABELS={cp_no:'CP編號',part_no:'構件編號',proj_num:'工程編號',zone_code:'工程區（BOM 帶入）',qty:'數量',unit_weight:'單重 kg（BOM 帶入）',drawing_no:'圖號（BOM 帶入）',online_date:'上線日期',ship_date:'出貨日期'};
+function modpartsMobileCard(r,open){
+  const meta=[r.proj_num,r.zone_code].filter(Boolean).map(xEsc).join(' · ');
+  const lines=[['構件',r.part_no],['數量',r.qty],['單重',r.unit_weight!=null&&r.unit_weight!==''?r.unit_weight+' kg':''],['圖號',r.drawing_no],['上線',r.online_date?dateSlash(r.online_date):''],['出貨',r.ship_date?dateSlash(r.ship_date):'']].filter(x=>x[1]!=null&&x[1]!=='').map(([k,v])=>'<span><b>'+k+'</b>'+xEsc(v)+'</span>').join('');
+  return '<div class="sp-l-card"'+(open?' role="button" tabindex="0" onclick="'+open+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+open+'}"':' style="cursor:default"')+'>'+
+    '<div class="sp-l-top"><span class="sp-l-cp">'+xEsc(r.cp_no||r.part_no||'（未填 CP 編號）')+'</span>'+(r.ship_date?'<span class="lt-m-chip lt-m-已出貨">已出貨</span>':'')+'</div>'+
+    (meta?'<div class="sp-l-meta">'+meta+'</div>':'')+(lines?'<div class="spx-m-lines">'+lines+'</div>':'')+(open?'<span class="sp-l-go" aria-hidden="true">›</span>':'')+'</div>';
+}
+function modpartsMobileList(rows,bodyId,footId,withTotal,editable){
+  const body=document.getElementById(bodyId),foot=document.getElementById(footId);if(!body)return;
+  const qty=rows.reduce((s,r)=>s+xNum(r.qty),0),w=rows.reduce((s,r)=>s+xNum(r.qty)*xNum(r.unit_weight),0);if(foot)foot.innerHTML='';
+  const cards=rows.map(r=>modpartsMobileCard(r,editable?'modpartsOpenMobileSheet('+mpRows.indexOf(r)+')':'')).join('');
+  body.innerHTML='<tr><td><div class="lt-m-sum">'+(withTotal||'合計')+' '+rows.length+' 筆 · 數量 '+qty+' · '+w.toFixed(2)+' kg</div>'+(cards?'<div class="sp-l-list">'+cards+'</div>':'<div class="sp-m-empty">'+(editable?'尚無修改構件資料':'此區間沒有資料')+'</div>')+'</td></tr>';
+}
+function modpartsOpenMobileSheet(i,refresh){
+  const r=mpRows[i];if(!r)return;
+  const old=document.getElementById('mpMobileSheet'),keepTop=refresh&&old?old.querySelector('.sp-sheet-panel').scrollTop:0;if(old)old.remove();
+  const fields=MP_KEYS.map(k=>{const type=k.includes('date')?'date':(['qty','unit_weight'].includes(k)?'number':'text'),ro=['zone_code','unit_weight','drawing_no'].includes(k);
+    // 改構件／工程編號會從 BOM 帶入工程區、單重、圖號，面板重畫一次顯示帶入結果（日期欄不重畫，避免手機日期選擇器被關掉）
+    const after=(k==='part_no'||k==='proj_num')?';setTimeout(()=>modpartsOpenMobileSheet('+i+',true),0)':'';
+    return '<label class="spx-m-field'+(k==='cp_no'||k==='part_no'?' wide':'')+'"><span>'+MP_LABELS[k]+'</span><input type="'+type+'"'+(type==='number'?' inputmode="decimal"':'')+(ro?' readonly':'')+' value="'+xEsc(r[k]??'')+'" autocomplete="off"'+(ro?'':' onchange="modpartsChange('+i+',\''+k+'\',this.value)'+after+'"')+'></label>';}).join('');
+  const sheet=document.createElement('div');sheet.className='sp-sheet spx-m-sheet'+(refresh?' no-anim':'');sheet.id='mpMobileSheet';
+  sheet.innerHTML='<div class="sp-sheet-panel" role="dialog" aria-modal="true" aria-label="編輯修改構件"><div class="sp-sheet-grip"></div>'+
+    '<div class="spx-m-head"><div class="sp-sheet-title">'+xEsc(r.cp_no||r.part_no||'修改構件')+'</div><button type="button" class="spx-m-close" aria-label="關閉" onclick="modpartsCloseMobileSheet()">✕</button></div>'+
+    '<div class="spx-m-form">'+fields+'<div class="cpr-m-actions"><button type="button" class="cpr-m-danger" onclick="modpartsMobileDelete('+i+')">刪除這筆</button></div></div><div class="spx-m-note">修改會自動儲存</div></div>';
+  sheet.addEventListener('click',e=>{if(e.target===sheet)modpartsCloseMobileSheet();});
+  document.body.appendChild(sheet);if(keepTop)sheet.querySelector('.sp-sheet-panel').scrollTop=keepTop;
+}
+function modpartsCloseMobileSheet(){const s=document.getElementById('mpMobileSheet');if(!s)return;s.remove();modpartsRender();}
+async function modpartsMobileDelete(i){const r=mpRows[i];await modpartsDelete(i);if(!mpRows.includes(r)){const s=document.getElementById('mpMobileSheet');if(s)s.remove();}}
+async function modpartsMobileAdd(){const first=mpRows[0];await modpartsAdd();if(mpRows[0]&&mpRows[0]!==first)modpartsOpenMobileSheet(0);}
+function modpartsRender(){const q=(document.getElementById('mp-search')?.value||'').toLowerCase(),rows=mpRows.filter(r=>!q||MP_KEYS.some(k=>String(r[k]||'').toLowerCase().includes(q)));
+  const mpCompact=spTrackIsMobile(),mpWrap=document.getElementById('mp-body')?.closest('.layout-table-wrap');if(mpWrap)mpWrap.classList.toggle('lt-m-mode',mpCompact);
+  if(mpCompact){modpartsMobileList(rows,'mp-body','mp-foot','合計',true);modpartsHistoryButtons();return;}document.getElementById('mp-body').innerHTML=rows.map(r=>{const i=mpRows.indexOf(r),oc=k=>`modpartsChange(${i},'${k}',this.value)`;return '<tr>'+MP_KEYS.map(k=>'<td>'+xCell(k.includes('date')?'date':(['qty','unit_weight'].includes(k)?'number':''),r[k]??'',oc(k),['zone_code','unit_weight','drawing_no'].includes(k))+'</td>').join('')+'<td><button class="btn-sm btn-danger" onclick="modpartsDelete('+i+')">刪除</button></td></tr>';}).join('')||'<tr><td colspan="10" class="empty-state">尚無修改構件資料</td></tr>';const qty=rows.reduce((s,r)=>s+xNum(r.qty),0),w=rows.reduce((s,r)=>s+xNum(r.qty)*xNum(r.unit_weight),0);document.getElementById('mp-foot').innerHTML='<tr><td colspan="4"><b>合計 '+rows.length+' 筆</b></td><td class="num"><b>'+qty+'</b></td><td class="num"><b>'+w.toFixed(2)+'</b></td><td colspan="4"></td></tr>';tblInitSelection(document.getElementById('mp-grid'));modpartsHistoryButtons();}
 async function modpartsAdd(){const before=modpartsSnapshot(),r={cp_no:'',part_no:'',proj_num:'',zone_code:'',qty:1,unit_weight:null,drawing_no:'',online_date:xToday(),ship_date:null};if(mpLocal){r.id='local-'+Date.now();mpRows.unshift(r);xLocalWrite(mpStore,mpRows);}else{const z=await sbFetch('/rest/v1/modified_components',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(r)});if(!z.ok){alert('新增失敗('+(z.status||'?')+')：'+((z.data&&(z.data.message||z.data.hint))||'請確認已在 Supabase 執行 deductions_modparts_migration.sql'));return;}mpRows.unshift(Array.isArray(z.data)?z.data[0]:z.data);}mpUndoStack.push(before);if(mpUndoStack.length>50)mpUndoStack.shift();mpRedoStack=[];modpartsRender();}
 let mpSaveTimer;
 function modpartsChange(i,k,v){const r=mpRows[i];if(!r)return;const nv=['qty','unit_weight'].includes(k)?(v===''?null:Number(v)):v;if(r[k]===nv)return;modpartsPushUndo();r[k]=nv;if(k==='part_no'||k==='proj_num')modpartsBomFill(r);modpartsSetDraft(r);modpartsSave(i);modpartsRender();}
@@ -41330,7 +41457,9 @@ async function modpartsDelete(i){const r=mpRows[i];if(!r||!await uiConfirm('確�
 function modpartsKey(e){tableArrowNav(e);}
 function modpartsDefaultPeriod(){const n=new Date(),p=x=>String(x).padStart(2,'0');let y=n.getFullYear(),m=n.getMonth()+1;if(n.getDate()<26){m--;if(m<1){m=12;y--;}}const from=y+'-'+p(m)+'-26';let e=new Date(y,m,25);const to=e.getFullYear()+'-'+p(e.getMonth()+1)+'-'+p(e.getDate());const a=document.getElementById('mp-from'),b=document.getElementById('mp-to');if(a)a.value=from;if(b)b.value=to;modpartsReport();}
 function modpartsPeriod(d){const a=document.getElementById('mp-from'),b=document.getElementById('mp-to');if(!a.value)return modpartsDefaultPeriod();const x=new Date(a.value+'T00:00:00');x.setMonth(x.getMonth()+d);const p=n=>String(n).padStart(2,'0');a.value=x.getFullYear()+'-'+p(x.getMonth()+1)+'-26';const e=new Date(x.getFullYear(),x.getMonth()+1,25);b.value=e.getFullYear()+'-'+p(e.getMonth()+1)+'-'+p(e.getDate());modpartsReport();}
-function modpartsReport(){const f=document.getElementById('mp-from')?.value||'',t=document.getElementById('mp-to')?.value||'',rows=mpRows.filter(r=>{const d=r.ship_date||r.online_date||'';return d&&d>=f&&d<=t;});document.getElementById('mp-report-body').innerHTML=rows.map(r=>'<tr>'+[r.cp_no,r.part_no,r.proj_num,r.zone_code,r.qty,r.unit_weight,(xNum(r.qty)*xNum(r.unit_weight)).toFixed(2),r.drawing_no,r.online_date,r.ship_date].map(v=>'<td>'+xEsc(v??'')+'</td>').join('')+'</tr>').join('')||'<tr><td colspan="10" class="empty-state">此區間沒有資料</td></tr>';const q=rows.reduce((s,r)=>s+xNum(r.qty),0),w=rows.reduce((s,r)=>s+xNum(r.qty)*xNum(r.unit_weight),0);document.getElementById('mp-report-foot').innerHTML='<tr><td colspan="4"><b>區間合計 '+rows.length+' 筆</b></td><td class="num"><b>'+q+'</b></td><td></td><td class="num"><b>'+w.toFixed(2)+'</b></td><td colspan="3"></td></tr>';}
+function modpartsReport(){const f=document.getElementById('mp-from')?.value||'',t=document.getElementById('mp-to')?.value||'',rows=mpRows.filter(r=>{const d=r.ship_date||r.online_date||'';return d&&d>=f&&d<=t;});
+  const rpCompact=spTrackIsMobile(),rpWrap=document.getElementById('mp-report-body')?.closest('.layout-table-wrap');if(rpWrap)rpWrap.classList.toggle('lt-m-mode',rpCompact);
+  if(rpCompact){modpartsMobileList(rows,'mp-report-body','mp-report-foot','區間合計',false);return;}document.getElementById('mp-report-body').innerHTML=rows.map(r=>'<tr>'+[r.cp_no,r.part_no,r.proj_num,r.zone_code,r.qty,r.unit_weight,(xNum(r.qty)*xNum(r.unit_weight)).toFixed(2),r.drawing_no,r.online_date,r.ship_date].map(v=>'<td>'+xEsc(v??'')+'</td>').join('')+'</tr>').join('')||'<tr><td colspan="10" class="empty-state">此區間沒有資料</td></tr>';const q=rows.reduce((s,r)=>s+xNum(r.qty),0),w=rows.reduce((s,r)=>s+xNum(r.qty)*xNum(r.unit_weight),0);document.getElementById('mp-report-foot').innerHTML='<tr><td colspan="4"><b>區間合計 '+rows.length+' 筆</b></td><td class="num"><b>'+q+'</b></td><td></td><td class="num"><b>'+w.toFixed(2)+'</b></td><td colspan="3"></td></tr>';}
 function modpartsExport(report){const f=document.getElementById('mp-from')?.value||'',t=document.getElementById('mp-to')?.value||'',rows=report?mpRows.filter(r=>{const d=r.ship_date||r.online_date||'';return d&&d>=f&&d<=t;}):mpRows,a=[['CP編號','構件編號','工程編號','工程區','數量','單重(kg)','總重(kg)','圖號','上線日期','出貨日期']];rows.forEach(r=>a.push([r.cp_no,r.part_no,r.proj_num,r.zone_code,r.qty,r.unit_weight,xNum(r.qty)*xNum(r.unit_weight),r.drawing_no,r.online_date,r.ship_date]));a.push(['合計','','','',rows.reduce((s,r)=>s+xNum(r.qty),0),'',rows.reduce((s,r)=>s+xNum(r.qty)*xNum(r.unit_weight),0),'','','']);const ws=XLSX.utils.aoa_to_sheet(a),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,report?'區間回報':'修改構件總表');XLSX.writeFile(wb,(report?'修改構件回報_'+f+'_'+t:'修改構件總表')+'.xlsx');}
 </script>
 <script>
