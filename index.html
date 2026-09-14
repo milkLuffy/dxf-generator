@@ -29398,7 +29398,14 @@ function attMBentoStep(d){
 }
 function attMLineShare(){
   const txt=attMLineTxt(); if(!txt) return;
-  window.open('https://line.me/R/share?text='+encodeURIComponent(txt),'_blank');
+  const enc=encodeURIComponent(txt), st=document.getElementById('att-m-line-status');
+  // 手機／平板：直接叫 LINE App 選聊天室。加到主畫面的 App 用 window.open 開 line.me 網址，只會卡在空白的內建瀏覽器
+  if(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)){
+    location.href='line://msg/text/'+enc;
+    setTimeout(()=>{ if(!document.hidden&&st) st.textContent='沒有打開 LINE 嗎？請按「📋 複製」，再到 LINE 聊天室貼上。'; },1500);
+    return;
+  }
+  window.open('https://line.me/R/share?text='+enc,'_blank');
 }
 
 async function attSaveDay(){
