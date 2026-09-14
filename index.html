@@ -6256,6 +6256,36 @@ window.normalizeFullWidth=function(value){
     :is(.sp-m-status,.sp-sheet-opt).stcell-送工地{background:rgba(10,132,255,.16);color:var(--accent2);border-color:rgba(10,132,255,.28)}
     :is(.sp-m-status,.sp-sheet-opt).stcell-轉包{background:rgba(191,90,242,.16);color:var(--purple);border-color:rgba(191,90,242,.28)}
     @keyframes spSheetUp{from{transform:translateY(100%)}to{transform:none}}
+    /* 手機版 CP 收圖與追蹤：頂部精簡、分頁單列滑動、工具列次要按鈕收進「更多」、SP 清單改卡片 */
+    .prod-m-more{display:none}
+    .sp-l-list{display:flex;flex-direction:column;gap:10px}
+    .sp-l-card{position:relative;display:block;text-align:left;padding:12px 34px 12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent}
+    .sp-l-card:active{background:var(--bg3)}
+    .sp-l-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .sp-l-cp{font:700 16px var(--mono);overflow-wrap:anywhere}
+    .sp-l-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:6px;font:12px var(--mono);color:var(--text2)}
+    .sp-l-items{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+    .sp-l-card .sp-priority-list{max-width:none;margin-top:8px}
+    .sp-l-note{margin-top:8px;font-size:12px;color:var(--text2);overflow-wrap:anywhere}
+    .sp-l-go{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:22px;line-height:1}
+    @media(max-width:768px){
+      #page-prod>.page-title{font-size:22px}
+      #page-prod>.page-title+.section-label{display:none}
+      #page-prod .prod-tabs{flex-wrap:nowrap;overflow-x:auto;gap:8px;margin:10px 0 12px;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+      #page-prod .prod-tabs::-webkit-scrollbar{display:none}
+      #page-prod .prod-tab{flex:none;display:flex;align-items:center;min-height:40px;padding:0 14px;white-space:nowrap}
+      #page-prod .prod-toolbar>div[style*="flex:1"]{display:none}
+      #page-prod .prod-toolbar input[type=text]{order:-2;flex:1 1 0;min-width:0!important;width:auto!important;height:42px;font-size:16px}
+      #page-prod .prod-m-more{display:inline-flex;align-items:center;order:-1;min-height:42px;white-space:nowrap}
+      #page-prod .prod-toolbar:not(.m-open)>:is(button,select,label):not(.prod-m-more){display:none}
+      #page-prod .prod-toolbar.m-open>:is(button,select,label){min-height:40px}
+      #page-prod .prod-toolbar .prod-count{order:9;flex-basis:100%;font-size:12px}
+      #prodview-track>.section-label{display:none}
+      #page-prod button[onclick^="spTrackNewCP"],#page-prod button[onclick^="prodDetailAddSP"]{display:none!important}  /* 新增 CP 的草稿列是表格格式，手機卡片模式先不提供 */
+      #page-prod .spx-wrap.sp-l-mode{display:block;max-height:none;overflow:visible;border:0;background:transparent}
+      #page-prod .spx-wrap.sp-l-mode :is(table,tbody,tr,td){display:block;width:100%;padding:0;border:0;white-space:normal;background:transparent}
+      #page-prod .spx-wrap.sp-l-mode thead{display:none}
+    }
     .pm-summary{margin:18px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
     .pm-summary-title{padding:10px 12px;background:var(--bg3);color:var(--text);font:700 13px var(--mono);border-bottom:1px solid var(--border)}
     .pm-summary .pm-detail-table th{position:static}
@@ -37414,6 +37444,20 @@ function prodTab(t){
     if(tab) tab.classList.toggle('active', k===t);
   });
   if((t==='track'||t==='reserved'||t==='product'||t==='welding'||t==='manual') && typeof prodTabBanner==='function') prodTabBanner(t);
+  prodMobileToolbarInit();prodCenterActiveTab(t);
+}
+// 手機版：工具列次要按鈕收進「⋯ 更多」（CSS 只在 768px 以下隱藏）；目前分頁捲到分頁列中間
+function prodMobileToolbarInit(){
+  document.querySelectorAll('#page-prod .prod-toolbar').forEach(bar=>{
+    if(bar.querySelector(':scope>.prod-m-more'))return;
+    const btn=document.createElement('button');btn.type='button';btn.className='btn prod-m-more';btn.setAttribute('aria-expanded','false');btn.textContent='⋯ 更多';
+    btn.onclick=()=>{const open=bar.classList.toggle('m-open');btn.setAttribute('aria-expanded',String(open));btn.textContent=open?'收起':'⋯ 更多';};
+    bar.appendChild(btn);
+  });
+}
+function prodCenterActiveTab(t){
+  const tab=document.getElementById('prodtab-'+t),bar=tab&&tab.parentElement;if(!bar||bar.scrollWidth<=bar.clientWidth)return;
+  bar.scrollLeft=Math.max(0,tab.offsetLeft-bar.offsetLeft-(bar.clientWidth-tab.offsetWidth)/2);
 }
 
 // ── 狀態燈號 ──
@@ -39159,6 +39203,24 @@ function spTrackSyncSchedule(z){
   if(cached){cached.erect_date=z.erect_date;cached.handover_date=z.handover_date;}
   prodMemoReset();
 }
+// 手機版 SP 清單：每個 CP 一張卡，點卡片開啟項目狀態（spTrackOpenCP）
+function spTrackListMode(body,mobile){const wrap=body&&body.closest('.spx-wrap');if(wrap)wrap.classList.toggle('sp-l-mode',mobile);}
+function spTrackMobileCardsHtml(groups,detail){
+  if(!groups.length)return '<div class="sp-m-empty">'+(detail?'此工程區尚無 CP 資料':'尚無資料')+'</div>';
+  return '<div class="sp-l-list">'+groups.map((g,i)=>{
+    const items=[...new Set(g.rows.map(r=>String(r.item||'').trim()).filter(x=>x&&x!=='-'))],date=spTrackReceivedDate(g);
+    const notes=[...new Set(g.rows.filter(r=>!r._receiptVirtual).map(r=>String(r.remark||'').trim()).filter(Boolean))].join(' / ');
+    return '<div class="sp-l-card" role="button" tabindex="0" onclick="spTrackOpenCP('+i+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();spTrackOpenCP('+i+')}">'+
+      '<div class="sp-l-top"><span class="sp-l-cp">'+esc(g.cp||'（未填）')+'</span><span class="chip '+g.overall.cls+'">'+esc(g.overall.label)+'</span></div>'+
+      '<div class="sp-l-meta">'+(detail?'':'<span>'+esc(g.proj)+'</span>')+spTrackZoneTags(g.zones)+(date?'<span>收圖 '+esc(date)+'</span>':'')+'</div>'+
+      '<div class="sp-l-items">'+(items.length?prodItemTags(g.rows):'<span class="prod-no">尚未選擇項目</span>')+'</div>'+
+      (!detail&&g._priority?.parts?.length?spTrackPriorityHtml(g._priority):'')+
+      (notes?'<div class="sp-l-note">備註：'+esc(notes)+'</div>':'')+
+      '<span class="sp-l-go" aria-hidden="true">›</span></div>';
+  }).join('')+'</div>';
+}
+// 手機／電腦寬度切換時（例如平板轉向）重繪 SP 清單，改用對應版面
+if(window.matchMedia){const spListMq=window.matchMedia('(max-width:768px)'),spListMqChange=()=>{try{spTrackRenderCurrentList();}catch(e){}};if(spListMq.addEventListener)spListMq.addEventListener('change',spListMqChange);else if(spListMq.addListener)spListMq.addListener(spListMqChange);}
 function spTrackRenderOuter(){
   prodMemoReset();
   const head=document.getElementById('spxHead-track'),body=document.getElementById('spxBody-track'); if(!head||!body)return;
@@ -39179,6 +39241,9 @@ function spTrackRenderOuter(){
   spTrackOuterGroups.sort(priority?spTrackPriorityCompare:spTrackNewestFirst);
   const hint=document.getElementById('spTrackPriorityHint');
   if(hint)hint.textContent='交管料日：'+today.slice(0,7)+' ＋ '+ldYMAdd(today.slice(0,7),1)+'（自然月）｜'+(priority?'逾期 → 本月 → 下月 → 後續 → 待排程':'依最新新增排序')+'。未指定交管料日時，沿用吊裝期前 5 個工作天（週六計入、週日略過）。';
+  const cnt=document.getElementById('spxCount-track');if(cnt)cnt.textContent=spTrackOuterGroups.length+' 個 CP';
+  const mobile=spTrackIsMobile();spTrackListMode(body,mobile);
+  if(mobile){head.innerHTML='';body.innerHTML='<tr><td>'+spTrackMobileCardsHtml(spTrackOuterGroups,false)+'</td></tr>';return;}
   const dataHtml=spTrackOuterGroups.length?spTrackOuterGroups.map((g,i)=>{
     const items=[...new Set(g.rows.map(r=>String(r.item||'').trim()).filter(x=>x&&x!=='-'))];
     const chips=items.length?prodItemTags(g.rows):'<span class="prod-no">尚未選擇</span>';
@@ -39189,7 +39254,6 @@ function spTrackRenderOuter(){
       '<td class="del-col">'+(g.receiptMeta?'':'<button class="btn-del-row" title="刪除整個 CP" onclick="spTrackDeleteCP('+i+')">✕</button>')+'</td></tr>';
   }).join(''):(spTrackDraft?'':'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:24px">尚無資料</td></tr>');
   body.innerHTML=spTrackDraftRowHtml(false)+dataHtml;
-  const cnt=document.getElementById('spxCount-track');if(cnt)cnt.textContent=spTrackOuterGroups.length+' 個 CP';
 }
 function spTrackRenderDetailOuter(){
   prodMemoReset();
@@ -39205,6 +39269,8 @@ function spTrackRenderDetailOuter(){
   const detailRows=spTrackBomZoneCompleted(proj,zone)?[]:spTrackRowsWithReceipts().filter(r=>String(r.proj_no||'').trim()===proj&&spTrackZoneHas(r,zone));
   spTrackOuterGroups=spTrackBuildGroups(detailRows).filter(g=>!spTrackReceiptProjectHidden(g.proj)&&(!kw||[g.cp,g.proj,g.zone,spTrackReceivedDate(g),g.rows.map(r=>prodItemLabel(r.item)).join(' '),g.rows.map(r=>r.remark||'').join(' ')].join(' ').toLowerCase().includes(kw))).sort(spTrackNewestFirst);
   head.innerHTML='<tr><th>CP編號</th><th>工程區</th><th>項目（多選）</th><th>收圖日期</th><th>整體狀態</th><th>備註</th><th></th></tr>';
+  const mobile=spTrackIsMobile();spTrackListMode(body,mobile);
+  if(mobile){head.innerHTML='';body.innerHTML='<tr><td>'+spTrackMobileCardsHtml(spTrackOuterGroups,true)+'</td></tr>';const cnt=document.getElementById('spxCount-detail');if(cnt)cnt.textContent=spTrackOuterGroups.length+' 個 CP';return;}
   const dataHtml=spTrackOuterGroups.length?spTrackOuterGroups.map((g,i)=>{
     const items=[...new Set(g.rows.map(r=>String(r.item||'').trim()).filter(x=>x&&x!=='-'))],chips=items.length?prodItemTags(g.rows):'<span class="prod-no">尚未選擇</span>',notes=[...new Set(g.rows.filter(r=>!r._receiptVirtual).map(r=>String(r.remark||'').trim()).filter(Boolean))].join(' / '),hasReal=g.rows.some(r=>!r._receiptVirtual),itemAction=g.receiptMeta?'spTrackOpenCPField(event,'+i+',\'modal-item\')':'spTrackOpenItemDropdown(event,'+i+')';
     return '<tr><td><button class="sp-cp-link" onclick="spTrackOpenCP('+i+')">'+esc(g.cp||'（未填）')+'</button></td><td style="text-align:left"><button class="spx-detail-btn" style="border:0;background:none;padding-left:0" onclick="spTrackOpenCPField(event,'+i+',\'modal-zone\')">'+spTrackZoneTags(g.zones)+'</button></td><td style="text-align:left"><button class="spx-detail-btn" style="text-align:left;white-space:normal;border:0;background:none;padding-left:0" onclick="'+itemAction+'">'+chips+'</button></td><td class="cpr-code">'+esc(spTrackReceivedDate(g)||'—')+'</td><td><span class="chip '+g.overall.cls+'">'+esc(g.overall.label)+'</span></td><td style="text-align:left"><input class="lt-edit" style="text-align:left" value="'+esc(notes)+'" placeholder="'+(hasReal?'備註':'配置後可填備註')+'" title="'+(hasReal?'備註':'請先點擊 CP 編號配置工程區項目，配置完成後即可填寫備註')+'" '+(hasReal?'oninput="spTrackGroupRemarkEdit('+i+',this.value)"':'readonly')+'></td><td class="del-col">'+(g.receiptMeta?'':'<button class="btn-del-row" title="刪除整個 CP" onclick="spTrackDeleteCP('+i+')">✕</button>')+'</td></tr>';
