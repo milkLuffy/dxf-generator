@@ -6675,6 +6675,134 @@ window.normalizeFullWidth=function(value){
       .wb-card-f{font-size:12px}
       .wb-move .rdy-mini{min-width:36px;min-height:34px;font-size:16px}
     }
+    /* ── 全站行動版 第三批：人臉打卡／打卡紀錄／出勤回報／長榮日報（手機與觸控平板） ── */
+    @media(max-width:768px),(pointer:coarse) and (max-width:1100px){
+      /* 人臉打卡 */
+      .attend-kiosk{gap:12px}
+      .attend-result{min-width:0;padding:20px}
+      .attend-result-icon{font-size:56px}
+      .attend-result-name{font-size:28px}
+      /* 打卡紀錄：篩選滿版，明細／工時彙總改卡片 */
+      #page-attendlog .page-header{flex-wrap:wrap;gap:10px}
+      #page-attendlog .page-header>div[style]{flex:1 1 100%}
+      #page-attendlog .staff-view-toggle{display:flex;flex:1 1 100%}
+      #page-attendlog .staff-view-toggle button{flex:1;min-height:40px}
+      #page-attendlog .btn-add-new[onclick^="exportAttendCSV"]{display:none}
+      #page-attendlog .btn-add-new[onclick^="loadAttendLog"]{flex:1 1 100%;min-height:40px}
+      #attendlog-search{flex:1 1 100%!important;min-width:0!important;height:44px;font-size:16px}
+      #page-attendlog :is(.attendlog-dates,.attendlog-quick){flex:1 1 100%}
+      #page-attendlog .attendlog-dates{min-width:0}
+      #page-attendlog .attendlog-dates input{flex:1 1 0;width:0;min-width:0;min-height:40px;font-size:16px}   /* 日期框有內建最小寬度，不歸零會把整列撐出卡片 */
+      #page-attendlog .attendlog-quick button{flex:1;min-height:38px}
+      #attendlog-count{flex:1 1 100%;margin-left:0!important}
+      #page-attendlog .card:has(>#attendlog-table){overflow:visible!important;padding:0;border:0;background:transparent}
+      #attendlog-table{display:block;min-width:0}
+      #attendlog-table thead{display:none}
+      #attendlog-table tbody{display:block}
+      #attendlog-table tr{display:grid;gap:4px 10px;margin-bottom:8px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg2)}
+      #attendlog-table tr:has(>td[colspan]){display:block}
+      #attendlog-table td{display:block;padding:0;border:0;background:transparent!important;line-height:1.5}
+      #attendlog-table[data-view="detail"] tr{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name type" "date time" "sim act"}
+      #attendlog-table[data-view="detail"] td:nth-child(1){grid-area:date}
+      #attendlog-table[data-view="detail"] td:nth-child(2){grid-area:time;text-align:right}
+      #attendlog-table[data-view="detail"] td:nth-child(3){grid-area:name;font:600 16px var(--sans);color:var(--text)}
+      #attendlog-table[data-view="detail"] td:nth-child(4){grid-area:type;text-align:right;font-size:14px}
+      #attendlog-table[data-view="detail"] td:nth-child(5){grid-area:sim}
+      #attendlog-table[data-view="detail"] td:nth-child(5)::before{content:'相似度 ';color:var(--text3)}
+      #attendlog-table[data-view="detail"] td:nth-child(6){grid-area:act;justify-self:end}
+      #attendlog-table[data-view="detail"] .btn-icon{min-width:38px;min-height:36px}
+      #attendlog-table[data-view="summary"] tr{grid-template-columns:repeat(3,minmax(0,1fr))}
+      #attendlog-table[data-view="summary"] td:nth-child(1){grid-column:3;grid-row:1;text-align:right}
+      #attendlog-table[data-view="summary"] td:nth-child(2){grid-column:1/3;grid-row:1;font:600 16px var(--sans);color:var(--text)}
+      #attendlog-table[data-view="summary"] td:nth-child(n+3)::before{display:block;font-size:11px;color:var(--text3)}
+      #attendlog-table[data-view="summary"] td:nth-child(3)::before{content:'上班'}
+      #attendlog-table[data-view="summary"] td:nth-child(4)::before{content:'下班'}
+      #attendlog-table[data-view="summary"] td:nth-child(5)::before{content:'工時'}
+      #attendlog-table[data-view="summary"] td:nth-child(6)::before{content:'正常'}
+      #attendlog-table[data-view="summary"] td:nth-child(7)::before{content:'加班'}
+      #attendlog-table[data-view="summary"] td:nth-child(8)::before{content:'打卡次數'}
+      /* 出勤回報：分頁滿版、工具列放大（批次輸入／檢查重複收起），每日明細一人一張卡；報表維持框內左右捲 */
+      #page-attendance .page-header{flex-wrap:wrap;gap:10px}
+      #page-attendance .att-tab-bar{display:flex;width:100%}
+      #page-attendance .att-tab-bar button{flex:1 1 auto;min-height:40px;padding:0 10px}
+      #page-attendance .dash-date-nav{gap:8px}
+      #page-attendance .dash-date-nav>span[style*="flex:1"]{display:none}
+      #page-attendance .dash-date-nav :is(.dash-nav-btn,.btn-add-new){flex:1 1 auto;min-height:40px;font-size:13px}
+      #page-attendance .dash-date-nav .dash-date{flex:1 1 150px;min-height:40px;font-size:16px}
+      #page-attendance .dash-date-nav :is(button[onclick^="attBatchImport"],button[onclick^="attScanDup"]){display:none}
+      #att-tab-main .card>div[style*="font-size:10px"][style*="margin-bottom:8px"]{display:none}
+      #att-line-text{font-size:16px}
+      #page-attendance #att-daily-grid{display:block;min-width:0}
+      #page-attendance #att-daily-grid thead{display:none}
+      #page-attendance #att-daily-grid :is(tbody,tfoot){display:block}
+      #page-attendance #att-daily-grid tbody tr[data-name]{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:8px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--bg2)}
+      #page-attendance #att-daily-grid tbody tr[data-name] td{display:block;padding:0;border:0;background:transparent}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(1){grid-column:1/3;font:600 16px var(--sans);color:var(--text)}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(2){display:none}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(3){grid-column:3/-1;text-align:right}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(n+4)::before{display:block;margin-bottom:3px;font-size:11px;color:var(--text3)}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(4)::before{content:'上班工數'}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(5)::before{content:'上班時數'}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(6)::before{content:'加班工數'}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(7)::before{content:'加班時數'}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(8)::before{content:'便當'}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(9){grid-column:span 2}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(9)::before{content:'請假類別'}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(10)::before{content:'請假工數'}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(11)::before{content:'請假時數'}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(12){grid-column:span 3}
+      #page-attendance #att-daily-grid tbody tr[data-name] td:nth-child(12)::before{content:'備註'}
+      #page-attendance table.att-grid :is(input,select){width:100%!important;min-height:40px;font-size:16px}
+      #page-attendance #att-daily-grid .att-cat-head{display:block;margin:12px 0 6px}
+      #page-attendance #att-daily-grid .att-cat-head td{display:block;padding:6px 4px;border-radius:8px}
+      #page-attendance #att-daily-grid tfoot tr{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px;padding:10px 12px;border:1px solid var(--border-hi);border-radius:12px;background:var(--bg2)}
+      #page-attendance #att-daily-grid tfoot td{display:block;padding:0;border:0;background:transparent}
+      #page-attendance #att-daily-grid tfoot tr:not(.att-warn-row) td:nth-child(1){flex:1 1 100%}
+      #page-attendance #att-daily-grid tfoot tr:not(.att-warn-row) td:nth-child(2)::before{content:'上班工數 ';color:var(--text3);font-weight:400}
+      #page-attendance #att-daily-grid tfoot tr:not(.att-warn-row) td:nth-child(3)::before{content:'時數 ';color:var(--text3);font-weight:400}
+      #page-attendance #att-daily-grid tfoot tr:not(.att-warn-row) td:nth-child(4)::before{content:'加班工數 ';color:var(--text3);font-weight:400}
+      #page-attendance #att-daily-grid tfoot tr:not(.att-warn-row) td:nth-child(5)::before{content:'時數 ';color:var(--text3);font-weight:400}
+      #page-attendance #att-daily-grid tfoot tr:not(.att-warn-row) td:nth-child(6)::before{content:'便當 ';color:var(--text3);font-weight:400}
+      #page-attendance #att-daily-grid tfoot tr:not(.att-warn-row) td:nth-child(7)::before{content:'請假 ';color:var(--text3);font-weight:400}
+      #page-attendance #att-daily-grid tfoot tr:not(.att-warn-row) td:nth-child(8)::before{content:'請假工數 ';color:var(--text3);font-weight:400}
+      #page-attendance #att-daily-grid tfoot tr:not(.att-warn-row) td:nth-child(9)::before{content:'時數 ';color:var(--text3);font-weight:400}
+      /* 長榮日報：日期列滿版、人數輸入放大換行、報表框內左右捲 */
+      #page-egdaily .page-header{flex-wrap:wrap;gap:10px}
+      #page-egdaily .page-title{font-size:22px}
+      #page-egdaily .page-header>div[style]{flex:1 1 100%;gap:8px}
+      #page-egdaily .page-header>div>label{display:none}
+      #page-egdaily .page-header .btn-sm{flex:1 1 auto;min-height:40px}
+      #page-egdaily #eg-date{flex:1 1 150px;width:auto!important;min-height:40px;font-size:16px}
+      #page-egdaily .eg-inputs{flex-direction:column}
+      #page-egdaily .eg-inrow{flex-wrap:wrap}
+      #page-egdaily .eg-inrow>span:first-child{flex:1 1 100%}
+      #page-egdaily .eg-inrow input{flex:1 1 0;width:0;min-width:0;min-height:40px;font-size:16px}   /* 數字框同樣歸零最小寬度，四格排一行 */
+      #page-egdaily #eg-preview{overflow-x:auto}
+      /* 請假・特休台帳：一人一張卡（姓名＋剩餘天數、部門／到職日／本期、應給／已休／已折現、登記） */
+      #page-leave .page-header{flex-wrap:wrap;gap:6px}
+      #page-leave .search-bar{flex-wrap:wrap;gap:8px}
+      #page-leave #leave-search{flex:1 1 100%;width:auto;height:44px;font-size:16px}
+      #page-leave .card:has(#leave-table){padding:0;border:0;background:transparent;overflow:visible!important}
+      #page-leave .card:has(#leave-table) .table-scroll{overflow:visible}
+      #leave-table{display:block;min-width:0}
+      #leave-table thead{display:none}
+      #leave-table tbody{display:block}
+      #leave-table tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px;margin-bottom:8px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg2)}
+      #leave-table tr:has(>td[colspan]){display:block}
+      #leave-table td{display:block;padding:0;border:0;background:transparent!important;text-align:left!important}
+      #leave-table td:nth-child(1){grid-column:1/3;grid-row:1;font:600 16px var(--sans);color:var(--text)}
+      #leave-table td:nth-child(8){grid-column:3;grid-row:1;text-align:right!important;font-size:16px}
+      #leave-table td:nth-child(n+2):nth-child(-n+7)::before{display:block;margin-bottom:2px;font-size:11px;font-weight:400;color:var(--text3)}
+      #leave-table td:nth-child(2)::before{content:'部門'}
+      #leave-table td:nth-child(3)::before{content:'到職日'}
+      #leave-table td:nth-child(4)::before{content:'本期'}
+      #leave-table td:nth-child(5)::before{content:'應給'}
+      #leave-table td:nth-child(6)::before{content:'已休'}
+      #leave-table td:nth-child(7)::before{content:'已折現'}
+      #leave-table td:nth-child(8)::before{content:'剩餘 ';font-size:11px;font-weight:400;color:var(--text3)}
+      #leave-table td:nth-child(9){grid-column:1/-1}
+      #leave-table td:nth-child(9) .btn-icon{width:100%;min-height:42px}
+    }
     #pmPrintArea{display:none}
     @media print{
       /* 具名頁面:只有細項彈窗列印套 A4 直式,不動到全站預設的橫式 @page(床位配置圖等) */
@@ -19907,6 +20035,7 @@ function renderAttendByView(){
   else renderAttendLog(attendLogFiltered);
 }
 function renderAttendLog(list){
+  document.getElementById('attendlog-table').dataset.view='detail';   // 手機卡片依檢視套不同欄位標籤
   document.getElementById('attendlog-head').innerHTML='<tr><th>日期</th><th>時間</th><th>姓名</th><th>類型</th><th>相似度</th><th>操作</th></tr>';
   const body=document.getElementById('attendlog-body');
   document.getElementById('attendlog-count').textContent='共 '+list.length+' 筆';
@@ -19950,6 +20079,7 @@ function buildAttendSummary(list){
   return rows;
 }
 function renderAttendSummary(list){
+  document.getElementById('attendlog-table').dataset.view='summary';
   document.getElementById('attendlog-head').innerHTML='<tr><th>日期</th><th>姓名</th><th>上班</th><th>下班</th><th>工時</th><th>正常</th><th>加班</th><th>次數</th></tr>';
   const rows=buildAttendSummary(list);
   const body=document.getElementById('attendlog-body');
