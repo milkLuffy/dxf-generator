@@ -29338,7 +29338,7 @@ async function attMOpenLine(){
   const b='<div class="att-m-seg">'+[['work','出勤'],['ot','加班'],['ot_next','加班＋隔天預計']].map(([k,l])=>
       '<button type="button" class="'+(k===attLineMode?'on':'')+'" onclick="attLineSetMode(\''+k+'\');attMOpenLine()">'+l+'</button>').join('')+'</div>'
     +'<textarea id="att-m-line-text" class="att-m-line-text" readonly>產生中…</textarea>'
-    +'<div class="att-m-hint" id="att-m-line-status">確認內容後按「分享到 LINE」選聊天室送出。</div>';
+    +'<div class="att-m-hint" id="att-m-line-status">確認內容後按「分享到 LINE」，在分享選單點 LINE 再選聊天室。</div>';
   const foot='<button type="button" class="cpr-m-ghost" onclick="attMLineCopy()">📋 複製</button><button type="button" class="att-m-share" onclick="attMLineShare()">分享到 LINE</button>';
   const s=document.getElementById('attMSheet');
   attMSheet('line','LINE 回報','LINE 回報',attLineMD(date)+'（'+attWeekdayShort(new Date(date+'T00:00:00'))+'）',b,foot,!!(s&&s.dataset.kind==='line'));
@@ -29382,7 +29382,7 @@ function attMOpenBento(mode,refresh){
     +'<div class="att-m-hint">自動統計：本工'+(m==='night'?'加班':'出工')+'且有便當 '+auto+' 人'
       +(n!==auto?'，已手動改成 '+n+' 個 <button type="button" class="att-m-link" onclick="attMBentoStep(0)">改回自動</button>':'。有人不吃就按 − 減少')+'</div>'
     +'<textarea id="att-m-line-text" class="att-m-line-text att-m-bento-text" readonly>'+attEsc(attMBentoText(n,m))+'</textarea>'
-    +'<div class="att-m-hint" id="att-m-line-status">確認數量後按「分享到 LINE」傳給便當店。</div>';
+    +'<div class="att-m-hint" id="att-m-line-status">確認數量後按「分享到 LINE」，在分享選單點 LINE 傳給便當店。</div>';
   const foot='<button type="button" class="cpr-m-ghost" onclick="attMLineCopy()">📋 複製</button><button type="button" class="att-m-share" onclick="attMLineShare()">分享到 LINE</button>';
   attMSheet('bento','訂便當','🍱 訂便當',attLineMD(date)+'（'+attWeekdayShort(new Date(date+'T00:00:00'))+'）',b,foot,refresh);
 }
@@ -29399,7 +29399,14 @@ function attMBentoStep(d){
 function attMLineShare(){
   const txt=attMLineTxt(); if(!txt) return;
   const enc=encodeURIComponent(txt), st=document.getElementById('att-m-line-status');
-  // 手機／平板：直接叫 LINE App 選聊天室。加到主畫面的 App 用 window.open 開 line.me 網址，只會卡在空白的內建瀏覽器
+  // 手機／平板優先用系統「分享」選單（從選單點 LINE）：加到主畫面的 App 開任何 LINE 連結都會卡在空白的內建瀏覽器
+  if(navigator.share){
+    navigator.share({text:txt}).catch(err=>{
+      if(err&&err.name==='AbortError') return;   // 使用者自己取消
+      if(st) st.textContent='無法開啟分享選單，請按「📋 複製」，再到 LINE 聊天室貼上。';
+    });
+    return;
+  }
   if(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)){
     location.href='line://msg/text/'+enc;
     setTimeout(()=>{ if(!document.hidden&&st) st.textContent='沒有打開 LINE 嗎？請按「📋 複製」，再到 LINE 聊天室貼上。'; },1500);
