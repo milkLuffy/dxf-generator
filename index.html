@@ -35291,6 +35291,9 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       return ix(dOrd,a.department,9)-ix(dOrd,b.department,9)||ix(rOrd,a.role,99)-ix(rOrd,b.role,99)||byName(a,b);
     });
   }
+  // 鎮山的「單位」:辦公人員一律寫辦公室,現場人員寫職稱(西工/焊工/研磨…)
+  function zsIsOffice(r){ return String(r.department||'').trim()==='辦公人員'; }
+  function zsUnit(r){ return zsIsOffice(r)?'辦公室':(String(r.role||'').trim()||'現場'); }
   // 鎮山名單不分類(一整串),只有統計用工種分組
   function flatOf(side){ var ex=new Set(glCfg[exKey(side)]); return sortedList(side).map(function(r){ return {r:r,on:!ex.has(String(r.id))}; }); }
   // 分組:長榮依辦公室位置;鎮山依工種＝職稱(只用於統計)
@@ -35330,7 +35333,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         gs.map(function(g){ return '<tr><td>'+esc(g.key)+'</td><td>'+g.send+'</td><td>'+g.people.length+'</td></tr>'; }).join('')+
         '</tbody><tfoot><tr><th>合計</th><th>'+send+'</th><th>'+total+'</th></tr></tfoot></table>';
       var person=function(p){
-        var sub=side==='eg'?p.r.rank:p.r.role;
+        var sub=side==='eg'?p.r.rank:zsUnit(p.r);
         return '<label class="gl-p'+(p.on?'':' off')+'" title="'+esc(side==='eg'?(p.r.unit||''):(p.r.department||''))+'"><input type="checkbox"'+(p.on?' checked':'')+(ed?'':' disabled')+
           ' onchange="glToggle(\''+side+'\',\''+esc(String(p.r.id))+'\',this.checked)"><span>'+esc(p.r.name||'—')+'</span>'+(sub?'<small>'+esc(sub)+'</small>':'')+'</label>';
       };
@@ -35411,11 +35414,10 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
             '</table></div>';
         }).join('');
       } else {
-        var people=flatOf('zs').filter(function(p){ return p.on; });
-        var maxLen=Math.max.apply(null,people.map(function(p){ return String(p.r.name||'').length; }));
-        var cols=maxLen>9?1:maxLen>4?2:3;   // 外勞英文長名改少欄,避免被截斷
-        names='<div class="ns" style="grid-template-columns:repeat('+cols+',1fr)">'+
-          people.map(function(p){ return '<div class="n"><i></i>'+esc(p.r.name||'')+'</div>'; }).join('')+'</div>';
+        // 鎮山不分組,比照長榮每人一列:姓名 + 單位(辦公人員寫「辦公室」,現場寫職稱如西工/焊工)
+        names='<table class="pt">'+flatOf('zs').filter(function(p){ return p.on; }).map(function(p){
+          return '<tr><td class="nm"><i></i>'+esc(p.r.name||'')+'</td><td class="rk">'+esc(zsUnit(p.r))+'</td></tr>';
+        }).join('')+'</table>';
       }
       return '<div class="col"><div class="ch">'+label+'<span>'+s.n+' 人</span></div>'+stats+names+'</div>';
     }
