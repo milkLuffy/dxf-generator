@@ -5294,8 +5294,9 @@ window.normalizeFullWidth=function(value){
     <style>
       #page-giftlist .gl-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
       #page-giftlist .gl-bar label{font-size:12px;color:var(--text3)}
-      #page-giftlist .gl-title-in{flex:1 1 220px;max-width:360px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:8px 11px;outline:none}
-      #page-giftlist .gl-title-in:focus{border-color:var(--accent2)}
+      #page-giftlist .gl-title-in,#page-giftlist .gl-title-sel{background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:8px 11px;outline:none}
+      #page-giftlist .gl-title-in{flex:1 1 200px;max-width:300px}
+      #page-giftlist .gl-title-in:focus,#page-giftlist .gl-title-sel:focus{border-color:var(--accent2)}
       #page-giftlist .gl-summary{font-family:var(--mono);font-size:13px;color:var(--text2)}
       #page-giftlist .gl-summary b{color:var(--accent2);font-size:15px}
       #page-giftlist .gl-status{font-size:12px;color:var(--text3)}
@@ -5328,8 +5329,14 @@ window.normalizeFullWidth=function(value){
         <button class="btn btn-gen" style="flex:0 0 auto" onclick="glPrint()">🖨 列印 A4</button>
       </div>
       <div class="gl-bar">
-        <label for="gl-title">列印標題</label>
-        <input class="gl-title-in" id="gl-title" placeholder="送禮名單（例：中秋節送禮名單）" oninput="glTitleChange()"/>
+        <label for="gl-title-sel">列印標題</label>
+        <select class="gl-title-sel" id="gl-title-sel" onchange="glTitlePick()">
+          <option value="春節送禮名單">春節送禮名單</option>
+          <option value="端午節送禮名單">端午節送禮名單</option>
+          <option value="中秋節送禮名單">中秋節送禮名單</option>
+          <option value="__custom">自訂標題…</option>
+        </select>
+        <input class="gl-title-in" id="gl-title" placeholder="輸入自訂標題" oninput="glTitleChange()" hidden/>
         <span class="gl-summary" id="gl-summary"></span>
         <span class="gl-status" id="gl-status"></span>
       </div>
@@ -35250,29 +35257,46 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         glCfg={ title:String(v.title||''), excludeEg:Array.isArray(v.excludeEg)?v.excludeEg.map(String):[], excludeZs:Array.isArray(v.excludeZs)?v.excludeZs.map(String):[] };
       }catch(e){}
     }
-    var t=document.getElementById('gl-title'); if(t){ t.value=glCfg.title; t.readOnly=!canEdit(); }
+    glTitleUI();
     status(canEdit()?'':'唯讀：無法修改名單');
     glRender();
   };
 
-  // 分組:長榮依辦公室位置(組內照單位→職級→姓名);鎮山依工種＝職稱(照部門→職稱順序→姓名)
+  // 列印標題:台灣三節下拉,另可自訂;還沒存過標題就依月份預選(11~2月春節、3~6月端午、7~10月中秋)
+  var GL_TITLES=['春節送禮名單','端午節送禮名單','中秋節送禮名單'];
+  function defaultTitle(){ var m=new Date().getMonth()+1; return GL_TITLES[m>=3&&m<=6?1:m>=7&&m<=10?2:0]; }
+  function curTitle(){ return String(glCfg.title||'').trim()||defaultTitle(); }
+  function glTitleUI(){
+    var sel=document.getElementById('gl-title-sel'), inp=document.getElementById('gl-title'); if(!sel||!inp) return;
+    var t=curTitle(), custom=GL_TITLES.indexOf(t)<0;
+    sel.value=custom?'__custom':t; inp.hidden=!custom; inp.value=custom?t:'';
+    sel.disabled=!canEdit(); inp.readOnly=!canEdit();
+  }
+  window.glTitlePick=function(){
+    if(!canEdit()) return;
+    var sel=document.getElementById('gl-title-sel'), inp=document.getElementById('gl-title');
+    if(sel.value==='__custom'){ inp.hidden=false; inp.focus(); glCfg.title=inp.value; }
+    else { inp.hidden=true; glCfg.title=sel.value; }
+    glQueueSave();
+  };
+
+  // 排序:長榮照單位→職級→姓名;鎮山照部門→職稱順序→姓名
+  function sortedList(side){
+    if(side==='eg') return glEg.slice().sort(function(a,b){
+      return egOrderIdx(EGST_UNIT_ORDER,a.unit)-egOrderIdx(EGST_UNIT_ORDER,b.unit)||egOrderIdx(EGST_RANK_ORDER,a.rank)-egOrderIdx(EGST_RANK_ORDER,b.rank)||byName(a,b);
+    });
+    var dOrd=typeof ATT_CATORD!=='undefined'?ATT_CATORD:{}, rOrd=typeof ROLE_ORDER!=='undefined'?ROLE_ORDER:{};
+    var ix=function(m,k,d){ return m[k]==null?d:m[k]; };
+    return glZs.slice().sort(function(a,b){
+      return ix(dOrd,a.department,9)-ix(dOrd,b.department,9)||ix(rOrd,a.role,99)-ix(rOrd,b.role,99)||byName(a,b);
+    });
+  }
+  // 鎮山名單不分類(一整串),只有統計用工種分組
+  function flatOf(side){ var ex=new Set(glCfg[exKey(side)]); return sortedList(side).map(function(r){ return {r:r,on:!ex.has(String(r.id))}; }); }
+  // 分組:長榮依辦公室位置;鎮山依工種＝職稱(只用於統計)
   function groupsOf(side){
-    var ex=new Set(glCfg[exKey(side)]), list, keyOf, blank;
-    if(side==='eg'){
-      blank='未填位置';
-      list=glEg.slice().sort(function(a,b){
-        return egOrderIdx(EGST_UNIT_ORDER,a.unit)-egOrderIdx(EGST_UNIT_ORDER,b.unit)||egOrderIdx(EGST_RANK_ORDER,a.rank)-egOrderIdx(EGST_RANK_ORDER,b.rank)||byName(a,b);
-      });
-      keyOf=function(r){ return String(r.office||'').trim()||blank; };
-    } else {
-      blank='未填職稱';
-      var dOrd=typeof ATT_CATORD!=='undefined'?ATT_CATORD:{}, rOrd=typeof ROLE_ORDER!=='undefined'?ROLE_ORDER:{};
-      var ix=function(m,k,d){ return m[k]==null?d:m[k]; };
-      list=glZs.slice().sort(function(a,b){
-        return ix(dOrd,a.department,9)-ix(dOrd,b.department,9)||ix(rOrd,a.role,99)-ix(rOrd,b.role,99)||byName(a,b);
-      });
-      keyOf=function(r){ return String(r.role||'').trim()||blank; };
-    }
+    var ex=new Set(glCfg[exKey(side)]), list=sortedList(side), blank=side==='eg'?'未填位置':'未填職稱';
+    var keyOf=function(r){ return String((side==='eg'?r.office:r.role)||'').trim()||blank; };
     var map={}, groups=[];
     list.forEach(function(r){
       var k=keyOf(r);
@@ -35302,16 +35326,19 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var stats='<table class="gl-stats"><thead><tr><th>'+unitLabel+'</th><th>送</th><th>共</th></tr></thead><tbody>'+
         gs.map(function(g){ return '<tr><td>'+esc(g.key)+'</td><td>'+g.send+'</td><td>'+g.people.length+'</td></tr>'; }).join('')+
         '</tbody><tfoot><tr><th>合計</th><th>'+send+'</th><th>'+total+'</th></tr></tfoot></table>';
-      var body=gs.map(function(g,gi){
-        var all=g.send===g.people.length;
-        return '<div class="gl-group"><label class="gl-gh"><input type="checkbox"'+(all?' checked':'')+(g.send&&!all?' data-mixed="1"':'')+(ed?'':' disabled')+
-          ' onchange="glToggleGroup(\''+side+'\','+gi+',this.checked)"><b>'+esc(g.key)+'</b><span class="gl-gc">'+g.send+' / '+g.people.length+'</span></label>'+
-          '<div class="gl-names">'+g.people.map(function(p){
-            var sub=side==='eg'?p.r.rank:p.r.department;
-            return '<label class="gl-p'+(p.on?'':' off')+'" title="'+esc(side==='eg'?(p.r.unit||''):(p.r.role||''))+'"><input type="checkbox"'+(p.on?' checked':'')+(ed?'':' disabled')+
-              ' onchange="glToggle(\''+side+'\',\''+esc(String(p.r.id))+'\',this.checked)"><span>'+esc(p.r.name||'—')+'</span>'+(sub?'<small>'+esc(sub)+'</small>':'')+'</label>';
-          }).join('')+'</div></div>';
-      }).join('');
+      var person=function(p){
+        var sub=side==='eg'?p.r.rank:p.r.role;
+        return '<label class="gl-p'+(p.on?'':' off')+'" title="'+esc(side==='eg'?(p.r.unit||''):(p.r.department||''))+'"><input type="checkbox"'+(p.on?' checked':'')+(ed?'':' disabled')+
+          ' onchange="glToggle(\''+side+'\',\''+esc(String(p.r.id))+'\',this.checked)"><span>'+esc(p.r.name||'—')+'</span>'+(sub?'<small>'+esc(sub)+'</small>':'')+'</label>';
+      };
+      var body=side==='zs'
+        ? '<div class="gl-names" style="margin-top:14px">'+flatOf(side).map(person).join('')+'</div>'
+        : gs.map(function(g,gi){
+            var all=g.send===g.people.length;
+            return '<div class="gl-group"><label class="gl-gh"><input type="checkbox"'+(all?' checked':'')+(g.send&&!all?' data-mixed="1"':'')+(ed?'':' disabled')+
+              ' onchange="glToggleGroup(\''+side+'\','+gi+',this.checked)"><b>'+esc(g.key)+'</b><span class="gl-gc">'+g.send+' / '+g.people.length+'</span></label>'+
+              '<div class="gl-names">'+g.people.map(person).join('')+'</div></div>';
+          }).join('');
       host.innerHTML=head+stats+body;
       host.querySelectorAll('input[data-mixed]').forEach(function(el){ el.indeterminate=true; });
     });
@@ -35343,9 +35370,9 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     }catch(e){ console.warn('glSave',e); status('雲端儲存失敗，請稍後再試','err'); }
   }
 
-  // 列印 A4 直式:左長榮、右鎮山;每邊先列統計表,再依分組列出要送的人(名字前留方框可打勾)
+  // 列印 A4 直式:左長榮(依辦公室位置分組,每人一列含單位/職級)、右鎮山(不分類);統計縮成一行小字,名字前留方框可打勾
   window.glPrint=function(){
-    var title=(glCfg.title||'').trim()||'送禮名單';
+    var title=curTitle();
     var sides=['eg','zs'].map(function(side){
       var gs=groupsOf(side).map(function(g){ return {key:g.key,people:g.people.filter(function(p){ return p.on; })}; }).filter(function(g){ return g.people.length; });
       return {side:side,gs:gs,n:gs.reduce(function(a,g){ return a+g.people.length; },0)};
@@ -35356,25 +35383,34 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     function colHtml(s){
       var label=s.side==='eg'?'長榮':'鎮山', unit=s.side==='eg'?'辦公室位置':'工種';
       if(!s.n) return '<div class="col"><div class="ch">'+label+'<span>0 人</span></div></div>';
-      var stats='<table class="st"><thead><tr><th>'+unit+'</th><th>人數</th></tr></thead><tbody>'+
-        s.gs.map(function(g){ return '<tr><td>'+esc(g.key)+'</td><td>'+g.people.length+'</td></tr>'; }).join('')+
-        '</tbody><tfoot><tr><td>合計</td><td>'+s.n+'</td></tr></tfoot></table>';
-      var groups=s.gs.map(function(g){
-        var maxLen=Math.max.apply(null,g.people.map(function(p){ return String(p.r.name||'').length; }));
+      var stats='<div class="st"><span class="sl">'+unit+'</span>'+
+        s.gs.map(function(g){ return '<span>'+esc(g.key)+' <b>'+g.people.length+'</b></span>'; }).join('')+'</div>';
+      var names;
+      if(s.side==='eg'){
+        names=s.gs.map(function(g){
+          return '<div class="g"><div class="gh">'+esc(g.key)+'<span>'+g.people.length+' 人</span></div><table class="pt">'+
+            g.people.map(function(p){ return '<tr><td class="nm"><i></i>'+esc(p.r.name||'')+'</td><td>'+esc(p.r.unit||'')+'</td><td class="rk">'+esc(p.r.rank||'')+'</td></tr>'; }).join('')+
+            '</table></div>';
+        }).join('');
+      } else {
+        var people=flatOf('zs').filter(function(p){ return p.on; });
+        var maxLen=Math.max.apply(null,people.map(function(p){ return String(p.r.name||'').length; }));
         var cols=maxLen>9?1:maxLen>4?2:3;   // 外勞英文長名改少欄,避免被截斷
-        return '<div class="g"><div class="gh">'+esc(g.key)+'<span>'+g.people.length+' 人</span></div><div class="ns" style="grid-template-columns:repeat('+cols+',1fr)">'+
-          g.people.map(function(p){ return '<div class="n"><i></i>'+esc(p.r.name||'')+'</div>'; }).join('')+'</div></div>';
-      }).join('');
-      return '<div class="col"><div class="ch">'+label+'<span>'+s.n+' 人</span></div>'+stats+groups+'</div>';
+        names='<div class="ns" style="grid-template-columns:repeat('+cols+',1fr)">'+
+          people.map(function(p){ return '<div class="n"><i></i>'+esc(p.r.name||'')+'</div>'; }).join('')+'</div>';
+      }
+      return '<div class="col"><div class="ch">'+label+'<span>'+s.n+' 人</span></div>'+stats+names+'</div>';
     }
     var css='@page{size:A4 portrait;margin:12mm 10mm}*{box-sizing:border-box}'+
       'html,body{margin:0;background:#fff;color:#111;font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
       'h1{font-size:20pt;text-align:center;margin:0 0 2mm;letter-spacing:.08em}.meta{text-align:center;font-size:10pt;color:#444;margin-bottom:5mm}'+
-      '.cols{display:grid;grid-template-columns:1fr 1fr;gap:8mm;align-items:start}'+
-      '.ch{display:flex;justify-content:space-between;align-items:baseline;font-size:14pt;font-weight:700;border-bottom:2px solid #111;padding-bottom:1.5mm;margin-bottom:3mm}.ch span{font-size:11pt}'+
-      '.st{width:100%;border-collapse:collapse;font-size:10pt;margin-bottom:4mm}.st th,.st td{border:1px solid #999;padding:1mm 2mm;text-align:left}'+
-      '.st th:last-child,.st td:last-child{text-align:right;width:16mm}.st thead th{background:#eee}.st tfoot td{font-weight:700;background:#f5f5f5}'+
-      '.g{break-inside:avoid;page-break-inside:avoid;margin-bottom:3.5mm}'+
+      '.cols{display:grid;grid-template-columns:1.25fr 1fr;gap:7mm;align-items:start}'+
+      '.ch{display:flex;justify-content:space-between;align-items:baseline;font-size:14pt;font-weight:700;border-bottom:2px solid #111;padding-bottom:1.5mm;margin-bottom:1.5mm}.ch span{font-size:11pt}'+
+      '.st{display:flex;flex-wrap:wrap;gap:.5mm 3mm;font-size:8pt;color:#555;margin-bottom:3mm;line-height:1.5}.st b{color:#111}.st .sl{color:#888}'+
+      '.g{break-inside:avoid;page-break-inside:avoid;margin-bottom:3mm}'+
+      '.pt{width:100%;border-collapse:collapse;font-size:10.5pt;margin-top:.8mm}.pt td{padding:.6mm 1mm;border-bottom:.3mm solid #ddd;white-space:nowrap}'+
+      '.pt td.nm{font-size:11pt;font-weight:600;width:30%}.pt td.nm i{display:inline-block;width:3.2mm;height:3.2mm;border:1px solid #555;margin-right:1.5mm;vertical-align:-.3mm}'+
+      '.pt td.rk{text-align:right;color:#333}'+
       '.gh{display:flex;justify-content:space-between;font-size:10.5pt;font-weight:700;background:#f0f0f0;padding:1mm 2mm;border-left:3px solid #111}.gh span{font-weight:400}'+
       '.ns{display:grid;gap:0 2mm;padding:1.2mm 1mm 0}'+
       '.n{font-size:11pt;line-height:1.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:1.5mm}'+
