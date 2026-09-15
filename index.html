@@ -6874,6 +6874,7 @@ window.normalizeFullWidth=function(value){
     .att-m-bar button{flex:1 1 40%;min-height:46px;border-radius:12px;font:600 15px var(--sans);cursor:pointer}
     .att-m-bar .att-m-bento-btn{flex-basis:100%;border:1px solid rgba(255,159,10,.5);background:rgba(255,159,10,.12);color:var(--accent)}
     .att-m-done{border:0;background:var(--accent);color:#fff}
+    .att-m-clear{display:block;width:100%;min-height:44px;margin-top:20px;border:1px solid rgba(255,69,58,.4);border-radius:12px;background:transparent;color:var(--red);font:600 14px var(--sans);cursor:pointer}
     .att-m-line{border:1px solid rgba(6,199,85,.55);background:rgba(6,199,85,.14);color:#06c755}
     .att-m-bento{display:flex;align-items:center;justify-content:center;gap:18px;margin:18px 0 6px}
     .att-m-step{flex:none;width:64px;height:64px;border:1px solid var(--border-hi);border-radius:50%;background:var(--bg3);color:var(--text);font:600 30px/1 var(--sans);cursor:pointer;touch-action:manipulation}
@@ -29203,6 +29204,8 @@ function attMRender(){
         }).join('')+'</div></div>';
     });
   }
+  if(people.some(x=>x.work>0||x.ot>0||x.leave_type||x.leave_hours>0||x.bento>0||String(x.note||'').trim()))
+    h+='<button type="button" class="att-m-clear" onclick="attMClearDay()">🗑 清除這天全部出勤</button>';
   h+='<div class="att-m-bar">'+(v==='roll'&&cnt.none?'<button type="button" class="att-m-done" onclick="attMOpenFinish()">完成點名</button>':'')
     +'<button type="button" class="att-m-line" onclick="attMOpenLine()">💬 LINE 回報</button>'
     +'<button type="button" class="att-m-bento-btn" onclick="attMOpenBento(attMView===\'ot\'?\'night\':\'noon\')">🍱 訂便當</button></div>';
@@ -29211,6 +29214,28 @@ function attMRender(){
   if(s&&s.dataset.kind==='edit') attMOpenEdit(attMEditName,true);
   else if(s&&s.dataset.kind==='finish') attMOpenFinish(true);
   else if(s&&s.dataset.kind==='bento') attMOpenBento(null,true);
+}
+// 清除這天全部出勤(上班/加班/便當/請假/備註)。請假台帳登記的假會保留並重新帶入,台帳本身不受影響
+async function attMClearDay(){
+  const date=(document.getElementById('att-date')||{}).value||''; if(!date) return;
+  const has=attMPeople().filter(x=>x.work>0||x.ot>0||x.leave_type||x.leave_hours>0||x.bento>0||String(x.note||'').trim());
+  if(!has.length) return;
+  if(typeof leaveDbReady!=='undefined' && leaveDbReady===null && typeof loadLeaves==='function'){ try{ await loadLeaves(); }catch(_){} }
+  const keep=(typeof allLeaves!=='undefined'&&Array.isArray(allLeaves)?allLeaves:[]).filter(l=>l.source==='req' && leaveCoversDate(l,date) && attMRow(l.staff_name));
+  const msg='確定清除 '+attLineMD(date)+'（'+attWeekdayShort(new Date(date+'T00:00:00'))+'）全部 '+has.length+' 人的出勤資料？\n上班、加班、便當、請假、備註都會清空，無法復原。'
+    +(keep.length?('\n請假台帳登記的假（'+keep.map(l=>l.staff_name).join('、')+'）會保留。'):'');
+  if(!await uiConfirm(msg,{danger:true})) return;
+  document.querySelectorAll('#att-daily-body tr[data-name]').forEach(tr=>{
+    ['work','ot','leave_hours'].forEach(f=>attSetPair(tr,f,0));
+    const sel=tr.querySelector('select[data-f="leave_type"]'); if(sel) sel.value='';
+    const b=tr.querySelector('input[data-f="bento"]');
+    if(b){ b.value=b.getAttribute('data-bento')==='auto'?'0':''; b.removeAttribute('data-touched'); }
+    const n=tr.querySelector('input[data-f="note"]'); if(n) n.value='';
+    attMarkLeaveConflict(tr);
+  });
+  keep.forEach(l=>{ const tr=attMRow(l.staff_name); if(tr) attMSetLeave(tr,l.leave_type,Number(l.hours)||8); });
+  attUpdateDayFoot(); attSaveNow();
+  attMView='roll'; attMRender();
 }
 function attMSetView(k){ attMView=k; attMRender(); }
 function attMSetOtHours(v){
