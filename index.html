@@ -29143,7 +29143,7 @@ function attMRender(){
   const date=(document.getElementById('att-date')||{}).value||'';
   if(!date||!attRoster.length){ wrap.innerHTML='<div class="att-m-empty">'+(date?'尚無人員，請至「公司名冊」新增':'請選擇日期')+'</div>'; return; }
   const people=attMPeople(), cnt={in:0,leave:0,none:0};
-  people.forEach(x=>cnt[x.state]++);
+  people.forEach(x=>{ if(!(x.state==='none'&&x.boss)) cnt[x.state]++; });   // 老闆不必點名：沒登記不算「未點」
   // 換日期時決定預設畫面：還有人沒點名 → 點名；每個人都有結果 → 明細
   if(attMViewDate!==date||!attMView){ attMViewDate=date; attMView=cnt.none?'roll':'list'; }
   const v=attMView;
@@ -29195,7 +29195,7 @@ function attMRender(){
           if(x.work>0) t.push('<span class="att-m-tag in">上班 '+attMGong(x.work)+'</span>');
           if(x.ot>0) t.push('<span class="att-m-tag ot">加班 '+attN(x.ot)+'h</span>');
           if(x.leave_type) t.push('<span class="att-m-tag lv">'+attEsc(x.leave_type)+' '+attMHours(x.leave_hours)+'</span>');
-          if(x.state==='none') t.push('<span class="att-m-tag none">未點名</span>');
+          if(x.state==='none') t.push(x.boss?'<span class="att-m-tag">未登記</span>':'<span class="att-m-tag none">未點名</span>');
           if(String(x.note||'').trim()) t.push('<span class="att-m-tag">📝</span>');
           return '<button type="button" class="att-m-row" data-name="'+attEsc(x.name)+'" onclick="attMOpenEdit(this.dataset.name)">'
             +'<span class="att-m-row-name">'+attEsc(x.name)+(x.team?'<small>'+attEsc(x.team)+'</small>':'')+'</span>'
@@ -29228,7 +29228,7 @@ function attMTap(name){
   attMRender();
 }
 function attMAllIn(){
-  attMPeople().filter(x=>x.state==='none').forEach(x=>{ const tr=attMRow(x.name); if(tr) attMSetWork(tr,8); });
+  attMPeople().filter(x=>x.state==='none'&&!x.boss).forEach(x=>{ const tr=attMRow(x.name); if(tr) attMSetWork(tr,8); });
   attMRender();
 }
 
@@ -29301,7 +29301,7 @@ function attMEdit(f,v){
 
 // 完成點名：沒點到的人一定要選假別（或改成有來）才能確認
 function attMOpenFinish(refresh){
-  const none=attMPeople().filter(x=>x.state==='none');
+  const none=attMPeople().filter(x=>x.state==='none'&&!x.boss);   // 老闆不強制選出勤或假別
   if(!none.length){ if(refresh) attMCloseSheet(); return; }
   if(!refresh) attMLeaveDraft={};
   attMFinishNames=none.map(x=>x.name);
