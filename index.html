@@ -332,6 +332,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .pr-ctbl input:focus{border-color:var(--accent2);background:var(--bg3)}
 .pr-ctbl td.pr-amtc{color:var(--accent2);font-weight:600;white-space:nowrap}
 .pr-ctbl td.pr-nap{color:var(--text3)}
+/* 計價表 Excel 式遊走：目前所在列微量疊色 */
+.pr-ctbl tbody tr:focus-within td,.pr-tbl tbody tr:focus-within td{background-image:linear-gradient(rgba(79,142,247,.075),rgba(79,142,247,.075))}
 .pr-csum{padding:12px 14px;background:var(--bg3);margin-top:auto}
 .pr-csrow{display:flex;justify-content:space-between;align-items:center;gap:10px;font-family:var(--mono);font-size:13px;padding:5px 0;color:var(--text2)}
 .pr-csrow b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
@@ -31304,6 +31306,94 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     pricingRecalc();
     pricingLockInputs();
   }
+
+  // ── Excel 式遊走：方向鍵／Enter 在計價表的輸入格之間移動，可從 Excel 貼上多格 ──
+  // 計價表每列欄位不一致（分類列 colspan、不適用「—」、工時/金額是純文字），所以只在「有輸入框的格」之間跳：
+  // 上下找同一欄（依 colspan 換算）最近有輸入框的列；左右找同列前後的輸入框，走到盡頭跨到隔壁側卡片的同一列；
+  // 卡片上方的公斤數/支數與下方項目表也能上下接起來。文字框內左右鍵先移動游標，到邊界才換格（比照點工單）。
+  (function(){
+    var NAV_KEYS={ArrowUp:1,ArrowDown:1,ArrowLeft:1,ArrowRight:1,Enter:1};
+    function colOf(td){ var c=0,x=td.parentElement.firstElementChild; while(x&&x!==td){ c+=x.colSpan||1; x=x.nextElementSibling; } return c; }
+    function rowInputs(tr){
+      var out=[];
+      Array.prototype.forEach.call(tr.children,function(td){ var f=td.querySelector('input'); if(f) out.push({el:f,col:colOf(td),span:td.colSpan||1}); });
+      return out;
+    }
+    function bodyRows(tbl){ var b=tbl&&tbl.tBodies[0]; return b?Array.prototype.slice.call(b.rows):[]; }
+    function vertical(tbl,ri,col,dir){
+      var rows=bodyRows(tbl);
+      for(var r=ri+dir;r>=0&&r<rows.length;r+=dir){
+        var hit=rowInputs(rows[r]).filter(function(x){ return col>=x.col&&col<x.col+x.span; })[0];
+        if(hit) return hit.el;
+      }
+      return null;
+    }
+    function sideCards(card){
+      var row=card&&card.parentElement;
+      return row&&row.classList.contains('pr-cards-row')?Array.prototype.slice.call(row.children).filter(function(c){ return c.classList.contains('pr-sidecard'); }):[];
+    }
+    function heads(card){ return card?Array.prototype.slice.call(card.querySelectorAll('.pr-chead input')):[]; }
+    function horizontal(t,dir){
+      var td=t.closest('td'), card=t.closest('.pr-sidecard'), cards=sideCards(card), ci=cards.indexOf(card), list, i, j;
+      if(td){ list=rowInputs(td.parentElement).map(function(x){ return x.el; }); }
+      else { list=heads(card); }
+      i=list.indexOf(t);
+      if(list[i+dir]) return list[i+dir];
+      for(j=ci+dir;ci>=0&&j>=0&&j<cards.length;j+=dir){
+        var other=td?rowInputs(bodyRows(cards[j].querySelector('table.pr-ctbl'))[td.parentElement.sectionRowIndex]||document.createElement('tr')).map(function(x){ return x.el; }):heads(cards[j]);
+        if(other.length) return dir>0?other[0]:other[other.length-1];
+      }
+      return null;
+    }
+    function go(el){ el.focus(); try{ el.select(); }catch(_){} }
+    document.addEventListener('keydown',function(e){
+      if(e.defaultPrevented||e.isComposing||e.keyCode===229) return;   // 中文輸入法選字時不換格
+      if(e.ctrlKey||e.metaKey||e.altKey) return;
+      var t=e.target, k=e.key;
+      if(!NAV_KEYS[k]||!t||t.tagName!=='INPUT'||!t.closest('#pricing-sheet')) return;
+      if(e.shiftKey&&k!=='Enter') return;   // Shift+方向鍵留給選取文字
+      var td=t.closest('td'), tbl=td&&td.closest('table.pr-ctbl,table.pr-tbl'), inHead=!td&&t.closest('.pr-chead');
+      if(!tbl&&!inHead) return;
+      var target=null;
+      if(k==='ArrowLeft'||k==='ArrowRight'){
+        var len=(t.value||'').length;
+        if(k==='ArrowLeft'?t.selectionStart!==0:t.selectionEnd!==len) return;   // 游標還沒到邊界 → 移動游標
+        target=horizontal(t,k==='ArrowLeft'?-1:1);
+      } else {
+        var dir=(k==='ArrowUp'||(k==='Enter'&&e.shiftKey))?-1:1, card=t.closest('.pr-sidecard');
+        if(tbl){
+          var col=colOf(td);
+          target=vertical(tbl,td.parentElement.sectionRowIndex,col,dir);
+          if(!target&&dir<0){ var hs=heads(card); target=hs[col<=1?0:hs.length-1]||null; }   // 最上面一列再往上 → 公斤數/支數
+        } else if(dir>0){
+          var ctbl=card&&card.querySelector('table.pr-ctbl'), hi=heads(card).indexOf(t);
+          target=ctbl?(vertical(ctbl,-1,hi===0?1:3,1)||vertical(ctbl,-1,1,1)):null;
+        }
+      }
+      e.preventDefault();   // Enter／方向鍵到表格邊緣就停在原格，不做別的事
+      if(target) go(target);
+    });
+    // 從 Excel 複製多格（含 Tab 或換行）貼到計價表：以目前格為左上角，依上面同一套規則往右、往下填
+    document.addEventListener('paste',function(e){
+      var t=e.target; if(!t||t.tagName!=='INPUT'||!t.closest('#pricing-sheet')) return;
+      var td=t.closest('td'), tbl=td&&td.closest('table.pr-ctbl,table.pr-tbl'); if(!tbl) return;
+      var text=(e.clipboardData||window.clipboardData).getData('text'); if(!text) return;
+      text=text.replace(/\r/g,'').replace(/\n+$/,'');
+      if(text.indexOf('\t')<0&&text.indexOf('\n')<0) return;   // 單格照瀏覽器原本的貼上
+      e.preventDefault();
+      var col=colOf(td), start=t;
+      text.split('\n').forEach(function(line,r){
+        if(!start) return;
+        if(r>0){ start=vertical(tbl,start.closest('tr').sectionRowIndex,col,1); if(!start) return; }
+        var list=rowInputs(start.closest('tr')).map(function(x){ return x.el; }), i0=list.indexOf(start);
+        line.split('\t').forEach(function(v,c){
+          var el=list[i0+c]; if(!el||el.readOnly) return;
+          v=v.trim(); if(!el.classList.contains('pr-iname')) v=v.replace(/[$,，\s]/g,'');
+          el.value=v; el.dispatchEvent(new Event('input',{bubbles:true}));
+        });
+      });
+    });
+  })();
 
   // ── 即時更新單格 ──
   window.pricingCell=function(idx,field,val){
