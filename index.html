@@ -35291,9 +35291,9 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       return ix(dOrd,a.department,9)-ix(dOrd,b.department,9)||ix(rOrd,a.role,99)-ix(rOrd,b.role,99)||byName(a,b);
     });
   }
-  // 鎮山的「單位」:辦公人員一律寫辦公室,現場人員寫職稱(西工/焊工/研磨…)
+  // 鎮山的「單位」:辦公人員一律寫辦公室,外勞寫移工,其餘現場人員寫職稱(西工/焊工/研磨…)
   function zsIsOffice(r){ return String(r.department||'').trim()==='辦公人員'; }
-  function zsUnit(r){ return zsIsOffice(r)?'辦公室':(String(r.role||'').trim()||'現場'); }
+  function zsUnit(r){ if(zsIsOffice(r)) return '辦公室'; if(/外勞/.test(String(r.department||''))) return '移工'; return String(r.role||'').trim()||'現場'; }
   // 鎮山名單不分類(一整串),只有統計用工種分組
   function flatOf(side){ var ex=new Set(glCfg[exKey(side)]); return sortedList(side).map(function(r){ return {r:r,on:!ex.has(String(r.id))}; }); }
   // 分組:長榮依辦公室位置;鎮山依工種＝職稱(只用於統計)
@@ -35392,7 +35392,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     return f;
   }
   window.__glFitOnePage=glFitOnePage;
-  // 列印 A4 直式:左長榮(依辦公室位置分組,每人一列含單位/職級)、右鎮山(不分類);統計縮成一行小字,名字前留方框可打勾
+  // 列印 A4 直式、限定一頁:左長榮名單表、右鎮山名單表 + 統計框 + 辦公室位置數量表(只列要送的人)
   window.glPrint=function(){
     var title=curTitle();
     var sides=['eg','zs'].map(function(side){
@@ -35401,47 +35401,41 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     });
     var total=sides[0].n+sides[1].n;
     if(!total){ alert('目前沒有要送的人'); return; }
-    function colHtml(s){
-      var label=s.side==='eg'?'長榮':'鎮山', unit=s.side==='eg'?'辦公室位置':'分類';
-      if(!s.n) return '<div class="col"><div class="ch">'+label+'<span>0 人</span></div></div>';
-      var stats='<div class="st"><span class="sl">'+unit+'</span>'+
-        s.gs.map(function(g){ return '<span>'+esc(g.key)+' <b>'+g.people.length+'</b></span>'; }).join('')+'</div>';
-      var names;
-      if(s.side==='eg'){
-        names=s.gs.map(function(g){
-          return '<div class="g"><div class="gh">'+esc(g.key)+'<span>'+g.people.length+' 人</span></div><table class="pt">'+
-            g.people.map(function(p){ return '<tr><td class="nm"><i></i>'+esc(p.r.name||'')+'</td><td>'+esc(p.r.unit||'')+'</td><td class="rk">'+esc(p.r.rank||'')+'</td></tr>'; }).join('')+
-            '</table></div>';
-        }).join('');
-      } else {
-        // 鎮山不分組,比照長榮每人一列:姓名 + 單位(辦公人員寫「辦公室」,現場寫職稱如西工/焊工)
-        names='<table class="pt">'+flatOf('zs').filter(function(p){ return p.on; }).map(function(p){
-          return '<tr><td class="nm"><i></i>'+esc(p.r.name||'')+'</td><td class="rk">'+esc(zsUnit(p.r))+'</td></tr>';
-        }).join('')+'</table>';
-      }
-      return '<div class="col"><div class="ch">'+label+'<span>'+s.n+' 人</span></div>'+stats+names+'</div>';
-    }
-    // 字級與間距一律用 rem,列印前依內容高度調整 html 字級(fitOnePage),保證只印一頁
+    // 版面比照使用者提供的範本:左「長榮○○送禮名單」表(NO./姓名/單位/職級/辦公室位置),
+    // 右「鎮山○○送禮名單」表(NO./姓名/單位),下方統計框(長榮/鎮山/合計)與辦公室位置數量表(總計紅字)
+    var rankIx=function(r){ var v=String(r.rank||'').trim(); return v?egOrderIdx(EGST_RANK_ORDER,v):2000; };   // 沒職級(警衛、協力商…)排最後
+    var egList=flatOf('eg').filter(function(p){ return p.on; }).map(function(p){ return p.r; }).sort(function(a,b){
+      return rankIx(a)-rankIx(b)||egOrderIdx(EGST_UNIT_ORDER,a.unit)-egOrderIdx(EGST_UNIT_ORDER,b.unit)||byName(a,b);
+    });
+    var zsList=flatOf('zs').filter(function(p){ return p.on; }).map(function(p){ return p.r; });
+    var offMap={}, offOrder=[];
+    egList.forEach(function(r){ var o=String(r.office||'').trim(); if(!o) return; if(!offMap[o]){ offMap[o]=0; offOrder.push(o); } offMap[o]++; });
+    var offSum=offOrder.reduce(function(a,o){ return a+offMap[o]; },0);
+    var egRows=egList.map(function(r,i){
+      return '<tr><td>'+(i+1)+'</td><td>'+esc(r.name||'')+'</td><td>'+esc(r.unit||'')+'</td><td>'+esc(r.rank||'')+'</td><td>'+esc(r.office||'')+'</td></tr>';
+    }).join('');
+    var zsRows=zsList.map(function(r,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(r.name||'')+'</td><td>'+esc(zsUnit(r))+'</td></tr>'; }).join('');
+    var left='<div class="tt">'+esc('長榮'+title)+'</div><table class="lst"><thead><tr><th class="no">NO.</th><th>姓名</th><th>單位</th><th>職級</th><th>辦公室位置</th></tr></thead><tbody>'+egRows+'</tbody></table>';
+    var right='<div class="tt">'+esc('鎮山'+title)+'</div><table class="lst box"><thead><tr><th class="no">NO.</th><th>姓名</th><th>單位</th></tr></thead><tbody>'+zsRows+'</tbody></table>'+
+      '<table class="sum"><tr><td class="lb" rowspan="3">統計</td><td>長榮</td><td>鎮山</td></tr>'+
+      '<tr class="ln"><td>'+sides[0].n+'</td><td>'+sides[1].n+'</td></tr><tr><td colspan="2">'+total+'</td></tr></table>'+
+      (offOrder.length?'<table class="loc"><thead><tr><th>位置</th><th>數量</th></tr></thead><tbody>'+
+        offOrder.map(function(o){ return '<tr><td>'+esc(o)+'</td><td>'+offMap[o]+'</td></tr>'; }).join('')+
+        '</tbody><tfoot><tr><td>總計</td><td class="red">'+offSum+'</td></tr></tfoot></table>':'');
+    // 字級與間距一律用 rem,列印前依內容高度調整 html 字級(glFitOnePage),保證只印一頁
     var css='@page{size:A4 portrait;margin:12mm 10mm}*{box-sizing:border-box}'+
-      'html{font-size:10pt}html,body{margin:0;background:#fff;color:#111;font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+      'html{font-size:10pt}html,body{margin:0;background:#fff;color:#111;font-family:"PMingLiU","新細明體","MingLiU","LiSong Pro","Songti TC","Noto Serif TC",serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
       '.sheet{position:relative;height:271mm;overflow:hidden}.body{width:100%}'+
-      '.foot{position:absolute;right:0;bottom:0;font-size:9pt;color:#444}'+
-      'h1{font-size:2rem;text-align:center;margin:0 0 1.2rem;letter-spacing:.08em}'+
-      '.cols{display:grid;grid-template-columns:1.25fr 1fr;gap:2rem;align-items:start}'+
-      '.ch{display:flex;justify-content:space-between;align-items:baseline;font-size:1.4rem;font-weight:700;border-bottom:2px solid #111;padding-bottom:.42rem;margin-bottom:.42rem}.ch span{font-size:1.1rem}'+
-      '.st{display:flex;flex-wrap:wrap;gap:.15rem .85rem;font-size:.8rem;color:#555;margin-bottom:.85rem;line-height:1.5}.st b{color:#111}.st .sl{color:#888}'+
-      '.g{margin-bottom:.85rem}'+
-      '.pt{width:100%;border-collapse:collapse;font-size:1.05rem;margin-top:.23rem}.pt td{padding:.17rem .28rem;border-bottom:1px solid #ddd;white-space:nowrap}'+
-      '.pt td.nm{font-size:1.1rem;font-weight:600;width:30%}.pt td.nm i{display:inline-block;width:.9rem;height:.9rem;border:1px solid #555;margin-right:.42rem;vertical-align:-.1rem}'+
-      '.pt td.rk{text-align:right;color:#333}'+
-      '.gh{display:flex;justify-content:space-between;font-size:1.05rem;font-weight:700;background:#f0f0f0;padding:.28rem .57rem;border-left:3px solid #111}.gh span{font-weight:400}'+
-      '.ns{display:grid;gap:0 .57rem;padding:.34rem .28rem 0}'+
-      '.n{font-size:1.1rem;line-height:1.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:.42rem}'+
-      '.n i{display:inline-block;width:.9rem;height:.9rem;border:1px solid #555;flex:0 0 auto}';
+      '.cols{display:grid;grid-template-columns:1.85fr 1fr;gap:1.6rem;align-items:start}'+
+      '.tt{text-align:center;font-size:1.25rem;font-weight:700;letter-spacing:.12em;margin-bottom:.35rem}'+
+      'table{border-collapse:collapse;width:100%}'+
+      '.lst th,.lst td{font-size:1.05rem;font-weight:400;padding:.13rem .3rem;text-align:center;white-space:nowrap;border-bottom:1px solid #444}'+
+      '.lst thead th{border-top:1.5px solid #111;border-bottom:1.5px solid #111}.lst .no{width:2.6rem}'+
+      '.lst.box{border:1.5px solid #111}'+
+      '.sum{margin-top:2.4rem;border:1.5px solid #111;font-size:1.05rem}.sum td{text-align:center;padding:.22rem .4rem}.sum .lb{width:32%}.sum tr.ln td{border-bottom:1px solid #111}'+
+      '.loc{margin:2.4rem auto 0;width:72%;border:1.5px solid #111;font-size:.95rem}.loc th,.loc td{border:1px solid #555;text-align:center;padding:.16rem .4rem;font-weight:400}.loc .red{color:#d00}';
     var html='<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>'+esc(title)+'</title><style>'+css+'</style></head><body>'+
-      '<div class="sheet"><div class="body"><h1>'+esc(title)+'</h1>'+
-      '<div class="cols">'+colHtml(sides[0])+colHtml(sides[1])+'</div></div>'+
-      '<div class="foot">共 '+total+' 份（長榮 '+sides[0].n+'、鎮山 '+sides[1].n+'）</div></div></body></html>';
+      '<div class="sheet"><div class="body"><div class="cols"><div>'+left+'</div><div>'+right+'</div></div></div></div></body></html>';
     // 用隱藏 iframe 直接叫出列印對話框(不另開分頁,比照姓名貼)
     var old=document.getElementById('__gl_print_frame'); if(old) old.remove();
     var iframe=document.createElement('iframe');
