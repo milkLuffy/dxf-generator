@@ -5331,9 +5331,9 @@ window.normalizeFullWidth=function(value){
       <div class="gl-bar">
         <label for="gl-title-sel">列印標題</label>
         <select class="gl-title-sel" id="gl-title-sel" onchange="glTitlePick()">
-          <option value="春節送禮名單">春節送禮名單</option>
-          <option value="端午節送禮名單">端午節送禮名單</option>
-          <option value="中秋節送禮名單">中秋節送禮名單</option>
+          <option value="新竹廠春節送禮名單">新竹廠春節送禮名單</option>
+          <option value="新竹廠端午節送禮名單">新竹廠端午節送禮名單</option>
+          <option value="新竹廠中秋節送禮名單">新竹廠中秋節送禮名單</option>
           <option value="__custom">自訂標題…</option>
         </select>
         <input class="gl-title-in" id="gl-title" placeholder="輸入自訂標題" oninput="glTitleChange()" hidden/>
@@ -35263,9 +35263,13 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   };
 
   // 列印標題:台灣三節下拉,另可自訂;還沒存過標題就依月份預選(11~2月春節、3~6月端午、7~10月中秋)
-  var GL_TITLES=['春節送禮名單','端午節送禮名單','中秋節送禮名單'];
+  var GL_TITLES=['新竹廠春節送禮名單','新竹廠端午節送禮名單','新竹廠中秋節送禮名單'];
   function defaultTitle(){ var m=new Date().getMonth()+1; return GL_TITLES[m>=3&&m<=6?1:m>=7&&m<=10?2:0]; }
-  function curTitle(){ return String(glCfg.title||'').trim()||defaultTitle(); }
+  function curTitle(){
+    var t=String(glCfg.title||'').trim();
+    if(GL_TITLES.indexOf('新竹廠'+t)>=0) t='新竹廠'+t;   // 舊版存的「中秋節送禮名單」等 → 自動補上新竹廠
+    return t||defaultTitle();
+  }
   function glTitleUI(){
     var sel=document.getElementById('gl-title-sel'), inp=document.getElementById('gl-title'); if(!sel||!inp) return;
     var t=curTitle(), custom=GL_TITLES.indexOf(t)<0;
@@ -35415,9 +35419,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       return '<tr><td>'+(i+1)+'</td><td>'+esc(r.name||'')+'</td><td>'+esc(r.unit||'')+'</td><td>'+esc(r.rank||'')+'</td><td>'+esc(r.office||'')+'</td></tr>';
     }).join('');
     var zsRows=zsList.map(function(r,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(r.name||'')+'</td><td>'+esc(zsUnit(r))+'</td></tr>'; }).join('');
-    var head=function(side,n){ return '<div class="ch"><span><b>'+side+'</b>'+esc(title)+'</span><em>'+n+' 人</em></div>'; };
-    var left=head('長榮',sides[0].n)+'<table class="lst"><thead><tr><th class="no">NO.</th><th>姓名</th><th>單位</th><th>職級</th><th>辦公室位置</th></tr></thead><tbody>'+egRows+'</tbody></table>';
-    var right=head('鎮山',sides[1].n)+'<table class="lst"><thead><tr><th class="no">NO.</th><th>姓名</th><th>單位</th></tr></thead><tbody>'+zsRows+'</tbody></table>'+
+    var left='<table class="lst"><thead><tr><th class="no">NO.</th><th>姓名</th><th>單位</th><th>職級</th><th>辦公室位置</th></tr></thead><tbody>'+egRows+'</tbody></table>';
+    var right='<table class="lst"><thead><tr><th class="no">NO.</th><th>姓名</th><th>單位</th></tr></thead><tbody>'+zsRows+'</tbody></table>'+
       '<div class="gh">統計</div><table class="sum"><thead><tr><th>長榮</th><th>鎮山</th><th>合計</th></tr></thead>'+
       '<tbody><tr><td>'+sides[0].n+'</td><td>'+sides[1].n+'</td><td class="tot">'+total+'</td></tr></tbody></table>'+
       (offOrder.length?'<div class="gh">辦公室位置<span>長榮</span></div><table class="loc"><thead><tr><th>位置</th><th>數量</th></tr></thead><tbody>'+
@@ -35428,9 +35431,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       'html{font-size:10pt}html,body{margin:0;background:#fff;color:#111;font-family:"標楷體","DFKai-SB","BiauKai","Kaiti TC","KaiTi TC","KaiTi",serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
       '.sheet{position:relative;height:271mm;overflow:hidden}.body{width:100%}'+
       '.cols{display:grid;grid-template-columns:1.85fr 1fr;gap:1.8rem;align-items:start}'+
-      // 名單標題:粗體＋黑色粗底線,右側人數(沿用前一版風格)
-      '.ch{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2.5px solid #111;padding:0 .15rem .35rem;margin-bottom:.5rem}'+
-      '.ch span{font-size:1.45rem;font-weight:700;letter-spacing:.06em}.ch b{margin-right:.35rem}.ch em{font-style:normal;font-size:1.1rem;color:#333}'+
+      // 全頁單一標題「新竹廠○○節送禮名單」:置中粗體＋黑色粗底線
+      '.ch{text-align:center;font-size:1.9rem;font-weight:700;letter-spacing:.12em;border-bottom:2.5px solid #111;padding-bottom:.45rem;margin-bottom:.9rem}'+
       'table{border-collapse:collapse;width:100%}'+
       // 名單表:灰底表頭、淺灰列線、隔列淡底;姓名加粗、NO. 灰字
       '.lst th,.lst td{font-size:1.08rem;padding:.2rem .35rem;text-align:center;white-space:nowrap}'+
@@ -35445,7 +35447,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       '.sum th,.loc th{font-weight:400;color:#555}.sum td{font-size:1.35rem;font-weight:700;border-bottom:1.5px solid #111}.sum td.tot{color:#c00}'+
       '.loc td:last-child,.loc th:last-child{width:32%}.loc tfoot td{font-weight:700;border-top:1.5px solid #111;border-bottom:1.5px solid #111}.loc .red{color:#c00}';
     var html='<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>'+esc(title)+'</title><style>'+css+'</style></head><body>'+
-      '<div class="sheet"><div class="body"><div class="cols"><div>'+left+'</div><div>'+right+'</div></div></div></div></body></html>';
+      '<div class="sheet"><div class="body"><div class="ch">'+esc(title)+'</div><div class="cols"><div>'+left+'</div><div>'+right+'</div></div></div></div></body></html>';
     // 用隱藏 iframe 直接叫出列印對話框(不另開分頁,比照姓名貼)
     var old=document.getElementById('__gl_print_frame'); if(old) old.remove();
     var iframe=document.createElement('iframe');
