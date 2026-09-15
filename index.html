@@ -35296,7 +35296,10 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   // 分組:長榮依辦公室位置;鎮山依工種＝職稱(只用於統計)
   function groupsOf(side){
     var ex=new Set(glCfg[exKey(side)]), list=sortedList(side), blank=side==='eg'?'未填位置':'未填職稱';
-    var keyOf=function(r){ return String((side==='eg'?r.office:r.role)||'').trim()||blank; };
+    // 鎮山統計只分兩類:部門「辦公人員」＝辦公室,其餘(本工/外勞)＝現場
+    var keyOf=side==='eg'
+      ? function(r){ return String(r.office||'').trim()||blank; }
+      : function(r){ return String(r.department||'').trim()==='辦公人員'?'辦公室':'現場'; };
     var map={}, groups=[];
     list.forEach(function(r){
       var k=keyOf(r);
@@ -35319,7 +35322,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       glGroups[side]=gs;
       gs.forEach(function(g){ total+=g.people.length; send+=g.send; });
       sum[side]={send:send,total:total};
-      var label=side==='eg'?'長榮人員':'鎮山（公司名冊）', unitLabel=side==='eg'?'辦公室位置':'工種';
+      var label=side==='eg'?'長榮人員':'鎮山（公司名冊）', unitLabel=side==='eg'?'辦公室位置':'分類';
       var head='<div class="gl-colh"><span class="gl-colt">'+label+'</span><span class="gl-colc">送 <b>'+send+'</b> / 共 '+total+' 人</span>'+
         (ed?'<button class="btn" onclick="glAll(\''+side+'\',true)">全送</button><button class="btn" onclick="glAll(\''+side+'\',false)">全不送</button>':'')+'</div>';
       if(!total){ host.innerHTML=head+'<div class="empty-state">沒有人員資料</div>'; return; }
@@ -35370,6 +35373,22 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     }catch(e){ console.warn('glSave',e); status('雲端儲存失敗，請稍後再試','err'); }
   }
 
+  // 限定一頁:內容比「整頁高度 − 右下角總數」高時,把 html 字級逐步縮小(所有尺寸都是 rem 會一起縮);
+  // 縮到一半還放不下(人非常多)才整塊等比縮放。回傳最後的字級倍率,供測試檢查。
+  function glFitOnePage(idoc){
+    var root=idoc.documentElement, body=idoc.querySelector('.body'), sheet=idoc.querySelector('.sheet'), foot=idoc.querySelector('.foot');
+    if(!body||!sheet) return 1;
+    var limit=sheet.clientHeight-(foot?foot.offsetHeight:0)-6, f=1;
+    root.style.fontSize='10pt';
+    while(body.offsetHeight>limit&&f>0.5){ f=Math.round((f-0.03)*100)/100; root.style.fontSize=(10*f)+'pt'; }
+    // 等比縮放:版面寬度放大成 100/s%,再 scale(s) 縮回整頁寬;寬度變了高度會變,所以重算幾次
+    for(var i=0,s=1;i<4&&body.offsetHeight*s>limit;i++){
+      s=limit/body.offsetHeight;
+      body.style.transformOrigin='0 0'; body.style.transform='scale('+s+')'; body.style.width=(100/s)+'%';
+    }
+    return f;
+  }
+  window.__glFitOnePage=glFitOnePage;
   // 列印 A4 直式:左長榮(依辦公室位置分組,每人一列含單位/職級)、右鎮山(不分類);統計縮成一行小字,名字前留方框可打勾
   window.glPrint=function(){
     var title=curTitle();
@@ -35379,9 +35398,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     });
     var total=sides[0].n+sides[1].n;
     if(!total){ alert('目前沒有要送的人'); return; }
-    var d=new Date(), ds=d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
     function colHtml(s){
-      var label=s.side==='eg'?'長榮':'鎮山', unit=s.side==='eg'?'辦公室位置':'工種';
+      var label=s.side==='eg'?'長榮':'鎮山', unit=s.side==='eg'?'辦公室位置':'分類';
       if(!s.n) return '<div class="col"><div class="ch">'+label+'<span>0 人</span></div></div>';
       var stats='<div class="st"><span class="sl">'+unit+'</span>'+
         s.gs.map(function(g){ return '<span>'+esc(g.key)+' <b>'+g.people.length+'</b></span>'; }).join('')+'</div>';
@@ -35401,32 +35419,41 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       }
       return '<div class="col"><div class="ch">'+label+'<span>'+s.n+' 人</span></div>'+stats+names+'</div>';
     }
+    // 字級與間距一律用 rem,列印前依內容高度調整 html 字級(fitOnePage),保證只印一頁
     var css='@page{size:A4 portrait;margin:12mm 10mm}*{box-sizing:border-box}'+
-      'html,body{margin:0;background:#fff;color:#111;font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
-      'h1{font-size:20pt;text-align:center;margin:0 0 2mm;letter-spacing:.08em}.meta{text-align:center;font-size:10pt;color:#444;margin-bottom:5mm}'+
-      '.cols{display:grid;grid-template-columns:1.25fr 1fr;gap:7mm;align-items:start}'+
-      '.ch{display:flex;justify-content:space-between;align-items:baseline;font-size:14pt;font-weight:700;border-bottom:2px solid #111;padding-bottom:1.5mm;margin-bottom:1.5mm}.ch span{font-size:11pt}'+
-      '.st{display:flex;flex-wrap:wrap;gap:.5mm 3mm;font-size:8pt;color:#555;margin-bottom:3mm;line-height:1.5}.st b{color:#111}.st .sl{color:#888}'+
-      '.g{break-inside:avoid;page-break-inside:avoid;margin-bottom:3mm}'+
-      '.pt{width:100%;border-collapse:collapse;font-size:10.5pt;margin-top:.8mm}.pt td{padding:.6mm 1mm;border-bottom:.3mm solid #ddd;white-space:nowrap}'+
-      '.pt td.nm{font-size:11pt;font-weight:600;width:30%}.pt td.nm i{display:inline-block;width:3.2mm;height:3.2mm;border:1px solid #555;margin-right:1.5mm;vertical-align:-.3mm}'+
+      'html{font-size:10pt}html,body{margin:0;background:#fff;color:#111;font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+      '.sheet{position:relative;height:271mm;overflow:hidden}.body{width:100%}'+
+      '.foot{position:absolute;right:0;bottom:0;font-size:9pt;color:#444}'+
+      'h1{font-size:2rem;text-align:center;margin:0 0 1.2rem;letter-spacing:.08em}'+
+      '.cols{display:grid;grid-template-columns:1.25fr 1fr;gap:2rem;align-items:start}'+
+      '.ch{display:flex;justify-content:space-between;align-items:baseline;font-size:1.4rem;font-weight:700;border-bottom:2px solid #111;padding-bottom:.42rem;margin-bottom:.42rem}.ch span{font-size:1.1rem}'+
+      '.st{display:flex;flex-wrap:wrap;gap:.15rem .85rem;font-size:.8rem;color:#555;margin-bottom:.85rem;line-height:1.5}.st b{color:#111}.st .sl{color:#888}'+
+      '.g{margin-bottom:.85rem}'+
+      '.pt{width:100%;border-collapse:collapse;font-size:1.05rem;margin-top:.23rem}.pt td{padding:.17rem .28rem;border-bottom:1px solid #ddd;white-space:nowrap}'+
+      '.pt td.nm{font-size:1.1rem;font-weight:600;width:30%}.pt td.nm i{display:inline-block;width:.9rem;height:.9rem;border:1px solid #555;margin-right:.42rem;vertical-align:-.1rem}'+
       '.pt td.rk{text-align:right;color:#333}'+
-      '.gh{display:flex;justify-content:space-between;font-size:10.5pt;font-weight:700;background:#f0f0f0;padding:1mm 2mm;border-left:3px solid #111}.gh span{font-weight:400}'+
-      '.ns{display:grid;gap:0 2mm;padding:1.2mm 1mm 0}'+
-      '.n{font-size:11pt;line-height:1.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:1.5mm}'+
-      '.n i{display:inline-block;width:3.2mm;height:3.2mm;border:1px solid #555;flex:0 0 auto}';
+      '.gh{display:flex;justify-content:space-between;font-size:1.05rem;font-weight:700;background:#f0f0f0;padding:.28rem .57rem;border-left:3px solid #111}.gh span{font-weight:400}'+
+      '.ns{display:grid;gap:0 .57rem;padding:.34rem .28rem 0}'+
+      '.n{font-size:1.1rem;line-height:1.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:.42rem}'+
+      '.n i{display:inline-block;width:.9rem;height:.9rem;border:1px solid #555;flex:0 0 auto}';
     var html='<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>'+esc(title)+'</title><style>'+css+'</style></head><body>'+
-      '<h1>'+esc(title)+'</h1><div class="meta">列印日期 '+ds+'　共 '+total+' 份（長榮 '+sides[0].n+'、鎮山 '+sides[1].n+'）</div>'+
-      '<div class="cols">'+colHtml(sides[0])+colHtml(sides[1])+'</div></body></html>';
+      '<div class="sheet"><div class="body"><h1>'+esc(title)+'</h1>'+
+      '<div class="cols">'+colHtml(sides[0])+colHtml(sides[1])+'</div></div>'+
+      '<div class="foot">共 '+total+' 份（長榮 '+sides[0].n+'、鎮山 '+sides[1].n+'）</div></div></body></html>';
     // 用隱藏 iframe 直接叫出列印對話框(不另開分頁,比照姓名貼)
     var old=document.getElementById('__gl_print_frame'); if(old) old.remove();
     var iframe=document.createElement('iframe');
     iframe.id='__gl_print_frame'; iframe.setAttribute('aria-hidden','true');
-    iframe.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+    // iframe 寬度＝A4 可印寬度(210-20mm),量到的高度才會跟實際列印一致
+    iframe.style.cssText='position:fixed;left:-10000px;top:0;width:190mm;height:280mm;border:0;visibility:hidden';
     document.body.appendChild(iframe);
     var idoc=iframe.contentWindow.document; idoc.open(); idoc.write(html); idoc.close();
     iframe.contentWindow.onafterprint=function(){ setTimeout(function(){ iframe.remove(); },200); };
-    setTimeout(function(){ try{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }catch(e){ console.error('glPrint',e); alert('無法開啟列印視窗，請再試一次'); } },250);
+    var doPrint=function(){
+      glFitOnePage(idoc);
+      setTimeout(function(){ try{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }catch(e){ console.error('glPrint',e); alert('無法開啟列印視窗，請再試一次'); } },100);
+    };
+    if(idoc.fonts&&idoc.fonts.ready) idoc.fonts.ready.then(function(){ setTimeout(doPrint,50); }); else setTimeout(doPrint,250);
     if(typeof auditDownload==='function') auditDownload(title+'（列印 '+total+' 份）');
   };
 })();
