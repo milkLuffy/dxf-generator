@@ -35415,25 +35415,35 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       return '<tr><td>'+(i+1)+'</td><td>'+esc(r.name||'')+'</td><td>'+esc(r.unit||'')+'</td><td>'+esc(r.rank||'')+'</td><td>'+esc(r.office||'')+'</td></tr>';
     }).join('');
     var zsRows=zsList.map(function(r,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(r.name||'')+'</td><td>'+esc(zsUnit(r))+'</td></tr>'; }).join('');
-    var left='<div class="tt">'+esc('長榮'+title)+'</div><table class="lst"><thead><tr><th class="no">NO.</th><th>姓名</th><th>單位</th><th>職級</th><th>辦公室位置</th></tr></thead><tbody>'+egRows+'</tbody></table>';
-    var right='<div class="tt">'+esc('鎮山'+title)+'</div><table class="lst box"><thead><tr><th class="no">NO.</th><th>姓名</th><th>單位</th></tr></thead><tbody>'+zsRows+'</tbody></table>'+
-      '<table class="sum"><tr><td class="lb" rowspan="3">統計</td><td>長榮</td><td>鎮山</td></tr>'+
-      '<tr class="ln"><td>'+sides[0].n+'</td><td>'+sides[1].n+'</td></tr><tr><td colspan="2">'+total+'</td></tr></table>'+
-      (offOrder.length?'<table class="loc"><thead><tr><th>位置</th><th>數量</th></tr></thead><tbody>'+
+    var head=function(side,n){ return '<div class="ch"><span><b>'+side+'</b>'+esc(title)+'</span><em>'+n+' 人</em></div>'; };
+    var left=head('長榮',sides[0].n)+'<table class="lst"><thead><tr><th class="no">NO.</th><th>姓名</th><th>單位</th><th>職級</th><th>辦公室位置</th></tr></thead><tbody>'+egRows+'</tbody></table>';
+    var right=head('鎮山',sides[1].n)+'<table class="lst"><thead><tr><th class="no">NO.</th><th>姓名</th><th>單位</th></tr></thead><tbody>'+zsRows+'</tbody></table>'+
+      '<div class="gh">統計</div><table class="sum"><thead><tr><th>長榮</th><th>鎮山</th><th>合計</th></tr></thead>'+
+      '<tbody><tr><td>'+sides[0].n+'</td><td>'+sides[1].n+'</td><td class="tot">'+total+'</td></tr></tbody></table>'+
+      (offOrder.length?'<div class="gh">辦公室位置<span>長榮</span></div><table class="loc"><thead><tr><th>位置</th><th>數量</th></tr></thead><tbody>'+
         offOrder.map(function(o){ return '<tr><td>'+esc(o)+'</td><td>'+offMap[o]+'</td></tr>'; }).join('')+
         '</tbody><tfoot><tr><td>總計</td><td class="red">'+offSum+'</td></tr></tfoot></table>':'');
     // 字級與間距一律用 rem,列印前依內容高度調整 html 字級(glFitOnePage),保證只印一頁
     var css='@page{size:A4 portrait;margin:12mm 10mm}*{box-sizing:border-box}'+
-      'html{font-size:10pt}html,body{margin:0;background:#fff;color:#111;font-family:"PMingLiU","新細明體","MingLiU","LiSong Pro","Songti TC","Noto Serif TC",serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+      'html{font-size:10pt}html,body{margin:0;background:#fff;color:#111;font-family:"標楷體","DFKai-SB","BiauKai","Kaiti TC","KaiTi TC","KaiTi",serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
       '.sheet{position:relative;height:271mm;overflow:hidden}.body{width:100%}'+
-      '.cols{display:grid;grid-template-columns:1.85fr 1fr;gap:1.6rem;align-items:start}'+
-      '.tt{text-align:center;font-size:1.25rem;font-weight:700;letter-spacing:.12em;margin-bottom:.35rem}'+
+      '.cols{display:grid;grid-template-columns:1.85fr 1fr;gap:1.8rem;align-items:start}'+
+      // 名單標題:粗體＋黑色粗底線,右側人數(沿用前一版風格)
+      '.ch{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2.5px solid #111;padding:0 .15rem .35rem;margin-bottom:.5rem}'+
+      '.ch span{font-size:1.45rem;font-weight:700;letter-spacing:.06em}.ch b{margin-right:.35rem}.ch em{font-style:normal;font-size:1.1rem;color:#333}'+
       'table{border-collapse:collapse;width:100%}'+
-      '.lst th,.lst td{font-size:1.05rem;font-weight:400;padding:.13rem .3rem;text-align:center;white-space:nowrap;border-bottom:1px solid #444}'+
-      '.lst thead th{border-top:1.5px solid #111;border-bottom:1.5px solid #111}.lst .no{width:2.6rem}'+
-      '.lst.box{border:1.5px solid #111}'+
-      '.sum{margin-top:2.4rem;border:1.5px solid #111;font-size:1.05rem}.sum td{text-align:center;padding:.22rem .4rem}.sum .lb{width:32%}.sum tr.ln td{border-bottom:1px solid #111}'+
-      '.loc{margin:2.4rem auto 0;width:72%;border:1.5px solid #111;font-size:.95rem}.loc th,.loc td{border:1px solid #555;text-align:center;padding:.16rem .4rem;font-weight:400}.loc .red{color:#d00}';
+      // 名單表:灰底表頭、淺灰列線、隔列淡底;姓名加粗、NO. 灰字
+      '.lst th,.lst td{font-size:1.08rem;padding:.2rem .35rem;text-align:center;white-space:nowrap}'+
+      '.lst thead th{background:#ececec;font-weight:700;border-top:1px solid #111;border-bottom:1.5px solid #111}'+
+      '.lst tbody td{border-bottom:1px solid #d6d6d6}.lst tbody tr:nth-child(even) td{background:#f7f7f7}'+
+      '.lst tbody tr:last-child td{border-bottom:1.5px solid #111}'+
+      '.lst .no{width:2.6rem}.lst tbody td:first-child{color:#777;font-size:.95rem}.lst tbody td:nth-child(2){font-weight:700}'+
+      // 統計/位置:灰底左黑條小標(沿用前一版分組標題)＋精簡表格
+      '.gh{display:flex;justify-content:space-between;margin-top:2rem;font-size:1.12rem;font-weight:700;background:#ececec;padding:.3rem .6rem;border-left:4px solid #111}'+
+      '.gh span{font-weight:400;font-size:.95rem;color:#555}'+
+      '.sum,.loc{font-size:1.05rem}.sum th,.sum td,.loc th,.loc td{text-align:center;padding:.22rem .4rem;border-bottom:1px solid #d6d6d6}'+
+      '.sum th,.loc th{font-weight:400;color:#555}.sum td{font-size:1.35rem;font-weight:700;border-bottom:1.5px solid #111}.sum td.tot{color:#c00}'+
+      '.loc td:last-child,.loc th:last-child{width:32%}.loc tfoot td{font-weight:700;border-top:1.5px solid #111;border-bottom:1.5px solid #111}.loc .red{color:#c00}';
     var html='<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>'+esc(title)+'</title><style>'+css+'</style></head><body>'+
       '<div class="sheet"><div class="body"><div class="cols"><div>'+left+'</div><div>'+right+'</div></div></div></div></body></html>';
     // 用隱藏 iframe 直接叫出列印對話框(不另開分頁,比照姓名貼)
