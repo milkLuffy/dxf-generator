@@ -2855,6 +2855,9 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
           <div class="nav-item" onclick="navTo('egstaff')" id="nav-egstaff">
             <span class="nav-icon">🪪</span><span class="nav-label">長榮人員</span>
           </div>
+          <div class="nav-item" onclick="navTo('giftlist')" id="nav-giftlist">
+            <span class="nav-icon">🎁</span><span class="nav-label">送禮名單</span>
+          </div>
           <div class="nav-item" onclick="navTo('attend')" id="nav-attend">
             <span class="nav-icon">📷</span><span class="nav-label">人臉打卡</span>
           </div>
@@ -3019,6 +3022,7 @@ window.normalizeFullWidth=function(value){
       'nav-drawingsearch':'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M8 9h6M8 12h4"/>',
       'nav-staff':'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-4 2.5-6 6-6s6 2 6 6M14 15c3.5 0 6 1.5 6 5"/>',
       'nav-egstaff':'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9" r="3"/><path d="M7 18c1-3 2.7-4 5-4s4 1 5 4"/>',
+      'nav-giftlist':'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13M12 8C10.5 5 7 4 7 6.5S10 8 12 8c2 0 5 .5 5-1.5S13.5 5 12 8"/>',
       'nav-attend':'<path d="M4 8V5a2 2 0 0 1 2-2h3M20 8V5a2 2 0 0 0-2-2h-3M4 16v3a2 2 0 0 0 2 2h3M20 16v3a2 2 0 0 1-2 2h-3"/><circle cx="12" cy="10" r="3"/><path d="M7.5 18c.8-3 2.2-4 4.5-4s3.7 1 4.5 4"/>',
       'nav-attendlog':'<circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/>',
       'nav-attendance':'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 15l2 2 5-5"/>',
@@ -5284,6 +5288,55 @@ window.normalizeFullWidth=function(value){
         <input class="search-input" id="egst-search" placeholder="搜尋姓名、單位、職級、位置..." oninput="egstRender()"/>
       </div>
       <div class="staff-grid" id="egst-table"><div class="empty-state">載入中...</div></div>
+    </div>
+
+    <!-- 送禮名單 -->
+    <style>
+      #page-giftlist .gl-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+      #page-giftlist .gl-bar label{font-size:12px;color:var(--text3)}
+      #page-giftlist .gl-title-in{flex:1 1 220px;max-width:360px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:8px 11px;outline:none}
+      #page-giftlist .gl-title-in:focus{border-color:var(--accent2)}
+      #page-giftlist .gl-summary{font-family:var(--mono);font-size:13px;color:var(--text2)}
+      #page-giftlist .gl-summary b{color:var(--accent2);font-size:15px}
+      #page-giftlist .gl-status{font-size:12px;color:var(--text3)}
+      #page-giftlist .gl-status.ok{color:var(--green)}
+      #page-giftlist .gl-status.err{color:var(--red)}
+      #page-giftlist .gl-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+      #page-giftlist .gl-col{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:14px;min-width:0}
+      #page-giftlist .gl-colh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+      #page-giftlist .gl-colt{font-size:16px;font-weight:700}
+      #page-giftlist .gl-colc{font-family:var(--mono);font-size:12px;color:var(--text2);margin-right:auto}
+      #page-giftlist .gl-colc b{color:var(--accent2);font-size:14px}
+      #page-giftlist .gl-stats{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:6px}
+      #page-giftlist .gl-stats th,#page-giftlist .gl-stats td{border-bottom:1px solid var(--border);padding:5px 8px;text-align:left}
+      #page-giftlist .gl-stats th:not(:first-child),#page-giftlist .gl-stats td:not(:first-child){text-align:right;width:56px;font-family:var(--mono)}
+      #page-giftlist .gl-stats thead th{color:var(--text3);font-weight:600;background:var(--bg3)}
+      #page-giftlist .gl-stats tfoot th{color:var(--text);background:var(--bg3)}
+      #page-giftlist .gl-gh{display:flex;align-items:center;gap:8px;margin:14px 0 6px;font-size:13.5px;cursor:pointer}
+      #page-giftlist .gl-gc{font-family:var(--mono);font-size:12px;color:var(--text3)}
+      #page-giftlist .gl-names{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+      #page-giftlist .gl-p{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);cursor:pointer;font-size:13px;min-width:0}
+      #page-giftlist .gl-p span{min-width:0;overflow-wrap:anywhere;line-height:1.35}
+      #page-giftlist .gl-p small{color:var(--text3);font-size:11px;margin-left:auto;white-space:nowrap}
+      #page-giftlist .gl-p.off{opacity:.45}
+      #page-giftlist .gl-p.off span{text-decoration:line-through}
+      @media(max-width:768px){#page-giftlist .gl-cols{grid-template-columns:minmax(0,1fr)}#page-giftlist .gl-title-in{font-size:16px;max-width:none}}
+    </style>
+    <div class="page" id="page-giftlist">
+      <div class="page-header">
+        <div class="page-title" style="margin-bottom:0">送禮名單</div>
+        <button class="btn btn-gen" style="flex:0 0 auto" onclick="glPrint()">🖨 列印 A4</button>
+      </div>
+      <div class="gl-bar">
+        <label for="gl-title">列印標題</label>
+        <input class="gl-title-in" id="gl-title" placeholder="送禮名單（例：中秋節送禮名單）" oninput="glTitleChange()"/>
+        <span class="gl-summary" id="gl-summary"></span>
+        <span class="gl-status" id="gl-status"></span>
+      </div>
+      <div class="gl-cols">
+        <section class="gl-col" id="gl-eg"><div class="empty-state">載入中...</div></section>
+        <section class="gl-col" id="gl-zs"><div class="empty-state">載入中...</div></section>
+      </div>
     </div>
 
     <!-- 員工薪資設定 (HR) -->
@@ -12320,7 +12373,7 @@ const PAGE_SECTION={
   dashboard:'main', mypage:'main', sop:'main', todo:'main', labor:'main', hardware:'main', deductions:'main',
   bom:'prod', layout:'prod', daily:'prod', inspect:'prod', a201a202:'prod', prod:'prod', modparts:'prod',
   multilevel:'tools', bomtool:'tools', sp:'tools', dxf:'tools', hazard:'tools', selfcheck:'tools', namelabels:'tools', drawingsearch:'tools',
-  staff:'staff', egstaff:'staff', attend:'staff', attendlog:'staff',
+  staff:'staff', egstaff:'staff', giftlist:'staff', attend:'staff', attendlog:'staff',
   attendance:'eg', egdaily:'eg',
   emp:'hr', payroll:'hr', leave:'hr', payrollcfg:'hr',
   output:'admin', pricing:'admin', cost:'admin', accounts:'admin', notify:'admin', audit:'admin'
@@ -12357,6 +12410,7 @@ const PAGE_META=[
   {k:'drawingsearch',label:'圖面快搜',       sec:'tools'},
   {k:'staff',        label:'公司名冊',       sec:'staff'},
   {k:'egstaff',      label:'長榮人員',       sec:'staff'},
+  {k:'giftlist',     label:'送禮名單',       sec:'staff'},
   {k:'attend',       label:'人臉打卡',       sec:'staff'},
   {k:'attendlog',    label:'打卡紀錄',       sec:'staff'},
   {k:'attendance',   label:'出勤回報',       sec:'eg'},
@@ -12686,6 +12740,7 @@ function navTo(page, viewState) {
   if(page==='modparts') modpartsInit();
   if(page==='loading') ldInit();
   if(page==='egstaff') egstInit();
+  if(page==='giftlist') glInit();
   if(page==='emp') empInit();
   if(page==='payroll') payrollInit();
   if(page==='leave') leaveInit();
@@ -35159,6 +35214,184 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     egstRows=egstRows.filter(function(x){ return x.id!==id; });
     if(typeof window.__invalidateEgStaff==='function') window.__invalidateEgStaff();
     egstRender();
+  };
+})();
+</script>
+
+<!-- 送禮名單:左長榮人員(依辦公室位置)、右鎮山公司名冊在職(依工種);預設全送,取消勾選＝不送,不送名單存 app_config -->
+<script>
+(function(){
+  var GL_KEY='gift_list';
+  var glEg=[], glZs=[], glCfg={title:'',excludeEg:[],excludeZs:[]}, glSaveTimer=null, glGroups={eg:[],zs:[]};
+
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function canEdit(){ try{ return pagePerm('giftlist')==='edit'; }catch(e){ return true; } }
+  function status(msg,cls){ var el=document.getElementById('gl-status'); if(el){ el.textContent=msg||''; el.className='gl-status'+(cls?' '+cls:''); } }
+  function exKey(side){ return side==='eg'?'excludeEg':'excludeZs'; }
+  function byName(a,b){ return String(a.name||'').localeCompare(String(b.name||''),'zh-Hant'); }
+
+  window.glInit=async function(){
+    status('載入中…');
+    var res=null;
+    try{
+      res=await Promise.all([
+        sbFetchAll('/rest/v1/eg_staff?select=id,name,unit,rank,office'),
+        sbFetchAll('/rest/v1/staff?select=id,name,role,department,status&order=name'),
+        sbFetch('/rest/v1/app_config?select=value&key=eq.'+GL_KEY)
+      ]);
+    }catch(e){ console.warn('glInit',e); }
+    if(!res){ status('載入失敗，請重新整理','err'); return; }
+    glEg=Array.isArray(res[0].data)?res[0].data:[];
+    glZs=(Array.isArray(res[1].data)?res[1].data:[]).filter(function(s){ return s.status!=='離職'; });
+    var row=res[2]&&res[2].ok&&Array.isArray(res[2].data)?res[2].data[0]:null;
+    if(row){
+      try{
+        var v=JSON.parse(row.value)||{};
+        glCfg={ title:String(v.title||''), excludeEg:Array.isArray(v.excludeEg)?v.excludeEg.map(String):[], excludeZs:Array.isArray(v.excludeZs)?v.excludeZs.map(String):[] };
+      }catch(e){}
+    }
+    var t=document.getElementById('gl-title'); if(t){ t.value=glCfg.title; t.readOnly=!canEdit(); }
+    status(canEdit()?'':'唯讀：無法修改名單');
+    glRender();
+  };
+
+  // 分組:長榮依辦公室位置(組內照單位→職級→姓名);鎮山依工種＝職稱(照部門→職稱順序→姓名)
+  function groupsOf(side){
+    var ex=new Set(glCfg[exKey(side)]), list, keyOf, blank;
+    if(side==='eg'){
+      blank='未填位置';
+      list=glEg.slice().sort(function(a,b){
+        return egOrderIdx(EGST_UNIT_ORDER,a.unit)-egOrderIdx(EGST_UNIT_ORDER,b.unit)||egOrderIdx(EGST_RANK_ORDER,a.rank)-egOrderIdx(EGST_RANK_ORDER,b.rank)||byName(a,b);
+      });
+      keyOf=function(r){ return String(r.office||'').trim()||blank; };
+    } else {
+      blank='未填職稱';
+      var dOrd=typeof ATT_CATORD!=='undefined'?ATT_CATORD:{}, rOrd=typeof ROLE_ORDER!=='undefined'?ROLE_ORDER:{};
+      var ix=function(m,k,d){ return m[k]==null?d:m[k]; };
+      list=glZs.slice().sort(function(a,b){
+        return ix(dOrd,a.department,9)-ix(dOrd,b.department,9)||ix(rOrd,a.role,99)-ix(rOrd,b.role,99)||byName(a,b);
+      });
+      keyOf=function(r){ return String(r.role||'').trim()||blank; };
+    }
+    var map={}, groups=[];
+    list.forEach(function(r){
+      var k=keyOf(r);
+      if(!map[k]){ map[k]={key:k,people:[],send:0}; groups.push(map[k]); }
+      var on=!ex.has(String(r.id));
+      map[k].people.push({r:r,on:on}); if(on) map[k].send++;
+    });
+    groups.sort(function(a,b){
+      var d=(a.key===blank)-(b.key===blank); if(d) return d;
+      return side==='eg'?a.key.localeCompare(b.key,'zh-Hant',{numeric:true}):0;   // 鎮山維持部門/職稱順序
+    });
+    return groups;
+  }
+
+  window.glRender=function(){
+    var ed=canEdit(), sum={};
+    ['eg','zs'].forEach(function(side){
+      var host=document.getElementById('gl-'+side); if(!host) return;
+      var gs=groupsOf(side), total=0, send=0;
+      glGroups[side]=gs;
+      gs.forEach(function(g){ total+=g.people.length; send+=g.send; });
+      sum[side]={send:send,total:total};
+      var label=side==='eg'?'長榮人員':'鎮山（公司名冊）', unitLabel=side==='eg'?'辦公室位置':'工種';
+      var head='<div class="gl-colh"><span class="gl-colt">'+label+'</span><span class="gl-colc">送 <b>'+send+'</b> / 共 '+total+' 人</span>'+
+        (ed?'<button class="btn" onclick="glAll(\''+side+'\',true)">全送</button><button class="btn" onclick="glAll(\''+side+'\',false)">全不送</button>':'')+'</div>';
+      if(!total){ host.innerHTML=head+'<div class="empty-state">沒有人員資料</div>'; return; }
+      var stats='<table class="gl-stats"><thead><tr><th>'+unitLabel+'</th><th>送</th><th>共</th></tr></thead><tbody>'+
+        gs.map(function(g){ return '<tr><td>'+esc(g.key)+'</td><td>'+g.send+'</td><td>'+g.people.length+'</td></tr>'; }).join('')+
+        '</tbody><tfoot><tr><th>合計</th><th>'+send+'</th><th>'+total+'</th></tr></tfoot></table>';
+      var body=gs.map(function(g,gi){
+        var all=g.send===g.people.length;
+        return '<div class="gl-group"><label class="gl-gh"><input type="checkbox"'+(all?' checked':'')+(g.send&&!all?' data-mixed="1"':'')+(ed?'':' disabled')+
+          ' onchange="glToggleGroup(\''+side+'\','+gi+',this.checked)"><b>'+esc(g.key)+'</b><span class="gl-gc">'+g.send+' / '+g.people.length+'</span></label>'+
+          '<div class="gl-names">'+g.people.map(function(p){
+            var sub=side==='eg'?p.r.rank:p.r.department;
+            return '<label class="gl-p'+(p.on?'':' off')+'" title="'+esc(side==='eg'?(p.r.unit||''):(p.r.role||''))+'"><input type="checkbox"'+(p.on?' checked':'')+(ed?'':' disabled')+
+              ' onchange="glToggle(\''+side+'\',\''+esc(String(p.r.id))+'\',this.checked)"><span>'+esc(p.r.name||'—')+'</span>'+(sub?'<small>'+esc(sub)+'</small>':'')+'</label>';
+          }).join('')+'</div></div>';
+      }).join('');
+      host.innerHTML=head+stats+body;
+      host.querySelectorAll('input[data-mixed]').forEach(function(el){ el.indeterminate=true; });
+    });
+    var se=document.getElementById('gl-summary');
+    if(se&&sum.eg&&sum.zs){
+      var n=sum.eg.send+sum.zs.send, off=sum.eg.total+sum.zs.total-n;
+      se.innerHTML='共送 <b>'+n+'</b> 份（長榮 '+sum.eg.send+'、鎮山 '+sum.zs.send+'）'+(off?'，不送 '+off+' 人':'');
+    }
+  };
+
+  function setOn(side,ids,on){
+    if(!canEdit()) return;
+    var k=exKey(side), s=new Set(glCfg[k]);
+    ids.forEach(function(id){ id=String(id); if(on) s.delete(id); else s.add(id); });
+    glCfg[k]=Array.from(s);
+    glRender(); glQueueSave();
+  }
+  window.glToggle=function(side,id,on){ setOn(side,[id],on); };
+  window.glToggleGroup=function(side,gi,on){ var g=glGroups[side][gi]; if(g) setOn(side,g.people.map(function(p){ return p.r.id; }),on); };
+  window.glAll=function(side,on){ setOn(side,(side==='eg'?glEg:glZs).map(function(r){ return r.id; }),on); };
+  window.glTitleChange=function(){ if(!canEdit()) return; glCfg.title=document.getElementById('gl-title').value; glQueueSave(); };
+
+  function glQueueSave(){ clearTimeout(glSaveTimer); status('儲存中…'); glSaveTimer=setTimeout(glSave,600); }
+  async function glSave(){
+    try{
+      var r=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:GL_KEY,value:JSON.stringify(glCfg)})});
+      if(r&&r.ok) status('已儲存 ✓','ok');
+      else status('雲端儲存失敗（請確認帳號權限），重新整理會回到上次存好的名單','err');
+    }catch(e){ console.warn('glSave',e); status('雲端儲存失敗，請稍後再試','err'); }
+  }
+
+  // 列印 A4 直式:左長榮、右鎮山;每邊先列統計表,再依分組列出要送的人(名字前留方框可打勾)
+  window.glPrint=function(){
+    var title=(glCfg.title||'').trim()||'送禮名單';
+    var sides=['eg','zs'].map(function(side){
+      var gs=groupsOf(side).map(function(g){ return {key:g.key,people:g.people.filter(function(p){ return p.on; })}; }).filter(function(g){ return g.people.length; });
+      return {side:side,gs:gs,n:gs.reduce(function(a,g){ return a+g.people.length; },0)};
+    });
+    var total=sides[0].n+sides[1].n;
+    if(!total){ alert('目前沒有要送的人'); return; }
+    var d=new Date(), ds=d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
+    function colHtml(s){
+      var label=s.side==='eg'?'長榮':'鎮山', unit=s.side==='eg'?'辦公室位置':'工種';
+      if(!s.n) return '<div class="col"><div class="ch">'+label+'<span>0 人</span></div></div>';
+      var stats='<table class="st"><thead><tr><th>'+unit+'</th><th>人數</th></tr></thead><tbody>'+
+        s.gs.map(function(g){ return '<tr><td>'+esc(g.key)+'</td><td>'+g.people.length+'</td></tr>'; }).join('')+
+        '</tbody><tfoot><tr><td>合計</td><td>'+s.n+'</td></tr></tfoot></table>';
+      var groups=s.gs.map(function(g){
+        var maxLen=Math.max.apply(null,g.people.map(function(p){ return String(p.r.name||'').length; }));
+        var cols=maxLen>9?1:maxLen>4?2:3;   // 外勞英文長名改少欄,避免被截斷
+        return '<div class="g"><div class="gh">'+esc(g.key)+'<span>'+g.people.length+' 人</span></div><div class="ns" style="grid-template-columns:repeat('+cols+',1fr)">'+
+          g.people.map(function(p){ return '<div class="n"><i></i>'+esc(p.r.name||'')+'</div>'; }).join('')+'</div></div>';
+      }).join('');
+      return '<div class="col"><div class="ch">'+label+'<span>'+s.n+' 人</span></div>'+stats+groups+'</div>';
+    }
+    var css='@page{size:A4 portrait;margin:12mm 10mm}*{box-sizing:border-box}'+
+      'html,body{margin:0;background:#fff;color:#111;font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+      'h1{font-size:20pt;text-align:center;margin:0 0 2mm;letter-spacing:.08em}.meta{text-align:center;font-size:10pt;color:#444;margin-bottom:5mm}'+
+      '.cols{display:grid;grid-template-columns:1fr 1fr;gap:8mm;align-items:start}'+
+      '.ch{display:flex;justify-content:space-between;align-items:baseline;font-size:14pt;font-weight:700;border-bottom:2px solid #111;padding-bottom:1.5mm;margin-bottom:3mm}.ch span{font-size:11pt}'+
+      '.st{width:100%;border-collapse:collapse;font-size:10pt;margin-bottom:4mm}.st th,.st td{border:1px solid #999;padding:1mm 2mm;text-align:left}'+
+      '.st th:last-child,.st td:last-child{text-align:right;width:16mm}.st thead th{background:#eee}.st tfoot td{font-weight:700;background:#f5f5f5}'+
+      '.g{break-inside:avoid;page-break-inside:avoid;margin-bottom:3.5mm}'+
+      '.gh{display:flex;justify-content:space-between;font-size:10.5pt;font-weight:700;background:#f0f0f0;padding:1mm 2mm;border-left:3px solid #111}.gh span{font-weight:400}'+
+      '.ns{display:grid;gap:0 2mm;padding:1.2mm 1mm 0}'+
+      '.n{font-size:11pt;line-height:1.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:1.5mm}'+
+      '.n i{display:inline-block;width:3.2mm;height:3.2mm;border:1px solid #555;flex:0 0 auto}';
+    var html='<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>'+esc(title)+'</title><style>'+css+'</style></head><body>'+
+      '<h1>'+esc(title)+'</h1><div class="meta">列印日期 '+ds+'　共 '+total+' 份（長榮 '+sides[0].n+'、鎮山 '+sides[1].n+'）</div>'+
+      '<div class="cols">'+colHtml(sides[0])+colHtml(sides[1])+'</div></body></html>';
+    // 用隱藏 iframe 直接叫出列印對話框(不另開分頁,比照姓名貼)
+    var old=document.getElementById('__gl_print_frame'); if(old) old.remove();
+    var iframe=document.createElement('iframe');
+    iframe.id='__gl_print_frame'; iframe.setAttribute('aria-hidden','true');
+    iframe.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+    document.body.appendChild(iframe);
+    var idoc=iframe.contentWindow.document; idoc.open(); idoc.write(html); idoc.close();
+    iframe.contentWindow.onafterprint=function(){ setTimeout(function(){ iframe.remove(); },200); };
+    setTimeout(function(){ try{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }catch(e){ console.error('glPrint',e); alert('無法開啟列印視窗，請再試一次'); } },250);
+    if(typeof auditDownload==='function') auditDownload(title+'（列印 '+total+' 份）');
   };
 })();
 </script>
