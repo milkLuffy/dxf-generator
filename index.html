@@ -30722,6 +30722,9 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   var PR_VIEW_ONLY=false;   // 目前這張表是否唯讀
   var PR_UNLOCKED=false;    // 使用者按過「解鎖重新議價」(換工程或換篩選就失效)
   var PR_PRICED={}, PR_UNPRICED={};   // project_id -> 是否有已/未議價的工程區
+  // 轉包(BOM 工程區狀態):案子已包出去,不再是我們的工程 → 不列入計價(工程下拉與工程區按鈕都排除)
+  var PR_SUB_HIDDEN=0;      // 目前這個工程被轉包擋掉幾個工程區(顯示在計價對象那一列)
+  function zIsSub(z){ return String(z&&z.status||'').trim()==='轉包'; }
   // ── 雲端儲存(pricing_sheets)。localStorage 仍然照寫,當作離線備援。 ──
   var REMOTE={};              // sheet_key -> data(本次載入時從 DB 抓下來的)
   var REMOTE_TABLE_OK=true;   // 尚未執行 migration 時關掉,免得每次輸入都打一次注定失敗的請求
@@ -31248,7 +31251,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var sel=document.getElementById('pricing-proj');
     document.getElementById('pricing-tabs').style.display='none';
     document.getElementById('pricing-sheet').innerHTML='<div class="empty-state">請先選擇工程</div>';
-    PROJ=null; ZONES=[]; SHEETS={}; IMPORTED_QTY={}; GROUPS={beam:[],misc:[],col:[]}; PICK={beam:null,misc:null,col:null};
+    PROJ=null; ZONES=[]; SHEETS={}; IMPORTED_QTY={}; GROUPS={beam:[],misc:[],col:[]}; PICK={beam:null,misc:null,col:null}; PR_SUB_HIDDEN=0;
     PR_VIEW_ONLY=false; PR_UNLOCKED=false; pricingRoBar();
     MISC_PICK=[]; MISC_GROUP=null; MISC_GROUPS={};
     BEAM_PICK=[]; COL_PICK=[]; BEAM_GROUP=null; COL_GROUP=null; BEAM_GROUPS={}; COL_GROUPS={};
@@ -31260,9 +31263,10 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       plist=Array.isArray(pr.data)?pr.data:[];
     }
     // 任一工程區的單價尚未定 → 該工程「有未議價」;有任一區已議價 → 該工程「有已議價紀錄」
-    var zr=await sbFetchAll('/rest/v1/zones?select=project_id,unit_price,util_price,util_weight_kg,util_proc_code,price_note');
+    var zr=await sbFetchAll('/rest/v1/zones?select=project_id,unit_price,util_price,util_weight_kg,util_proc_code,price_note,status');
     var zs=Array.isArray(zr.data)?zr.data:[], unpriced={}, priced={};
-    zs.forEach(function(z){ if(zNegotiated(z)) priced[z.project_id]=true; else unpriced[z.project_id]=true; });
+    // 轉包的工程區不算未議價,否則整個工程只剩轉包區時,還是會一直掛在「未議價」清單裡
+    zs.forEach(function(z){ if(zIsSub(z)) return; if(zNegotiated(z)) priced[z.project_id]=true; else unpriced[z.project_id]=true; });
     PR_PRICED=priced; PR_UNPRICED=unpriced;
     var list=plist.filter(function(p){
       return PR_FILTER==='done' ? !!priced[p.id]
@@ -31299,15 +31303,17 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var pid=document.getElementById('pricing-proj').value;
     var sheetEl=document.getElementById('pricing-sheet');
     var tabsEl=document.getElementById('pricing-tabs');
-    if(!pid){ PROJ=null; PR_VIEW_ONLY=false; PR_UNLOCKED=false; pricingRoBar(); tabsEl.style.display='none'; sheetEl.innerHTML='<div class="empty-state">請先選擇工程</div>'; return; }
+    if(!pid){ PROJ=null; PR_VIEW_ONLY=false; PR_UNLOCKED=false; PR_SUB_HIDDEN=0; pricingRoBar(); tabsEl.style.display='none'; sheetEl.innerHTML='<div class="empty-state">請先選擇工程</div>'; return; }
     var opt=document.getElementById('pricing-proj').selectedOptions[0];
     PROJ={id:pid, txt:opt?opt.text:''};
     // 已議價的工程預設唯讀:只看不改,要改得先按「解鎖重新議價」。
     PR_VIEW_ONLY = !PR_UNLOCKED && (PR_FILTER==='done' || (!!PR_PRICED[pid] && !PR_UNPRICED[pid]));
     tabsEl.style.display='none';
     sheetEl.innerHTML='<div class="empty-state">載入工程區與構件資料中…</div>';
-    var zr=await sbFetch('/rest/v1/zones?select=id,zone_code,unit_price,util_proc_code,util_weight_kg,util_price,price_note&project_id=eq.'+pid+'&order=zone_code');
+    var zr=await sbFetch('/rest/v1/zones?select=id,zone_code,unit_price,util_proc_code,util_weight_kg,util_price,price_note,status&project_id=eq.'+pid+'&order=zone_code');
     var zs=Array.isArray(zr.data)?zr.data:[];
+    // 轉包工程區整區不計價:不列工程區按鈕、也不抓它的構件公斤/支數
+    var zsAll=zs.length; zs=zs.filter(function(z){ return !zIsSub(z); }); PR_SUB_HIDDEN=zsAll-zs.length;
     var byZone={};
     if(zs.length){
       var ids=zs.map(function(z){return z.id;}).join(',');
@@ -31690,7 +31696,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   function pricingRender(){
     if(!PROJ) return;
     pricingRoBar();   // 唯讀/解鎖提示列跟著目前狀態走
-    var head='<div style="font-family:var(--mono);font-size:13px;color:var(--text2);margin-bottom:12px">計價對象：<strong style="color:var(--accent)">'+esc(PROJ.txt)+'</strong> ／ 類別 <strong style="color:var(--accent2)">'+esc(CATS[CAT].label)+'</strong></div>';
+    var subTag=PR_SUB_HIDDEN?' ／ <span style="color:var(--purple)">已排除轉包工程區 '+PR_SUB_HIDDEN+' 區</span>':'';
+    var head='<div style="font-family:var(--mono);font-size:13px;color:var(--text2);margin-bottom:12px">計價對象：<strong style="color:var(--accent)">'+esc(PROJ.txt)+'</strong> ／ 類別 <strong style="color:var(--accent2)">'+esc(CATS[CAT].label)+'</strong>'+subTag+'</div>';
     var html=head+groupsBar(CAT);
     var g=curGroup(), st=S();
     if(!g||!st){
