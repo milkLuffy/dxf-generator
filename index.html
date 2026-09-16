@@ -4691,6 +4691,11 @@ window.normalizeFullWidth=function(value){
         #output-billing-panel .ov-tbl input.bl-util-locked{opacity:.68;cursor:not-allowed;background:rgba(255,193,7,.08)}
         .bl-grid-help{flex:1 1 100%;font-family:var(--mono);font-size:11px;color:var(--text3)}
         .bl-util-wait{display:inline-block;color:var(--yellow);font-size:11px;font-weight:700;white-space:nowrap}
+        /* 水電重量下拉:待全區完成(黃) / 提早請款(青)。寬度貼齊欄位,不撐開表格 */
+        .bl-util-sel{width:100%;min-width:118px;max-width:150px;padding:3px 4px;border:1px solid rgba(255,193,7,.45);border-radius:6px;
+          background:rgba(255,193,7,.10);color:var(--yellow);font-family:var(--mono);font-size:11px;font-weight:700;text-align:right;cursor:pointer}
+        .bl-util-sel option{background:var(--card,#1b1e24);color:var(--text1)}
+        .bl-util-sel.is-early{border-color:rgba(125,211,192,.55);background:rgba(125,211,192,.14);color:var(--accent3)}
 
         /* 請款狀況：比照點工計價的小色塊，僅以顏色區分 */
         .bill-status-pill{display:inline-block;min-width:58px;border:1px solid transparent;border-radius:6px;padding:3px 8px;font-family:var(--mono);font-size:11px;font-weight:700;text-align:center;white-space:nowrap}
@@ -33587,6 +33592,10 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   var blDirty={};        // 'round|zid' -> true
   var blRowsCache={1:[],2:[]};
   var blZoneNeed={};        // 工程編號|工程區 -> 該區 BOM 總支數
+  // 水電是「整區一筆」:任何產量月／次別請過一次,之後各月都不可再算。
+  // zid(字串) -> {key:'ym|round', ym, round, date} —— 取最早那一次(含提早請款)。
+  var blUtilPaid={};
+  var blUtilEarlySel={};    // 'round|zid' -> true/false:本次操作在「水電重量」下拉選的提早請款,尚未存檔前先記著
   var blGridAnchor=null, blGridActive=null, blGridDragging=false;
   var blGridSel={};   // Ctrl/⌘ 跳格多選:已定案的選取格 'round|row|col'->座標;與目前 anchor..active 矩形聯集成最終選取
   var blLegacy=(typeof window!=='undefined'&&window.BILLING_LEGACY_DATA)||{};
@@ -33720,7 +33729,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   function blSaved(msg,color){ var el=document.getElementById('bl-saved'); if(el){ el.textContent=msg||''; el.style.color=color||'var(--text3)'; } }
 
   async function loadRecords(ym){
-    blRecords={}; blDirty={};
+    blRecords={}; blDirty={}; blUtilEarlySel={};
     if(blDemo){ Object.keys(blDemoRec).forEach(function(k){ var r=blDemoRec[k]; if(r.ym===ym) blRecords[r.round+'|'+r.zone_id]=r; }); return; }
     var res=await sbFetchAll('/rest/v1/billing_records?ym=eq.'+ym+'&select=*');
     var arr=Array.isArray(res.data)?res.data:[];
@@ -33748,15 +33757,35 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   var blDemoArc=[];   // 示範用:已封存紀錄
   var blDemoArcSeq=0;
   // 共用載入:每次進頁都重抓 daily_output,確保「報驗→每日產量」的更新即時同步
+  // 水電請款索引:掃「請款核對(billing_records)」與「請款紀錄(billing_archive)」,
+  // 只要某工程區的水電請款價格有填過(含「NT合併」「和算」這類文字),就記下最早的那一次。
+  // 之後不論哪個月再出現零星產量,水電都只顯示「mm/dd已請款」,不再重複計價、也不列入未請款。
+  function utilPaidTake(r){
+    if(!r||r.zone_id==null) return;
+    if(!billedValue(r.util_bill_price)) return;
+    var id=String(r.zone_id), key=String(r.ym)+'|'+(+r.round||0), cur=blUtilPaid[id];
+    if(cur && cur.key<=key) return;
+    blUtilPaid[id]={ key:key, ym:r.ym, round:+r.round||0, date:r.bill_date||'' };
+  }
   async function blLoadBase(){
-    if(blDemo) return;
+    if(blDemo){
+      blUtilPaid={};
+      Object.keys(blDemoRec).forEach(function(k){ utilPaidTake(blDemoRec[k]); });
+      blDemoArc.forEach(utilPaidTake);
+      return;
+    }
     var res=await Promise.all([
       sbFetchAll('/rest/v1/daily_output?select=date,proj_num,zone_code,net_weight,company'),
       sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,sub_code,proc_code,unit_price,util_price,util_weight_kg,util_proc_code,price_note,status'),
       sbFetchAll('/rest/v1/projects?select=id,proj_num,company'),
       sbFetchAll('/rest/v1/components?select=zone_id,qty'),
-      sbFetchAll('/rest/v1/labor_orders?select=bill_date,actual_amount,retention,has_retention')
+      sbFetchAll('/rest/v1/labor_orders?select=bill_date,actual_amount,retention,has_retention'),
+      sbFetchAll('/rest/v1/billing_records?select=zone_id,ym,round,util_bill_price,bill_date'),
+      sbFetchAll('/rest/v1/billing_archive?select=zone_id,ym,round,util_bill_price,bill_date')
     ]);
+    blUtilPaid={};
+    (Array.isArray(res[5].data)?res[5].data:[]).forEach(utilPaidTake);
+    (Array.isArray(res[6].data)?res[6].data:[]).forEach(utilPaidTake);
     blLabor=Array.isArray(res[4].data)?res[4].data:[];
     var proj={};
     var pr=Array.isArray(res[2].data)?res[2].data:((typeof allBOM!=='undefined'&&Array.isArray(allBOM))?allBOM:[]);
@@ -33926,7 +33955,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       mk('2026-04-20','A101','Z1',2000,'鎮山'), // → 5月第一次
       mk('2026-05-10','B202','Z1',1200,'麗生')  // → 5月第二次
     ];
-    blCompany={}; blLoaded=true; blRecords={}; blDirty={};
+    blCompany={}; blLoaded=true; blRecords={}; blDirty={}; blUtilPaid={}; blUtilEarlySel={};
     setMonthUI(defaultBillMonth());
     outputSwitchTab('billing');
     blRender();
@@ -33974,7 +34003,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     }
   }
 
-  function rangeRows(from,to){
+  function rangeRows(from,to,round){
     if(!from||!to) return [];
     var agg={};
     for(var i=0;i<blDaily.length;i++){
@@ -33989,15 +34018,39 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var tonv=o.kg/1000, up=num(z.unit_price), total=tonv*up;
       var hasUtil=z.util_weight_kg!=null;
       var zoneComplete=zoneCompleteAt(k,to);
-      var uW=(hasUtil&&zoneComplete)?num(z.util_weight_kg)/1000:null;
-      var uTotal=(uW==null)?0:uW*num(z.util_price);
-      return { key:k, zid:(z.zid==null?null:z.zid), proj_num:o.proj_num, zone_code:o.zone_code,
+      var zid=(z.zid==null?null:z.zid);
+      var fullW=hasUtil?num(z.util_weight_kg)/1000:null;
+      // 提早請款:全區還沒完成,但在「水電重量」下拉選了本區水電重量(只開放第二次計價)
+      var early=(+round===2)&&hasUtil&&!zoneComplete&&utilEarlyOn(round,zid);
+      // 已在其他期別請過水電 → 本列只顯示「mm/dd已請款」,重量/總價都不再計入
+      var paid=hasUtil?utilPaidElsewhere(zid,blMonth,round):null;
+      var uW=(hasUtil&&(zoneComplete||early))?fullW:null;
+      var uTotal=(uW==null||paid)?0:uW*num(z.util_price);
+      return { key:k, zid:zid, proj_num:o.proj_num, zone_code:o.zone_code,
         proc_code:z.proc_code||'', sub_code:z.sub_code||'',
         tons:tonv, qty:o.qty, unit_price:up, util_price:num(z.util_price), total:total, price_note:z.price_note||'',
-        util_proc_code:z.util_proc_code||'', util_weight:uW, util_total:uTotal,
-        has_util:hasUtil, util_pending:hasUtil&&!zoneComplete, project_complete:zoneComplete,
+        util_proc_code:z.util_proc_code||'', util_weight:uW, util_total:uTotal, util_weight_full:fullW,
+        has_util:hasUtil, util_pending:hasUtil&&!zoneComplete&&!early, util_early:early,
+        util_paid_label:paid?paidMd({bill_date:paid.date}):'',
+        project_complete:zoneComplete,
         company:companyOf(o.proj_num,k) };
     });
+  }
+  // 本次操作選過就聽本次的;沒選過就看已存檔的 util_weight——全區未完成卻存了重量,代表上次選的是提早請款。
+  function utilEarlyOn(round,zid){
+    if(zid==null) return false;
+    var k=round+'|'+zid;
+    if(blUtilEarlySel[k]!=null) return !!blUtilEarlySel[k];
+    var rec=blRecords[k];
+    return !!(rec && num(rec.util_weight)>0);
+  }
+  // 此工程區的水電已在「別的」產量月/次別請過 → 回傳那一次的紀錄,否則 null
+  function utilPaidElsewhere(zid,ym,round){
+    if(zid==null) return null;
+    var p=blUtilPaid[String(zid)];
+    if(!p) return null;
+    if(p.ym===ym && p.round===+round) return null;   // 就是這一格自己請的
+    return p;
   }
 
   function zoneCompleteAt(zk,toDate){
@@ -34038,11 +34091,11 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   window.blRenderRound=function(round){
     var f=document.getElementById('bl-r'+round+'-from'), t=document.getElementById('bl-r'+round+'-to');
     var from=f&&f.value, to=t&&t.value;
-    var rows=rangeRows(from,to);
+    var rows=rangeRows(from,to,round);
     // 第一次截止日已完成的工程區：把主件狀態與水電整列承接到第二次計價。
     if(round===2){
       var f1=document.getElementById('bl-r1-from'),t1=document.getElementById('bl-r1-to');
-      var firstRows=rangeRows(f1&&f1.value,t1&&t1.value);
+      var firstRows=rangeRows(f1&&f1.value,t1&&t1.value,1);
       var carry=[];
       firstRows.forEach(function(r){
         if(!r.has_util||!r.project_complete) return;
@@ -34051,6 +34104,9 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         var c=Object.assign({},r),r1=blRecords['1|'+r.zid]||{};
         c.carry_from_first=true; c.first_billed=billedValue(r1.bill_price); c.first_paid_label=c.first_billed?paidMd(r1):'';
         c.total_display=c.first_billed?null:c.total;
+        // 承接列是掛在第二次計價顯示的,水電「是否已在別期請過」要用第二次的身分重算
+        var cp=utilPaidElsewhere(c.zid,blMonth,2);
+        c.util_paid_label=cp?paidMd({bill_date:cp.date}):''; if(cp) c.util_total=0;
         carry.push(c);
       });
       rows=carry.concat(rows);
@@ -34074,12 +34130,23 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         ? '<td><input class="ov-in-l num bl-util-locked" disabled placeholder="第一次不請水電" title="第一次計價禁止輸入水電請款價格"></td>'
         : !row.has_util
           ? '<td class="num">—</td>'
+          : row.util_paid_label
+            ? '<td><input class="ov-in-l num bl-util-locked" disabled placeholder="'+escAttr(row.util_paid_label)+'" title="此工程區的水電已在其他期別請款,不再重複計價"></td>'
           : row.util_pending
             ? '<td><input class="ov-in-l num bl-util-locked" disabled placeholder="本區支數尚未完成" title="截至本次結束日，此工程區完成支數尚未達 BOM 總支數"></td>'
             : '<td><input id="'+pfx+'-uprice" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,row.zid,'util_bill_price')+' value="'+escAttr(fmtBill(ubp))+'" placeholder="水電請款" oninput="blCell('+round+','+row.zid+',\'util_bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>';
       var mainPriceCell=row.carry_from_first&&row.first_billed
         ? '<td class="num"><span class="ov-noutil">'+row.first_paid_label+'</span></td>'
         : '<td><input id="'+pfx+'-price" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,row.zid,'bill_price')+' value="'+escAttr(fmtBill(bp))+'" placeholder="請款價格" oninput="blCell('+round+','+row.zid+',\'bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>';
+      // 水電重量欄:已在別期請過 → mm/dd已請款;第二次計價且全區未完成 → 下拉(待全區完成／本區水電重量=提早請款)
+      var utilWeightCell = row.has_util&&row.util_paid_label
+        ? '<td class="num"><span class="ov-noutil">'+esc(row.util_paid_label)+'</span></td>'
+        : (round===2&&row.has_util&&!row.project_complete&&row.zid!=null&&!row.carry_from_first)
+          ? '<td class="num"><select class="bl-util-sel'+(row.util_early?' is-early':'')+'" title="全區尚未完成;要提早請款就改選本區水電重量" onchange="blUtilEarly(2,'+row.zid+',this.value)">'
+              +'<option value="0"'+(row.util_early?'':' selected')+'>待全區完成</option>'
+              +'<option value="1"'+(row.util_early?' selected':'')+'>'+t2(row.util_weight_full)+' t（提早請款）</option>'
+            +'</select></td>'
+          : '<td class="num">'+(row.util_pending?'<span class="bl-util-wait">待全區完成</span>':row.util_weight==null?'—':t2(row.util_weight))+'</td>';
       body+='<tr'+(row.has_util?' class="has-util'+(row.util_pending?' util-pending':'')+'"':'')+'>'
         +'<td>'+esc(row.proj_num)+'</td><td>'+esc(row.zone_code)+'</td>'
         +'<td>'+esc(row.proc_code)+'</td><td>'+esc(row.sub_code)+'</td>'
@@ -34087,8 +34154,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         +'<td class="num">'+(row.carry_from_first&&row.first_billed?'—':ntd(row.total))+'</td>'
         +mainPriceCell
         +'<td>'+esc(row.util_proc_code||'—')+'</td>'
-        +'<td class="num">'+(row.util_pending?'<span class="bl-util-wait">待全區完成</span>':row.util_weight==null?'—':t2(row.util_weight))+'</td>'
-        +'<td class="num">'+(row.util_pending?'—':row.util_weight==null?'—':money(row.util_total))+'</td>'
+        +utilWeightCell
+        +'<td class="num">'+(row.util_paid_label||row.util_pending?'—':row.util_weight==null?'—':money(row.util_total))+'</td>'
         +utilPriceCell
         +'<td class="num">'+(row.has_util?money(row.util_price):'—')+'</td>'
         +'<td class="num">'+(row.price_note&&String(row.price_note).trim()!==''?'<span class="ov-labor">'+esc(row.price_note)+'</span>':money(row.unit_price))+'</td>'
@@ -34294,6 +34361,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   }
   function gridKey(e,td){
     if(e.isComposing||e.keyCode===229) return;
+    if(e.target&&e.target.tagName==='SELECT') return;   // 水電重量下拉:方向鍵/Enter 交還瀏覽器選項操作
     var activeEl=blGridActive?gridCellAt(blGridActive.round,blGridActive.row,blGridActive.col):null;
     var base=activeEl||td;
     var mod=e.metaKey||e.ctrlKey;
@@ -34350,7 +34418,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var waterOnly=row.carry_from_first&&row.first_billed;
       estTotal+=(waterOnly?0:row.total); utilTotal+=row.util_total; tons+=(waterOnly?0:row.tons); qty+=(waterOnly?0:row.qty);
       var rec=blRecords[round+'|'+row.zid]||{};
-      var rowBilled=billNum(rec.bill_price)+(round===1||row.util_pending?0:billNum(rec.util_bill_price));
+      var rowBilled=billNum(rec.bill_price)+(round===1||row.util_pending||row.util_paid_label?0:billNum(rec.util_bill_price));
       billed+=rowBilled;
       var co=row.company||'(未分類)';
       byCo[co]=(byCo[co]||0)+rowBilled;   // 鎮山/麗生 = 各公司「已請款」金額
@@ -34390,6 +34458,18 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(blAutosaveTimer){ clearTimeout(blAutosaveTimer); blAutosaveTimer=null; }
     if(Object.keys(blDirty).some(function(k){return blDirty[k];})) await blSave(true);
   }
+  // 「水電重量」下拉:待全區完成(0) / 本區水電重量(1,提早請款)。
+  // 選擇本身靠 billing_records.util_weight 存檔——有重量就是提早請款,不必動資料表結構。
+  window.blUtilEarly=function(round,zid,val){
+    var k=round+'|'+zid, on=(String(val)==='1');
+    blUtilEarlySel[k]=on;
+    var rec=blRecords[k]||(blRecords[k]={round:round,zone_id:zid});
+    if(!on){ rec.util_bill_price=null; }   // 改回待全區完成 → 一併清掉已填的水電請款價格
+    blDirty[k]=true;
+    blSaved('編輯中…','var(--text3)');
+    blRenderRound(round);      // 重繪:重量/水電總價/請款價格欄的鎖定狀態都跟著變
+    scheduleBlAutosave();
+  };
   window.blCell=function(round,zid,field,val){
     var k=round+'|'+zid;
     var rec=blRecords[k]||(blRecords[k]={round:round,zone_id:zid});
@@ -34544,20 +34624,38 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
           company:comp, status:mainSt, note:(rec.note||'') });
         grand+=total;
       }
-      // 水電：單一工程區的完成支數達到該區 BOM 總支數後，才進入未請款清單。
-      var zoneComplete=zoneCompleteAt(o.zkey,billingPeriodEnd(o.ym,o.round));
-      var uW=(z.util_weight_kg==null||!zoneComplete)?null:num(z.util_weight_kg)/1000;
-      var uTotal=(uW==null)?0:uW*num(z.util_price);
-      if(o.round===2 && uW!=null && uTotal>0){
-        var utilSt=partStatus(rec.util_bill_price, z.util_price, null);
-        if(arcUtil[akey]) utilSt='已請款';   // 已在請款紀錄→視為已請款
-        if(utilSt!=='已請款'){
-          lines.push({ round:o.round, kind:'水電', proj_num:o.proj_num, zone_code:o.zone_code,
-            proc_code:z.util_proc_code||'', sub_code:z.sub_code||'', tons:uW, qty:null, amount:uTotal,
-            company:comp, status:utilSt, note:(rec.note||'') });
-          grand+=uTotal;
-        }
-      }
+    });
+    // ── 水電(整區一筆,掛第二次計價) ──
+    // 舊做法是綁在「本月第二次有產量」的群組上,所以整區在第一次就完工、或本月產量只落在第一次的工程區,
+    // 請款核對明明有水電列(第一次完成會承接到第二次),未請款卻完全抓不到。改成逐工程區判定:
+    //   1. 只看「該產量月期末(第二次結束日)該區是否完成」,產量落在第一或第二次都算;
+    //   2. 或該月在請款核對選了「提早請款」(billing_records 第二次存了 util_weight);
+    //   3. 同一區只列在最早符合的那個產量月,避免之後每個月的零星產量重複算一次水電;
+    //   4. 只要任一期別已請過水電(blUtilPaid)就整筆不列——含提早請款。
+    // 水電單價未議價(0 元)仍要列出,比照主件顯示「未議價」,不再因 uTotal=0 被吃掉。
+    var utilCand={};
+    Object.keys(groups).forEach(function(gk){
+      var o=groups[gk], z=blZoneMap[o.zkey]||{};
+      if(z.util_weight_kg==null) return;
+      var zid=(z.zid==null?null:z.zid);
+      var end=billingPeriodEnd(o.ym,2)||billingPeriodEnd(o.ym,1);
+      var early=!!(zid!=null && recIdx[o.ym+'|2|'+zid] && num(recIdx[o.ym+'|2|'+zid].util_weight)>0);
+      if(!early && !zoneCompleteAt(o.zkey,end)) return;
+      var cur=utilCand[o.zkey];
+      if(!cur || o.ym<cur.ym) utilCand[o.zkey]={ ym:o.ym, zkey:o.zkey, proj_num:o.proj_num, zone_code:o.zone_code, z:z, zid:zid };
+    });
+    Object.keys(utilCand).forEach(function(zk){
+      var c=utilCand[zk], z=c.z, zid=c.zid;
+      if(zid!=null && blUtilPaid[String(zid)]) return;     // 任一期別已請過 → 不列
+      var rec=(zid==null)?{}:(recIdx[c.ym+'|2|'+zid]||{});
+      var utilSt=partStatus(rec.util_bill_price, z.util_price, null);
+      if(arcUtil[c.ym+'|2|'+zid] || settledUtil[c.ym+'|'+zk]) utilSt='已請款';
+      if(utilSt==='已請款') return;
+      var uW=num(z.util_weight_kg)/1000, uTotal=uW*num(z.util_price);
+      (byYm[c.ym]||(byYm[c.ym]=[])).push({ round:2, kind:'水電', proj_num:c.proj_num, zone_code:c.zone_code,
+        proc_code:z.util_proc_code||'', sub_code:z.sub_code||'', tons:uW, qty:null, amount:uTotal,
+        company:companyOf(c.proj_num,zk), status:utilSt, note:(rec.note||'') });
+      grand+=uTotal;
     });
     var ubq=outputQuery('ub-search');
     if(ubq){
