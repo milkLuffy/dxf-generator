@@ -41888,6 +41888,8 @@ function register(key, config) {
   return config;
 }
 const cfgOf = k => CFG[k];
+// 欄位一律取自本引擎登記的 cfg.cols。(舊版誤用生產模組的 spxCols(key)——那支讀的是 SPX[key],對「扣款明細／修改構件」這些非生產分頁回傳空陣列,整個表身只剩刪除鈕。)
+const gxColsOf = k => ((CFG[k]||{}).cols)||[];
 const arrOf = k => CFG[k].arr();
 
 /* ── 值 / 型別 ────────────────────────────────────────────────────────────*/
@@ -41973,7 +41975,7 @@ function renderBody(key){ const cfg=cfgOf(key), body=document.getElementById('gx
   const dataIdx=vis.filter(i=>!rowIsBlank(cfg,arr[i]));
   if(cfg.sort) dataIdx.sort((a,b)=>cfg.sort(arr[a],arr[b]));
   let html=''; blankIdx.forEach(i=>html+=rowHtml(key,i)); dataIdx.forEach(i=>html+=rowHtml(key,i));
-  if(!dataIdx.length && !blankIdx.length) html='<tr><td colspan="'+(spxCols(key).length+1)+'" style="text-align:center;color:var(--text3);padding:24px">尚無資料</td></tr>';
+  if(!dataIdx.length && !blankIdx.length) html='<tr><td colspan="'+(gxColsOf(key).length+1)+'" style="text-align:center;color:var(--text3);padding:24px">尚無資料</td></tr>';
   body.innerHTML=html;
   const cnt=document.getElementById('gxCount-'+key); if(cnt) cnt.textContent=dataIdx.length+' 列';
   if(cfg.afterRender) cfg.afterRender(key,dataIdx.map(i=>arr[i]));
@@ -41981,13 +41983,13 @@ function renderBody(key){ const cfg=cfgOf(key), body=document.getElementById('gx
   equalizeWide(key);
 }
 function equalizeWide(key){ const cfg=cfgOf(key), body=document.getElementById('gxBody-'+key); if(!body) return;
-  spxCols(key).forEach((c,ci)=>{ if(!c.wide) return; const inputs=[]; let max=0;
+  gxColsOf(key).forEach((c,ci)=>{ if(!c.wide) return; const inputs=[]; let max=0;
     Array.from(body.children).forEach(tr=>{ const td=tr.children[ci]; if(!td) return; const inp=td.querySelector('input'); if(!inp) return; inputs.push(inp); const w=inp.offsetWidth; if(w>max) max=w; });
     if(!inputs.length) return; max=Math.max(400,Math.min(max,640)); inputs.forEach(inp=>{ inp.style.width=max+'px'; }); });
 }
 function rowHtml(key,i){ const cfg=cfgOf(key), arr=arrOf(key), r=arr[i], blank=rowIsBlank(cfg,r), RO=blank?'':' readonly';
   let h='<tr data-key="'+r._key+'"'+(blank?' class="lt-input-row"':'')+'>';
-  spxCols(key).forEach(c=>{ const td=c.wide?'<td class="col-wide">':'<td>';
+  gxColsOf(key).forEach(c=>{ const td=c.wide?'<td class="col-wide">':'<td>';
     if(c.status){ const cur=r[c.k]||c.def||'-';
       const opts=c.sel.map(o=>'<option value="'+esc(o)+'"'+((cur===o)?' selected':'')+'>'+esc((typeof SPX_STATUS_LABEL!=='undefined'&&SPX_STATUS_LABEL[o])||o)+'</option>').join('');
       h+=td+'<select class="lt-edit-sel stcell-'+esc(cur)+'" onchange="this.className=\'lt-edit-sel stcell-\'+this.value;GridXL.edit(\''+key+'\','+i+',\''+c.k+'\',this.value)">'+opts+'</select></td>';
@@ -42033,7 +42035,7 @@ function deleteSelection(t){ const key=keyOf(t); if(!key) return; const cfg=cfgO
   snapshotNow(key);
   for(let r=rect.r1;r<=rect.r2;r++){ const tr=rows[r]; if(!tr||!tr.dataset.key) continue;
     const idx=arr.findIndex(x=>String(x._key)===tr.dataset.key); if(idx<0) continue;
-    const _dcols=spxCols(key); for(let c=rect.c1;c<=rect.c2 && c<_dcols.length;c++){ const col=_dcols[c]; if(col.combo) col.combo.forEach(f=>arr[idx][f]=''); else if(!col.noData) arr[idx][col.k]=(col.num||col.date)?null:''; }
+    const _dcols=gxColsOf(key); for(let c=rect.c1;c<=rect.c2 && c<_dcols.length;c++){ const col=_dcols[c]; if(col.combo) col.combo.forEach(f=>arr[idx][f]=''); else if(!col.noData) arr[idx][col.k]=(col.num||col.date)?null:''; }
     markDirty(key,idx);
   }
   render(key);
@@ -42112,7 +42114,7 @@ function pasteGrid(key,cells2d,anchor){ const cfg=cfgOf(key), arr=arrOf(key);
   snapshotNow(key);
   const domRows=Array.from(document.getElementById('gxBody-'+key).children);
   const startC=anchor.c, affected=[];
-  const _pcols=spxCols(key);
+  const _pcols=gxColsOf(key);
   const fill=(ri,line)=>{ const row=arr[ri]; line.forEach((val,dc)=>{ const ci=startC+dc; if(ci>=_pcols.length) return; const col=_pcols[ci]; if(col.combo) setCombo(row,col,val); else row[col.k]= (col.bool||col.num||col.date)?coerce(cfg,col,val):val; }); affected.push(ri); };
   const anchorTr=domRows[anchor.r];
   const anchorIdx=(anchorTr&&anchorTr.dataset&&anchorTr.dataset.key)?arr.findIndex(r=>String(r._key)===anchorTr.dataset.key):-1;
