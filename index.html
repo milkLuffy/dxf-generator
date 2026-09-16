@@ -4842,6 +4842,7 @@ window.normalizeFullWidth=function(value){
           </div>
           <button class="filter-select" id="ov-edit-toggle" onclick="outputToggleEdit()">✏️ 編輯</button>
           <button class="filter-select" onclick="clearColFilters('ovprice')">清除篩選</button>
+          <span id="ov-sub-note" style="font-family:var(--mono);font-size:12px;color:var(--purple);margin-left:12px"></span>
           <span id="output-saved" style="font-family:var(--mono);font-size:12px;color:var(--text3);margin-left:12px"></span>
         </div>
         <div class="card" style="padding:0;overflow:hidden">
@@ -32713,6 +32714,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var utilOk = !hasUtil(row) || row.util_price!=null;
     return mainOk && utilOk;
   }
+  // 轉包(BOM 工程區狀態):案子已包出去,不再是我們的工程 → 單價、請款核對、未請款一律排除
+  function isSubcontract(z){ return String(z&&z.status||'').trim()==='轉包'; }
   function setSaved(msg,color){ var el=document.getElementById('output-saved'); if(el){ el.textContent=msg||''; el.style.color=color||'var(--text3)'; } }
   window.outputSetNegFilter=function(v){ negFilter=v;
     ['all','yes','no','labor'].forEach(function(x){ var b=document.getElementById('ov-neg-'+x); if(b) b.classList.toggle('active',x===v); });
@@ -32752,6 +32755,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     rows=zs.map(function(z){
       var p=projById[String(z.project_id)]||{num:'',name:''};
       return { zid:z.id, proj_num:p.num, zone_code:z.zone_code||'', proc_code:z.proc_code||'', sub_code:z.sub_code||'',
+               status:         String(z.status||'').trim(),
                util_proc_code: z.util_proc_code||'',
                price_note:     z.price_note||'',
                unit_price:     z.unit_price==null?null:Number(z.unit_price),
@@ -32790,9 +32794,11 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     // 表頭欄位篩選（比照明細輸入）：蒐集各欄可選值
     var colVals={proj_num:[],zone_code:[],proc_code:[],sub_code:[],util_proc_code:[]};
     rows.forEach(function(r){ for(var k in colVals) colVals[k].push(r[k]||''); });
-    var body='', shown=0;
+    var body='', shown=0, subHidden=0;
     for(var i=0;i<rows.length;i++){
       var row=rows[i];
+      // 轉包工程區:案子已包出去,不是我們在做 → 單價整列不顯示(計價/未請款同樣排除)
+      if(isSubcontract(row)){ subHidden++; continue; }
       if(q){ var hay=(row.proj_num+' '+row.zone_code+' '+row.proc_code+' '+row.sub_code).toLowerCase(); if(hay.indexOf(q)<0) continue; }
       // 議價篩選
       if(negFilter==='yes' && !isNegotiated(row)) continue;
@@ -32864,6 +32870,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       '</tr>';
     }
     if(!shown){ body='<tr><td colspan="9" class="empty-state">找不到符合條件的資料</td></tr>'; }
+    var subNote=document.getElementById('ov-sub-note');
+    if(subNote) subNote.textContent=subHidden?('已排除轉包工程區 '+subHidden+' 區'):'';
     function thf(label,key){
       var vals=JSON.stringify(colVals[key]).replace(/'/g,'&#39;');
       var act=colFilterActive('ovprice',key)?' active':'';
@@ -33799,7 +33807,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     zr.forEach(function(z){
       var pn=proj[String(z.project_id)]||'';
       var zk=zkey(pn,z.zone_code); zoneKeyById[String(z.id)]=zk;
-      blZoneMap[zk]={ zid:z.id, proc_code:z.proc_code, sub_code:z.sub_code,
+      blZoneMap[zk]={ zid:z.id, proc_code:z.proc_code, sub_code:z.sub_code, status:String(z.status||'').trim(),
         unit_price:z.unit_price, util_price:z.util_price, util_weight_kg:z.util_weight_kg, util_proc_code:z.util_proc_code||'', price_note:z.price_note||'' };
     });
     // 單一工程區完成判斷：該區累計完成/報驗支數 >= 該區 BOM 總支數。
@@ -34013,6 +34021,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       o.qty++; o.kg+=num(r.net_weight);
     }
     var keys=Object.keys(agg).sort(function(a,b){ return a<b?-1:a>b?1:0; });
+    // 轉包工程區整列不計價(已填過請款價格的保留,見 zoneIsSub 註解)
+    keys=keys.filter(function(k){ var z=blZoneMap[k]||{}; return !zoneIsSub(k) || subHasBill(round,(z.zid==null?null:z.zid)); });
     return keys.map(function(k){
       var o=agg[k], z=blZoneMap[k]||{};
       var tonv=o.kg/1000, up=num(z.unit_price), total=tonv*up;
@@ -34026,7 +34036,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var paid=hasUtil?utilPaidElsewhere(zid,blMonth,round):null;
       var uW=(hasUtil&&(zoneComplete||early))?fullW:null;
       var uTotal=(uW==null||paid)?0:uW*num(z.util_price);
-      return { key:k, zid:zid, proj_num:o.proj_num, zone_code:o.zone_code,
+      return { key:k, zid:zid, proj_num:o.proj_num, zone_code:o.zone_code, is_sub:zoneIsSub(k),
         proc_code:z.proc_code||'', sub_code:z.sub_code||'',
         tons:tonv, qty:o.qty, unit_price:up, util_price:num(z.util_price), total:total, price_note:z.price_note||'',
         util_proc_code:z.util_proc_code||'', util_weight:uW, util_total:uTotal, util_weight_full:fullW,
@@ -34053,6 +34063,14 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     return p;
   }
 
+  // 轉包(BOM 工程區狀態):案子已包出去,不再是我們的工程 → 不計價、不列未請款(單價分頁同樣排除)。
+  // 保險起見:該期別已經填過請款價格(或水電請款價格)的列仍保留,免得轉包設定一下去,舊帳從畫面上消失。
+  function zoneIsSub(zk){ return String((blZoneMap[zk]||{}).status||'').trim()==='轉包'; }
+  function subHasBill(round,zid){
+    if(zid==null) return false;
+    var rec=blRecords[round+'|'+zid];
+    return !!(rec && (billedValue(rec.bill_price)||billedValue(rec.util_bill_price)));
+  }
   function zoneCompleteAt(zk,toDate){
     var need=blZoneNeed[zk]||0,done=0;
     if(!need||!toDate) return false;
@@ -34151,14 +34169,14 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         +'<td>'+esc(row.proj_num)+'</td><td>'+esc(row.zone_code)+'</td>'
         +'<td>'+esc(row.proc_code)+'</td><td>'+esc(row.sub_code)+'</td>'
         +'<td class="num">'+(row.carry_from_first&&row.first_billed?'—':t2(row.tons))+'</td><td class="num">'+(row.carry_from_first&&row.first_billed?'—':intf(row.qty))+'</td>'
-        +'<td class="num">'+(row.carry_from_first&&row.first_billed?'—':ntd(row.total))+'</td>'
+        +'<td class="num">'+(row.is_sub||(row.carry_from_first&&row.first_billed)?'—':ntd(row.total))+'</td>'
         +mainPriceCell
         +'<td>'+esc(row.util_proc_code||'—')+'</td>'
         +utilWeightCell
         +'<td class="num">'+(row.util_paid_label||row.util_pending?'—':row.util_weight==null?'—':money(row.util_total))+'</td>'
         +utilPriceCell
-        +'<td class="num">'+(row.has_util?money(row.util_price):'—')+'</td>'
-        +'<td class="num">'+(row.price_note&&String(row.price_note).trim()!==''?'<span class="ov-labor">'+esc(row.price_note)+'</span>':money(row.unit_price))+'</td>'
+        +'<td class="num">'+(row.is_sub?'—':row.has_util?money(row.util_price):'—')+'</td>'
+        +'<td class="num">'+(row.is_sub?'<span class="status-badge 轉包">轉包</span>':row.price_note&&String(row.price_note).trim()!==''?'<span class="ov-labor">'+esc(row.price_note)+'</span>':money(row.unit_price))+'</td>'
         +'<td><input id="'+pfx+'-date" class="ov-in-l bl-grid-cell"'+gridAttrs(round,row.zid,'bill_date')+' type="date" value="'+escAttr(bd)+'" onchange="blCell('+round+','+row.zid+',\'bill_date\',this.value)"></td>'
         +'<td><span id="'+pfx+'-status" class="bill-status-pill '+billStatusClassName(stDisp)+'">'+esc(stDisp)+'</span></td>'
         +'<td'+coStyle(row.company)+'>'+esc(row.company||'—')+'</td>'
@@ -34416,7 +34434,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     rows.forEach(function(row){
       if(row.zid==null) return;
       var waterOnly=row.carry_from_first&&row.first_billed;
-      estTotal+=(waterOnly?0:row.total); utilTotal+=row.util_total; tons+=(waterOnly?0:row.tons); qty+=(waterOnly?0:row.qty);
+      // 轉包列只為了保留已填的請款金額才留著,預估總價/水電總價不計入(噸數、支數是產量,照算)
+      estTotal+=(waterOnly||row.is_sub?0:row.total); utilTotal+=(row.is_sub?0:row.util_total); tons+=(waterOnly?0:row.tons); qty+=(waterOnly?0:row.qty);
       var rec=blRecords[round+'|'+row.zid]||{};
       var rowBilled=billNum(rec.bill_price)+(round===1||row.util_pending||row.util_paid_label?0:billNum(rec.util_bill_price));
       billed+=rowBilled;
@@ -34590,6 +34609,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     blDaily.forEach(function(r){
       if(!r.date) return;
       var yr=ymRoundOf(r.date); if(yr.ym<UB_MIN_YM) return; var k=zkey(r.proj_num,r.zone_code);
+      if(zoneIsSub(k)) return;               // 轉包:案子不是我們的,不列未請款(主件與水電都不算)
       var gk=yr.ym+'|'+yr.round+'|'+k;
       var o=groups[gk]||(groups[gk]={ym:yr.ym,round:yr.round,zkey:k,proj_num:r.proj_num,zone_code:r.zone_code,qty:0,kg:0});
       o.qty++; o.kg+=num(r.net_weight);
@@ -34599,6 +34619,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     blLegacyUnbilled.forEach(function(r){
       if(r.ym<'2025-08'||r.ym>'2026-06') return;
       var isUtil=/水電/.test(r.zone_code||''),zone=String(r.zone_code||'').replace(/水電/g,''),zk=zkey(r.proj_num,zone);
+      if(zoneIsSub(zk)) return;              // 轉包:舊月快照的未請款也一併排除
       var settledKey=r.ym+'|'+zk; if((isUtil&&settledUtil[settledKey])||(!isUtil&&settledMain[settledKey])) return;
       var amount=billNum(r.amount),tons=num(r.tons),qty=String(r.qty||'').trim()?num(r.qty):null;
       (byYm[r.ym]||(byYm[r.ym]=[])).push({round:r.round||1,kind:isUtil?'水電':'主件',proj_num:r.proj_num,zone_code:zone,
