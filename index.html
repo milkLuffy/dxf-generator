@@ -760,6 +760,47 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .dash-date-nav{display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap}
 .dash-nav-btn{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text2);font-family:var(--mono);font-size:11px;padding:4px 10px;cursor:pointer;white-space:nowrap;transition:all .15s}
 .dash-nav-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+/* ── 「截圖分享」共用樣式:按鈕(主頁統計 / 產值報表)與預覽視窗 ── */
+.dash-shot-btn{display:inline-flex;align-items:center;gap:5px;margin-left:auto;background:#06c755;border-color:#06c755;color:#fff;font-weight:600}
+.dash-shot-btn:hover{background:#05b34c;border-color:#05b34c;color:#fff}
+.dash-shot-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.dash-shot-btn:disabled{opacity:.55;cursor:default}
+/* 產值報表:分頁列 + 截圖鈕同一列(底線畫在外層,按鈕不會壓到分頁) */
+.ovr-tabs-row{display:flex;align-items:flex-end;gap:8px;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.ovr-tabs-row>.layout-tabs{flex:1 1 auto;min-width:0;margin-bottom:0;border-bottom:none}
+.ovr-shot-btn{flex:none;margin-bottom:6px}
+/* <input type=date> 被 html2canvas 畫出來時文字會貼齊上緣、切到邊框,
+   所以截圖的複本裡改成同樣外觀的純文字 span */
+.shot-date-text{display:inline-block;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:12px;padding:4px 8px;line-height:1.35}
+#shot-mask{position:fixed;inset:0;background:rgba(0,0,0,.66);backdrop-filter:blur(3px);z-index:13500;display:flex;align-items:center;justify-content:center;padding:20px}
+.shot-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;width:min(920px,96vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 48px rgba(0,0,0,.5)}
+.shot-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border)}
+.shot-title{font-family:var(--mono);font-size:12px;color:var(--text2);letter-spacing:.05em}
+.shot-x{margin-left:auto;background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;line-height:1;padding:2px 6px}
+.shot-x:hover{color:var(--text)}
+.shot-preview{flex:1 1 auto;min-height:0;overflow:auto;padding:12px;background:var(--bg);display:flex;flex-direction:column;gap:10px}
+.shot-item{flex:none;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--bg2)}
+.shot-item-head{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--border)}
+.shot-item-name{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.shot-mini{margin-left:auto;display:flex;gap:6px}
+.shot-mini .dash-nav-btn{padding:3px 10px;font-size:11px}
+.shot-item img{display:block;max-width:100%;height:auto}
+.shot-btns{display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px;border-top:1px solid var(--border)}
+.shot-btns .dash-nav-btn{font-size:12px;padding:8px 14px}
+.shot-line{background:#06c755;border-color:#06c755;color:#fff;font-weight:600}
+.shot-line:hover{background:#05b34c;border-color:#05b34c;color:#fff}
+.shot-hint{font-family:var(--mono);font-size:11px;color:var(--text3);margin-left:auto;align-self:center}
+@media(max-width:768px){
+  .dash-shot-btn{margin-left:0;flex:1 1 100%;justify-content:center;min-height:38px;font-size:13px}
+  /* 分頁列改成橫向捲動(同硬體/勞務頁),截圖鈕自成一列 */
+  .ovr-tabs-row{flex-wrap:wrap;align-items:stretch;gap:0}
+  .ovr-tabs-row>.layout-tabs{flex:1 1 100%;overflow-x:auto;scrollbar-width:none}
+  .ovr-tabs-row>.layout-tabs::-webkit-scrollbar{display:none}
+  .ovr-tabs-row .layout-tab{flex:none;white-space:nowrap;padding:10px 14px}
+  .ovr-shot-btn{flex:1 1 100%;justify-content:center;margin:8px 0 2px;min-height:40px}
+  .shot-btns .dash-nav-btn{flex:1 1 auto;min-height:42px;font-size:13px}
+  .shot-hint{flex:1 1 100%;margin-left:0;text-align:center}
+}
 /* ── 每日產量回報卡片 ── */
 .dash-chip{font-family:var(--mono);font-size:11px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:2px 10px;white-space:nowrap}
 .dash-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
@@ -3198,6 +3239,9 @@ window.normalizeFullWidth=function(value){
         <button class="btn-sm btn-export" onclick="navTo('bom')">全部</button>
       </div>
 
+      <!-- 截圖分享區:日期列 + 每日產量 + 線上進度(dashShareShot 只截這一塊) -->
+      <div id="dash-shot-area">
+
       <!-- 共用日期工具 (每日產量 + 線上進度 共用) -->
       <div class="dash-date-nav" style="margin-bottom:16px">
         <span style="font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.05em">統計日期</span>
@@ -3206,6 +3250,9 @@ window.normalizeFullWidth=function(value){
         <button class="dash-nav-btn" onclick="dashNavDate(1)">後一天 »</button>
         <button class="dash-nav-btn" onclick="dashNavDate(0)">今日</button>
         <span class="date-wk-show" id="dash-date-show">—</span>
+        <button class="dash-nav-btn dash-shot-btn" data-shot-hide onclick="dashShareShot()" title="把下方統計截成圖片,分享到 LINE 群組">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>截圖分享
+        </button>
       </div>
 
       <!-- 每日產量 + 線上進度 左右並排(窄螢幕自動堆疊) -->
@@ -3274,6 +3321,7 @@ window.normalizeFullWidth=function(value){
         </div>
 
       </div>
+      </div><!-- /#dash-shot-area -->
     </div>
 
     <!-- BOM -->
@@ -4805,13 +4853,18 @@ window.normalizeFullWidth=function(value){
         </div>
       </div>
       <div id="output-report-panel" style="display:none">
-        <div class="layout-tabs" style="margin-bottom:14px">
+        <div class="ovr-tabs-row">
+        <div class="layout-tabs">
           <button class="layout-tab"        id="ovtab-one" onclick="ovrView('one')">一頁回報</button>
           <button class="layout-tab active" id="ovtab-daily" onclick="ovrView('daily')">每日產值回報</button>
           <button class="layout-tab"        id="ovtab-price" onclick="ovrView('price')">計價統計</button>
           <button class="layout-tab"        id="ovtab-manu"  onclick="ovrView('manu')">製造統計</button>
           <button class="layout-tab"        id="ovtab-eg"    onclick="ovrView('eg')">長榮製造統計</button>
           <button class="layout-tab"        id="ovtab-hist"  onclick="ovrView('hist')">歷史總覽</button>
+        </div>
+        <button class="dash-nav-btn dash-shot-btn ovr-shot-btn" data-shot-hide onclick="ovrShareShots()" title="一次截「每日產值回報／計價統計／製造統計／長榮製造統計」四張,分享到 LINE 群組">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>截圖分享 4 張
+        </button>
         </div>
 
         <!-- 一頁回報：用一個基準日期整合四種日／週期／月統計 -->
@@ -15980,6 +16033,270 @@ function dashToggleProgCols() {
   const collapsed = t.classList.toggle('dash-prog-collapsed');
   if (b) b.textContent = collapsed ? '顯示支數明細 ▼' : '收合支數明細 ▲';
 }
+
+/* ══ 截圖分享(主頁統計 / 產值報表共用)════════════════════════════
+   用 html2canvas-pro 把指定區塊畫成 PNG(pro 版才支援本站大量使用的 color-mix() 顏色),
+   再開預覽視窗讓你選:分享到 LINE / 複製圖片 / 下載。
+   navigator.share() 一定要由「使用者按鈕」直接觸發,所以先截圖開視窗、
+   再由視窗裡的按鈕呼叫,才不會被瀏覽器當成失去使用者操作而擋掉。 */
+const SC_SHOT_LIB = 'https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.11/dist/html2canvas-pro.min.js';
+let scShotBusy = false;
+
+// 檔名用畫面上的日期,沒有就用今天
+function scShotDateOf(inputId) {
+  const el = document.getElementById(inputId);
+  if (el && el.value) return el.value;
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// 切分頁後先讓瀏覽器把版面畫完,再截圖
+function scShotNextFrame() {
+  return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+}
+
+// 裁掉右邊／下面整片背景色的空白,讓圖片寬高貼齊實際內容
+// (表格比容器窄時,html2canvas 會照容器寬度畫,右邊會留一大片空白)
+// 分頁列底下那種「整條橫線」不算內容,否則永遠裁不掉 → 右邊界只採「連續 6 列以上都畫得到」的位置
+function scShotTrim(canvas, bgCss) {
+  const m = /(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(bgCss || '');
+  if (!m) return canvas;
+  const w = canvas.width, h = canvas.height;
+  let data;
+  try { data = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data; }
+  catch (e) { return canvas; }                        // 讀不到像素就原樣回傳
+  const br = +m[1], bg = +m[2], bb = +m[3], TOL = 2;  // 容差要小於 --bg 與 --bg3 的色差,不然淺色主題的卡片會被當成空白
+  const isBg = i => Math.abs(data[i] - br) <= TOL && Math.abs(data[i+1] - bg) <= TOL && Math.abs(data[i+2] - bb) <= TOL;
+
+  const rowRight = new Int32Array(h);                 // 每列最右邊的非背景色像素
+  let bottom = -1;
+  for (let y = 0; y < h; y++) {
+    const row = y * w * 4;
+    let r = -1;
+    for (let x = w - 1; x >= 0; x--) { if (!isBg(row + x * 4)) { r = x; break; } }
+    rowRight[y] = r;
+    if (r >= 0) bottom = y;
+  }
+  if (bottom < 0) return canvas;                      // 整張都是背景色(沒資料),不裁
+
+  const WIN = 6, MARGIN = 8;                          // 1px 的橫線在 scale:2 只有 2 列,撐不滿 6 列
+  let right = -1;
+  for (let y = 0; y + WIN <= h; y++) {
+    let mn = rowRight[y];
+    for (let k = 1; k < WIN; k++) if (rowRight[y + k] < mn) mn = rowRight[y + k];
+    if (mn > right) right = mn;
+  }
+  right = Math.min(w - 1, right + MARGIN);
+  if (right < 0) return canvas;
+
+  const cw = right + 1, ch = bottom + 1;
+  if (cw >= w && ch >= h) return canvas;
+  const out = document.createElement('canvas');
+  out.width = cw; out.height = ch;
+  out.getContext('2d').drawImage(canvas, 0, 0, cw, ch, 0, 0, cw, ch);
+  return out;
+}
+
+// 把 id 指定的元素畫成 PNG blob
+async function scShotBlob(elId) {
+  const el = document.getElementById(elId);
+  if (!el) throw new Error('找不到截圖區塊:' + elId);
+  await scLoadLib('html2canvas-pro', SC_SHOT_LIB);
+  if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch(e){} }
+  const bg = getComputedStyle(document.body).backgroundColor || '#1e1e1e';
+  const canvas = await html2canvas(el, {
+    backgroundColor: bg,
+    scale: 2,                 // 2 倍解析度,在手機上放大看數字才不會糊
+    useCORS: true,
+    logging: false,
+    ignoreElements: n => !!(n && n.nodeType === 1 && n.hasAttribute && n.hasAttribute('data-shot-hide')),  // 按鈕本身不入鏡
+    // 只改「要截圖的那份複本」,畫面上的原本元素不動
+    onclone: (doc) => {
+      const cl = doc.getElementById(elId);
+      if (!cl) return;
+      // 日期/月份輸入框被 html2canvas 畫出來時文字會貼齊上緣、切到邊框 → 換成同樣外觀的純文字
+      cl.querySelectorAll('input[type="date"],input[type="month"]').forEach(inp => {
+        const sp = doc.createElement('span');
+        sp.className = 'shot-date-text';
+        sp.textContent = inp.value ? inp.value.replace(/-/g, '/') : '—';
+        if (inp.parentNode) inp.parentNode.replaceChild(sp, inp);
+      });
+    }
+  });
+  const trimmed = scShotTrim(canvas, bg);
+  // 四周補一圈留白(直接畫在畫布上,不動原本版面 → 表格欄寬不會被擠變)
+  const PAD = 24;
+  const out = document.createElement('canvas');
+  out.width = trimmed.width + PAD * 2;
+  out.height = trimmed.height + PAD * 2;
+  const ctx = out.getContext('2d');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, out.width, out.height);
+  ctx.drawImage(trimmed, PAD, PAD);
+  const blob = await new Promise(res => out.toBlob(res, 'image/png'));
+  if (!blob) throw new Error('轉成圖片失敗');
+  return blob;
+}
+
+/* 預覽視窗:分享 / 複製 / 下載。shots = [{ name:'檔名.png', label:'小標', blob }] */
+function scShotPreview(shots, title) {
+  const oldMask = document.getElementById('shot-mask'); if (oldMask) oldMask.remove();
+  const multi = shots.length > 1;
+  const files = shots.map(s => new File([s.blob], s.name, { type: 'image/png' }));
+  const urls  = [];
+
+  let canShareFile = false;
+  try { canShareFile = !!(navigator.share && navigator.canShare && navigator.canShare({ files })); } catch(e){}
+  const canCopy = !!(navigator.clipboard && window.ClipboardItem && window.isSecureContext);
+
+  const mask = document.createElement('div'); mask.id = 'shot-mask';
+  const box  = document.createElement('div'); box.className = 'shot-box';
+
+  const head = document.createElement('div'); head.className = 'shot-head';
+  const ttl  = document.createElement('div'); ttl.className = 'shot-title'; ttl.textContent = title + (multi ? ' · 共 ' + shots.length + ' 張' : '');
+  const x    = document.createElement('button'); x.className = 'shot-x'; x.type = 'button'; x.textContent = '✕';
+  head.appendChild(ttl); head.appendChild(x);
+
+  let done = false;
+  const close = () => { if (done) return; done = true; document.removeEventListener('keydown', onKey, true); urls.forEach(u => URL.revokeObjectURL(u)); mask.remove(); };
+  const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
+
+  const mk = (txt, cls) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'dash-nav-btn' + (cls ? ' ' + cls : ''); b.textContent = txt; return b; };
+  const doDownload = (url, name) => { const a = document.createElement('a'); a.href = url; a.download = name; a.click(); };
+  const doCopy = async (blob) => {
+    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); showToast('已複製圖片,到 LINE 群組直接貼上(Ctrl/⌘+V)'); return true; }
+    catch (err) { showToast('複製失敗,請改用「下載」'); return false; }
+  };
+
+  const prev = document.createElement('div'); prev.className = 'shot-preview';
+  shots.forEach((s, i) => {
+    const url = URL.createObjectURL(s.blob); urls.push(url);
+    const item = document.createElement('div'); item.className = 'shot-item';
+    if (multi) {   // 多張時每張自己一組「複製 / 下載」,方便只補其中一張
+      const h  = document.createElement('div'); h.className = 'shot-item-head';
+      const nm = document.createElement('span'); nm.className = 'shot-item-name'; nm.textContent = (i + 1) + '. ' + s.label;
+      const mini = document.createElement('span'); mini.className = 'shot-mini';
+      if (canCopy) { const c = mk('複製'); c.onclick = () => doCopy(s.blob); mini.appendChild(c); }
+      const d = mk('下載'); d.onclick = () => { doDownload(url, s.name); showToast('已下載 ' + s.name); }; mini.appendChild(d);
+      h.appendChild(nm); h.appendChild(mini); item.appendChild(h);
+    }
+    const img = document.createElement('img'); img.src = url; img.alt = s.label;
+    item.appendChild(img);
+    prev.appendChild(item);
+  });
+
+  const bar = document.createElement('div'); bar.className = 'shot-btns';
+
+  if (canShareFile) {
+    const bShare = mk(multi ? '分享到 LINE(' + shots.length + ' 張)' : '分享到 LINE', 'shot-line');
+    bShare.onclick = async () => {
+      try {
+        // 只帶圖片不帶文字:LINE 收到同時有文字+圖片時常常只保留文字
+        await navigator.share({ files });
+        close();
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;   // 使用者自己取消,不用報錯
+        showToast('分享失敗,可改用「複製」後貼到 LINE');
+      }
+    };
+    bar.appendChild(bShare);
+  }
+
+  if (canCopy && !multi) {
+    const bCopy = mk(canShareFile ? '複製圖片' : '複製圖片(貼到 LINE)', canShareFile ? '' : 'shot-line');
+    bCopy.onclick = async () => { if (await doCopy(shots[0].blob)) close(); };
+    bar.appendChild(bCopy);
+  }
+
+  const bDl = mk(multi ? '全部下載' : '下載 PNG', (!canShareFile && multi) ? 'shot-line' : '');
+  bDl.onclick = () => {
+    shots.forEach((s, i) => setTimeout(() => doDownload(urls[i], s.name), i * 350));   // 連續下載要隔開,不然瀏覽器只收第一個
+    showToast('已下載 ' + shots.length + ' 張圖片');
+  };
+  bar.appendChild(bDl);
+
+  const bClose = mk('關閉'); bClose.onclick = close; bar.appendChild(bClose);
+
+  const hint = document.createElement('span'); hint.className = 'shot-hint';
+  hint.textContent = canShareFile ? '手機按「分享到 LINE」選群組即可'
+                   : (multi ? '電腦版:每張右上角「複製」後到 LINE 貼上' : '電腦版:複製後到 LINE 貼上');
+  bar.appendChild(hint);
+
+  box.appendChild(head); box.appendChild(prev); box.appendChild(bar);
+  mask.appendChild(box);
+  x.onclick = close;
+  mask.onclick = e => { if (e.target === mask) close(); };
+  document.addEventListener('keydown', onKey, true);
+  (document.body || document.documentElement).appendChild(mask);
+  (bar.querySelector('.shot-line') || bDl).focus();
+}
+
+// ── 主頁:統計日期列 + 每日產量回報 + 線上進度統計(1 張)──
+async function dashShareShot() {
+  if (scShotBusy) return;
+  const btn  = document.querySelector('.dash-shot-btn');
+  const busy = showToast('截圖產生中…', 'info');
+  scShotBusy = true; if (btn) btn.disabled = true;
+  try {
+    const d = scShotDateOf('dash-shared-date');
+    const blob = await scShotBlob('dash-shot-area');
+    scShotPreview([{ name: '產量進度_' + d + '.png', label: '產量與進度統計', blob }], '統計截圖 · ' + d);
+  } catch (err) {
+    console.error('[截圖分享]', err);
+    showToast('截圖失敗:' + ((err && err.message) || err));
+  } finally {
+    scShotBusy = false; if (btn) btn.disabled = false;
+    if (busy) busy.remove();
+  }
+}
+
+// ── 產值回報:一次截「每日產值回報 / 計價統計 / 製造統計 / 長榮製造統計」四張 ──
+const OVR_SHOT_VIEWS = [
+  { view: 'daily', label: '每日產值回報' },
+  { view: 'price', label: '計價統計' },
+  { view: 'manu',  label: '製造統計' },
+  { view: 'eg',    label: '長榮製造統計' }
+];
+
+// 目前在哪個分頁(讀 DOM,截完要切回來)
+function ovrShotCurView() {
+  const t = document.querySelector('#output-report-panel .layout-tab.active');
+  const m = t && /^ovtab-(.+)$/.exec(t.id || '');
+  return m ? m[1] : 'daily';
+}
+
+async function ovrShareShots() {
+  if (scShotBusy) return;
+  if (typeof ovrView !== 'function') { showToast('產值報表尚未載入完成'); return; }
+  const btn  = document.querySelector('.ovr-shot-btn');
+  const back = ovrShotCurView();
+  const busy = showToast('截圖產生中…(共 ' + OVR_SHOT_VIEWS.length + ' 張)', 'info');
+  scShotBusy = true; if (btn) btn.disabled = true;
+  try {
+    const d = scShotDateOf('ovr-date');
+    const shots = [];
+    for (const v of OVR_SHOT_VIEWS) {
+      ovrView(v.view);
+      // 每日產值回報要等出勤資料回來才有 KPI 數字(ovrView 只會發動、不會等)
+      // 讀取失敗或太久都不該讓整批截圖卡住 → 最多等 8 秒,之後照畫面上目前的內容截
+      if (v.view === 'daily' && typeof ovrRenderDaily === 'function') {
+        try { await Promise.race([ovrRenderDaily(), new Promise(r => setTimeout(r, 8000))]); }
+        catch (e) { console.warn('[截圖分享] 每日產值重繪失敗', e); }
+      }
+      await scShotNextFrame();
+      shots.push({ name: v.label + '_' + d + '.png', label: v.label, blob: await scShotBlob('output-report-panel') });
+    }
+    scShotPreview(shots, '產值統計截圖 · ' + d);
+  } catch (err) {
+    console.error('[截圖分享]', err);
+    showToast('截圖失敗:' + ((err && err.message) || err));
+  } finally {
+    ovrView(back);   // 切回原本看的那個分頁
+    scShotBusy = false; if (btn) btn.disabled = false;
+    if (busy) busy.remove();
+  }
+}
+
 
 // 長榮統計 — 結算區間每月 26 ~ 次月 25,依日期區間自動統計
 function dashEvergreenPeriod() {
@@ -29109,7 +29426,10 @@ function attLinePerson(r){
   return attRoster.find(x=>x.name===r.staff_name)
     || {name:r.staff_name, cat:staffDept(r.team,r.category), team:r.team||''};
 }
-// 一段回報:標題 + 各組名單(沒人的組不列) + 請假(* 開頭)
+// 加班工數 → 收工時間。列在這裡的工數才會在名單下面多標一行(例:工數 1 → 「*博正，加班到23:00」)
+// 一般加班(0.5 工)照舊不標;之後要加別的級距,在這裡補一組就好。
+const ATT_LINE_OT_END={ 1:'23:00' };
+// 一段回報:標題 + 各組名單(沒人的組不列) + 加班收工時間/請假(* 開頭,同樣內容的人併成一行)
 function attLineBlock(iso, title, recs, field, withLeave){
   const rank=new Map(attRoster.map((p,i)=>[p.name,i]));
   const rows=(recs||[]).map(r=>({r, p:attLinePerson(r)}))
@@ -29122,12 +29442,30 @@ function attLineBlock(iso, title, recs, field, withLeave){
   const lines=[attLineMD(iso)+title, ''];
   const body=ATT_LINE_GROUPS.filter(g=>groups[g]).map(g=>g+':'+groups[g].join('.'));
   lines.push(...(body.length?body:['（無）']));
-  if(withLeave){
-    const lv=rows.filter(x=>String(x.r.leave_type||'').trim()).map(x=>{
-      const h=+x.r.leave_hours||0;
-      return '*'+nm(x.p)+'，'+String(x.r.leave_type).trim()+((h>0&&h<8)?attN(h)+'小時':'');
+  // 加班:工數對得上 ATT_LINE_OT_END 的人,補一行收工時間(同一個時間的人併成一行)
+  if(field==='ot_hours'){
+    const ot=new Map();
+    rows.forEach(x=>{
+      const qty=Math.round((+x.r.ot_hours||0)/6*1000)/1000;   // 加班工數＝時數÷6,與明細表同一換算
+      const end=ATT_LINE_OT_END[qty];
+      if(!end) return;
+      if(!ot.has(end)) ot.set(end,[]);
+      ot.get(end).push(nm(x.p));
     });
-    if(lv.length) lines.push('', ...lv);
+    const notes=Array.from(ot, ([end,names])=>'*'+names.join('.')+'，加班到'+end);
+    if(notes.length) lines.push('', ...notes);
+  }
+  if(withLeave){
+    const lv=new Map();   // 同樣的假別(含時數)併成一行:*綮予.蘇提拉，病假
+    rows.forEach(x=>{
+      const t=String(x.r.leave_type||'').trim(); if(!t) return;
+      const h=+x.r.leave_hours||0;
+      const key=t+((h>0&&h<8)?attN(h)+'小時':'');
+      if(!lv.has(key)) lv.set(key,[]);
+      lv.get(key).push(nm(x.p));
+    });
+    const notes=Array.from(lv, ([key,names])=>'*'+names.join('.')+'，'+key);
+    if(notes.length) lines.push('', ...notes);
   }
   return lines.join('\n');
 }
