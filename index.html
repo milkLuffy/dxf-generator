@@ -35294,6 +35294,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var lp=blLegacy[ym]&&blLegacy[ym][round-1]; if(lp&&lp.to) return lp.to;
     var p=roundDates(ym); return p[round]&&p[round].to;
   }
+  // 承接列是否「只請水電」:第一次主件已請款,且第二次沒有另外填主件請款金額
+  function carryWaterOnly(row,rec2){ return !!(row&&row.carry_from_first&&row.first_billed&&!billNum(rec2&&rec2.bill_price)); }
   function billedValue(v){ return billNum(v)>0||/已請款|合併|和算/.test(String(v||'')); }
   function paidMd(rec){
     var d=String(rec&&rec.bill_date||''); var m=d.match(/(?:\d{4}[-\/])?(\d{1,2})[-\/](\d{1,2})/);
@@ -35366,12 +35368,11 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
           : row.util_pending
             ? '<td><input class="ov-in-l num bl-util-locked" disabled placeholder="本區支數尚未完成" title="截至本次結束日，此工程區完成支數尚未達 BOM 總支數"></td>'
             : '<td><input id="'+pfx+'-uprice" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,row.zid,'util_bill_price')+' value="'+escAttr(fmtBill(ubp))+'" placeholder="水電請款" oninput="blCell('+round+','+row.zid+',\'util_bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>';
-      // 承接列:主件第一次已請款 → 只顯示「mm/dd已請款」。但第二次這格若已經填了金額,仍要顯示出來並標紅,
-      // 否則金額看不到卻照樣算進「實際請款金額」,會變成重複請款。
-      var mainPriceCell=row.carry_from_first&&row.first_billed&&!billNum(bp)
+      // 承接列:第一次標了已請款、第二次這格也空著 → 主件算在第一次,這裡只顯示「mm/dd已請款」。
+      // 第二次這格有填金額 → 主件改在第二次請(第一次那列的「已請款」只是避免重複列),照一般列顯示。
+      var waterOnly=carryWaterOnly(row,rec);
+      var mainPriceCell=waterOnly
         ? '<td class="num"><span class="ov-noutil">'+row.first_paid_label+'</span></td>'
-        : row.carry_from_first&&row.first_billed
-        ? '<td><div class="ov-noutil" style="font-size:10px">'+row.first_paid_label+'</div><input id="'+pfx+'-price" class="ov-in-l num bl-grid-cell" style="border-color:var(--danger,#e0555b);color:var(--danger,#e0555b)"'+gridAttrs(round,row.zid,'bill_price')+' value="'+escAttr(fmtBill(bp))+'" title="主件已在第一次計價請款，第二次又填了請款價格，可能重複請款；只請水電的話請清空這格" oninput="blCell('+round+','+row.zid+',\'bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>'
         : '<td><input id="'+pfx+'-price" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,row.zid,'bill_price')+' value="'+escAttr(fmtBill(bp))+'" placeholder="請款價格" oninput="blCell('+round+','+row.zid+',\'bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>';
       // 水電重量欄:已在別期請過 → mm/dd已請款;第二次計價且全區未完成 → 下拉(待全區完成／本區水電重量=提早請款)
       var utilWeightCell = row.has_util&&row.util_paid_label
@@ -35385,8 +35386,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       body+='<tr'+(row.has_util?' class="has-util'+(row.util_pending?' util-pending':'')+'"':'')+'>'
         +'<td>'+esc(row.proj_num)+'</td><td>'+esc(row.zone_code)+'</td>'
         +'<td>'+esc(row.proc_code)+'</td><td>'+esc(row.sub_code)+'</td>'
-        +'<td class="num">'+(row.carry_from_first&&row.first_billed?'—':t2(row.tons))+'</td><td class="num">'+(row.carry_from_first&&row.first_billed?'—':intf(row.qty))+'</td>'
-        +'<td class="num">'+(row.is_sub||(row.carry_from_first&&row.first_billed)?'—':ntd(row.total))+'</td>'
+        +'<td class="num">'+(waterOnly?'—':t2(row.tons))+'</td><td class="num">'+(waterOnly?'—':intf(row.qty))+'</td>'
+        +'<td class="num">'+(row.is_sub||waterOnly?'—':ntd(row.total))+'</td>'
         +mainPriceCell
         +'<td>'+esc(row.util_proc_code||'—')+'</td>'
         +utilWeightCell
@@ -35650,7 +35651,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var byCo={};
     rows.forEach(function(row){
       if(row.zid==null) return;
-      var waterOnly=row.carry_from_first&&row.first_billed;
+      var waterOnly=carryWaterOnly(row,blRecords[round+'|'+row.zid]);
       // 轉包列只為了保留已填的請款金額才留著,預估總價/水電總價不計入(噸數、支數是產量,照算)
       estTotal+=(waterOnly||row.is_sub?0:row.total); utilTotal+=(row.is_sub?0:row.util_total); tons+=(waterOnly?0:row.tons); qty+=(waterOnly?0:row.qty);
       var rec=blRecords[round+'|'+row.zid]||{};
