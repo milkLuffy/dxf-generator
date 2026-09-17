@@ -389,6 +389,20 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .pr-ctbl input.pr-iname{text-align:left;width:130px}
 .pr-ctbl input:focus{border-color:var(--accent2);background:var(--bg3)}
 .pr-ctbl td.pr-amtc{color:var(--accent2);font-weight:600;white-space:nowrap}
+/* 柱子卡片:數字欄加寬,最右側刪除鈕,每段底下新增列 */
+.pr-sidecard:has(.pr-ctbl-col){flex-basis:560px;min-width:min(560px,100%)}
+.pr-ctbl-col th:nth-child(2),.pr-ctbl-col td:nth-child(2){width:96px}
+.pr-ctbl-col th:nth-child(3),.pr-ctbl-col td:nth-child(3){width:76px}
+.pr-ctbl-col th:nth-child(4),.pr-ctbl-col td:nth-child(4){width:80px}
+.pr-ctbl-col th:nth-child(5),.pr-ctbl-col td:nth-child(5){width:104px}
+.pr-ctbl-col th:nth-child(6),.pr-ctbl-col td:nth-child(6){width:64px;text-align:center}
+.pr-ctbl-col input.pr-price,.pr-ctbl-col input.pr-qty{width:100%}
+.pr-ctbl-col input.pr-iname{width:100%}
+.pr-ctbl-col .pr-delbtn{border:1px solid var(--border);background:transparent;color:var(--danger,#e0555b);border-radius:6px;font-size:11.5px;padding:3px 8px;cursor:pointer}
+.pr-ctbl-col .pr-delbtn:hover{border-color:var(--danger,#e0555b);background:rgba(224,85,91,.1)}
+.pr-ctbl-col tr.pr-addrow td{text-align:left;height:auto;padding:4px 8px 8px}
+.pr-ctbl-col .pr-addbtn{border:1px dashed var(--border-hi,var(--border));background:transparent;color:var(--text2);border-radius:6px;font-size:12px;padding:4px 10px;cursor:pointer}
+.pr-ctbl-col .pr-addbtn:hover{border-color:var(--accent2);color:var(--text)}
 .pr-ctbl td.pr-nap{color:var(--text3)}
 /* 計價表 Excel 式遊走：目前所在列微量疊色 */
 .pr-ctbl tbody tr:focus-within td,.pr-tbl tbody tr:focus-within td{background-image:linear-gradient(rgba(79,142,247,.075),rgba(79,142,247,.075))}
@@ -31562,13 +31576,14 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   // 柱子表定（依「柱公式.xlsx / CBC」）。base=基本樓層列(0F~5F 且計入每噸分子)；floor=工時欄顯示樓層；
   // div=工時 mh 除數(基本段/344、實作段/345)；mh=工時直接指定。金額=單價×數量，與大小樑相同。
   var RAW_COL=[
-    {cat:'基本'},
+    {cat:'柱基本單價'},
     {name:'基本單價 0F（長度切割+FB+吊耳+假設工程+連接板+整理+進出料，做到好）', bg:5200, floor:'0F', base:true},
     {name:'基本單價 1F（每加1F加2600元）', bg:7800,  floor:'1F', base:true},
     {name:'基本單價 2F', bg:10400, floor:'2F', base:true},
     {name:'基本單價 3F', bg:13000, floor:'3F', base:true},
     {name:'基本單價 4F', bg:15600, floor:'4F', base:true},
     {name:'基本單價 5F', bg:18200, floor:'5F', base:true},
+    {cat:'基本'},
     {name:'透氣孔(/孔)', bg:45,  div:344},
     {name:'繫桿(/支)(含鑽孔*2)', bg:156, div:344},
     {name:'剪力釘數(/支)', bg:6.5, div:344},
@@ -31701,6 +31716,28 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   function beamDefaultItems(){
     return RAW.map(function(r){ if(r.cat) return {cat:r.cat}; return {name:r.name,bg:r.bg,sb:r.sb,qbg:0,qsb:0}; });
   }
+  // 網頁上 0F~5F(base)獨立成「柱基本單價」段。舊存檔還是「基本」段開頭夾著 base 列 → 載入時搬過去。
+  // 搬完的順序與新表定一致(loadSheet 依索引補各側單價才對得上)。
+  var COL_BASE_SEC='柱基本單價';
+  function colNormalizeItems(items){
+    if(!Array.isArray(items) || items.some(function(it){ return it.cat===COL_BASE_SEC; })) return items;
+    var base=items.filter(function(it){ return !it.cat && it.base; });
+    var rest=items.filter(function(it){ return it.cat || !it.base; });
+    return [{cat:COL_BASE_SEC}].concat(base, rest);
+  }
+  // 報價單與 Excel 維持原樣:不出現「柱基本單價」標題,base 列放回「基本」段最前面
+  function colPrintItems(items){
+    if(!Array.isArray(items) || !items.some(function(it){ return it.cat===COL_BASE_SEC; })) return items;
+    var base=[], rest=[], sec=null;
+    items.forEach(function(it){
+      if(it.cat){ sec=it.cat; if(it.cat!==COL_BASE_SEC) rest.push(it); return; }
+      if(sec===COL_BASE_SEC){ var o=Object.assign({},it); o.base=true; base.push(o); } else rest.push(it);
+    });
+    var at=rest.findIndex(function(it){ return it.cat==='基本'; });
+    if(at<0) return [{cat:'基本'}].concat(base, rest);
+    return rest.slice(0,at+1).concat(base, rest.slice(at+1));
+  }
+  function colPrintSheet(st){ return Object.assign({}, st, {items:colPrintItems(st.items)}); }
   function colDefaultItems(){
     return RAW_COL.map(function(r){
       if(r.cat) return {cat:r.cat};
@@ -32007,6 +32044,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     }
     if(!saved){ try{ var raw=localStorage.getItem(keyOf(g.key)); if(raw) saved=JSON.parse(raw); }catch(e){} }
     if(saved && saved.items){
+      if(g.cat==='col') saved.items=colNormalizeItems(saved.items);
       if(!saved.summary) saved.summary = g.cat==='col'?{mgmtRate:'0.1',inspRate:'',supAdd:'100'}:{admin:'1.1',cdong:'200',che:'0'};
       if(g.cat!=='col' && !(saved.summary.cdong)) saved.summary.cdong='200';
       if(g.cat!=='col' && saved.summary.che==null) saved.summary.che='0';
@@ -32412,20 +32450,22 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var hdr='<div class="pr-chead"><div class="pr-cf"><label>公斤數 (KG)</label>'+inp('pr-h-kg-'+k,h[side.hkg])+'</div>'+
       '<div class="pr-cf"><label>支數</label>'+inp('pr-h-cnt-'+k,h[side.hcnt])+'</div>'+
       '<div class="pr-cf"><label>噸數</label><span class="pr-ton" id="pr-h-ton-'+k+'">0</span></div></div>';
+    var sec=null;
+    var addRow=function(s){ return s?'<tr class="pr-addrow"><td colspan="6"><button class="pr-addbtn" onclick="pricingAddRowIn(\''+escAttr(s)+'\')">＋ 新增列（'+esc(s)+'）</button></td></tr>':''; };
     st.items.forEach(function(it,i){
-      if(it.cat){rows+='<tr><td class="pr-cat" colspan="5">'+esc(it.cat)+'</td></tr>';return;}
+      if(it.cat){ rows+=addRow(sec); sec=it.cat; rows+='<tr><td class="pr-cat" colspan="6">'+esc(it.cat)+'</td></tr>'; return; }
       var pv=it[side.priceF],na=pv==null||pv==='';
-      var name=it.custom?'<input class="pr-iname" value="'+escAttr(it.name||'')+'" oninput="pricingCell('+i+',\'name\',this.value)">':esc(it.name||'');
-      if(na){rows+='<tr><td class="pr-name">'+name+'</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-amtc">—</td></tr>';return;}
+      var name=it.custom?'<input class="pr-iname" value="'+escAttr(it.name||'')+'" oninput="pricingCell('+i+',\'name\',this.value)" placeholder="項目名稱">':esc(it.name||'');
+      var del='<td class="pr-delc"><button class="pr-delbtn" onclick="pricingDelRowAsk('+i+')">刪除</button></td>';
+      if(na){rows+='<tr><td class="pr-name">'+name+'</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-amtc">—</td>'+del+'</tr>';return;}
       rows+='<tr><td class="pr-name">'+name+'</td>'+
         '<td><input class="pr-price" value="'+escAttr(pv)+'" oninput="pricingCell('+i+',\''+side.priceF+'\',this.value)"></td>'+
         '<td class="pr-mhc"><span id="pr-mh-'+k+'-'+i+'">0</span></td>'+
         '<td><input class="pr-qty" value="'+escAttr(num(it[side.qtyF])?it[side.qtyF]:'')+'" oninput="pricingCell('+i+',\''+side.qtyF+'\',this.value)"></td>'+
-        '<td class="pr-amtc"><span id="pr-amt-'+k+'-'+i+'">$0</span></td></tr>';
+        '<td class="pr-amtc"><span id="pr-amt-'+k+'-'+i+'">$0</span></td>'+del+'</tr>';
     });
-    var addBtn=((g.sides||[]).length>1)
-      ? '<div class="pr-cadd"><button class="btn" onclick="pricingAddRow(' + Q + "'+k+'" + Q + ')">＋ 只加「'+esc(side.code||'本區')+'」的項目</button></div>' : '';
-    var tbl='<div class="pr-citems"><table class="pr-ctbl"><thead><tr><th class="pr-name">加工項目</th><th>單價</th><th>工時mh</th><th>數量</th><th>金額</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+addBtn;
+    rows+=addRow(sec);
+    var tbl='<div class="pr-citems"><table class="pr-ctbl pr-ctbl-col"><thead><tr><th class="pr-name">加工項目</th><th>單價</th><th>工時mh</th><th>數量</th><th>金額</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
     var summ='<div class="pr-csum">'+
       '<div class="pr-csrow"><span>A 基本加工費</span><b id="pr-col-a-'+k+'">$0</b></div>'+
       '<div class="pr-csrow"><span>B 實作加工費</span><b id="pr-col-b-'+k+'">$0</b></div>'+
@@ -32439,7 +32479,6 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   }
   function colMultiFooter(st){
     return '<div class="pr-card"><div class="pr-toolbar">'+
-      '<button class="btn" onclick="pricingAddRow()">＋ 自訂加工項目（每側都加）</button>'+
       '<button class="btn" onclick="pricingReset()">↺ 恢復表定項目</button>'+
       '<button class="btn" onclick="pricingReautofill()">↻ 重新帶入公斤/支數</button>'+
       '<button class="btn" onclick="pricingApplyImported()">↧ 帶入已核對數量</button>'+
@@ -32750,6 +32789,31 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     it[side.priceF]=''; it[side.qtyF]='';
     pricingRender();
   };
+  // 柱子:在指定段落最後面加一列(所有柱區都可填);「柱基本單價」段的列計入基本柱金額
+  window.pricingAddRowIn=function(secName){
+    var st=S(), g=curGroup(); if(!st||!g) return;
+    var row={name:'', custom:true};
+    if(secName===COL_BASE_SEC){ row.base=true; row.div=344; }
+    else row.div=(secName==='實作時算')?345:344;
+    (g.sides||[]).forEach(function(side){ row[side.priceF]=0; row[side.qtyF]=0; });
+    var at=-1, inSec=false;
+    for(var i=0;i<st.items.length;i++){
+      var it=st.items[i];
+      if(it.cat){ if(inSec){ at=i; break; } inSec=(it.cat===secName); }
+    }
+    if(at<0) at=st.items.length;
+    st.items.splice(at,0,row);
+    pricingRender();
+    setTimeout(function(){ var el=document.querySelector('.pr-ctbl-col input.pr-iname[oninput^="pricingCell('+at+',"]'); if(el) el.focus(); },0);
+  };
+  window.pricingDelRowAsk=async function(idx){
+    var st=S(), g=curGroup(); if(!st||!st.items[idx]) return;
+    var nm=String(st.items[idx].name||'').trim()||'（未命名）';
+    var many=(g&&g.sides&&g.sides.length>1)?'\n\n這一列在所有柱區（'+g.sides.map(function(s){return s.code;}).join('、')+'）都會一起刪除。':'';
+    if(!await uiConfirm('確定刪除「'+nm+'」項目？'+many,{danger:true,okText:'刪除'})) return;
+    st.items.splice(idx,1);
+    pricingRender();
+  };
   window.pricingDelRow=function(idx){
     var st=S(); if(!st||!st.items[idx]) return;
     st.items.splice(idx,1);
@@ -33057,6 +33121,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     var st=S(), g=curGroup(); if(!st||!g){ return; }
     pricingRecalc();
     if(typeof XLSX==='undefined'){ alert('XLSX 未載入'); return; }
+    if(g.cat==='col') st=colPrintSheet(st);   // Excel 維持原本段落(不拆柱基本單價)
     if(g.multi){ pricingExportCombined(g,st); return; }
     if(g.multi){
       var wbMisc=XLSX.utils.book_new();
@@ -33536,7 +33601,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       var reportGroups=activeGroup?[activeGroup]:[];
       reportGroups.forEach(function(g){
         var st = SHEETS[g.key] || loadSheet(g);
-        var res = reportCalc(g, st);
+        var res = reportCalc(g, g.cat==='col' ? colPrintSheet(st) : st);   // 報價單維持原本段落
         if(!res.items.length) return;   // 沒填任何數量的工程區不列
         sections += sectionHTML(g, res);
         count += res.type==='sideMulti' ? (res.parts||[]).length : 1;
