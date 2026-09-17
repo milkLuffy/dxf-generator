@@ -5348,6 +5348,8 @@ window.normalizeFullWidth=function(value){
       #page-labor .lm-row .lm-amt{width:92px;text-align:right;flex:none;color:var(--yellow)}
       #page-labor .lm-custom-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
       #page-labor .lm-custom-row .search-input{max-width:none}
+      #page-labor #lm-caption.lm-invalid{border-color:var(--danger);box-shadow:0 0 0 2px rgba(239,68,68,.25)}
+      #page-labor .lm-cap-warn{margin-top:4px;font-size:12px;font-weight:700;color:var(--danger)}
       #page-labor .lm-photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
       #page-labor .lm-photo{position:relative;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg3);cursor:grab;transition:box-shadow .12s,transform .12s,border-color .12s}
       #page-labor .lm-photo:active{cursor:grabbing}
@@ -5497,7 +5499,7 @@ window.normalizeFullWidth=function(value){
           <div class="lab-group-h" style="margin-top:0">③ 照片(第二頁,自動縮放進格子;超過 6 張自動增加照片頁)</div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <label class="btn" style="cursor:pointer">📷 選擇照片<input type="file" id="lm-photo-file" accept="image/png,image/jpeg" multiple style="display:none" onchange="lmAddPhotos(this)"/></label>
-            <div class="lm-field" style="min-width:320px;flex:1"><label>照片說明(所有照片格統一顯示)</label><input class="search-input" id="lm-caption" placeholder="輸入照片說明"/></div>
+            <div class="lm-field" style="min-width:320px;flex:1"><label>照片說明 <span style="color:var(--danger);font-weight:700">＊必填</span>(所有照片格統一顯示)</label><input class="search-input" id="lm-caption" placeholder="輸入照片說明(必填)" oninput="lmCaptionCheck(false)"/><div id="lm-caption-warn" class="lm-cap-warn" style="display:none">⚠ 照片說明未填寫,無法產生點工單</div></div>
           </div>
           <div id="lm-photo-grid" class="lm-photo-grid"></div>
         </div>
@@ -44811,12 +44813,27 @@ function lmTrimPhotoTable(tblXml, keep){
   }
   return out+suffix;
 }
+// 照片說明必填:空白時紅框+警示字;force=true(按產生時)才第一次亮起,之後邊打字邊更新
+window.lmCaptionCheck=function(force){
+  const inp=document.getElementById('lm-caption'),warn=document.getElementById('lm-caption-warn');if(!inp)return true;
+  if(force)inp.dataset.lmChecked='1';   // 按過產生後,之後清空也會即時再亮警示
+  const empty=!(inp.value||'').trim();
+  const on=empty&&inp.dataset.lmChecked==='1';
+  inp.classList.toggle('lm-invalid',on);if(warn)warn.style.display=on?'':'none';
+  return !empty;
+};
 window.lmBuild=async function(){
   if(lmBusy)return;
   lmBusy=true;
   try{
     const proj=(document.getElementById('lm-proj').value||'').trim();
     if(!proj){alert('請先選擇工程編號(點工單編號會自動接續產生)');return;}
+    // 照片說明必填(SP 模式只出第一頁、沒有照片頁,不檢查)
+    if(!lmSpActive()&&!lmCaptionCheck(true)){
+      const ci=document.getElementById('lm-caption');
+      if(ci){ci.scrollIntoView({block:'center',behavior:'smooth'});ci.focus();}
+      alert('照片說明未填寫!\n請先填寫「照片說明」才能產生點工單。');return;
+    }
     // 資料夾權限要在使用者剛按下按鈕時就取得,後面同步 DB／組 Word／嵌照片會耗掉手勢有效期
     try{await lmEnsureFolderPermission(true);}catch(e){}
     // 產生前再同步一次 DB → 編號一定接在最新一筆之後;手改過的編號則檢查是否撞號
@@ -44942,6 +44959,8 @@ window.lmBuild=async function(){
 function lmResetForm(){
   lmDocnoAuto=true;
   ['lm-proj','lm-projname','lm-docno','lm-refno','lm-caption','lm-content'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const capEl=document.getElementById('lm-caption');if(capEl){capEl.classList.remove('lm-invalid');delete capEl.dataset.lmChecked;}
+  const capWarn=document.getElementById('lm-caption-warn');if(capWarn)capWarn.style.display='none';
   const detailResp=document.getElementById('lm-detail-resp');if(detailResp)detailResp.value='';
   const d=document.getElementById('lm-date');if(d)d.value=lmFriday();
   const r=document.getElementById('lm-resp');if(r)r.value='製二課';
