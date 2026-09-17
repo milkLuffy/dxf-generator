@@ -6149,7 +6149,7 @@ window.normalizeFullWidth=function(value){
           <thead id="daily-thead"><tr>
             <th>日期</th><th>構件編號</th><th>工程編號</th><th>工程區</th><th>數量</th><th>單重(kg)</th>
             <th>圖號</th><th>流水編號</th><th>規格</th><th>加工代號</th><th>工程副號</th>
-            <th>報驗時間</th><th>報驗公司</th><th>報驗單</th><th></th>
+            <th>報驗時間</th><th>受檢時間</th><th>報驗公司</th><th>報驗單</th><th></th>
           </tr></thead>
           <tbody id="daily-body"></tbody>
         </table>
@@ -28067,7 +28067,7 @@ let dailyViewDate = '';   // 單日檢視(預設今天);空字串=顯示全部�
 let dailyViewMode = (function(){ try { return localStorage.getItem('daily_view_mode') || 'flat'; } catch(e){ return 'flat'; } })();
 const dailyOpenSet = new Set();     // collapsed 模式:被點開的批次 key
 const dailyClosedSet = new Set();   // expanded 模式:被收起的批次 key
-const DAILY_THEAD_FLAT = '<tr><th>日期</th><th>構件編號</th><th>工程編號</th><th>工程區</th><th>數量</th><th>單重(kg)</th><th>圖號</th><th>流水編號</th><th>規格</th><th>加工代號</th><th>工程副號</th><th>報驗時間</th><th>報驗公司</th><th>報驗單</th><th></th></tr>';
+const DAILY_THEAD_FLAT = '<tr><th>日期</th><th>構件編號</th><th>工程編號</th><th>工程區</th><th>數量</th><th>單重(kg)</th><th>圖號</th><th>流水編號</th><th>規格</th><th>加工代號</th><th>工程副號</th><th>報驗時間</th><th>受檢時間</th><th>報驗公司</th><th>報驗單</th><th></th></tr>';
 // 效能:預設只抓「近 DAILY_INIT_DAYS 天」讓頁面快速顯示;需要看更舊日期或「列出全部」時才補抓完整歷史。
 const DAILY_INIT_DAYS = 120;
 let dailyFullLoaded = false;   // 是否已載入完整歷史
@@ -28076,10 +28076,46 @@ let dailyLoadedFrom = '';      // 目前已載入資料的最早日期(YYYY-MM-D
 function dailyTodayStr(){ const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
 function dailyDaysAgoStr(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function dailyEl(id){ return document.getElementById(id); }
+// 受檢時間:不另存 daily_output,直接取報驗單雲端備份(inspection_reports.snapshot 的 recv_date/recv_time)。
+// 對應鍵與「Word」下載鈕相同(日期+工程+流水編號);預報補送的報驗單日期是補報當天,對不到時退回同工程+流水編號、報驗日最接近的那張。
+let dailyRecvExact = new Map(), dailyRecvBySerial = new Map();
+function dailyRecvFmt(d, t){
+  const m = String(d||'').match(/(\d{1,2})\s*[\/\-.月]\s*(\d{1,2})\s*日?\s*$/);
+  if (!m) return '';
+  const pad = x => String(x).padStart(2,'0');
+  const tm = String(t||'').match(/(\d{1,2})\s*[:：]\s*(\d{2})/);
+  return pad(m[1]) + '/' + pad(m[2]) + (tm ? ' ' + pad(tm[1]) + ':' + tm[2] : '');
+}
+async function dailyLoadRecv(since){
+  try {
+    const r = await sbFetchAll('/rest/v1/inspection_reports?select=report_date,proj_num,serial_no,recv_date:snapshot->>recv_date,recv_time:snapshot->>recv_time'
+      + (since ? '&report_date=gte.' + since : ''));
+    if (!r.ok || !Array.isArray(r.data)) return;
+    dailyRecvExact = new Map(); dailyRecvBySerial = new Map();
+    r.data.forEach(x => {
+      const txt = dailyRecvFmt(x.recv_date, x.recv_time); if (!txt) return;
+      const pk = String(x.proj_num||'').trim().toUpperCase() + '|' + String(x.serial_no||'').trim();
+      dailyRecvExact.set(String(x.report_date||'').slice(0,10) + '|' + pk, txt);
+      if (!dailyRecvBySerial.has(pk)) dailyRecvBySerial.set(pk, []);
+      dailyRecvBySerial.get(pk).push({date:String(x.report_date||'').slice(0,10), txt});
+    });
+  } catch(e) { console.warn('受檢時間載入失敗', e); }
+}
+function dailyRecvOf(r){
+  const pk = String(r.proj_num||'').trim().toUpperCase() + '|' + String(r.serial_no||'').trim();
+  const hit = dailyRecvExact.get(String(r.date||'') + '|' + pk); if (hit) return hit;
+  const list = dailyRecvBySerial.get(pk); if (!list) return '';
+  let best = null;   // 報驗日當天或之後、最接近的那張(預報後補送)
+  list.forEach(x => { if (x.date >= String(r.date||'') && (!best || x.date < best.date)) best = x; });
+  return best ? best.txt : '';
+}
 async function loadDaily() {
   // 預設只抓近期(足夠「今天/本週/本月」檢視,載入快);更舊或「全部」再補抓
   const since = dailyDaysAgoStr(DAILY_INIT_DAYS);
-  const r = await sbFetchAll('/rest/v1/daily_output?select=*&date=gte.'+since+'&order=date.desc,id.desc');
+  const [r] = await Promise.all([
+    sbFetchAll('/rest/v1/daily_output?select=*&date=gte.'+since+'&order=date.desc,id.desc'),
+    dailyLoadRecv(since)
+  ]);
   dailyRows = Array.isArray(r.data) ? r.data : [];
   dailyLoadedFrom = since;
   dailyFullLoaded = false;
@@ -28096,7 +28132,10 @@ function dailyNeedFull(target){
 }
 async function dailyEnsureFull(){
   if (dailyFullLoaded) return;
-  const r = await sbFetchAll('/rest/v1/daily_output?select=*&order=date.desc,id.desc');
+  const [r] = await Promise.all([
+    sbFetchAll('/rest/v1/daily_output?select=*&order=date.desc,id.desc'),
+    dailyLoadRecv('')
+  ]);
   dailyRows = Array.isArray(r.data) ? r.data : [];
   dailyFullLoaded = true;
   dailyLoadedFrom = '';
@@ -28213,7 +28252,7 @@ function renderDaily() {
   if (grouped) { renderDailyGrouped(rawRows, ctx); return; }
   const groups = dailyGroupRows(rawRows);   // 合併相同構件,qty = 支數
   dailyEl('daily-count').textContent = ctx + ' · 共 ' + groups.length + ' 筆 / ' + rawRows.length + ' 支';
-  if (!groups.length) { tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:var(--text3);padding:32px;font-family:var(--mono);font-size:13px">尚無資料</td></tr>'; return; }
+  if (!groups.length) { tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;color:var(--text3);padding:32px;font-family:var(--mono);font-size:13px">尚無資料</td></tr>'; return; }
   const pgD = pagerSlice('daily', groups);
   const dtd = v => '<td><input type="text" readonly value="'+esc(v==null?'':v)+'" style="text-align:center"></td>';
   const reportSeen = new Set();
@@ -28224,10 +28263,10 @@ function renderDaily() {
     return '<tr>' +
     dtd(r.date) + dtd(r.part_no) + dtd(r.proj_num) + dtd(r.zone_code) +
     dtd(g.qty) + dtd(r.net_weight!=null?r.net_weight:'') + dtd(r.drawing_no) + dtd(r.serial_no) + dtd(r.spec) +
-    dtd(r.proc_code) + dtd(r.sub_code) + dtd(r.inspect_time) + dtd(r.company) +
+    dtd(r.proc_code) + dtd(r.sub_code) + dtd(r.inspect_time) + dtd(dailyRecvOf(r)) + dtd(r.company) +
     '<td style="text-align:center">'+reportBtn+'</td>' +
     '<td class="del-col"><button class="btn-del-row" onclick="delDailyGroup(\''+g.ids.join(',')+'\')">✕</button></td>' +
-  '</tr>'; }).join('') + pagerRow(pgD, 15);
+  '</tr>'; }).join('') + pagerRow(pgD, 16);
   const dTbl = document.getElementById('daily-table');
   if (dTbl) tblInitSelection(dTbl);
 }
@@ -28284,6 +28323,7 @@ function renderDailyGrouped(rows, ctx){
         if (r.proc_code) meta.push('<span><b>加工</b> '+esc(r.proc_code)+'</span>');
         if (r.sub_code) meta.push('<span><b>副號</b> '+esc(r.sub_code)+'</span>');
         if (r.inspect_time) meta.push('<span><b>時間</b> '+esc(r.inspect_time)+'</span>');
+        const recvTxt = dailyRecvOf(r); if (recvTxt) meta.push('<span><b>受檢</b> '+esc(recvTxt)+'</span>');
         return '<div class="dc-row"><span class="dc-pno">'+esc(r.part_no||'')+'</span><span class="dc-qty">×'+g.qty+'</span>' +
           '<span class="dc-meta">'+meta.join('')+'</span>' +
           '<button class="dc-x-sm" onclick="delDailyGroup(\''+g.ids.join(',')+'\')" title="刪除此構件">✕</button></div>';
@@ -28349,8 +28389,8 @@ async function delDailyGroup(idsStr) {
 }
 function exportDaily() {
   const groups = dailyGroupRows(dailyGetFiltered());
-  const head = ['日期','構件編號','工程編號','工程區','數量','單重(kg)','圖號','流水編號','規格','加工代號','工程副號','報驗時間','報驗公司'];
-  const data = groups.map(g => { const r = g.rep; return [r.date,r.part_no,r.proj_num,r.zone_code,g.qty,r.net_weight,r.drawing_no,r.serial_no,r.spec,r.proc_code,r.sub_code,r.inspect_time,r.company]; });
+  const head = ['日期','構件編號','工程編號','工程區','數量','單重(kg)','圖號','流水編號','規格','加工代號','工程副號','報驗時間','受檢時間','報驗公司'];
+  const data = groups.map(g => { const r = g.rep; return [r.date,r.part_no,r.proj_num,r.zone_code,g.qty,r.net_weight,r.drawing_no,r.serial_no,r.spec,r.proc_code,r.sub_code,r.inspect_time,dailyRecvOf(r),r.company]; });
   const ws = XLSX.utils.aoa_to_sheet([head, ...data]);
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '每日產量');
   const rs=(dailyEl('daily-range-start')||{}).value||'', re=(dailyEl('daily-range-end')||{}).value||'';
