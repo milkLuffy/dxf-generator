@@ -5622,6 +5622,7 @@ window.normalizeFullWidth=function(value){
       #page-labor .lm-row .lm-amt{width:92px;text-align:right;flex:none;color:var(--yellow)}
       #page-labor .lm-custom-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
       #page-labor .lm-custom-row .search-input{max-width:none}
+      #page-labor .lm-sp-note{font-size:12px;font-weight:600;color:var(--yellow);background:rgba(245,184,61,.12);border:1px solid rgba(245,184,61,.35);border-radius:6px;padding:2px 8px}
       #page-labor .lm-invalid{border-color:var(--danger);box-shadow:0 0 0 2px rgba(239,68,68,.25)}
       #page-labor .lm-cap-warn{margin-top:4px;font-size:12px;font-weight:700;color:var(--danger)}
       #lm-photo-view{position:fixed;inset:0;z-index:100500;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
@@ -5796,6 +5797,7 @@ window.normalizeFullWidth=function(value){
         <div class="card" style="margin-bottom:14px">
           <div class="lab-group-h" style="margin-top:0;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <span>④ 點工內容 <span style="color:var(--danger);font-weight:700">＊必填</span>(產生後直接寫入「明細登錄」的點工內容欄)</span>
+            <span id="lm-sp-auto-note" class="lm-sp-note" style="display:none"></span>
             <label style="margin-left:auto;display:flex;align-items:center;gap:6px;white-space:nowrap">權責單位(填入明細) <span style="color:var(--danger);font-weight:700">＊必填</span>:
               <select class="filter-select" id="lm-detail-resp" style="padding:5px 8px;min-width:120px" onchange="lmReqCheck('lm-detail-resp',false)">
                 <option value="">請選擇</option>
@@ -45593,7 +45595,28 @@ window.lmRefresh=function(){
   const lv=document.getElementById('lm-lines');
   // 預覽可手動修改:改過(lmLinesDirty)就不再自動覆寫,按「↺ 重設」恢復自動產生
   if(lv&&!lmLinesDirty)lv.value=lines.join('\n');
+  lmSpAutoFill(sp);
 };
+// SP站人力支援(外勞)點工單:點工內容自動帶「MM/01~MM/末日外勞支援」、權責單位自動選「工程範圍」,並在④標題旁註明。
+// 只覆寫空白或上次自動帶入的值(手動改過就不動);取消 SP 時把自動帶入的清回去。
+let lmSpAuto={content:'',resp:false};
+function lmSpAutoFill(sp){
+  const c=document.getElementById('lm-content'), r=document.getElementById('lm-detail-resp'), note=document.getElementById('lm-sp-auto-note');
+  if(!c||!r) return;
+  if(sp){
+    const range=lmSpRange(), auto=range?range+'外勞支援':'';
+    if(auto && (!c.value.trim()||c.value===lmSpAuto.content)) c.value=auto;
+    lmSpAuto.content=auto;
+    if(!r.value){ r.value='工程範圍'; lmSpAuto.resp=true; }
+    if(typeof lmReqCheck==='function'){ lmReqCheck('lm-content',false); lmReqCheck('lm-detail-resp',false); }
+    if(note){ note.style.display=''; note.textContent='SP站人力支援:點工內容自動帶入「'+(auto||'MM/01~MM/末日外勞支援')+'」、權責單位自動選「工程範圍」'; }
+  }else{
+    if(lmSpAuto.content && c.value===lmSpAuto.content) c.value='';
+    if(lmSpAuto.resp && r.value==='工程範圍') r.value='';
+    lmSpAuto={content:'',resp:false};
+    if(note) note.style.display='none';
+  }
+}
 // 照片:縮圖用小張 JPEG(原圖動輒數 MB,格子裡直接放原圖會讓拖曳卡頓),放大檢視才用原圖(object URL,不佔字串記憶體)。
 // b64 原圖只給產生 Word 用。
 const LM_THUMB_PX=360;
@@ -45959,6 +45982,7 @@ window.lmBuild=async function(){
 function lmResetForm(){
   lmDocnoAuto=true;
   ['lm-proj','lm-projname','lm-docno','lm-refno','lm-caption','lm-content'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  lmSpAuto={content:'',resp:false};
   ['lm-caption','lm-content','lm-detail-resp'].forEach(id=>{
     const el=document.getElementById(id);if(el){el.classList.remove('lm-invalid');delete el.dataset.lmChecked;}
     const w=document.getElementById(id+'-warn');if(w)w.style.display='none';
