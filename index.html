@@ -5649,7 +5649,12 @@ window.normalizeFullWidth=function(value){
       #page-labor .lm-photo.drop-after{border-right-color:var(--accent2);box-shadow:inset -5px 0 0 var(--accent2)}
       #page-labor .lm-photo img{width:100%;height:110px;object-fit:contain;display:block;pointer-events:none}
       #page-labor .lm-photo .lm-photo-x{position:absolute;top:4px;right:4px;border:0;border-radius:50%;width:22px;height:22px;background:rgba(0,0,0,.55);color:#fff;cursor:pointer}
-      #page-labor .lm-photo .lm-photo-n{position:absolute;top:4px;left:6px;font-size:11px;color:#fff;text-shadow:0 1px 2px #000}
+      #page-labor .lm-photo .lm-photo-n{position:absolute;bottom:4px;left:6px;font-size:11px;color:#fff;text-shadow:0 1px 2px #000}
+      #page-labor .lm-photo .lm-photo-chk{position:absolute;top:3px;left:3px;width:26px;height:26px;display:grid;place-items:center;border-radius:6px;background:rgba(0,0,0,.45);cursor:pointer}
+      #page-labor .lm-photo .lm-photo-chk input{width:16px;height:16px;margin:0;cursor:pointer;accent-color:var(--accent2)}
+      #page-labor .lm-photo.selected{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2) inset}
+      #page-labor .lm-photo-selbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:6px 10px;border:1px solid var(--accent2);border-radius:8px;background:rgba(79,142,247,.08);font-size:13px}
+      #page-labor .lm-photo-selbar .lm-photo-seldel{color:var(--danger);border-color:var(--danger)}
       @media print{
         /* 具名頁面:只有未請款列印(body.labor-ub-printing)套直式,不影響全站預設的橫式 @page(床位配置圖等) */
         @page laborUb{ size:A4 portrait; margin:8mm; }
@@ -5790,8 +5795,12 @@ window.normalizeFullWidth=function(value){
           <div class="lab-group-h" style="margin-top:0">③ 照片(第二頁,自動縮放進格子;超過 6 張自動增加照片頁)</div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <label class="btn" style="cursor:pointer">📷 選擇照片<input type="file" id="lm-photo-file" accept="image/png,image/jpeg" multiple style="display:none" onchange="lmAddPhotos(this)"/></label>
+            <button type="button" class="btn" id="lm-photo-delall" style="display:none" onclick="lmDelAllPhotos()">🗑 刪除所有照片</button>
             <div class="lm-field" style="min-width:320px;flex:1"><label>照片說明 <span style="color:var(--danger);font-weight:700">＊有照片必填</span>(所有照片格統一顯示)</label><input class="search-input" id="lm-caption" placeholder="輸入照片說明(有放照片就必填)" oninput="lmCaptionCheck(false)"/><div id="lm-caption-warn" class="lm-cap-warn" style="display:none">⚠ 照片說明未填寫,無法產生點工單</div></div>
           </div>
+          <div id="lm-photo-selbar" class="lm-photo-selbar" style="display:none"><span>已選 <b id="lm-photo-selcnt">0</b> 張</span>
+            <button type="button" class="btn-sm" onclick="lmPhotoSelAll(true)">全選</button><button type="button" class="btn-sm" onclick="lmPhotoSelAll(false)">取消選取</button>
+            <button type="button" class="btn-sm lm-photo-seldel" onclick="lmDelSelectedPhotos()">🗑 刪除選取的照片</button></div>
           <div id="lm-photo-grid" class="lm-photo-grid"></div>
         </div>
         <div class="card" style="margin-bottom:14px">
@@ -45620,34 +45629,65 @@ function lmSpAutoFill(sp){
 // 照片:縮圖用小張 JPEG(原圖動輒數 MB,格子裡直接放原圖會讓拖曳卡頓),放大檢視才用原圖(object URL,不佔字串記憶體)。
 // b64 原圖只給產生 Word 用。
 const LM_THUMB_PX=360;
-window.lmAddPhotos=function(inp){
+// 依「選檔順序」加入(每張讀檔完成的先後不固定,以前會打亂順序);超過 30 張的部分略過
+window.lmAddPhotos=async function(inp){
   const files=Array.from(inp.files||[]);inp.value='';
-  files.forEach(f=>{
-    if(lmPhotos.length>=30){alert('最多 30 張照片(5 頁)');return;}
+  const room=30-lmPhotos.length;
+  if(room<=0){alert('最多 30 張照片(5 頁)');return;}
+  if(files.length>room) alert('最多 30 張照片(5 頁),只加入前 '+room+' 張');
+  const load=f=>new Promise(res=>{
     const rd=new FileReader();
+    rd.onerror=()=>res(null);
     rd.onload=()=>{const img=new Image();
+      img.onerror=()=>res(null);
       img.onload=()=>{
         const w=img.naturalWidth||800,h=img.naturalHeight||600,sc=Math.min(1,LM_THUMB_PX/Math.max(w,h));
         let thumb=String(rd.result);
         try{ const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w*sc)); c.height=Math.max(1,Math.round(h*sc));
           c.getContext('2d').drawImage(img,0,0,c.width,c.height); thumb=c.toDataURL('image/jpeg',0.82); }catch(e){}
         let full=String(rd.result); try{ full=URL.createObjectURL(f); }catch(e){}
-        if(lmPhotos.length>=30) return;
-        lmPhotos.push({mime:f.type==='image/png'?'png':'jpeg',b64:String(rd.result).split(',')[1],w,h,thumb,full});
-        lmRenderPhotos();
+        res({mime:f.type==='image/png'?'png':'jpeg',b64:String(rd.result).split(',')[1],w,h,thumb,full});
       };
       img.src=String(rd.result);};
     rd.readAsDataURL(f);
   });
+  const loaded=await Promise.all(files.slice(0,room).map(load));
+  loaded.forEach(p=>{ if(p&&lmPhotos.length<30) lmPhotos.push(p); });
+  lmRenderPhotos();
 };
 function lmPhotoFree(p){ if(p&&p.full&&String(p.full).startsWith('blob:')){ try{ URL.revokeObjectURL(p.full); }catch(e){} } }
-window.lmDelPhoto=function(i){ const [p]=lmPhotos.splice(i,1); lmPhotoFree(p); lmRenderPhotos(); };
+window.lmDelPhoto=function(i){ const [p]=lmPhotos.splice(i,1); lmPhotoFree(p); lmPhotoSel.delete(p); lmRenderPhotos(); };
+// 多選刪除:照片左上角勾選,選了就出現「已選 N 張」工具列
+const lmPhotoSel=new Set();
+function lmPhotoSelUpdate(){
+  const n=lmPhotos.filter(p=>lmPhotoSel.has(p)).length;
+  const bar=document.getElementById('lm-photo-selbar'); if(bar) bar.style.display=n?'':'none';
+  const cnt=document.getElementById('lm-photo-selcnt'); if(cnt) cnt.textContent=n;
+  const all=document.getElementById('lm-photo-delall'); if(all) all.style.display=lmPhotos.length?'':'none';
+  const el=document.getElementById('lm-photo-grid');
+  if(el) Array.prototype.forEach.call(el.children,(card,i)=>{ const on=lmPhotoSel.has(lmPhotos[i]); card.classList.toggle('selected',on); const cb=card.querySelector('.lm-photo-chk input'); if(cb) cb.checked=on; });
+}
+window.lmPhotoSelAll=function(on){ lmPhotoSel.clear(); if(on) lmPhotos.forEach(p=>lmPhotoSel.add(p)); lmPhotoSelUpdate(); };
+window.lmDelSelectedPhotos=async function(){
+  const pick=lmPhotos.filter(p=>lmPhotoSel.has(p)); if(!pick.length) return;
+  if(!await uiConfirm('刪除選取的 '+pick.length+' 張照片?',{danger:true})) return;
+  pick.forEach(lmPhotoFree);
+  lmPhotos=lmPhotos.filter(p=>!lmPhotoSel.has(p)); lmPhotoSel.clear();
+  lmRenderPhotos();
+};
+window.lmDelAllPhotos=async function(){
+  if(!lmPhotos.length) return;
+  if(!await uiConfirm('刪除所有照片(共 '+lmPhotos.length+' 張)?',{danger:true})) return;
+  lmPhotos.forEach(lmPhotoFree); lmPhotos=[]; lmPhotoSel.clear();
+  lmRenderPhotos();
+};
 // 只在張數變動(新增/刪除/清空)時重建格子;拖曳排序直接搬 DOM 節點,不重畫
 function lmRenderPhotos(){
   const el=document.getElementById('lm-photo-grid');if(!el)return;
   lmPhotoBind(el);
   if(!lmPhotos.length){ const c=document.getElementById('lm-caption'); if(c){ c.classList.remove('lm-invalid'); delete c.dataset.lmChecked; } const w=document.getElementById('lm-caption-warn'); if(w) w.style.display='none'; }   // 沒照片就不必填說明
-  el.innerHTML=lmPhotos.map((p,i)=>'<div class="lm-photo" draggable="true"><span class="lm-photo-n">'+(i+1)+'</span><img src="'+(p.thumb||p.url||'')+'" draggable="false" decoding="async"/><button class="lm-photo-x" draggable="false" title="刪除">✕</button></div>').join('');
+  el.innerHTML=lmPhotos.map((p,i)=>'<div class="lm-photo" draggable="true"><label class="lm-photo-chk" draggable="false" title="選取(可多選後一次刪除)"><input type="checkbox"></label><span class="lm-photo-n">'+(i+1)+'</span><img src="'+(p.thumb||p.url||'')+'" draggable="false" decoding="async"/><button class="lm-photo-x" draggable="false" title="刪除">✕</button></div>').join('');
+  lmPhotoSelUpdate();
 }
 function lmPhotoRenumber(el){ Array.prototype.forEach.call(el.children,(c,i)=>{ const n=c.querySelector('.lm-photo-n'); if(n) n.textContent=i+1; }); }
 function lmPhotoIndex(node){ const card=node&&node.closest?node.closest('.lm-photo'):null; return card?Array.prototype.indexOf.call(card.parentNode.children,card):-1; }
@@ -45689,12 +45729,18 @@ function lmPhotoBind(el){
     lmPhotoDragFrom=null; lmPhotoDropAt=null; lmPhotoClearMark();
     const d=el.querySelector('.lm-photo.dragging'); if(d) d.classList.remove('dragging');
   });
+  el.addEventListener('change',e=>{
+    const cb=e.target.closest('.lm-photo-chk input'); if(!cb) return;
+    const p=lmPhotos[lmPhotoIndex(cb)]; if(!p) return;
+    if(cb.checked) lmPhotoSel.add(p); else lmPhotoSel.delete(p);
+    lmPhotoSelUpdate();
+  });
   el.addEventListener('click',e=>{
     if(!e.target.closest('.lm-photo-x')) return;
     const i=lmPhotoIndex(e.target); if(i>=0) lmDelPhoto(i);
   });
   el.addEventListener('dblclick',e=>{
-    if(e.target.closest('.lm-photo-x')) return;
+    if(e.target.closest('.lm-photo-x,.lm-photo-chk')) return;
     const i=lmPhotoIndex(e.target); if(i>=0) lmPhotoView(i);
   });
 }
@@ -45991,7 +46037,7 @@ function lmResetForm(){
   const d=document.getElementById('lm-date');if(d)d.value=lmFriday();
   const r=document.getElementById('lm-resp');if(r)r.value='製二課';
   lmTokens.forEach(t=>{t.checked=false;t.qty=1;});
-  lmCustoms=[];lmPhotos.forEach(lmPhotoFree);lmPhotos=[];lmLinesDirty=false;
+  lmCustoms=[];lmPhotos.forEach(lmPhotoFree);lmPhotos=[];lmPhotoSel.clear();lmLinesDirty=false;
   const b=document.getElementById('lm-lines-reset');if(b)b.style.display='none';
   ['lm-sp-wd','lm-sp-hd'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});
   ['lm-sp-wd-n','lm-sp-wd-g','lm-sp-hd-n','lm-sp-hd-g'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.disabled=true;}});
