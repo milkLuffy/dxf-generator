@@ -1910,7 +1910,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .ship-proj-h span{font-size:12px;color:var(--accent2);font-family:var(--mono)}
 .ship-parts{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:3px;font-size:12px;font-family:var(--mono);color:var(--text2)}
 .ship-cols label{display:inline-flex;align-items:center;gap:4px;cursor:pointer;color:var(--text)}
-.ship-cars{margin:8px 0 2px 28px;font-size:14px}
+.ship-cars{margin:0 0 8px;font-size:14px}
 .ship-cars input{width:64px;padding:4px 6px;font-size:15px;text-align:center;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text)}
 .ship-foot{border-top:1px solid var(--border);margin-top:10px;padding-top:10px}
 .ship-dash-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--rad);cursor:pointer;transition:background .15s;font-size:12.5px;min-width:0}
@@ -28446,7 +28446,7 @@ function shipModalEl(){
     +'<span id="ship-sum" style="font-size:12px;font-weight:400;color:var(--text3)"></span>'
     +'<button class="btn-sm" style="margin-left:auto" onclick="openShipBoard(true)">↻ 重新整理</button></div>'
     +'<div id="ship-body" class="ship-body"><div class="empty-state">載入中...</div></div>'
-    +'<div class="ship-foot"><textarea id="ship-msg" readonly placeholder="勾選柱位後,這裡會產生派車訊息"></textarea>'
+    +'<div class="ship-foot"><div class="ship-cars" id="ship-cars" style="display:none"></div><textarea id="ship-msg" readonly placeholder="勾選柱位後,這裡會產生派車訊息"></textarea>'
     +'<div class="modal-actions" style="margin-top:8px"><button class="btn-modal-cancel" onclick="closeModal(\'ship-board-modal\')">關閉</button>'
     +'<button class="btn-modal-ok" id="ship-copy" onclick="shipCopyMsg()">複製派車訊息</button></div></div></div>';
   document.body.appendChild(m);
@@ -28492,7 +28492,7 @@ async function openShipBoard(reload, pickBed){
   const body=document.getElementById('ship-body');
   if(reload||!shipBoardLoadedAt||Date.now()-shipBoardLoadedAt>5*60000){
     body.innerHTML='<div class="empty-state">載入中...</div>';
-    shipBoardSel={};
+    shipBoardSel={}; shipCars=1;
     try{ await shipLoadRows(); }
     catch(e){ console.warn('ship board',e); body.innerHTML='<div class="empty-state" style="color:var(--danger)">載入失敗</div>'; return; }
     if(typeof shipDashRender==='function') shipDashRender();
@@ -28562,7 +28562,6 @@ function shipRender(){
         +' data-bed="'+bedKey+'" data-id="'+esc(r.id)+'" onchange="shipToggleCol(this.dataset.bed,this.dataset.id,this.checked)">柱 '+esc(r.part)+(r.qty>1?' ×'+r.qty:'')+'</label>').join('')+'</div>';
       h+='</div>';
     });
-    if(sel.on&&beamN) h+='<div class="ship-cars">樑：出 <input type="number" min="0" step="1" inputmode="numeric" value="'+(sel.cars==null?1:sel.cars)+'" data-bed="'+bedKey+'" oninput="shipSetCars(this.dataset.bed,this.value)"> 車</div>';
     return h+'</div>';
   }).join('');
   shipBuildMsg();
@@ -28580,16 +28579,29 @@ window.shipToggleCol=function(bed,id,on){
   if(on) sel.cols[r.id]=true; else delete sel.cols[r.id];
   shipBuildMsg();
 };
-window.shipSetCars=function(bed,v){ const sel=shipBoardSel[bed]; if(!sel) return; sel.cars=Math.max(0,parseInt(v)||0); shipBuildMsg(); };
+// 車數是「所有勾選柱位的樑合起來」幾車,不是每個柱位各自幾車
+let shipCars=1;
+window.shipSetCars=function(v){ shipCars=Math.max(0,parseInt(v)||0); shipBuildMsg(); };
 function shipBuildMsg(){
-  const lines=[];
+  const lines=[], beamBeds=[], colBeds=[]; let colN=0;
   Object.keys(shipBoardSel).filter(b=>shipBoardSel[b].on).sort(shipBedOrder).forEach(bed=>{
     const sel=shipBoardSel[bed], list=shipBoardRows.filter(r=>r.bed===bed);
-    const cars=sel.cars==null?1:sel.cars;
-    if(list.some(r=>!r.col)&&cars>0) lines.push('C棟'+bed+'需出'+cars+'車 麻煩安排 謝謝');
+    if(list.some(r=>!r.col)) beamBeds.push(bed);
     const n=list.filter(r=>r.col&&sel.cols&&sel.cols[r.id]).reduce((a,r)=>a+r.qty,0);
-    if(n>0) lines.push('C棟'+bed+'需出'+n+'支柱子 麻煩安排 謝謝');
+    if(n>0){ colBeds.push(bed); colN+=n; }
   });
+  // 多個柱位合併成一則:C棟D05.D11需出1車
+  if(beamBeds.length&&shipCars>0) lines.push('C棟'+beamBeds.join('.')+'需出'+shipCars+'車 麻煩安排 謝謝');
+  if(colN>0) lines.push('C棟'+colBeds.join('.')+'需出'+colN+'支柱子 麻煩安排 謝謝');
+  const carsEl=document.getElementById('ship-cars');
+  if(carsEl){
+    carsEl.style.display=beamBeds.length?'':'none';
+    if(beamBeds.length){
+      const inp=carsEl.querySelector('input');
+      if(!inp) carsEl.innerHTML='樑（<span id="ship-cars-beds"></span>）合計出 <input type="number" min="0" step="1" inputmode="numeric" value="'+shipCars+'" oninput="shipSetCars(this.value)"> 車';
+      const bb=document.getElementById('ship-cars-beds'); if(bb) bb.textContent=beamBeds.join('.');
+    }
+  }
   const ta=document.getElementById('ship-msg'); if(ta) ta.value=lines.join('\n');
   const b=document.getElementById('ship-copy'); if(b){ b.disabled=!lines.length; b.textContent='複製派車訊息'+(lines.length?'（'+lines.length+' 則）':''); }
 }
