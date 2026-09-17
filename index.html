@@ -19678,6 +19678,7 @@ async function loadNotificationData(){
   await Promise.all([notificationConfigLoad(),manualNotificationLoad(),notificationReadLoad()]);
   updateNotifBadge();
   if(typeof rdyNotifRefresh==='function') rdyNotifRefresh();   // 上線準備紅燈要抓好幾張表,背景抓完再補進鈴鐺,不擋其他通知
+  setTimeout(()=>{ if(typeof pushMaybeAsk==='function') pushMaybeAsk(); }, 2500);   // 手機版登入後詢問是否開啟推播
 }
 async function notificationConfigLoad(){
   const r=await sbFetch('/rest/v1/notification_settings?id=eq.1&select=*');
@@ -19956,6 +19957,79 @@ async function pushSendTest(){
     if(!res.ok) { await pushRenderSettings('測試失敗:'+(d.error||('HTTP '+res.status))); return; }
     await pushRenderSettings('已送出到 '+d.devices+' 台裝置(成功 '+d.sent+'),幾秒內會收到。');
   }catch(e){ await pushRenderSettings('測試失敗:'+(e.message||e)); }
+}
+// ── 手機版開啟時詢問推播 ──
+// 只在「手機、可收推播、還沒開、沒封鎖、7 天內沒按以後再說」時跳小卡。
+// iPhone 規定要使用者點按鈕才能跳系統授權視窗,所以不能自動彈,要靠小卡的「開啟」鈕。
+// iPhone 用 Safari 開(未加主畫面)本來就收不到推播,不詢問。
+const PUSH_ASK_SNOOZE_KEY='push_ask_snooze_until';
+const PUSH_ASK_SNOOZE_DAYS=7;
+let _pushAsked=false;
+async function pushMaybeAsk(){
+  try{
+    if(_pushAsked||isGuest||!currentUser) return;
+    if(!spTrackIsMobile()||!pushSupported()) return;
+    if(pushIsIOS()&&!pushIsStandalone()) return;
+    if(Notification.permission==='denied') return;
+    const until=+(localStorage.getItem(PUSH_ASK_SNOOZE_KEY)||0);
+    if(until&&Date.now()<until) return;
+    const reg=await Promise.race([pushRegistration(), new Promise(r=>setTimeout(()=>r(null),4000))]);
+    if(!reg) return;
+    const sub=await reg.pushManager.getSubscription();
+    if(sub&&Notification.permission==='granted'){
+      const r=await sbFetch('/rest/v1/push_subscriptions?select=endpoint&endpoint=eq.'+encodeURIComponent(sub.endpoint));
+      if(!r.ok||(Array.isArray(r.data)&&r.data.length)) return;   // 已開啟(或查不到表時不打擾)
+    }
+    _pushAsked=true;
+    pushAskShow();
+  }catch(e){ console.warn('pushMaybeAsk',e); }
+}
+function pushAskShow(msg){
+  let el=document.getElementById('push-ask');
+  if(!el){
+    el=document.createElement('div'); el.id='push-ask';
+    el.style.cssText='position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:720;max-width:460px;margin:0 auto;background:var(--bg2);border:1px solid var(--accent2);border-radius:14px;box-shadow:0 10px 32px rgba(0,0,0,.4);padding:14px 16px;font-size:14px;color:var(--text);line-height:1.6';
+    document.body.appendChild(el);
+  }
+  el.innerHTML='<div style="font-weight:700;margin-bottom:4px">📱 開啟手機推播提醒？</div>'
+    +'<div style="font-size:13px;color:var(--text2)">每天早上 07:30 推送待辦到期、公司通知等提醒。</div>'
+    +(msg?'<div style="margin-top:6px;font-size:13px;color:var(--danger,#e0555b)">'+esc(msg)+'</div>':'')
+    +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'
+    +'<button class="btn btn-gen" style="flex:1 1 auto" onclick="pushAskEnable()">開啟</button>'
+    +'<button class="btn" onclick="pushAskClose();openPushSettings()">選擇項目</button>'
+    +'<button class="btn" onclick="pushAskSnooze()">以後再說</button></div>';
+}
+function pushAskClose(){ const el=document.getElementById('push-ask'); if(el) el.remove(); }
+function pushAskSnooze(){
+  try{ localStorage.setItem(PUSH_ASK_SNOOZE_KEY,String(Date.now()+PUSH_ASK_SNOOZE_DAYS*86400000)); }catch(e){}
+  pushAskClose();
+}
+async function pushAskEnable(){
+  try{
+    const perm=await Notification.requestPermission();   // 必須是點擊後第一個 await,iPhone 才會跳授權視窗
+    if(perm!=='granted'){
+      if(perm==='denied'){ pushAskClose(); alert('通知已被封鎖。要收推播請到手機「設定 → 通知」允許本系統後,再到 🔔 → 📱 推播設定開啟。'); }
+      else pushAskShow('沒有取得通知權限,可以再按一次「開啟」。');
+      return;
+    }
+    const reg=await pushRegistration();
+    if(!reg){ pushAskShow('離線快取還沒啟用,請重新開啟 App 後再試。'); return; }
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:pushKeyBytes(PUSH_VAPID_PUBLIC)});
+    const j=sub.toJSON();
+    const topics=PUSH_TOPICS.filter(t=>(t.k==='todo'||t.k==='notice')&&(!t.perm||pagePerm(t.perm)!=='hide')).map(t=>t.k);
+    const r=await sbFetch('/rest/v1/rpc/push_subscribe',{method:'POST',body:JSON.stringify({p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_topics:topics.length?topics:['notice'],p_device:pushDeviceName()})});
+    if(!r.ok){ pushAskShow('儲存失敗(HTTP '+r.status+'),請稍後再試。'); return; }
+    const el=document.getElementById('push-ask');
+    if(el){
+      el.innerHTML='<div style="font-weight:700">✅ 推播已開啟</div><div style="font-size:13px;color:var(--text2)">預設收「待辦到期」與「公司通知」,要調整可到 🔔 → 📱 推播設定。</div>'
+        +'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn" onclick="pushAskClose();openPushSettings()">調整項目</button><button class="btn" onclick="pushAskClose()">好</button></div>';
+      setTimeout(pushAskClose,8000);
+    }
+  }catch(e){
+    console.warn('pushAskEnable',e);
+    pushAskShow('開啟失敗:'+(e.message||e));
+  }
 }
 // 上線準備紅燈的計算要讀很多張表,伺服器端不重算:網頁端算完就把結果寫成快照,排程推播時直接用。
 // 內容沒變且今天寫過就不再寫,避免每個人每次開網頁都寫一次。
