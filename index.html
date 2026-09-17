@@ -2333,7 +2333,7 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
     <div class="modal-grid">
       <div class="lf"><label>請假人</label><select id="lvq-staff"></select></div>
       <div class="lf"><label>假別</label><select id="lvq-type"></select></div>
-      <div class="lf"><label>開始日期</label><input type="date" id="lvq-start" class="date-wk" data-wk="lvq-start-show" onchange="leaveFormChanged()"/><small class="date-wk-show" id="lvq-start-show" style="color:var(--text3)">—</small></div>
+      <div class="lf"><label>開始日期</label><input type="date" id="lvq-start" class="date-wk" data-wk="lvq-start-show" onchange="leaveStartChanged()"/><small class="date-wk-show" id="lvq-start-show" style="color:var(--text3)">—</small></div>
       <div class="lf"><label>結束日期</label><input type="date" id="lvq-end" class="date-wk" data-wk="lvq-end-show" onchange="leaveFormChanged()"/><small class="date-wk-show" id="lvq-end-show" style="color:var(--text3)">—</small></div>
       <div class="lf"><label>時段</label><select id="lvq-daypart" onchange="leaveFormChanged()">
         <option value="full">全天（8 小時）</option><option value="am">上午（4 小時）</option>
@@ -16129,6 +16129,12 @@ function renderDashLeaves(){
       +(l._parts.length===1&&leaveCanModify(l)?'<button type="button" class="leave-del" title="刪除這筆登記" onclick="leaveDelete(\''+esc(String(l.id))+'\')">✕</button>':'<span></span>')
       +'</div>';
   }).join('')+(rows.length>6?'<div class="dash-ann-more" onclick="openLeaveModal()" style="cursor:pointer;padding:6px 14px">還有 '+(rows.length-6)+' 筆 → 查看全部</div>':'');
+}
+// 改開始日期 → 結束日期自動跟成同一天(請多天的再自己改結束日期)
+function leaveStartChanged(){
+  const st=document.getElementById('lvq-start').value;
+  if(st) document.getElementById('lvq-end').value=st;
+  leaveFormChanged();
 }
 function leaveFormChanged(){
   const dp=document.getElementById('lvq-daypart').value;
