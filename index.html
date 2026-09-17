@@ -15929,14 +15929,42 @@ function leaveCoversDate(l,d){
 }
 function leaveMd(v){ const p=String(v).slice(0,10).split('-'); return p.length===3?(+p[1]+'/'+ +p[2]):String(v); }
 function leaveRangeTxt(l){
-  const n=leaveDays(l);
-  return leaveMd(l.start_date)+(n>1?('-'+leaveMd(l.end_date)):'')+(n>1?('（'+n+'天）'):'');
+  const n=l._days||leaveDays(l), multi=String(l.start_date).slice(0,10)!==String(l.end_date||l.start_date).slice(0,10);
+  return leaveMd(l.start_date)+(multi?('-'+leaveMd(l.end_date)):'')+(n>1?('（'+n+'天）'):'');
 }
+// 顯示方式統一(主頁登記與出勤回報同一套):8 小時以上＝全天;半天/自訂顯示時數(登記時選了上午/下午就帶上)
 function leaveMetaTxt(l){
-  const part=LEAVE_DAYPART_TXT[l.day_part]||'';
-  const h=(Number(l.hours)||0);
-  const hs=h?((h%1?h:h.toFixed(0))+'h'):'';
-  return [part,hs].filter(Boolean).join(' ')+(leaveDays(l)>1?(' × '+leaveDays(l)+' 天'):'');
+  const h=Number(l.hours)||0, n=l._days||leaveDays(l);
+  const hs=(h%1?h:h.toFixed(0))+'h';
+  const one=(h>=8||(!h&&l.day_part==='full'))?'全天'
+    :(l.day_part==='am'?'上午 ':l.day_part==='pm'?'下午 ':'')+(h?hs:'');
+  return one+(n>1?(' × '+n+' 天'):'');
+}
+// 主頁清單用:同一人、同假別、同時數的連續請假併成一段(不分主頁登記或出勤回報直接填;中間只隔週日也算連續)
+function leaveIsSunday(ymd){ return new Date(ymd+'T00:00:00').getDay()===0; }
+function leaveNextDay(ymd){ const d=new Date(ymd+'T00:00:00'); d.setDate(d.getDate()+1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function leaveSpans(list){
+  const hKey=l=>{ const h=Number(l.hours)||0; return (h>=8||(!h&&l.day_part==='full'))?'full':String(h)+'|'+(l.day_part==='am'||l.day_part==='pm'?l.day_part:''); };
+  const sorted=list.slice().sort((a,b)=>String(a.staff_name||'').localeCompare(String(b.staff_name||''),'zh-Hant')||String(a.start_date).localeCompare(String(b.start_date)));
+  const out=[]; let cur=null;
+  sorted.forEach(l=>{
+    const st=String(l.start_date).slice(0,10), en=String(l.end_date||l.start_date).slice(0,10);
+    const days=leaveDateList(l).filter(d=>!leaveIsSunday(d));
+    if(cur && cur.staff_name===l.staff_name && String(cur.leave_type||'').trim()===String(l.leave_type||'').trim() && cur._hk===hKey(l)){
+      let d=leaveNextDay(cur.end_date); while(d<st && leaveIsSunday(d)) d=leaveNextDay(d);
+      if(st<=d){   // 接得上(或重疊)
+        if(en>cur.end_date) cur.end_date=en;
+        days.forEach(x=>cur._daySet.add(x)); cur._parts.push(l);
+        if(cur.source!==l.source) cur.source='mixed';
+        cur._days=cur._daySet.size||1;
+        return;
+      }
+    }
+    cur=Object.assign({},l,{start_date:st,end_date:en,_hk:hKey(l),_parts:[l],_daySet:new Set(days)});
+    cur._days=cur._daySet.size||1;
+    out.push(cur);
+  });
+  return out;
 }
 // 區間內的每一天(上限 60 天,避免手殘輸入把整年灌進出勤回報)
 function leaveDateList(l){
@@ -16035,7 +16063,7 @@ function leaveUpcoming(){
   const today=dashTodayStr();
   const until=new Date(new Date(today+'T00:00:00').getTime()+14*86400000);
   const u=until.getFullYear()+'-'+String(until.getMonth()+1).padStart(2,'0')+'-'+String(until.getDate()).padStart(2,'0');
-  return allLeaves
+  return leaveSpans(allLeaves)
     .filter(l=>String(l.end_date||l.start_date).slice(0,10)>=today && String(l.start_date).slice(0,10)<=u)
     .sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date))||String(a.staff_name||'').localeCompare(String(b.staff_name||''),'zh-Hant'));
 }
@@ -16060,8 +16088,8 @@ function renderDashLeaves(){
       +'<span class="leave-date">'+esc(leaveRangeTxt(l))+'</span>'
       +'<span class="leave-name">'+esc(l.staff_name||'')+'</span>'
       +'<div class="leave-meta"><span class="leave-type">'+esc(l.leave_type||'')+'</span>'+esc(leaveMetaTxt(l))
-        +(now?' · 休假中':'')+(l.source==='att'?' · 出勤回報':'')+'</div>'
-      +(leaveCanModify(l)?'<button type="button" class="leave-del" title="刪除這筆登記" onclick="leaveDelete(\''+esc(String(l.id))+'\')">✕</button>':'<span></span>')
+        +(now?' · 休假中':'')+(l.source==='att'?' · 出勤回報':l.source==='mixed'?' · 登記＋出勤回報':'')+'</div>'
+      +(l._parts.length===1&&leaveCanModify(l)?'<button type="button" class="leave-del" title="刪除這筆登記" onclick="leaveDelete(\''+esc(String(l.id))+'\')">✕</button>':'<span></span>')
       +'</div>';
   }).join('')+(rows.length>6?'<div class="dash-ann-more" onclick="openLeaveModal()" style="cursor:pointer;padding:6px 14px">還有 '+(rows.length-6)+' 筆 → 查看全部</div>':'');
 }
