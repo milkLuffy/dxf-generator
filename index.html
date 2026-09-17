@@ -389,20 +389,20 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .pr-ctbl input.pr-iname{text-align:left;width:130px}
 .pr-ctbl input:focus{border-color:var(--accent2);background:var(--bg3)}
 .pr-ctbl td.pr-amtc{color:var(--accent2);font-weight:600;white-space:nowrap}
-/* 柱子卡片:數字欄加寬,最右側刪除鈕,每段底下新增列 */
-.pr-sidecard:has(.pr-ctbl-col){flex-basis:560px;min-width:min(560px,100%)}
-.pr-ctbl-col th:nth-child(2),.pr-ctbl-col td:nth-child(2){width:96px}
-.pr-ctbl-col th:nth-child(3),.pr-ctbl-col td:nth-child(3){width:76px}
-.pr-ctbl-col th:nth-child(4),.pr-ctbl-col td:nth-child(4){width:80px}
-.pr-ctbl-col th:nth-child(5),.pr-ctbl-col td:nth-child(5){width:104px}
-.pr-ctbl-col th:nth-child(6),.pr-ctbl-col td:nth-child(6){width:64px;text-align:center}
-.pr-ctbl-col input.pr-price,.pr-ctbl-col input.pr-qty{width:100%}
-.pr-ctbl-col input.pr-iname{width:100%}
-.pr-ctbl-col .pr-delbtn{border:1px solid var(--border);background:transparent;color:var(--danger,#e0555b);border-radius:6px;font-size:11.5px;padding:3px 8px;cursor:pointer}
-.pr-ctbl-col .pr-delbtn:hover{border-color:var(--danger,#e0555b);background:rgba(224,85,91,.1)}
-.pr-ctbl-col tr.pr-addrow td{text-align:left;height:auto;padding:4px 8px 8px}
-.pr-ctbl-col .pr-addbtn{border:1px dashed var(--border-hi,var(--border));background:transparent;color:var(--text2);border-radius:6px;font-size:12px;padding:4px 10px;cursor:pointer}
-.pr-ctbl-col .pr-addbtn:hover{border-color:var(--accent2);color:var(--text)}
+/* 計價卡片(大小樑/雜項/柱子):數字欄加寬,最右側刪除鈕,每段底下新增列 */
+.pr-sidecard:has(.pr-ctbl-wide){flex-basis:560px;min-width:min(560px,100%)}
+.pr-ctbl-wide th:nth-child(2),.pr-ctbl-wide td:nth-child(2){width:96px}
+.pr-ctbl-wide th:nth-child(3),.pr-ctbl-wide td:nth-child(3){width:76px}
+.pr-ctbl-wide th:nth-child(4),.pr-ctbl-wide td:nth-child(4){width:80px}
+.pr-ctbl-wide th:nth-child(5),.pr-ctbl-wide td:nth-child(5){width:104px}
+.pr-ctbl-wide th:nth-child(6),.pr-ctbl-wide td:nth-child(6){width:64px;text-align:center}
+.pr-ctbl-wide input.pr-price,.pr-ctbl-wide input.pr-qty{width:100%}
+.pr-ctbl-wide input.pr-iname{width:100%}
+.pr-ctbl-wide .pr-delbtn{border:1px solid var(--border);background:transparent;color:var(--danger,#e0555b);border-radius:6px;font-size:11.5px;padding:3px 8px;cursor:pointer}
+.pr-ctbl-wide .pr-delbtn:hover{border-color:var(--danger,#e0555b);background:rgba(224,85,91,.1)}
+.pr-ctbl-wide tr.pr-addrow td{text-align:left;height:auto;padding:4px 8px 8px}
+.pr-ctbl-wide .pr-addbtn{border:1px dashed var(--border-hi,var(--border));background:transparent;color:var(--text2);border-radius:6px;font-size:12px;padding:4px 10px;cursor:pointer}
+.pr-ctbl-wide .pr-addbtn:hover{border-color:var(--accent2);color:var(--text)}
 .pr-ctbl td.pr-nap{color:var(--text3)}
 /* 計價表 Excel 式遊走：目前所在列微量疊色 */
 .pr-ctbl tbody tr:focus-within td,.pr-tbl tbody tr:focus-within td{background-image:linear-gradient(rgba(79,142,247,.075),rgba(79,142,247,.075))}
@@ -32408,33 +32408,33 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       '<div class="pr-cf"><label>支數</label>'+inp('pr-h-cnt-'+k, h[side.hcnt])+'</div>'+
       '<div class="pr-cf"><label>計算噸數</label><span class="pr-ton" id="pr-h-ton-'+k+'">0</span></div>'+
       '</div>';
-    var rows='';
+    var rows='', sec=null;
+    var addRow=function(s){ return s?'<tr class="pr-addrow"><td colspan="6"><button class="pr-addbtn" onclick="pricingAddRowIn(\''+escAttr(s)+'\')">＋ 新增列（'+esc(s)+'）</button></td></tr>':''; };
     for(var i=0;i<st.items.length;i++){
       var it=st.items[i];
-      if(it.cat){ rows+='<tr><td class="pr-cat" colspan="5">'+esc(it.cat)+'</td></tr>'; continue; }
+      if(it.cat){ rows+=addRow(sec); sec=it.cat; rows+='<tr><td class="pr-cat" colspan="6">'+esc(it.cat)+'</td></tr>'; continue; }
       var pv=it[side.priceF], na=(pv==null||pv==='');
       var nameCell = it.custom
-        ? '<input class="pr-iname" value="'+escAttr(it.name||'')+'" oninput="pricingCell('+i+',\'name\',this.value)" placeholder="自訂項目名稱">'
+        ? '<input class="pr-iname" value="'+escAttr(it.name||'')+'" oninput="pricingCell('+i+',\'name\',this.value)" placeholder="項目名稱">'
         : esc(it.name||'');
-      var delc = it.custom ? ' <span class="pr-del" onclick="pricingDelRow('+i+')" title="刪除">✕</span>' : '';
-      // 自訂項目可以只屬於其中一側(例如只有 9BG 要的加工)。另一側維持「—」,按「＋ 本側也加」就補回來。
+      var del='<td class="pr-delc"><button class="pr-delbtn" onclick="pricingDelRowAsk('+i+')">刪除</button></td>';
+      // 自訂項目可以只屬於其中一側(例如只有 9BG 要的加工)。另一側按「⊘」變「—」,按「＋ 本側也加」補回來。
       var onBtn  = (it.custom&&multiSide) ? '<span class="pr-sideon" onclick="pricingSideOn('+i+',\''+k+'\')" title="本側也加這個項目">＋ 本側也加</span>' : '';
       var offBtn = (it.custom&&multiSide) ? ' <span class="pr-del" onclick="pricingSideOff('+i+',\''+k+'\')" title="本側不用這個項目">⊘</span>' : '';
       if(na){
         rows+= onBtn
-          ? '<tr><td class="pr-name">'+nameCell+delc+'</td><td class="pr-nap" colspan="4">'+onBtn+'</td></tr>'
-          : '<tr><td class="pr-name">'+nameCell+delc+'</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-amtc">—</td></tr>';
+          ? '<tr><td class="pr-name">'+nameCell+'</td><td class="pr-nap" colspan="4">'+onBtn+'</td>'+del+'</tr>'
+          : '<tr><td class="pr-name">'+nameCell+'</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-amtc">—</td>'+del+'</tr>';
       } else {
-        rows+='<tr><td class="pr-name">'+nameCell+delc+offBtn+'</td>'+
+        rows+='<tr><td class="pr-name">'+nameCell+offBtn+'</td>'+
           '<td><input class="pr-price" value="'+escAttr(pv)+'" oninput="pricingCell('+i+',\''+side.priceF+'\',this.value)"></td>'+
           '<td class="pr-mhc"><span id="pr-mh-'+k+'-'+i+'">0</span></td>'+
           '<td><input class="pr-qty" id="pr-qty-'+k+'-'+i+'" value="'+escAttr(num(it[side.qtyF])?it[side.qtyF]:'')+'" oninput="pricingCell('+i+',\''+side.qtyF+'\',this.value)"></td>'+
-          '<td class="pr-amtc"><span id="pr-amt-'+k+'-'+i+'">$0</span></td></tr>';
+          '<td class="pr-amtc"><span id="pr-amt-'+k+'-'+i+'">$0</span></td>'+del+'</tr>';
       }
     }
-    var addBtn = multiSide
-      ? '<div class="pr-cadd"><button class="btn" onclick="pricingAddRow(\''+k+'\')">＋ 只加「'+esc(side.code||side.tag)+'」的項目</button></div>' : '';
-    var tbl='<div class="pr-citems"><table class="pr-ctbl"><thead><tr><th class="pr-name">項目</th><th>單價</th><th>工時mh</th><th>數量</th><th>金額</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+addBtn;
+    rows+=addRow(sec);
+    var tbl='<div class="pr-citems"><table class="pr-ctbl pr-ctbl-wide"><thead><tr><th class="pr-name">項目</th><th>單價</th><th>工時mh</th><th>數量</th><th>金額</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
     var summ='<div class="pr-csum">'+
       '<div class="pr-csrow"><span>工時金額合計</span><b id="pr-s-total-'+k+'">$0</b></div>'+
       '<div class="pr-csrow"><span>管銷 × <span id="pr-s-adminx-'+k+'">1.1</span></span><b id="pr-s-after-'+k+'">$0</b></div>'+
@@ -32465,7 +32465,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         '<td class="pr-amtc"><span id="pr-amt-'+k+'-'+i+'">$0</span></td>'+del+'</tr>';
     });
     rows+=addRow(sec);
-    var tbl='<div class="pr-citems"><table class="pr-ctbl pr-ctbl-col"><thead><tr><th class="pr-name">加工項目</th><th>單價</th><th>工時mh</th><th>數量</th><th>金額</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    var tbl='<div class="pr-citems"><table class="pr-ctbl pr-ctbl-wide"><thead><tr><th class="pr-name">加工項目</th><th>單價</th><th>工時mh</th><th>數量</th><th>金額</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
     var summ='<div class="pr-csum">'+
       '<div class="pr-csrow"><span>A 基本加工費</span><b id="pr-col-a-'+k+'">$0</b></div>'+
       '<div class="pr-csrow"><span>B 實作加工費</span><b id="pr-col-b-'+k+'">$0</b></div>'+
@@ -32559,7 +32559,6 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   function footerHTML(g, st){
     var isBeam=g.cat==='beam', multi=g.sides.length>=2;
     var toolbar='<div class="pr-toolbar">'+
-      '<button class="btn" onclick="pricingAddRow()">＋ 新增項目'+(multi?'（每側都加）':'')+'</button>'+
       '<button class="btn" onclick="pricingReset()">↺ 重設為表定</button>'+
       '<button class="btn" onclick="pricingReautofill()">↻ 重新帶入公斤/支數</button>'+
       '<button class="btn" onclick="pricingApplyImported()">↧ 帶入已核對數量</button>'+
@@ -32789,12 +32788,14 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     it[side.priceF]=''; it[side.qtyF]='';
     pricingRender();
   };
-  // 柱子:在指定段落最後面加一列(所有柱區都可填);「柱基本單價」段的列計入基本柱金額
+  // 在指定段落最後面加一列(所有工程區都可填);柱子「柱基本單價」段的列計入基本柱金額
   window.pricingAddRowIn=function(secName){
     var st=S(), g=curGroup(); if(!st||!g) return;
     var row={name:'', custom:true};
-    if(secName===COL_BASE_SEC){ row.base=true; row.div=344; }
-    else row.div=(secName==='實作時算')?345:344;
+    if(g.cat==='col'){
+      if(secName===COL_BASE_SEC){ row.base=true; row.div=344; }
+      else row.div=(secName==='實作時算')?345:344;
+    }
     (g.sides||[]).forEach(function(side){ row[side.priceF]=0; row[side.qtyF]=0; });
     var at=-1, inSec=false;
     for(var i=0;i<st.items.length;i++){
@@ -32804,12 +32805,12 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(at<0) at=st.items.length;
     st.items.splice(at,0,row);
     pricingRender();
-    setTimeout(function(){ var el=document.querySelector('.pr-ctbl-col input.pr-iname[oninput^="pricingCell('+at+',"]'); if(el) el.focus(); },0);
+    setTimeout(function(){ var el=document.querySelector('.pr-ctbl-wide input.pr-iname[oninput^="pricingCell('+at+',"]'); if(el) el.focus(); },0);
   };
   window.pricingDelRowAsk=async function(idx){
     var st=S(), g=curGroup(); if(!st||!st.items[idx]) return;
     var nm=String(st.items[idx].name||'').trim()||'（未命名）';
-    var many=(g&&g.sides&&g.sides.length>1)?'\n\n這一列在所有柱區（'+g.sides.map(function(s){return s.code;}).join('、')+'）都會一起刪除。':'';
+    var many=(g&&g.sides&&g.sides.length>1)?'\n\n這一列在所有工程區（'+g.sides.map(function(s){return s.code;}).join('、')+'）都會一起刪除。':'';
     if(!await uiConfirm('確定刪除「'+nm+'」項目？'+many,{danger:true,okText:'刪除'})) return;
     st.items.splice(idx,1);
     pricingRender();
