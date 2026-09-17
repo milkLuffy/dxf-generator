@@ -3027,6 +3027,9 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
           <div class="nav-item" onclick="navTo('cost')" id="nav-cost">
             <span class="nav-icon">🧾</span><span class="nav-label">成本</span>
           </div>
+          <div class="nav-item" onclick="navTo('projpl')" id="nav-projpl">
+            <span class="nav-icon">📈</span><span class="nav-label">工程損益</span>
+          </div>
           <div class="nav-item" onclick="navTo('accounts')" id="nav-accounts">
             <span class="nav-icon">🔑</span><span class="nav-label">帳號管理</span>
           </div>
@@ -3167,6 +3170,7 @@ window.normalizeFullWidth=function(value){
       'nav-output':'<path d="M4 20V10h4v10M10 20V4h4v16M16 20v-7h4v7M2 20h20"/>',
       'nav-pricing':'<circle cx="12" cy="12" r="9"/><path d="M16 8c-.7-1-1.8-1.5-4-1.5-2.5 0-4 1-4 2.5s1.2 2.2 4 2.8 4 1.3 4 2.8-1.5 2.8-4 2.8c-2.2 0-3.7-.6-4.5-1.7M12 4v16"/>',
       'nav-cost':'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+      'nav-projpl':'<path d="M3 20h18"/><path d="m4 16 5-5 4 3 7-8"/><path d="M15 6h5v5"/>',
       'nav-accounts':'<circle cx="8" cy="15" r="4"/><path d="m11 12 8-8 2 2-2 2 2 2-3 3-2-2-3 3"/>',
       'nav-notify':'<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>',
       'nav-audit':'<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4"/><path d="M8 11h8M8 15h8M8 19h4"/>',
@@ -8404,6 +8408,71 @@ window.normalizeFullWidth=function(value){
       </div>
     </div>
 
+    <!-- 工程損益(管理員):單一工程從頭到尾的收入、扣款與分攤成本 -->
+    <style>
+      #page-projpl .pl-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+      #page-projpl .pl-bar select{min-width:260px;max-width:100%}
+      #page-projpl .pl-seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--rad);overflow:hidden}
+      #page-projpl .pl-seg button{border:none;border-right:1px solid var(--border);border-radius:0;background:var(--bg3);color:var(--text2);font-family:var(--mono);font-size:11px;padding:6px 11px;cursor:pointer}
+      #page-projpl .pl-seg button:last-child{border-right:none}
+      #page-projpl .pl-seg button.active{background:var(--accent2);color:#fff}
+      #page-projpl .pl-cards{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+      #page-projpl .pl-card{flex:1 1 150px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:10px 14px;min-width:145px}
+      #page-projpl .pl-card .lbl{display:block;font-size:11px;color:var(--text3);margin-bottom:3px}
+      #page-projpl .pl-card .big{display:block;font-family:var(--mono);font-size:19px;font-weight:700;color:var(--text);line-height:1.25}
+      #page-projpl .pl-card .sub{display:block;font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:4px;line-height:1.5}
+      #page-projpl .pl-card.main{border-color:var(--accent2)}
+      #page-projpl .pl-pos{color:var(--green,#3ecf8e)!important}
+      #page-projpl .pl-neg{color:#e0555b!important}
+      #page-projpl .pl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:14px}
+      #page-projpl .pl-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);overflow:hidden;min-width:0}
+      #page-projpl .pl-box.wide{grid-column:1/-1}
+      #page-projpl .pl-box-h{background:var(--bg3);padding:8px 12px;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--accent2);display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border)}
+      #page-projpl .pl-scroll{max-height:460px;overflow:auto}
+      #page-projpl table{width:100%;border-collapse:collapse;font-size:12px}
+      #page-projpl th{background:var(--bg3);color:var(--text3);font-family:var(--mono);font-size:11px;font-weight:500;padding:6px 8px;text-align:left;position:sticky;top:0;white-space:nowrap}
+      #page-projpl td{padding:5px 8px;border-bottom:1px solid rgba(128,128,128,.12);white-space:nowrap}
+      #page-projpl td.num,#page-projpl th.num{text-align:right;font-family:var(--mono)}
+      #page-projpl tr.pl-foot td{font-weight:700;background:var(--bg3);border-top:2px solid var(--border);position:sticky;bottom:0}
+      #page-projpl .pl-muted{color:var(--text3)}
+      #page-projpl .pl-warn{background:rgba(224,85,91,.1);border:1px solid rgba(224,85,91,.35);color:var(--text2);border-radius:var(--rad);padding:8px 12px;font-size:12px;margin-bottom:12px;line-height:1.7}
+      #page-projpl .pl-kv{display:flex;justify-content:space-between;gap:10px;padding:7px 12px;font-size:12px;border-bottom:1px solid rgba(128,128,128,.12)}
+      #page-projpl .pl-kv:last-child{border-bottom:none}
+      #page-projpl .pl-kv .k{color:var(--text2)}
+      #page-projpl .pl-kv .v{font-family:var(--mono);font-weight:600;text-align:right}
+      #page-projpl .pl-note{font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:12px;line-height:1.8}
+      @media (max-width:768px){#page-projpl .pl-bar select{min-width:0;flex:1 1 100%}#page-projpl .pl-card{flex:1 1 calc(50% - 5px);min-width:0}#page-projpl .pl-card .big{font-size:16px}}
+    </style>
+    <div class="page" id="page-projpl">
+      <div class="page-header">
+        <div><div class="page-title">📈 工程損益</div><div class="page-subtitle">單一工程從頭到尾:產值、點工、扣款與分攤成本</div></div>
+      </div>
+      <div class="pl-bar">
+        <div class="pl-seg">
+          <button id="pl-f-done" onclick="plSetFilter('done')">已完成</button>
+          <button id="pl-f-open" onclick="plSetFilter('open')">進行中</button>
+          <button id="pl-f-all" class="active" onclick="plSetFilter('all')">全部</button>
+        </div>
+        <select class="filter-select" id="pl-proj" onchange="plLoad()"><option value="">— 載入中… —</option></select>
+        <span class="ovr-seg-sep">收入口徑</span>
+        <div class="pl-seg">
+          <button id="pl-r-value" class="active" onclick="plSetBasis('value')" title="完成噸數 × 單價,另加水電">產值</button>
+          <button id="pl-r-bill" onclick="plSetBasis('bill')" title="請款核對／請款紀錄裡實際請款的金額">已請款</button>
+        </div>
+        <button class="btn" onclick="plLoad(true)">🔄 重新計算</button>
+        <span id="pl-status" style="font-family:var(--mono);font-size:12px;color:var(--text3);margin-left:auto"></span>
+      </div>
+      <div id="pl-warn"></div>
+      <div class="pl-cards" id="pl-cards"></div>
+      <div class="pl-grid" id="pl-body"><div class="empty-state" style="grid-column:1/-1">請先選擇工程</div></div>
+      <div class="pl-note">
+        ※ <b>產值</b>＝各工程區完成噸數(每日產量淨重)× 產值頁單價;水電在該區 BOM 支數全部完成後以「水電重量 × 水電單價」計入。轉包工程區不計。<br>
+        ※ <b>已請款</b>＝請款紀錄(封存)＋請款核對中已填請款金額的期別;含中文的請款欄(例:NT合併、點工)無法換算,以 0 計。<br>
+        ※ <b>點工</b>＝點工單中此工程編號的請款金額;保留款未核銷的部分另列。<b>扣款</b>＝扣款明細中編號以此工程編號開頭、未作廢的實際扣款金額。<br>
+        ※ <b>分攤成本是估算</b>:人事(出勤工數 × 日薪,同「成本」頁)與五金(採購實付)先算出全廠每月總額,再依「本工程當月噸數 ÷ 全廠當月噸數」分攤。不含勞健保雇主負擔、材料、外包與管理費用。
+      </div>
+    </div>
+
     <!-- 成本(管理員):人事 + 五金,當日/本月/自訂區間 -->
     <style>
       #page-cost .ct-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
@@ -12643,7 +12712,7 @@ const PAGE_SECTION={
   staff:'staff', egstaff:'staff', giftlist:'staff', attend:'staff', attendlog:'staff',
   attendance:'eg', egdaily:'eg',
   emp:'hr', payroll:'hr', leave:'hr', payrollcfg:'hr',
-  output:'admin', pricing:'admin', cost:'admin', accounts:'admin', notify:'admin', audit:'admin', health:'admin'
+  output:'admin', pricing:'admin', cost:'admin', projpl:'admin', accounts:'admin', notify:'admin', audit:'admin', health:'admin'
 };
 // 每個分類的「首頁」(點圖示或觸控時導向)
 const SECTION_FIRST={main:'dashboard',prod:'bom',tools:'bomtool',staff:'staff',eg:'attendance',hr:'emp',admin:'output'};
@@ -12689,12 +12758,13 @@ const PAGE_META=[
   {k:'output',       label:'產值',           sec:'admin'},
   {k:'pricing',      label:'計價',           sec:'admin'},
   {k:'cost',         label:'成本',           sec:'admin'},
+  {k:'projpl',       label:'工程損益',       sec:'admin'},
   {k:'accounts',     label:'帳號管理',       sec:'admin'},
   {k:'notify',       label:'通知管理',       sec:'admin'},
   {k:'audit',        label:'操作紀錄',       sec:'admin'},
   {k:'health',       label:'系統健康',       sec:'admin'},
 ];
-const ADMIN_PAGES=new Set(['output','pricing','cost','accounts','notify','audit','health']);   // 一般帳號預設隱藏的管理頁
+const ADMIN_PAGES=new Set(['output','pricing','cost','projpl','accounts','notify','audit','health']);   // 一般帳號預設隱藏的管理頁
 // 人事薪資專區:整區用單一 perms 鍵 'payroll' 控管(與資料庫 is_hr() 一致),未授權一律隱藏
 const HR_PAGES=new Set(['emp','leave','payroll','payslip','payrollcfg']);
 // 人事薪資四頁各自一把鑰匙;未設定時沿用舊的整區鍵 perms.payroll(舊帳號行為不變)
@@ -12994,6 +13064,7 @@ function navTo(page, viewState) {
   if(page==='pricing') pricingInit();
   if(page==='output') outputInit();
   if(page==='cost') costInit();
+  if(page==='projpl') projplInit();
   if(page==='attend') attendInit();
   if(page==='attendlog') loadAttendLog();
   if(page==='attendance') attendanceInit();
@@ -38959,6 +39030,281 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 })();
 </script>
 
+<!-- ═══════════ 管理員:工程損益 ═══════════ -->
+<script>
+(function(){
+  var plFilter='all', plBasis='value', plBase=null, plCostCache={};
+  function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
+  // 請款欄可能是文字(NT合併/點工),含中文一律當 0,與產值頁 billNum 同一規則
+  function billNum(v){ var s=String(v==null?'':v); if(/[一-鿿]/.test(s)) return 0; var n=parseFloat(s.replace(/[^0-9.\-]/g,'')); return isFinite(n)?n:0; }
+  function money(x){ return Math.round(num(x)).toLocaleString('en-US'); }
+  function ntd(x){ var n=Math.round(num(x)); return (n<0?'−':'')+'NT$'+Math.abs(n).toLocaleString('en-US'); }
+  function up(s){ return String(s||'').trim().toUpperCase(); }
+  function zk(p,z){ return up(p)+'|'+up(z); }
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function monthEnd(ym){ var y=+ym.slice(0,4), m=+ym.slice(5,7); return ym+'-'+pad(new Date(y,m,0).getDate()); }
+  function isSub(z){ return String(z&&z.status||'').trim()==='轉包'; }
+  function el(id){ return document.getElementById(id); }
+
+  window.plSetFilter=function(f){
+    plFilter=f;
+    ['done','open','all'].forEach(function(k){ var b=el('pl-f-'+k); if(b) b.classList.toggle('active',k===f); });
+    plFillProjects();
+  };
+  window.plSetBasis=function(b){
+    plBasis=b;
+    ['value','bill'].forEach(function(k){ var x=el('pl-r-'+k); if(x) x.classList.toggle('active',k===b); });
+    plLoad();
+  };
+  window.projplInit=async function(){
+    if(!plBase) await plLoadBase();
+    plFillProjects();
+    if(el('pl-proj').value) plLoad();
+  };
+
+  async function plLoadBase(){
+    var st=el('pl-status'); if(st) st.textContent='載入工程資料…';
+    var res=await Promise.all([
+      sbFetchAll('/rest/v1/projects?select=id,proj_num,proj_name,company,status,client'),
+      sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,unit_price,util_price,util_weight_kg,price_note,status'),
+      sbFetchAll('/rest/v1/daily_output?select=date,proj_num,zone_code,net_weight'),
+      sbFetchAll('/rest/v1/components?select=zone_id,qty')
+    ]);
+    var arr=function(i){ return Array.isArray(res[i].data)?res[i].data:[]; };
+    var projects=arr(0), zones=arr(1), daily=arr(2), comps=arr(3);
+    var byNum={};
+    projects.forEach(function(p){
+      var k=up(p.proj_num); if(!k) return;
+      var g=byNum[k]||(byNum[k]={proj_num:String(p.proj_num).trim(),names:[],ids:[],statuses:[],company:p.company||'',client:p.client||''});
+      g.ids.push(String(p.id)); if(p.proj_name&&g.names.indexOf(p.proj_name)<0) g.names.push(p.proj_name); g.statuses.push(String(p.status||'').trim());
+    });
+    var projNumById={}; projects.forEach(function(p){ projNumById[String(p.id)]=up(p.proj_num); });
+    var zoneByKey={}; zones.forEach(function(z){ z._pn=projNumById[String(z.project_id)]||''; zoneByKey[zk(z._pn,z.zone_code)]=z; });
+    var bomQty={}; comps.forEach(function(c){ var id=String(c.zone_id); bomQty[id]=(bomQty[id]||0)+(parseInt(c.qty)||0); });
+    var tonsByMonth={}, firstDate={}, lastDate={};
+    daily.forEach(function(d){
+      if(!d.date) return;
+      var ym=d.date.slice(0,7); tonsByMonth[ym]=(tonsByMonth[ym]||0)+num(d.net_weight)/1000;
+      var p=up(d.proj_num); if(!p) return;
+      if(!firstDate[p]||d.date<firstDate[p]) firstDate[p]=d.date;
+      if(!lastDate[p]||d.date>lastDate[p]) lastDate[p]=d.date;
+    });
+    plBase={byNum:byNum, zones:zones, zoneByKey:zoneByKey, daily:daily, bomQty:bomQty, tonsByMonth:tonsByMonth, firstDate:firstDate, lastDate:lastDate};
+    plCostCache={};
+    if(st) st.textContent='';
+  }
+
+  function plProjDone(g){ return g.statuses.length>0 && g.statuses.every(function(s){ return s==='已完成'||s==='轉包'; }); }
+  function plFillProjects(){
+    var sel=el('pl-proj'); if(!sel||!plBase) return;
+    var cur=sel.value;
+    var list=Object.keys(plBase.byNum).map(function(k){ return plBase.byNum[k]; })
+      .filter(function(g){ return plBase.firstDate[up(g.proj_num)]; })   // 沒有任何產量的工程不列
+      .filter(function(g){ return plFilter==='all' || (plFilter==='done')===plProjDone(g); })
+      .sort(function(a,b){ return String(plBase.lastDate[up(b.proj_num)]||'').localeCompare(String(plBase.lastDate[up(a.proj_num)]||'')); });
+    sel.innerHTML='<option value="">— 選擇工程('+list.length+')—</option>'+list.map(function(g){
+      var k=up(g.proj_num);
+      return '<option value="'+esc(k)+'"'+(k===cur?' selected':'')+'>'+esc(g.proj_num+' '+g.names.join('/'))+'　'+esc((plBase.firstDate[k]||'').slice(0,7)+' ~ '+(plBase.lastDate[k]||'').slice(0,7))+(plProjDone(g)?'　✓完成':'')+'</option>';
+    }).join('');
+  }
+
+  // 全廠某月的人事+五金成本(與「成本」頁同算法),依月份快取
+  async function plMonthCosts(months){
+    var need=months.filter(function(m){ return !plCostCache[m]; });
+    if(need.length){
+      var from=need[0]+'-01', to=monthEnd(need[need.length-1]);
+      var res=await Promise.all([
+        sbFetchAll('/rest/v1/att_report?select=work_date,staff_name,work_hours,ot_hours&work_date=gte.'+from+'&work_date=lte.'+to),
+        sbFetchAll('/rest/v1/staff?select=id,name'),
+        sbFetchAll('/rest/v1/employee_pay?select=staff_id,pay_type,base_salary,daily_wage'),
+        sbFetchAll('/rest/v1/hw_purchases?select=tx_date,qty,price,total&tx_date=gte.'+from+'&tx_date=lte.'+to)
+      ]);
+      var arr=function(i){ return Array.isArray(res[i].data)?res[i].data:[]; };
+      var payBySid={}; arr(2).forEach(function(p){ payBySid[String(p.staff_id)]=p; });
+      var sidByName={}; arr(1).forEach(function(s){ if(s.name) sidByName[s.name]=s; });
+      need.forEach(function(m){ plCostCache[m]={hr:0,hw:0,noPay:!arr(2).length}; });
+      arr(0).forEach(function(a){
+        var m=String(a.work_date||'').slice(0,7), c=plCostCache[m]; if(!c) return;
+        var gong=num(a.work_hours)/8+num(a.ot_hours)/6; if(gong<=0) return;
+        var s=sidByName[a.staff_name], pay=s?payBySid[String(s.id)]:null;
+        c.hr+=gong*(pay?Payroll.dailyWage(pay):0);
+      });
+      arr(3).forEach(function(p){
+        var m=String(p.tx_date||'').slice(0,7), c=plCostCache[m]; if(!c) return;
+        c.hw+=num(p.total)||(num(p.qty)*num(p.price));
+      });
+    }
+    return months.map(function(m){ return Object.assign({ym:m},plCostCache[m]); });
+  }
+
+  window.plLoad=async function(force){
+    var sel=el('pl-proj'), st=el('pl-status'), body=el('pl-body'), cards=el('pl-cards'), warn=el('pl-warn');
+    if(force){ plBase=null; }
+    if(!plBase){ await plLoadBase(); plFillProjects(); }
+    var P=sel&&sel.value;
+    if(!P){ cards.innerHTML=''; warn.innerHTML=''; body.innerHTML='<div class="empty-state" style="grid-column:1/-1">請先選擇工程</div>'; return; }
+    var g=plBase.byNum[P];
+    if(st) st.textContent='計算中…';
+    try{
+      // ── 產量與產值(依工程區) ──
+      var zoneRows={}, monthTons={};
+      plBase.daily.forEach(function(d){
+        if(up(d.proj_num)!==P) return;
+        var key=zk(P,d.zone_code), r=zoneRows[key];
+        if(!r){ var z=plBase.zoneByKey[key]||null; r=zoneRows[key]={zone_code:String(d.zone_code||'').trim(),z:z,qty:0,kg:0}; }
+        r.qty++; r.kg+=num(d.net_weight);
+        var ym=String(d.date||'').slice(0,7); if(ym) monthTons[ym]=(monthTons[ym]||0)+num(d.net_weight)/1000;
+      });
+      var zidSet={};
+      plBase.zones.forEach(function(z){ if(z._pn===P) zidSet[String(z.id)]=z; });
+
+      var ids=Object.keys(zidSet);
+      var inIds=ids.length?ids.join(','):'0';
+      var res=await Promise.all([
+        sbFetchAll('/rest/v1/billing_archive?select=ym,round,zone_id,bill_price,util_bill_price,bill_date&zone_id=in.('+inIds+')'),
+        sbFetchAll('/rest/v1/billing_records?select=ym,round,zone_id,bill_price,util_bill_price,bill_date&zone_id=in.('+inIds+')'),
+        sbFetchAll('/rest/v1/labor_orders?select=proj_num,doc_no,work_date,actual_amount,amount,bill_date,has_retention,retention,retention_paid_amount'),
+        sbFetchAll('/rest/v1/deduction_details?select=category,doc_no,zone_code,reason,expected_amount,actual_amount,deduction_date,voided')
+      ]);
+      var arr=function(i){ return Array.isArray(res[i].data)?res[i].data:[]; };
+      var w=[];
+      if(!res[0].ok&&!res[1].ok) w.push('讀不到請款資料(billing_archive / billing_records),已請款以 0 計。');
+
+      // 已請款:封存優先,請款核對補上尚未封存的期別
+      var billByZone={}, seen={};
+      function takeBill(r){
+        var k=r.ym+'|'+r.round+'|'+r.zone_id; if(seen[k]) return; 
+        var amt=billNum(r.bill_price)+billNum(r.util_bill_price); if(amt===0) return;
+        seen[k]=1; billByZone[String(r.zone_id)]=(billByZone[String(r.zone_id)]||0)+amt;
+      }
+      arr(0).forEach(takeBill); arr(1).forEach(takeBill);
+
+      var rows=Object.keys(zoneRows).map(function(k){ return zoneRows[k]; });
+      // 有請款但沒有產量的工程區也列出來(例:只請水電)
+      Object.keys(billByZone).forEach(function(id){
+        var z=zidSet[id]; if(!z) return;
+        var key=zk(P,z.zone_code); if(!zoneRows[key]) rows.push(zoneRows[key]={zone_code:String(z.zone_code||'').trim(),z:z,qty:0,kg:0});
+      });
+      var noPrice=[], sumTons=0, sumValue=0, sumUtil=0, sumBill=0, subCount=0;
+      rows.forEach(function(r){
+        var z=r.z||{}, id=r.z?String(r.z.id):'';
+        r.sub=isSub(z); r.tons=r.kg/1000; r.bom=id?(plBase.bomQty[id]||0):0;
+        r.complete=r.bom>0&&r.qty>=r.bom;
+        r.unit=num(z.unit_price); r.note=String(z.price_note||'').trim();
+        r.value=r.sub?0:r.tons*r.unit;
+        r.hasUtil=z.util_weight_kg!=null&&!r.sub;
+        r.util=(r.hasUtil&&r.complete)?num(z.util_weight_kg)/1000*num(z.util_price):0;
+        r.bill=id?(billByZone[id]||0):0;
+        if(r.sub) subCount++;
+        else if(!r.unit&&r.tons>0) noPrice.push(r.zone_code+(r.note?'('+r.note+')':''));
+        sumTons+=r.tons; sumValue+=r.value; sumUtil+=r.util; sumBill+=r.bill;
+      });
+      rows.sort(function(a,b){ return a.zone_code.localeCompare(b.zone_code,'zh-Hant',{numeric:true}); });
+      if(!rows.length) w.push('此工程沒有工程區產量資料。');
+      if(noPrice.length) w.push('這些工程區有產量但沒有數字單價,產值以 0 計:'+noPrice.slice(0,12).join('、')+(noPrice.length>12?' 等':''));
+      var pendingUtil=rows.filter(function(r){ return r.hasUtil&&!r.complete; }).map(function(r){ return r.zone_code; });
+
+      // ── 點工 ──
+      var labor={n:0,amount:0,retention:0,retPaid:0,unbilled:0};
+      arr(2).forEach(function(l){
+        if(up(l.proj_num)!==P) return;
+        labor.n++;
+        var amt=num(l.actual_amount);
+        if(!l.bill_date){ labor.unbilled+=num(l.amount); return; }
+        labor.amount+=amt;
+        if(l.has_retention){ labor.retention+=(l.retention==null?Math.round(amt*0.2):num(l.retention)); labor.retPaid+=num(l.retention_paid_amount); }
+      });
+      // ── 扣款(編號以工程編號開頭) ──
+      var ded={total:0,pending:0,byCat:{},n:0};
+      arr(3).forEach(function(d){
+        if(d.voided===true) return;
+        if(up(d.doc_no).indexOf(P)!==0) return;
+        ded.n++;
+        var a=num(d.actual_amount), c=d.category||'(未分類)';
+        if(String(d.actual_amount??'').trim()===''){ ded.pending+=num(d.expected_amount); return; }
+        ded.total+=a; ded.byCat[c]=(ded.byCat[c]||0)+a;
+      });
+
+      // ── 分攤成本 ──
+      var months=Object.keys(monthTons).sort();
+      var costs=months.length?await plMonthCosts(months):[];
+      var hrAlloc=0, hwAlloc=0, costRows=costs.map(function(c){
+        var all=plBase.tonsByMonth[c.ym]||0, mine=monthTons[c.ym]||0, share=all>0?mine/all:0;
+        hrAlloc+=c.hr*share; hwAlloc+=c.hw*share;
+        return {ym:c.ym,mine:mine,all:all,share:share,hr:c.hr,hw:c.hw,hrA:c.hr*share,hwA:c.hw*share};
+      });
+      if(costs.some(function(c){ return c.noPay; })) w.push('讀不到員工薪資設定(需 HR 權限)→ 人事成本會是 0,損益會偏高。');
+
+      var revenueMain=plBasis==='value'?(sumValue+sumUtil):sumBill;
+      var laborNet=labor.amount-(labor.retention-labor.retPaid);
+      var revenue=revenueMain+labor.amount-ded.total;
+      var cost=hrAlloc+hwAlloc;
+      var profit=revenue-cost;
+      var margin=revenue>0?profit/revenue*100:null;
+      warn.innerHTML=w.length?'<div class="pl-warn">⚠ '+w.map(esc).join('<br>⚠ ')+'</div>':'';
+
+      var card=function(lbl,big,sub,cls,bigCls){ return '<div class="pl-card'+(cls?' '+cls:'')+'"><span class="lbl">'+lbl+'</span><span class="big'+(bigCls?' '+bigCls:'')+'">'+big+'</span><span class="sub">'+sub+'</span></div>'; };
+      var span=(plBase.firstDate[P]||'')+' ~ '+(plBase.lastDate[P]||'');
+      cards.innerHTML=
+         card('估算損益',ntd(profit),margin==null?'—':'毛利率 '+margin.toFixed(1)+'%','main',profit>=0?'pl-pos':'pl-neg')
+        +card('收入合計',ntd(revenue),(plBasis==='value'?'產值':'已請款')+' ＋ 點工 − 扣款')
+        +card(plBasis==='value'?'產值(含水電)':'已請款',ntd(revenueMain),plBasis==='value'?('產值 '+money(sumValue)+' ＋ 水電 '+money(sumUtil)):('產值估算 '+money(sumValue+sumUtil)))
+        +card('點工',ntd(labor.amount),labor.n+' 張'+(labor.unbilled?' · 未請款 '+money(labor.unbilled):''))
+        +card('扣款',ntd(-ded.total),ded.n+' 筆'+(ded.pending?' · 未扣 '+money(ded.pending):''))
+        +card('分攤成本(估算)',ntd(cost),'人事 '+money(hrAlloc)+' ＋ 五金 '+money(hwAlloc))
+        +card('完成噸數',sumTons.toFixed(2)+' t',span)
+        +card('每噸損益',sumTons>0?ntd(profit/sumTons):'—','損益 ÷ 噸數',null,profit>=0?'pl-pos':'pl-neg');
+
+      var zoneHtml='<div class="pl-box wide"><div class="pl-box-h"><span>🏗 工程區產值與請款</span><span>'+esc(g?g.proj_num+' '+g.names.join('/'):P)+(subCount?' · 轉包 '+subCount+' 區不計':'')+'</span></div><div class="pl-scroll"><table><thead><tr>'
+        +'<th>工程區</th><th class="num">完成支數</th><th class="num">噸數</th><th class="num">單價</th><th class="num">產值</th><th class="num">水電</th><th class="num">已請款</th><th class="num">產值−已請款</th></tr></thead><tbody>'
+        +rows.map(function(r){
+          var unitTxt=r.sub?'<span class="status-badge 轉包">轉包</span>':(r.unit?money(r.unit):(r.note?'<span class="pl-muted">'+esc(r.note)+'</span>':'<span class="pl-neg">未填</span>'));
+          var utilTxt=!r.hasUtil?'<span class="pl-muted">—</span>':(r.complete?money(r.util):'<span class="pl-muted" title="BOM 支數尚未全部完成">未完成</span>');
+          var diff=r.value+r.util-r.bill;
+          return '<tr><td>'+esc(r.zone_code)+'</td><td class="num">'+r.qty+(r.bom?' / '+r.bom:'')+'</td><td class="num">'+r.tons.toFixed(2)+'</td><td class="num">'+unitTxt+'</td>'
+            +'<td class="num">'+money(r.value)+'</td><td class="num">'+utilTxt+'</td><td class="num">'+money(r.bill)+'</td>'
+            +'<td class="num'+(Math.abs(diff)>=1?(diff>0?' pl-neg':''):'')+'" title="正數＝還沒請款的產值">'+money(diff)+'</td></tr>';
+        }).join('')
+        +'<tr class="pl-foot"><td>合計 '+rows.length+' 區</td><td class="num">'+rows.reduce(function(s,r){return s+r.qty;},0)+'</td><td class="num">'+sumTons.toFixed(2)+'</td><td></td><td class="num">'+money(sumValue)+'</td><td class="num">'+money(sumUtil)+'</td><td class="num">'+money(sumBill)+'</td><td class="num">'+money(sumValue+sumUtil-sumBill)+'</td></tr>'
+        +'</tbody></table></div></div>';
+
+      var kv=function(k,v,cls){ return '<div class="pl-kv"><span class="k">'+k+'</span><span class="v'+(cls?' '+cls:'')+'">'+v+'</span></div>'; };
+      var laborHtml='<div class="pl-box"><div class="pl-box-h"><span>🧾 點工單</span><span>'+labor.n+' 張</span></div>'
+        +kv('已請款金額',ntd(labor.amount))
+        +kv('其中保留款(20%)',ntd(labor.retention))
+        +kv('保留款已核銷',ntd(labor.retPaid))
+        +kv('保留款未收',ntd(labor.retention-labor.retPaid),(labor.retention-labor.retPaid)>0?'pl-neg':'')
+        +kv('尚未請款(估算金額)',ntd(labor.unbilled))
+        +kv('實收(已請款 − 未收保留款)',ntd(laborNet))
+        +'</div>';
+      var cats=Object.keys(ded.byCat).sort();
+      var dedHtml='<div class="pl-box"><div class="pl-box-h"><span>✂️ 扣款</span><span>'+ded.n+' 筆</span></div>'
+        +(cats.length?cats.map(function(c){ return kv(esc(c),ntd(-ded.byCat[c]),'pl-neg'); }).join(''):kv('已扣款','<span class="pl-muted">無</span>'))
+        +kv('合計',ntd(-ded.total),ded.total?'pl-neg':'')
+        +(ded.pending?kv('尚未扣款(預計金額)',ntd(-ded.pending)):'')
+        +'</div>';
+
+      var costHtml='<div class="pl-box wide"><div class="pl-box-h"><span>👷 成本分攤(估算)</span><span>'+ntd(cost)+'</span></div><div class="pl-scroll"><table><thead><tr>'
+        +'<th>月份</th><th class="num">本工程噸數</th><th class="num">全廠噸數</th><th class="num">占比</th><th class="num">全廠人事</th><th class="num">全廠五金</th><th class="num">分攤人事</th><th class="num">分攤五金</th><th class="num">分攤合計</th></tr></thead><tbody>'
+        +(costRows.length?costRows.map(function(c){
+          return '<tr><td>'+esc(c.ym)+'</td><td class="num">'+c.mine.toFixed(2)+'</td><td class="num">'+c.all.toFixed(2)+'</td><td class="num">'+(c.share*100).toFixed(1)+'%</td>'
+            +'<td class="num pl-muted">'+money(c.hr)+'</td><td class="num pl-muted">'+money(c.hw)+'</td><td class="num">'+money(c.hrA)+'</td><td class="num">'+money(c.hwA)+'</td><td class="num">'+money(c.hrA+c.hwA)+'</td></tr>';
+        }).join('')+'<tr class="pl-foot"><td>合計 '+costRows.length+' 個月</td><td class="num">'+sumTons.toFixed(2)+'</td><td></td><td></td><td></td><td></td><td class="num">'+money(hrAlloc)+'</td><td class="num">'+money(hwAlloc)+'</td><td class="num">'+money(cost)+'</td></tr>'
+        :'<tr><td colspan="9" class="empty-state">沒有產量月份</td></tr>')
+        +'</tbody></table></div></div>';
+
+      body.innerHTML=zoneHtml+laborHtml+dedHtml+costHtml
+        +(pendingUtil.length?'<div class="pl-box wide"><div class="pl-kv"><span class="k">水電尚未計入(BOM 支數未全部完成)</span><span class="v pl-muted">'+esc(pendingUtil.join('、'))+'</span></div></div>':'');
+      if(st) st.textContent='已更新 '+new Date().toLocaleTimeString('zh-TW',{hour12:false});
+    }catch(e){
+      console.warn('projpl load failed',e);
+      if(st) st.textContent='計算失敗';
+      warn.innerHTML='<div class="pl-warn">⚠ 工程損益計算失敗:'+esc(e.message||e)+'</div>';
+    }
+  };
+})();
+</script>
+
 <!-- ═══════════ 管理員:成本(人事 + 五金)═══════════ -->
 <script>
 (function(){
@@ -48889,6 +49235,11 @@ async function ldDashPlan(){
 // ── 離線快取(PWA):第二次打開直接用本機那份秒開,背景確認新版 ──
 (function(){
   if(!('serviceWorker' in navigator) || !window.isSecureContext || location.protocol==='file:') return;
+  // 本機開發(localhost)不啟用,改檔後重新整理才看得到新版;要測離線快取時網址加 ?sw=1
+  if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && !/[?&]sw=1\b/.test(location.search)){
+    navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ r.unregister(); }); }).catch(function(){});
+    return;
+  }
   var hadController=!!navigator.serviceWorker.controller;
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('sw.js').then(function(reg){ window.__swReg=reg; }).catch(function(e){ console.warn('SW 註冊失敗',e); });
