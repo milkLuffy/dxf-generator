@@ -1,10 +1,11 @@
-// 手機推播提醒(每天早上由 pg_cron 呼叫一次)
+// 手機推播提醒(pg_cron 每 30 分鐘呼叫一次;每台裝置在自己設定的時間收每日提醒,預設 08:00)
 //  ・待辦:今天到期、明天到期、已逾期 → 個人待辦推給本人;團體待辦推給被指派的人(沒指派＝全體)
 //  ・交管料日:3 個工作天內或已逾期(14 個工作天內)的工程區 → 推給有訂閱「交管料」的人
 //  ・通知管理發佈的通知(含農曆每月循環):輪到的日子推給有訂閱「公司通知」的人
 //  ・上線準備紅燈:網頁端算好的快照(push_ready_snapshot) → 推給有訂閱「上線準備」的人
 //  ・報驗完成(待出貨):台灣時間 13:00 推今天上午報驗、08:00 推前一天下午報驗,依柱位整理 → 訂閱「ship」的人
-//    (pg_cron 另排 08:00/13:00 兩個排程呼叫同一支;也可帶 {mode:'ship', half:'am'|'pm', date:'YYYY-MM-DD'} 手動觸發)
+//    (也可帶 {mode:'ship', half:'am'|'pm', date:'YYYY-MM-DD'} 手動觸發)
+//  ・每日提醒時間:push_subscriptions.remind_time(HH:MM,30 分鐘一格,空=08:00);daily_sent_on 記錄今天送過,排程重跑也不重複
 // 另外支援 {mode:'test'}:登入者自己按「傳送測試通知」。
 import { sendWebPush } from './webpush.js';
 import { lunarOccurrences, loadTwCalendar } from './lunar.js';
@@ -25,7 +26,7 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-type Sub = { id: string; user_id: string; endpoint: string; p256dh: string; auth: string; topics: string[] | null };
+type Sub = { id: string; user_id: string; endpoint: string; p256dh: string; auth: string; topics: string[] | null; remind_time?: string | null; daily_sent_on?: string | null };
 type Msg = { title: string; body: string; tag: string; url: string };
 
 async function rest(path: string, init: RequestInit = {}) {
@@ -42,7 +43,17 @@ function json(data: unknown, status = 200) {
 
 // ── 日期(一律用台灣時間) ──
 function taipeiToday() { return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10); }
-function taipeiHour() { return new Date(Date.now() + 8 * 3600 * 1000).getUTCHours(); }
+// 目前時段(往下取到 30 分鐘一格):08:14 → '08:00'、08:31 → '08:30'
+function taipeiSlot() {
+  const t = new Date(Date.now() + 8 * 3600 * 1000);
+  return String(t.getUTCHours()).padStart(2, '0') + ':' + (t.getUTCMinutes() >= 30 ? '30' : '00');
+}
+const DEFAULT_REMIND = '08:00';
+function remindSlotOf(s: Sub) {
+  const m = String(s.remind_time || '').match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return DEFAULT_REMIND;
+  return String(+m[1]).padStart(2, '0') + ':' + (+m[2] >= 30 ? '30' : '00');
+}
 function d(ymd: string) { return new Date(ymd + 'T00:00:00Z'); }
 function iso(x: Date) { return x.toISOString().slice(0, 10); }
 function addDays(ymd: string, n: number) { const x = d(ymd); x.setUTCDate(x.getUTCDate() + n); return iso(x); }
@@ -259,29 +270,43 @@ Deno.serve(async req => {
   if (!subs.length) return json({ ok: true, today, subscriptions: 0 });
   const has = (s: Sub, t: string) => (s.topics || []).includes(t);
 
-  // 報驗完成(待出貨):08:00/13:00 的排程,或手動帶 mode:'ship'。07:30 的每日提醒不受影響。
-  const hour = taipeiHour();
-  if (body.mode === 'ship' || (body.mode !== 'daily' && (hour === 8 || hour === 13))) {
-    const half: 'am' | 'pm' = body.half === 'am' || body.half === 'pm' ? body.half : (hour >= 12 ? 'am' : 'pm');
+  const slot = taipeiSlot();
+  const out: Record<string, unknown> = { ok: true, today, slot, subscriptions: subs.length };
+
+  // 報驗完成(待出貨):固定 13:00 推今天上午、08:00 推前一天下午;或手動帶 mode:'ship'
+  if (body.mode === 'ship' || (body.mode !== 'daily' && (slot === '08:00' || slot === '13:00'))) {
+    const half: 'am' | 'pm' = body.half === 'am' || body.half === 'pm' ? body.half : (slot === '13:00' ? 'am' : 'pm');
     const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date || '')) ? String(body.date) : (half === 'am' ? today : addDays(today, -1));
-    const msg = await buildShipMessage(date, half);
+    const msg = await buildShipMessage(date, half).catch(e => { console.warn('ship', e); return null; });
     const t = subs.filter(s => has(s, 'ship'));
     if (msg && t.length) await deliver(t, msg, stats);
-    return json({ ok: true, mode: 'ship', date, half, pieces: msg ? msg.title : null, devices: t.length, ...stats });
+    out.ship = { date, half, title: msg ? msg.title : null, devices: t.length };
+    if (body.mode === 'ship') return json({ ...out, ...stats });
   }
 
-  const report: Record<string, number> = {};
-  const todoMsgs = await buildTodoMessages(today, subs);
-  for (const [u, msg] of Object.entries(todoMsgs)) {
-    const mine = subs.filter(s => s.user_id === u && has(s, 'todo'));
-    if (mine.length) { await deliver(mine, msg, stats); report.todo = (report.todo || 0) + 1; }
+  // 每日提醒:只送「設定時間 = 目前時段、今天還沒送過」的裝置;手動帶 mode:'daily' 則全部送(測試用,不看時間)
+  const due = subs.filter(s => body.mode === 'daily' || (remindSlotOf(s) === slot && String(s.daily_sent_on || '') !== today));
+  out.dailyDue = due.length;
+  if (due.length) {
+    const report: Record<string, number> = {};
+    const todoMsgs = await buildTodoMessages(today, subs);   // 團體待辦沒指派＝推給所有訂閱者,所以名單用全部訂閱
+    for (const [u, msg] of Object.entries(todoMsgs)) {
+      const mine = due.filter(s => s.user_id === u && has(s, 'todo'));
+      if (mine.length) { await deliver(mine, msg, stats); report.todo = (report.todo || 0) + 1; }
+    }
+    const hand = await buildHandoverMessage(today);
+    if (hand) { const t = due.filter(s => has(s, 'handover')); if (t.length) await deliver(t, hand, stats); report.handover = t.length; }
+    const notices = await buildNoticeMessages(today).catch(e => { console.warn('notices', e); return [] as Msg[]; });
+    if (notices.length) { const t = due.filter(s => has(s, 'notice')); if (t.length) for (const m of notices) await deliver(t, m, stats); report.notice = notices.length; }
+    const ready = await buildReadyMessage(today).catch(e => { console.warn('ready snapshot', e); return null; });
+    if (ready) { const t = due.filter(s => has(s, 'ready')); if (t.length) await deliver(t, ready, stats); report.ready = t.length; }
+    out.report = report;
+    if (body.mode !== 'daily') {
+      // 標記今天已送;尚未跑 migration(沒有 daily_sent_on 欄)時略過,不影響推送
+      await rest('push_subscriptions?id=in.(' + due.map(s => s.id).join(',') + ')', {
+        method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ daily_sent_on: today }),
+      }).catch(e => console.warn('mark daily_sent_on', e));
+    }
   }
-  const hand = await buildHandoverMessage(today);
-  if (hand) { const t = subs.filter(s => has(s, 'handover')); await deliver(t, hand, stats); report.handover = t.length; }
-  const notices = await buildNoticeMessages(today).catch(e => { console.warn('notices', e); return [] as Msg[]; });
-  if (notices.length) { const t = subs.filter(s => has(s, 'notice')); for (const m of notices) await deliver(t, m, stats); report.notice = notices.length; }
-  const ready = await buildReadyMessage(today).catch(e => { console.warn('ready snapshot', e); return null; });
-  if (ready) { const t = subs.filter(s => has(s, 'ready')); await deliver(t, ready, stats); report.ready = t.length; }
-
-  return json({ ok: true, today, subscriptions: subs.length, report, ...stats });
+  return json({ ...out, ...stats });
 });

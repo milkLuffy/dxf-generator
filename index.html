@@ -20130,7 +20130,8 @@ function manualNotificationItemsBasic(){return manualNotifications.filter(n=>n.r
 function announcementNotificationItems(){return (allAnnouncements||[]).filter(a=>a.notify_in_app!==false&&announcementIsActive(a)).map(a=>notifItem('announcement:'+(a.id||a.created_at||a.title),(a.priority==='緊急'?'🚨 ':a.priority==='重要'?'❗ ':'📢 ')+(a.title||'公司公告')));}
 function notifItems(){return staffBirthdaysToday().concat(staffAnnivSoon(),saturdayDutyNotifications,manualNotificationItems(),announcementNotificationItems(),todoNotificationItems(),leaveNotificationItems(),
   (typeof readinessNotificationItems==='function'?readinessNotificationItems():[]));}   // 上線準備紅燈(模組在檔案最末)
-// ── 手機推播(PWA Web Push):每天早上 07:30 由伺服器推送待辦／交管料日／上線準備提醒 ──
+// ── 手機推播(PWA Web Push):每天在各裝置自訂的時間(預設 08:00)由伺服器推送待辦／交管料日／上線準備提醒 ──
+// 時間存在 push_subscriptions.remind_time(需執行 push_remind_time_migration.sql);伺服器每 30 分鐘檢查一次,所以選單是 30 分鐘一格。
 // iPhone 必須先用 Safari「分享 → 加入主畫面」,從主畫面圖示打開後才能開啟推播(iOS 16.4 以上)。
 const PUSH_VAPID_PUBLIC='BJEpchXUxfC3eM3EuZ3bNdgSbkx_9Ko8dpRi2C_HAAbkzbNBMZOdDKLDWITWgQY3-lKO9JKzxhbcH2lD6MuLPoo';
 const PUSH_TOPICS=[
@@ -20187,10 +20188,12 @@ async function pushRenderSettings(msg){
   const reg=await Promise.race([pushRegistration(), new Promise(r=>setTimeout(()=>r(null),4000))]);
   if(!reg){ body.innerHTML='離線快取還沒啟用(本機測試網址不會啟用),無法開啟推播。請用正式網址開啟。'; act.innerHTML=close; return; }
   const sub=await reg.pushManager.getSubscription();
-  let topics=['todo','notice'], saved=false;
+  let topics=['todo','notice'], saved=false, remind=PUSH_DEFAULT_TIME;
   if(sub){
-    const r=await sbFetch('/rest/v1/push_subscriptions?select=topics&endpoint=eq.'+encodeURIComponent(sub.endpoint));
-    if(r.ok&&Array.isArray(r.data)&&r.data[0]){ topics=r.data[0].topics||[]; saved=true; }
+    const q='/rest/v1/push_subscriptions?endpoint=eq.'+encodeURIComponent(sub.endpoint)+'&select=';
+    let r=await sbFetch(q+'topics,remind_time');
+    if(!r.ok) r=await sbFetch(q+'topics');   // 還沒跑時間欄位 migration
+    if(r.ok&&Array.isArray(r.data)&&r.data[0]){ topics=r.data[0].topics||[]; saved=true; if(r.data[0].remind_time) remind=pushSlot(r.data[0].remind_time); }
   }
   const denied=Notification.permission==='denied';
   const on=!!sub&&saved;
@@ -20198,13 +20201,26 @@ async function pushRenderSettings(msg){
   body.innerHTML=(msg?'<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:var(--bg3);color:var(--text)">'+esc(msg)+'</div>':'')
     +'<div>這台裝置:<b>'+esc(pushDeviceName())+'</b>　狀態:'+(denied?'<b style="color:var(--danger,#e0555b)">通知已被封鎖</b>':on?'<b style="color:var(--green,#3ecf8e)">已開啟</b>':'<b>未開啟</b>')+'</div>'
     +(denied?'<div style="margin-top:6px;color:var(--text3);font-size:12px">請到手機「設定 → 通知」或瀏覽器網站設定裡,允許本系統的通知後再回來開啟。</div>':'')
-    +'<div style="margin:10px 0 4px;color:var(--text3);font-size:12px">每天早上 07:30 推送,要收哪些提醒:</div>'
+    +'<label style="display:flex;align-items:center;gap:8px;margin:12px 0 2px;color:var(--text)">每天推送時間'
+      +'<select id="push-time" class="filter-select" style="padding:5px 8px">'+pushTimeOptions(remind)+'</select></label>'
+    +'<div style="margin:4px 0 4px;color:var(--text3);font-size:12px">要收哪些提醒(「報驗完成」固定 13:00、08:00 推送,不受上面時間影響):</div>'
     +visible.map(t=>'<label style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--border);cursor:pointer">'
       +'<input type="checkbox" class="push-topic" value="'+t.k+'"'+(topics.includes(t.k)?' checked':'')+' style="margin-top:4px;width:16px;height:16px">'
       +'<span><span style="color:var(--text)">'+t.label+'</span><br><span style="font-size:11px;color:var(--text3)">'+t.sub+'</span></span></label>').join('');
   act.innerHTML=(on
       ?'<button class="btn btn-gen" onclick="pushSubscribe()">儲存設定</button><button class="btn" onclick="pushSendTest()">傳送測試通知</button><button class="btn" onclick="pushUnsubscribe()">關閉這台</button>'
       :(denied?'':'<button class="btn btn-gen" onclick="pushSubscribe()">開啟推播</button>'))+close;
+}
+const PUSH_DEFAULT_TIME='08:00';
+function pushSlot(t){ const m=String(t||'').match(/^(\d{1,2}):(\d{2})/); return m?(String(+m[1]).padStart(2,'0')+':'+(+m[2]>=30?'30':'00')):PUSH_DEFAULT_TIME; }
+function pushTimeOptions(cur){
+  let h='';
+  for(let x=5*60;x<=22*60;x+=30){ const v=String(Math.floor(x/60)).padStart(2,'0')+':'+(x%60?'30':'00'); h+='<option value="'+v+'"'+(v===cur?' selected':'')+'>'+v+(v===PUSH_DEFAULT_TIME?'(預設)':'')+'</option>'; }
+  return h;
+}
+async function pushSaveTime(endpoint,time){
+  const r=await sbFetch('/rest/v1/rpc/push_set_time',{method:'POST',body:JSON.stringify({p_endpoint:endpoint,p_time:time})});
+  return r.ok;
 }
 async function pushSubscribe(){
   const topics=[...document.querySelectorAll('#push-modal .push-topic:checked')].map(x=>x.value);
@@ -20218,7 +20234,9 @@ async function pushSubscribe(){
     const j=sub.toJSON();
     const r=await sbFetch('/rest/v1/rpc/push_subscribe',{method:'POST',body:JSON.stringify({p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_topics:topics,p_device:pushDeviceName()})});
     if(!r.ok){ await pushRenderSettings('儲存失敗(HTTP '+r.status+'),請確認已執行 push_notifications_migration.sql。'); return; }
-    await pushRenderSettings('已儲存 ✓ 可以按「傳送測試通知」確認收得到。');
+    const tsel=document.getElementById('push-time'), time=tsel?tsel.value:PUSH_DEFAULT_TIME;
+    const tr=await pushSaveTime(j.endpoint,time);
+    await pushRenderSettings(tr?('已儲存 ✓ 每天 '+time+' 推送。可以按「傳送測試通知」確認收得到。'):'提醒項目已儲存,但推送時間沒存到(請先執行 push_remind_time_migration.sql),目前仍為 08:00。');
   }catch(e){
     console.warn('push subscribe failed',e);
     await pushRenderSettings('開啟失敗:'+(e.message||e));
@@ -20278,7 +20296,7 @@ function pushAskShow(msg){
     document.body.appendChild(el);
   }
   el.innerHTML='<div style="font-weight:700;margin-bottom:4px">📱 開啟手機推播提醒？</div>'
-    +'<div style="font-size:13px;color:var(--text2)">每天早上 07:30 推送待辦到期、公司通知等提醒。</div>'
+    +'<div style="font-size:13px;color:var(--text2)">每天 08:00 推送待辦到期、公司通知等提醒(時間可到推播設定修改)。</div>'
     +(msg?'<div style="margin-top:6px;font-size:13px;color:var(--danger,#e0555b)">'+esc(msg)+'</div>':'')
     +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'
     +'<button class="btn btn-gen" style="flex:1 1 auto" onclick="pushAskEnable()">開啟</button>'
