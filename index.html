@@ -19660,6 +19660,130 @@ function manualNotificationItems(){return manualNotifications.map(n=>({n,occ:man
 function announcementNotificationItems(){return (allAnnouncements||[]).filter(a=>a.notify_in_app!==false&&announcementIsActive(a)).map(a=>notifItem('announcement:'+(a.id||a.created_at||a.title),(a.priority==='緊急'?'🚨 ':a.priority==='重要'?'❗ ':'📢 ')+(a.title||'公司公告')));}
 function notifItems(){return staffBirthdaysToday().concat(staffAnnivSoon(),saturdayDutyNotifications,manualNotificationItems(),announcementNotificationItems(),todoNotificationItems(),leaveNotificationItems(),
   (typeof readinessNotificationItems==='function'?readinessNotificationItems():[]));}   // 上線準備紅燈(模組在檔案最末)
+// ── 手機推播(PWA Web Push):每天早上 07:30 由伺服器推送待辦／交管料日／上線準備提醒 ──
+// iPhone 必須先用 Safari「分享 → 加入主畫面」,從主畫面圖示打開後才能開啟推播(iOS 16.4 以上)。
+const PUSH_VAPID_PUBLIC='BJEpchXUxfC3eM3EuZ3bNdgSbkx_9Ko8dpRi2C_HAAbkzbNBMZOdDKLDWITWgQY3-lKO9JKzxhbcH2lD6MuLPoo';
+const PUSH_TOPICS=[
+  {k:'todo',     label:'⏰ 待辦到期／逾期',        sub:'自己的待辦、指派給自己的團體待辦(今天、明天到期與已逾期)', perm:'todo'},
+  {k:'handover', label:'🚚 交管料日快到',          sub:'3 個工作天內要交管料或已逾期的工程區', perm:'loading'},
+  {k:'ready',    label:'🚩 上線準備逾期(紅燈)',  sub:'過了準備期限還沒備齊的工程區', perm:'prod'}
+];
+function pushSupported(){ return 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification!=='undefined'; }
+function pushIsIOS(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); }
+function pushIsStandalone(){ return window.navigator.standalone===true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches); }
+function pushKeyBytes(b64u){ const s=b64u.replace(/-/g,'+').replace(/_/g,'/'); const bin=atob(s+'='.repeat((4-s.length%4)%4)); return Uint8Array.from(bin,c=>c.charCodeAt(0)); }
+function pushDeviceName(){
+  const ua=navigator.userAgent;
+  const os=/iPhone/.test(ua)?'iPhone':/iPad/.test(ua)||pushIsIOS()&&!/iPhone/.test(ua)&&/Mac/.test(ua)?'iPad':/Android/.test(ua)?'Android':/Windows/.test(ua)?'Windows':/Mac/.test(ua)?'Mac':'裝置';
+  return os+(pushIsStandalone()?'(主畫面 App)':'(瀏覽器)');
+}
+async function pushRegistration(){
+  if(!pushSupported()) return null;
+  let reg=await navigator.serviceWorker.getRegistration();
+  if(!reg){ try{ reg=await navigator.serviceWorker.register('sw.js'); }catch(e){ return null; } }
+  return navigator.serviceWorker.ready;
+}
+function pushModalEl(){
+  let m=document.getElementById('push-modal');
+  if(m) return m;
+  m=document.createElement('div');
+  m.className='modal-overlay'; m.id='push-modal';
+  m.onclick=e=>{ if(e.target===m) m.classList.remove('show'); };
+  m.innerHTML='<div class="modal" style="max-width:460px"><div class="modal-title">📱 手機推播提醒</div><div id="push-body" style="font-size:13px;color:var(--text2);line-height:1.7">載入中…</div>'
+    +'<div class="modal-actions" id="push-actions"></div></div>';
+  document.body.appendChild(m);
+  return m;
+}
+async function openPushSettings(){
+  if(typeof closeNotificationPopup==='function') closeNotificationPopup();
+  const m=pushModalEl(); m.classList.add('show');
+  await pushRenderSettings();
+}
+async function pushRenderSettings(msg){
+  const body=document.getElementById('push-body'), act=document.getElementById('push-actions');
+  if(!body||!act) return;
+  const close='<button class="btn" onclick="document.getElementById(\'push-modal\').classList.remove(\'show\')">關閉</button>';
+  if(isGuest||!currentUser){ body.innerHTML='請先登入。'; act.innerHTML=close; return; }
+  if(pushIsIOS() && !pushIsStandalone()){
+    body.innerHTML='iPhone／iPad 要先把系統加到主畫面,才能收推播:<ol style="margin:8px 0 0 18px">'
+      +'<li>用 <b>Safari</b> 打開本系統</li><li>點下方「分享」按鈕 → <b>加入主畫面</b></li>'
+      +'<li>從主畫面的「鎮山工程」圖示打開、登入</li><li>再回到 🔔 → 「📱 推播設定」開啟</li></ol>'
+      +'<div style="margin-top:8px;color:var(--text3);font-size:12px">需要 iOS 16.4 以上。</div>';
+    act.innerHTML=close; return;
+  }
+  if(!pushSupported()){ body.innerHTML='這個瀏覽器不支援推播通知。'; act.innerHTML=close; return; }
+  const reg=await Promise.race([pushRegistration(), new Promise(r=>setTimeout(()=>r(null),4000))]);
+  if(!reg){ body.innerHTML='離線快取還沒啟用(本機測試網址不會啟用),無法開啟推播。請用正式網址開啟。'; act.innerHTML=close; return; }
+  const sub=await reg.pushManager.getSubscription();
+  let topics=['todo'], saved=false;
+  if(sub){
+    const r=await sbFetch('/rest/v1/push_subscriptions?select=topics&endpoint=eq.'+encodeURIComponent(sub.endpoint));
+    if(r.ok&&Array.isArray(r.data)&&r.data[0]){ topics=r.data[0].topics||[]; saved=true; }
+  }
+  const denied=Notification.permission==='denied';
+  const on=!!sub&&saved;
+  const visible=PUSH_TOPICS.filter(t=>pagePerm(t.perm)!=='hide');
+  body.innerHTML=(msg?'<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:var(--bg3);color:var(--text)">'+esc(msg)+'</div>':'')
+    +'<div>這台裝置:<b>'+esc(pushDeviceName())+'</b>　狀態:'+(denied?'<b style="color:var(--danger,#e0555b)">通知已被封鎖</b>':on?'<b style="color:var(--green,#3ecf8e)">已開啟</b>':'<b>未開啟</b>')+'</div>'
+    +(denied?'<div style="margin-top:6px;color:var(--text3);font-size:12px">請到手機「設定 → 通知」或瀏覽器網站設定裡,允許本系統的通知後再回來開啟。</div>':'')
+    +'<div style="margin:10px 0 4px;color:var(--text3);font-size:12px">每天早上 07:30 推送,要收哪些提醒:</div>'
+    +visible.map(t=>'<label style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--border);cursor:pointer">'
+      +'<input type="checkbox" class="push-topic" value="'+t.k+'"'+(topics.includes(t.k)?' checked':'')+' style="margin-top:4px;width:16px;height:16px">'
+      +'<span><span style="color:var(--text)">'+t.label+'</span><br><span style="font-size:11px;color:var(--text3)">'+t.sub+'</span></span></label>').join('');
+  act.innerHTML=(on
+      ?'<button class="btn btn-gen" onclick="pushSubscribe()">儲存設定</button><button class="btn" onclick="pushSendTest()">傳送測試通知</button><button class="btn" onclick="pushUnsubscribe()">關閉這台</button>'
+      :(denied?'':'<button class="btn btn-gen" onclick="pushSubscribe()">開啟推播</button>'))+close;
+}
+async function pushSubscribe(){
+  const topics=[...document.querySelectorAll('#push-modal .push-topic:checked')].map(x=>x.value);
+  if(!topics.length){ await pushRenderSettings('至少要勾一種提醒;不想收的話請按「關閉這台」。'); return; }
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){ await pushRenderSettings('沒有取得通知權限。'); return; }
+    const reg=await pushRegistration();
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:pushKeyBytes(PUSH_VAPID_PUBLIC)});
+    const j=sub.toJSON();
+    const r=await sbFetch('/rest/v1/rpc/push_subscribe',{method:'POST',body:JSON.stringify({p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_topics:topics,p_device:pushDeviceName()})});
+    if(!r.ok){ await pushRenderSettings('儲存失敗(HTTP '+r.status+'),請確認已執行 push_notifications_migration.sql。'); return; }
+    await pushRenderSettings('已儲存 ✓ 可以按「傳送測試通知」確認收得到。');
+  }catch(e){
+    console.warn('push subscribe failed',e);
+    await pushRenderSettings('開啟失敗:'+(e.message||e));
+  }
+}
+async function pushUnsubscribe(){
+  try{
+    const reg=await pushRegistration(), sub=reg&&await reg.pushManager.getSubscription();
+    if(sub){
+      await sbFetch('/rest/v1/push_subscriptions?endpoint=eq.'+encodeURIComponent(sub.endpoint),{method:'DELETE',headers:{Prefer:'return=minimal'}});
+      await sub.unsubscribe();
+    }
+    await pushRenderSettings('已關閉這台裝置的推播。');
+  }catch(e){ await pushRenderSettings('關閉失敗:'+(e.message||e)); }
+}
+async function pushSendTest(){
+  try{
+    const res=await fetch(SUPA_URL+'/functions/v1/push-reminders',{method:'POST',
+      headers:{'Content-Type':'application/json',apikey:SUPA_KEY,Authorization:'Bearer '+(currentSession&&currentSession.access_token||'')},
+      body:JSON.stringify({mode:'test'})});
+    const d=await res.json().catch(()=>({}));
+    if(!res.ok) { await pushRenderSettings('測試失敗:'+(d.error||('HTTP '+res.status))); return; }
+    await pushRenderSettings('已送出到 '+d.devices+' 台裝置(成功 '+d.sent+'),幾秒內會收到。');
+  }catch(e){ await pushRenderSettings('測試失敗:'+(e.message||e)); }
+}
+// 上線準備紅燈的計算要讀很多張表,伺服器端不重算:網頁端算完就把結果寫成快照,排程推播時直接用。
+// 內容沒變且今天寫過就不再寫,避免每個人每次開網頁都寫一次。
+async function pushWriteReadySnapshot(items){
+  try{
+    const list=(items||[]).map(it=>({text:String(it.text||'').replace(/^🚩\s*/,''), proj:it.proj||'', zone:it.zone||''}));
+    const sig=ldToday()+'|'+JSON.stringify(list);
+    if(localStorage.getItem('push_ready_sig')===sig) return;
+    const r=await sbFetch('/rest/v1/push_ready_snapshot?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({id:1, items:list, updated_at:new Date().toISOString()})});
+    if(r.ok) localStorage.setItem('push_ready_sig',sig);
+  }catch(e){}
+}
 async function enableDesktopNotifications(){
   if(typeof Notification==='undefined'){alert('此瀏覽器不支援桌面通知。');return;}
   const p=await Notification.requestPermission();
@@ -19720,7 +19844,7 @@ async function toggleNotifPanel(){
   if(!Array.isArray(allStaff) || !allStaff.length){ try{ await loadStaff(); }catch(e){} }
   if(request!==notifPanelRequest)return;
   const items=notifItems();
-  let html='<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between"><span>🔔 通知</span><span>'+(typeof Notification!=='undefined'&&Notification.permission==='default'?'<button onclick="enableDesktopNotifications()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer;margin-right:5px">啟用桌面通知</button>':'')+(!isGuest&&pagePerm('notify')!=='hide'?'<button onclick="openNotificationSettings()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer">⚙ 通知管理</button>':'')+'</span></div>';
+  let html='<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between"><span>🔔 通知</span><span>'+(typeof Notification!=='undefined'&&Notification.permission==='default'?'<button onclick="enableDesktopNotifications()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer;margin-right:5px">啟用桌面通知</button>':'')+(!isGuest?'<button onclick="openPushSettings()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer;margin-right:5px">📱 推播設定</button>':'')+(!isGuest&&pagePerm('notify')!=='hide'?'<button onclick="openNotificationSettings()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer">⚙ 通知管理</button>':'')+'</span></div>';
   html+= items.length
     ? items.map(t=>'<div style="padding:11px 12px;font-size:13px;color:var(--text);border-bottom:1px solid var(--border)'+(t.zone?';cursor:pointer':'')+'"'
         +(t.zone?' data-proj="'+notifEsc(t.proj)+'" data-zone="'+notifEsc(t.zone)+'" title="點一下開工程區詳情" onclick="closeNotificationPopup();dashGoSP(this.dataset.proj,this.dataset.zone)"':'')   // 上線準備紅燈可直接點進去
@@ -49083,7 +49207,10 @@ function readinessNotificationItems(){
 // 登入時由 loadNotificationData 呼叫:背景抓完再更新鈴鐺數字(不擋其他通知)
 function rdyNotifRefresh(){
   if(isGuest || (typeof pagePerm==='function' && pagePerm('prod')==='hide')) return;
-  rdyFetchRows().then(()=>{ if(typeof updateNotifBadge==='function') updateNotifBadge(); rdyDashRender(); }).catch(e=>console.warn('readiness notify failed',e));
+  rdyFetchRows().then(()=>{
+    if(typeof updateNotifBadge==='function') updateNotifBadge(); rdyDashRender();
+    if(typeof pushWriteReadySnapshot==='function' && !/尚未啟用/.test(rdyRowsMsg||'')) pushWriteReadySnapshot(readinessNotificationItems());   // 給排程推播用(讀取失敗時不覆寫)
+  }).catch(e=>console.warn('readiness notify failed',e));
 }
 
 // ── 上線白板(月產量排程頁的第二個分頁)────────────────────────
