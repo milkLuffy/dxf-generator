@@ -5291,6 +5291,11 @@ window.normalizeFullWidth=function(value){
       #page-labor .labor-project-code{font-size:16px;font-weight:750;margin-bottom:6px}
       #page-labor .labor-project-meta{font-family:var(--mono);font-size:10px;line-height:1.55;color:var(--text3)}
       #page-labor .labor-project-meta b{color:var(--danger);font-weight:650}
+      #page-labor .labor-ub-list-btn{margin-top:7px;width:100%;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.08);color:var(--danger);border-radius:6px;padding:3px 6px;font-size:11px;font-weight:700;cursor:pointer}
+      #page-labor .labor-ub-list-btn:hover{background:rgba(239,68,68,.16)}
+      #page-labor .labor-ub-list-btn.on{background:var(--danger);border-color:var(--danger);color:#fff}
+      #page-labor .labor-ub-sum{font-family:var(--mono);font-size:12px;color:var(--text2)}
+      #page-labor .labor-ub-sum b{color:var(--danger)}
       #page-labor .labor-ub-switch{display:inline-flex;padding:3px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;gap:2px}
       #page-labor .labor-ub-switch button{border:0;background:transparent;color:var(--text3);padding:5px 12px;border-radius:6px;cursor:pointer;font:inherit}
       #page-labor .labor-ub-switch button.active{background:var(--accent2);color:#fff;font-weight:700}
@@ -36551,6 +36556,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   var laborTab='detail';
   var laborProject='__cards__'; // __cards__=工程入口、__all__=全部工程、其餘=指定工程
   var laborShowCompleted=false;
+  var laborOnlyUnbilled=false;  // 明細登錄「列出未請款」:只列請款日空白的點工單,方便逐張核對登記
   // 外勞支援工程:可標記「多個」工程;主存 app_config(跨電腦/帳號共用),localStorage 僅作離線快取。
   var LABOR_SUPPORT_KEY='labor_support_projects';
   var laborSupportProjects=(function(){try{return new Set(JSON.parse(localStorage.getItem('laborSupportProjects')||'[]'));}catch(e){return new Set();}})();
@@ -36657,21 +36663,38 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var rows=laborRows.filter(function(r){return String(r.proj_num||'').trim()===p;});
       var sum=rows.reduce(function(s,r){return s+num(r.amount);},0);
       var ub=rows.reduce(function(s,r){return s+(isBilled(r)?0:num(r.amount));},0);
+      var ubCnt=rows.filter(function(r){return !isBilled(r);}).length;
       var support=laborSupportProjects.has(p);
       var completed=Math.abs(ub)<.005&&!support;
       if(completed){completedCount++;if(!laborShowCompleted)return;}
       cards+='<div class="labor-project-card '+(laborProject===p?'active ':'')+(completed?'completed':'')+'" role="button" tabindex="0" data-project="'+escAttr(p)+'" onclick="laborOpenProject(this.dataset.project)" onkeydown="if(event.key===\'Enter\')laborOpenProject(this.dataset.project)">'
         +'<div class="labor-project-code-row"><div class="labor-project-code">'+esc(p)+'</div>'+(support?'<span class="labor-support-tag">外勞支援</span>':'')+'</div>'
-        +'<div class="labor-project-meta">'+rows.length+' 筆 · NT$'+ntd(sum)+'<br>'+(support?'<b style="color:var(--yellow)">外勞支援 · 未完成</b>':completed?'<span style="color:var(--success);font-weight:700">已完成</span>':'<b>未請款 NT$'+ntd(ub)+'</b>')+'</div></div>';
+        +'<div class="labor-project-meta">'+rows.length+' 筆 · NT$'+ntd(sum)+'<br>'+(support?'<b style="color:var(--yellow)">外勞支援 · 未完成</b>':completed?'<span style="color:var(--success);font-weight:700">已完成</span>':'<b>未請款 NT$'+ntd(ub)+'</b>')+'</div>'
+        +(ubCnt?'<button type="button" class="labor-ub-list-btn'+(laborProject===p&&laborOnlyUnbilled?' on':'')+'" data-project="'+escAttr(p)+'" onclick="event.stopPropagation();laborListUnbilled(this.dataset.project)" onkeydown="event.stopPropagation()">列出未請款（'+ubCnt+' 張）</button>':'')
+        +'</div>';
     });
     var supportBtn='<button class="btn" style="margin-left:auto;padding:4px 10px" onclick="laborOpenSupportPicker()">設定外勞支援</button>';
     var completedBtn='<button class="btn" style="padding:4px 10px" onclick="laborToggleCompleted()">'+(laborShowCompleted?'隱藏已完成':'顯示已完成')+'（'+completedCount+'）</button>';
     var head=laborProject==='__cards__'
       ?'<div class="labor-project-head"><span>選擇工程後輸入點工單；未請款 NT$0 的工程視為已完成</span>'+supportBtn+completedBtn+'</div>'
-      :'<div class="labor-project-head"><button class="labor-project-back" onclick="laborOpenProject(\'__cards__\')">← 返回工程小卡</button><span>›</span><b>'+(laborProject==='__all__'?'全部工程':esc(laborProject))+'</b>'+supportBtn+completedBtn+'</div>';
+      :'<div class="labor-project-head"><button class="labor-project-back" onclick="laborOpenProject(\'__cards__\')">← 返回工程小卡</button><span>›</span><b>'+(laborProject==='__all__'?'全部工程':esc(laborProject))+'</b>'
+        +'<button type="button" class="labor-ub-list-btn'+(laborOnlyUnbilled?' on':'')+'" style="width:auto;margin:0 0 0 6px;padding:4px 10px" onclick="laborListUnbilled(null)">'+(laborOnlyUnbilled?'✓ 只列未請款（點此顯示全部）':'列出未請款')+'</button>'
+        +(laborOnlyUnbilled?laborUnbilledSummary():'')
+        +supportBtn+completedBtn+'</div>';
     el.innerHTML=head+'<div class="labor-project-grid">'+cards+'</div>';
   }
-  window.laborOpenProject=function(project){ laborProject=project||'__cards__'; laborRender(); };
+  window.laborOpenProject=function(project){ laborProject=project||'__cards__'; laborOnlyUnbilled=false; laborRender(); };
+  // 小卡按鈕帶工程編號 → 進該工程並只列未請款;表頭按鈕(null)→ 在目前工程切換
+  window.laborListUnbilled=function(project){
+    if(project){ laborProject=project; laborOnlyUnbilled=true; }
+    else laborOnlyUnbilled=!laborOnlyUnbilled;
+    laborRender();
+  };
+  function laborUnbilledSummary(){
+    var list=laborRows.filter(function(r){ return !isBilled(r) && (laborProject==='__all__'||String(r.proj_num||'').trim()===laborProject); });
+    var amt=0,act=0; list.forEach(function(r){ amt+=num(r.amount); act+=num(r.actual_amount); });
+    return '<span class="labor-ub-sum">未請款 <b>'+list.length+'</b> 張 · 金額 <b>NT$'+ntd(amt)+'</b> · 已填請款金額 NT$'+ntd(act)+'　填了「請款日」即算已請款(重整畫面後移出清單)</span>';
+  }
   window.laborToggleCompleted=function(){laborShowCompleted=!laborShowCompleted;laborRenderProjects();};
   window.laborOpenSupportPicker=function(){
     var old=document.getElementById('labor-support-picker');if(old)old.remove();
@@ -36788,6 +36811,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var q=(document.getElementById('labor-search').value||'').trim().toLowerCase();
     var rows=laborRows.filter(function(r){
       if(laborProject!=='__all__' && String(r.proj_num||'').trim()!==laborProject) return false;
+      if(laborOnlyUnbilled && isBilled(r) && !r._new) return false;
       if(!rowPassesColFilters('labordetail',function(key){return laborDetailValue(r,key);})) return false;
       if(!q) return true;
       return [r.doc_no,r.proj_num,r.content,r.manager,r.resp_unit].some(function(v){ return String(v||'').toLowerCase().indexOf(q)>=0; });
@@ -36813,7 +36837,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         +'<td><button class="btn lab-del" onclick="laborDelete('+rid+')">刪除</button></td>'
         +'</tr>';
     });
-    if(!rows.length) body='<tr><td colspan="14" class="empty-state">目前沒有點工單,按右上角「＋ 新增一列」</td></tr>';
+    if(!rows.length) body='<tr><td colspan="14" class="empty-state">'+(laborOnlyUnbilled?'沒有未請款的點工單 🎉':'目前沒有點工單,按右上角「＋ 新增一列」')+'</td></tr>';
     tbl.innerHTML='<table class="lab-tbl" id="labor-grid" onkeydown="laborGridKey(event)"><thead><tr>'
       +laborDetailHead('工程','proj_num')+laborDetailHead('編號','doc_no')+laborDetailHead('日期','work_date')+laborDetailHead('工數','work_count','num')+laborDetailHead('金額','amount','num')
       +laborDetailHead('請款工數','actual_count','num')+laborDetailHead('請款金額','actual_amount','num')+laborDetailHead('保','has_retention','num')+laborDetailHead('點工內容','content')
