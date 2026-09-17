@@ -1,9 +1,11 @@
 // 手機推播提醒(每天早上由 pg_cron 呼叫一次)
 //  ・待辦:今天到期、明天到期、已逾期 → 個人待辦推給本人;團體待辦推給被指派的人(沒指派＝全體)
 //  ・交管料日:3 個工作天內或已逾期(14 個工作天內)的工程區 → 推給有訂閱「交管料」的人
+//  ・通知管理發佈的通知(含農曆每月循環):輪到的日子推給有訂閱「公司通知」的人
 //  ・上線準備紅燈:網頁端算好的快照(push_ready_snapshot) → 推給有訂閱「上線準備」的人
 // 另外支援 {mode:'test'}:登入者自己按「傳送測試通知」。
 import { sendWebPush } from './webpush.js';
+import { lunarOccurrences, loadTwCalendar } from './lunar.js';
 
 const SUPA_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -123,6 +125,36 @@ async function buildReadyMessage(today: string): Promise<Msg | null> {
   };
 }
 
+// 通知管理(app_notifications):規則同網頁 manualNotificationOccurrence
+async function buildNoticeMessages(today: string): Promise<Msg[]> {
+  const rows = await rest('app_notifications?select=*&is_active=not.is.false') as any[];
+  const needCal = rows.some(n => n.recurrence_unit === 'lunar' && n.skip_holidays);
+  const y = +today.slice(0, 4);
+  const isHoliday = needCal ? await loadTwCalendar([y, y + 1]) : () => false;
+  const out: Msg[] = [];
+  for (const n of rows) {
+    const start = String(n.starts_at || n.created_at || today).slice(0, 10), end = n.expires_at ? String(n.expires_at).slice(0, 10) : '';
+    if (today < start || (end && today > end)) continue;
+    const unit = n.recurrence_unit || 'none', interval = Math.max(1, parseInt(n.recurrence_interval) || 1);
+    const icon = n.priority === '緊急' ? '🚨 ' : n.priority === '重要' ? '❗ ' : unit === 'lunar' ? '🙏 ' : '🔔 ';
+    const push = (extra: string, key: string) => out.push({
+      title: icon + (n.title || '通知'), body: [extra, n.message || ''].filter(Boolean).join('\n'),
+      tag: 'notice-' + n.id + '-' + key, url: APP_URL + '#/dashboard',
+    });
+    if (unit === 'lunar') { for (const o of lunarOccurrences(n, today, isHoliday)) push(o.text, o.key); continue; }
+    const diff = daysBetween(start, today);
+    if (unit === 'none') { if (diff === 0) push('', today); continue; }   // 不循環:只在開始當天推一次
+    if (unit === 'day' && diff % interval === 0) push('', today);
+    if (unit === 'week' && diff % (interval * 7) === 0) push('', today);
+    if (unit === 'month') {
+      const md = (+today.slice(0, 4) - +start.slice(0, 4)) * 12 + (+today.slice(5, 7) - +start.slice(5, 7));
+      const last = new Date(Date.UTC(+today.slice(0, 4), +today.slice(5, 7), 0)).getUTCDate();
+      if (md % interval === 0 && +today.slice(8, 10) === Math.min(+start.slice(8, 10), last)) push('', today);
+    }
+  }
+  return out;
+}
+
 async function deliver(subs: Sub[], msg: Msg, stats: { sent: number; failed: number; removed: number }) {
   for (const s of subs) {
     try {
@@ -170,6 +202,8 @@ Deno.serve(async req => {
   }
   const hand = await buildHandoverMessage(today);
   if (hand) { const t = subs.filter(s => has(s, 'handover')); await deliver(t, hand, stats); report.handover = t.length; }
+  const notices = await buildNoticeMessages(today).catch(e => { console.warn('notices', e); return [] as Msg[]; });
+  if (notices.length) { const t = subs.filter(s => has(s, 'notice')); for (const m of notices) await deliver(t, m, stats); report.notice = notices.length; }
   const ready = await buildReadyMessage(today).catch(e => { console.warn('ready snapshot', e); return null; });
   if (ready) { const t = subs.filter(s => has(s, 'ready')); await deliver(t, ready, stats); report.ready = t.length; }
 

@@ -5977,8 +5977,12 @@ window.normalizeFullWidth=function(value){
             <div class="lf full"><label>通知內容</label><textarea id="noti-message" rows="3" placeholder="輸入通知內容"></textarea></div>
             <div class="lf"><label>重要程度</label><select id="noti-priority"><option value="一般">一般</option><option value="重要">重要</option><option value="緊急">緊急</option></select></div>
             <div class="lf"><label>開始日期</label><input type="date" id="noti-starts" class="date-wk" data-wk="noti-starts-show"/><small class="date-wk-show" id="noti-starts-show" style="color:var(--text3)">—</small></div>
-            <div class="lf"><label>循環方式</label><select id="noti-repeat-unit" onchange="manualNotificationRepeatToggle()"><option value="none">不循環</option><option value="day">按天循環</option><option value="week">按週循環</option><option value="month">按月循環</option></select></div>
+            <div class="lf"><label>循環方式</label><select id="noti-repeat-unit" onchange="manualNotificationRepeatToggle()"><option value="none">不循環</option><option value="day">按天循環</option><option value="week">按週循環</option><option value="month">按月循環</option><option value="lunar">農曆每月</option></select></div>
             <div class="lf" id="noti-repeat-interval-wrap"><label>循環間隔</label><input type="number" id="noti-repeat-interval" min="1" max="365" value="1"/><small style="color:var(--text3)">例如填 2，就是每 2 天／每 2 週／每 2 個月</small></div>
+            <div class="lf full" id="noti-lunar-wrap" style="display:none"><label>農曆日（每月）</label><input type="text" id="noti-lunar-days" placeholder="例如：2,16 或 初二 十六" oninput="lunarFormPreview()"/>
+              <label style="display:flex;gap:6px;align-items:center;margin-top:6px;font-size:12px;color:var(--text2);text-transform:none;letter-spacing:0"><input type="checkbox" id="noti-lunar-skip" checked onchange="lunarFormPreview()" style="width:auto"/>遇週六、週日或國定假日，提前到前一個平日（補班日算平日）</label>
+              <label style="display:flex;gap:6px;align-items:center;margin-top:4px;font-size:12px;color:var(--text2);text-transform:none;letter-spacing:0"><input type="checkbox" id="noti-lunar-before" checked onchange="lunarFormPreview()" style="width:auto"/>前一個平日也提醒一次</label>
+              <small id="noti-lunar-preview" style="color:var(--accent2);display:block;margin-top:6px"></small></div>
             <div class="lf"><label>結束日期（選填）</label><input type="date" id="noti-expires" class="date-wk" data-wk="noti-expires-show"/><small class="date-wk-show" id="noti-expires-show" style="color:var(--text3)">—</small></div>
           </div>
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
@@ -19587,6 +19591,7 @@ async function manualNotificationLoad(){
   const r=await sbFetch('/rest/v1/app_notifications?select=*&order=created_at.desc&limit=100');
   if(r.ok&&Array.isArray(r.data)){manualNotificationDbAvailable=true;manualNotifications=r.data;}
   else{manualNotificationDbAvailable=false;manualNotifications=manualNotificationLocalRead();}
+  if(manualNotifications.some(n=>n.recurrence_unit==='lunar'&&n.skip_holidays)){ const y=+dashTodayStr().slice(0,4); await twCalEnsure([y,y+1]); }
   updateNotifBadge();
 }
 async function notificationReadLoad(){
@@ -19632,11 +19637,88 @@ function staffAnnivSoon(){
   allStaff.forEach(s=>{if(s.status==='離職'||!s.hire_date)return;const x=annualTargetDays(s.hire_date);if(!x||x.days>limit)return;const years=x.target.getFullYear()-x.origin.getFullYear();if(years<=0)return;out.push(notifItem('anniversary:'+(s.id||s.name)+':'+notifYmd(x.target),x.days===0?'🎉 今天是 '+s.name+' 到職滿 '+years+' 週年！':'🎉 還有 '+x.days+' 天，'+s.name+' 將到職滿 '+years+' 週年'));});
   return out;
 }
+// ── 農曆每月循環通知(例:每月農曆初二、十六拜拜,遇週六日／國定假日提前到前一個平日) ──
+// 規則與 supabase/functions/push-reminders/lunar.js 相同,改一邊要同步改另一邊。
+const LUNAR_FMT=(()=>{ try{ return new Intl.DateTimeFormat('en-u-ca-chinese',{timeZone:'Asia/Taipei',month:'numeric',day:'numeric'}); }catch(e){ return null; } })();
+const LUNAR_MONTH=['正','二','三','四','五','六','七','八','九','十','冬','臘'];
+function lunarYmdAdd(ymd,n){ const d=new Date(ymd+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
+function lunarOf(ymd){
+  if(!LUNAR_FMT) return null;
+  let m='',day=0;
+  LUNAR_FMT.formatToParts(new Date(ymd+'T12:00:00+08:00')).forEach(p=>{ if(p.type==='month')m=p.value; if(p.type==='day')day=parseInt(p.value,10); });
+  return {month:parseInt(m,10), leap:/bis/.test(m), day};
+}
+function lunarDayName(d){ const n=['','一','二','三','四','五','六','七','八','九','十']; return d<=10?'初'+n[d]:d<20?'十'+n[d-10]:d===20?'二十':d<30?'廿'+n[d-20]:'三十'; }
+function lunarLabel(l){ return '農曆'+(l.leap?'閏':'')+LUNAR_MONTH[l.month-1]+'月'+lunarDayName(l.day); }
+function lunarMdw(ymd){ return (+ymd.slice(5,7))+'/'+(+ymd.slice(8,10))+'('+'日一二三四五六'[new Date(ymd+'T12:00:00Z').getUTCDay()]+')'; }
+// 台灣行事曆(TaiwanCalendar):isHoliday 含週末、國定假日、補假,補班日為 false;抓不到就只看週六日
+const twCalMap={};
+async function twCalEnsure(years){
+  for(const y of years){
+    if(twCalMap['y'+y]) continue;
+    const ck='tw_cal_v1_'+y;
+    let data=null;
+    try{ const c=JSON.parse(localStorage.getItem(ck)||'null'); if(c&&Date.now()-c.at<30*86400000) data=c.days; }catch(e){}
+    if(!data){
+      try{
+        const r=await fetch('https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/'+y+'.json');
+        if(r.ok){ data={}; (await r.json()).forEach(d=>{ const s=String(d.date); data[s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)]=!!d.isHoliday; });
+          try{ localStorage.setItem(ck,JSON.stringify({at:Date.now(),days:data})); }catch(e){} }
+      }catch(e){}
+    }
+    if(data){ Object.assign(twCalMap,data); twCalMap['y'+y]=true; }
+  }
+}
+function twIsHoliday(ymd){ return (ymd in twCalMap)?twCalMap[ymd]:[0,6].includes(new Date(ymd+'T12:00:00Z').getUTCDay()); }
+function lunarPrevWorkday(ymd){ let x=ymd,g=0; while(twIsHoliday(x)&&g++<20) x=lunarYmdAdd(x,-1); return x; }
+function lunarDaysOf(n){ return (Array.isArray(n&&n.lunar_days)?n.lunar_days:[]).map(Number).filter(d=>d>=1&&d<=30); }
+// 某天要出的提醒:[{key,text}]
+function lunarOccurrences(n,today){
+  const days=lunarDaysOf(n); if(!days.length||!LUNAR_FMT) return [];
+  const out=[];
+  for(let i=0;i<=20;i++){
+    const base=lunarYmdAdd(today,i), l=lunarOf(base);
+    if(!days.includes(l.day)) continue;
+    const eff=n.skip_holidays?lunarPrevWorkday(base):base;
+    const moved=eff!==base?'(原 '+lunarMdw(base)+' 遇假日提前)':'';
+    if(eff===today) out.push({key:base, text:'今天 '+lunarMdw(eff)+' '+lunarLabel(l)+moved});
+    else if(n.remind_day_before){
+      const pre=n.skip_holidays?lunarPrevWorkday(lunarYmdAdd(eff,-1)):lunarYmdAdd(eff,-1);
+      if(pre===today) out.push({key:base+':pre', text:(eff===lunarYmdAdd(today,1)?'明天 ':'')+lunarMdw(eff)+' '+lunarLabel(l)+moved});
+    }
+  }
+  return out;
+}
+function lunarRuleLabel(n){ return '農曆每月'+lunarDaysOf(n).sort((a,b)=>a-b).map(lunarDayName).join('、')+(n.skip_holidays?'(遇假日提前)':'')+(n.remind_day_before?'＋前一天':''); }
+// 表單輸入「2,16」「初二 十六」都接受
+function lunarParseDays(text){
+  const cn={'初一':1,'初二':2,'初三':3,'初四':4,'初五':5,'初六':6,'初七':7,'初八':8,'初九':9,'初十':10,'十一':11,'十二':12,'十三':13,'十四':14,'十五':15,'十六':16,'十七':17,'十八':18,'十九':19,'二十':20,'廿一':21,'廿二':22,'廿三':23,'廿四':24,'廿五':25,'廿六':26,'廿七':27,'廿八':28,'廿九':29,'三十':30};
+  const out=[];
+  String(text||'').split(/[\s,，、;；]+/).filter(Boolean).forEach(s=>{ const v=cn[s]!=null?cn[s]:parseInt(s,10); if(v>=1&&v<=30&&!out.includes(v)) out.push(v); });
+  return out.sort((a,b)=>a-b);
+}
+// 表單即時預覽:接下來幾次的實際日期
+async function lunarFormPreview(){
+  const box=document.getElementById('noti-lunar-preview'); if(!box) return;
+  if(document.getElementById('noti-repeat-unit')?.value!=='lunar'){ box.textContent=''; return; }
+  const n={lunar_days:lunarParseDays(document.getElementById('noti-lunar-days').value), skip_holidays:document.getElementById('noti-lunar-skip').checked, remind_day_before:document.getElementById('noti-lunar-before').checked};
+  if(!LUNAR_FMT){ box.textContent='⚠ 這個瀏覽器不支援農曆換算'; return; }
+  if(!n.lunar_days.length){ box.textContent='請輸入農曆日,例如:2,16 或 初二 十六'; return; }
+  const today=dashTodayStr(), y=+today.slice(0,4);
+  if(n.skip_holidays) await twCalEnsure([y,y+1]);
+  const hits=[];
+  for(let i=0;i<120&&hits.length<4;i++){
+    const d=lunarYmdAdd(today,i);
+    lunarOccurrences(n,d).filter(o=>!/:pre$/.test(o.key)).forEach(o=>hits.push(o.text.replace(/^今天 /,'')));
+  }
+  box.textContent='接下來:'+hits.join('；');
+}
 function manualNotificationOccurrence(n){
   if(!n||n.is_active===false)return null;
   const today=dashTodayStr(),start=String(n.starts_at||n.created_at||today).slice(0,10),end=n.expires_at?String(n.expires_at).slice(0,10):'';
   if(today<start||(end&&today>end))return null;
   const unit=n.recurrence_unit||'none',interval=Math.max(1,parseInt(n.recurrence_interval)||1);
+  if(unit==='lunar'){ const occ=lunarOccurrences(n,today); return occ.length?occ[0].key:null; }
   if(unit==='none')return 'once';
   const td=new Date(today+'T00:00:00'),sd=new Date(start+'T00:00:00');
   if(isNaN(td)||isNaN(sd))return null;
@@ -19656,7 +19738,12 @@ function manualNotificationOccurrence(n){
   return 'once';
 }
 function manualNotificationActive(n){return manualNotificationOccurrence(n)!==null;}
-function manualNotificationItems(){return manualNotifications.map(n=>({n,occ:manualNotificationOccurrence(n)})).filter(x=>x.occ!==null).map(x=>notifItem('manual:'+(x.n.id||x.n.created_at||x.n.title)+':'+x.occ,(x.n.priority==='緊急'?'🚨 ':x.n.priority==='重要'?'❗ ':'🔔 ')+(x.n.title||'通知')+(x.n.message?' — '+x.n.message:'')));}
+function manualNotificationItems(){
+  const today=dashTodayStr();
+  const lunar=manualNotifications.filter(n=>n.recurrence_unit==='lunar'&&manualNotificationOccurrence(n)!==null).flatMap(n=>lunarOccurrences(n,today).map(o=>notifItem('manual:'+(n.id||n.created_at||n.title)+':'+o.key,(n.priority==='緊急'?'🚨 ':n.priority==='重要'?'❗ ':'🙏 ')+(n.title||'通知')+' — '+o.text+(n.message?'｜'+n.message:''))));
+  return lunar.concat(manualNotificationItemsBasic());
+}
+function manualNotificationItemsBasic(){return manualNotifications.filter(n=>n.recurrence_unit!=='lunar').map(n=>({n,occ:manualNotificationOccurrence(n)})).filter(x=>x.occ!==null).map(x=>notifItem('manual:'+(x.n.id||x.n.created_at||x.n.title)+':'+x.occ,(x.n.priority==='緊急'?'🚨 ':x.n.priority==='重要'?'❗ ':'🔔 ')+(x.n.title||'通知')+(x.n.message?' — '+x.n.message:'')));}
 function announcementNotificationItems(){return (allAnnouncements||[]).filter(a=>a.notify_in_app!==false&&announcementIsActive(a)).map(a=>notifItem('announcement:'+(a.id||a.created_at||a.title),(a.priority==='緊急'?'🚨 ':a.priority==='重要'?'❗ ':'📢 ')+(a.title||'公司公告')));}
 function notifItems(){return staffBirthdaysToday().concat(staffAnnivSoon(),saturdayDutyNotifications,manualNotificationItems(),announcementNotificationItems(),todoNotificationItems(),leaveNotificationItems(),
   (typeof readinessNotificationItems==='function'?readinessNotificationItems():[]));}   // 上線準備紅燈(模組在檔案最末)
@@ -19666,7 +19753,8 @@ const PUSH_VAPID_PUBLIC='BJEpchXUxfC3eM3EuZ3bNdgSbkx_9Ko8dpRi2C_HAAbkzbNBMZOdDKL
 const PUSH_TOPICS=[
   {k:'todo',     label:'⏰ 待辦到期／逾期',        sub:'自己的待辦、指派給自己的團體待辦(今天、明天到期與已逾期)', perm:'todo'},
   {k:'handover', label:'🚚 交管料日快到',          sub:'3 個工作天內要交管料或已逾期的工程區', perm:'loading'},
-  {k:'ready',    label:'🚩 上線準備逾期(紅燈)',  sub:'過了準備期限還沒備齊的工程區', perm:'prod'}
+  {k:'ready',    label:'🚩 上線準備逾期(紅燈)',  sub:'過了準備期限還沒備齊的工程區', perm:'prod'},
+  {k:'notice',   label:'🙏 公司通知(含農曆拜拜)', sub:'通知管理發佈的通知,在輪到的日子推送(農曆通知含前一天提醒)', perm:''}
 ];
 function pushSupported(){ return 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification!=='undefined'; }
 function pushIsIOS(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); }
@@ -19715,14 +19803,14 @@ async function pushRenderSettings(msg){
   const reg=await Promise.race([pushRegistration(), new Promise(r=>setTimeout(()=>r(null),4000))]);
   if(!reg){ body.innerHTML='離線快取還沒啟用(本機測試網址不會啟用),無法開啟推播。請用正式網址開啟。'; act.innerHTML=close; return; }
   const sub=await reg.pushManager.getSubscription();
-  let topics=['todo'], saved=false;
+  let topics=['todo','notice'], saved=false;
   if(sub){
     const r=await sbFetch('/rest/v1/push_subscriptions?select=topics&endpoint=eq.'+encodeURIComponent(sub.endpoint));
     if(r.ok&&Array.isArray(r.data)&&r.data[0]){ topics=r.data[0].topics||[]; saved=true; }
   }
   const denied=Notification.permission==='denied';
   const on=!!sub&&saved;
-  const visible=PUSH_TOPICS.filter(t=>pagePerm(t.perm)!=='hide');
+  const visible=PUSH_TOPICS.filter(t=>!t.perm||pagePerm(t.perm)!=='hide');
   body.innerHTML=(msg?'<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;background:var(--bg3);color:var(--text)">'+esc(msg)+'</div>':'')
     +'<div>這台裝置:<b>'+esc(pushDeviceName())+'</b>　狀態:'+(denied?'<b style="color:var(--danger,#e0555b)">通知已被封鎖</b>':on?'<b style="color:var(--green,#3ecf8e)">已開啟</b>':'<b>未開啟</b>')+'</div>'
     +(denied?'<div style="margin-top:6px;color:var(--text3);font-size:12px">請到手機「設定 → 通知」或瀏覽器網站設定裡,允許本系統的通知後再回來開啟。</div>':'')
@@ -19876,7 +19964,9 @@ function notifyCancelEdit(){
   document.getElementById('noti-title').value='';document.getElementById('noti-message').value='';
   document.getElementById('noti-priority').value='一般';document.getElementById('noti-starts').value=dashTodayStr();
   document.getElementById('noti-repeat-unit').value='none';document.getElementById('noti-repeat-interval').value='1';
-  document.getElementById('noti-expires').value='';manualNotificationRepeatToggle();
+  document.getElementById('noti-expires').value='';
+  document.getElementById('noti-lunar-days').value='';document.getElementById('noti-lunar-skip').checked=true;document.getElementById('noti-lunar-before').checked=true;
+  manualNotificationRepeatToggle();
   document.getElementById('notify-form-title').textContent='發佈新通知';
   document.getElementById('notify-edit-banner').style.display='none';
   document.getElementById('notify-cancel-edit').style.display='none';
@@ -19893,6 +19983,9 @@ function notifyEdit(i){
   document.getElementById('noti-repeat-unit').value=n.recurrence_unit||'none';
   document.getElementById('noti-repeat-interval').value=Math.max(1,parseInt(n.recurrence_interval)||1);
   document.getElementById('noti-expires').value=n.expires_at?String(n.expires_at).slice(0,10):'';
+  document.getElementById('noti-lunar-days').value=lunarDaysOf(n).join(',');
+  document.getElementById('noti-lunar-skip').checked=n.recurrence_unit==='lunar'?!!n.skip_holidays:true;
+  document.getElementById('noti-lunar-before').checked=n.recurrence_unit==='lunar'?!!n.remind_day_before:true;
   manualNotificationRepeatToggle();
   document.getElementById('notify-form-title').textContent='編輯通知';
   const b=document.getElementById('notify-edit-banner');
@@ -19916,8 +20009,10 @@ async function notifyToggleActive(i){
 }
 function manualNotificationRepeatToggle(){
   const unit=document.getElementById('noti-repeat-unit')?.value||'none',wrap=document.getElementById('noti-repeat-interval-wrap'),input=document.getElementById('noti-repeat-interval');
-  if(wrap)wrap.style.opacity=unit==='none'?'.45':'1';
+  if(wrap){wrap.style.opacity=unit==='none'?'.45':'1';wrap.style.display=unit==='lunar'?'none':'';}
   if(input)input.disabled=unit==='none';
+  const lw=document.getElementById('noti-lunar-wrap');if(lw)lw.style.display=unit==='lunar'?'':'none';
+  if(typeof lunarFormPreview==='function')lunarFormPreview();
 }
 async function notificationConfigSave(){
   const payload={id:1,birthday_enabled:document.getElementById('noti-birthday-enabled').checked,birthday_days_before:Math.max(0,parseInt(document.getElementById('noti-birthday-days').value)||0),anniversary_enabled:document.getElementById('noti-anniv-enabled').checked,anniversary_days_before:Math.max(0,parseInt(document.getElementById('noti-anniv-days').value)||0)};
@@ -19958,7 +20053,7 @@ function manualNotificationRenderList(){
       +'</tr>';
   }).join('');
 }
-function manualNotificationRepeatLabel(n){const unit=n.recurrence_unit||'none',v=Math.max(1,parseInt(n.recurrence_interval)||1);return unit==='day'?'每 '+v+' 天':unit==='week'?'每 '+v+' 週':unit==='month'?'每 '+v+' 個月':'不循環';}
+function manualNotificationRepeatLabel(n){const unit=n.recurrence_unit||'none',v=Math.max(1,parseInt(n.recurrence_interval)||1);return unit==='lunar'?lunarRuleLabel(n):unit==='day'?'每 '+v+' 天':unit==='week'?'每 '+v+' 週':unit==='month'?'每 '+v+' 個月':'不循環';}
 async function manualNotificationSave(){
   const title=document.getElementById('noti-title').value.trim(),message=document.getElementById('noti-message').value.trim();if(!title||!message){alert('請填寫通知標題與內容');return;}
   const starts=document.getElementById('noti-starts').value||dashTodayStr(),expires=document.getElementById('noti-expires').value||null,unit=document.getElementById('noti-repeat-unit').value||'none',interval=Math.max(1,parseInt(document.getElementById('noti-repeat-interval').value)||1);
@@ -19966,6 +20061,12 @@ async function manualNotificationSave(){
   const editing=notifyEditId!=null;
   // 編輯時不動 is_active / 發佈人:停用中的改完仍是停用,發佈人保留原建立者
   const payload={title,message,priority:document.getElementById('noti-priority').value,starts_at:starts,expires_at:expires,recurrence_unit:unit,recurrence_interval:interval};
+  if(unit==='lunar'){
+    const days=lunarParseDays(document.getElementById('noti-lunar-days').value);
+    if(!days.length){alert('請輸入農曆日，例如：2,16');return;}
+    if(!LUNAR_FMT){alert('這個瀏覽器不支援農曆換算，請改用 Chrome 或 Safari');return;}
+    Object.assign(payload,{lunar_days:days,skip_holidays:document.getElementById('noti-lunar-skip').checked,remind_day_before:document.getElementById('noti-lunar-before').checked});
+  }
   const btn=document.getElementById('noti-send');btn.disabled=true;btn.textContent=editing?'儲存中...':'發布中...';let ok=false;
   if(editing){
     if(manualNotificationDbAvailable){const r=await sbFetch('/rest/v1/app_notifications?id=eq.'+encodeURIComponent(notifyEditId),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)});ok=r.ok;}
@@ -19976,7 +20077,7 @@ async function manualNotificationSave(){
     else{const rows=manualNotificationLocalRead();rows.unshift({...full,id:'local-'+Date.now(),created_at:new Date().toISOString()});manualNotificationLocalWrite(rows);ok=true;}
   }
   btn.disabled=false;
-  if(!ok){btn.textContent=editing?'💾 儲存修改':'📣 發布通知';alert(editing?'通知修改失敗，請確認資料表權限':'通知發布失敗，請確認資料表權限及更新通知資料表');return;}
+  if(!ok){btn.textContent=editing?'💾 儲存修改':'📣 發布通知';alert((editing?'通知修改失敗，請確認資料表權限':'通知發布失敗，請確認資料表權限及更新通知資料表')+(unit==='lunar'?'\n（農曆通知需要先執行 lunar_notifications_migration.sql）':''));return;}
   await manualNotificationLoad();notifyCancelEdit();manualNotificationRenderList();updateNotifBadge(true);
   alert((editing?'已更新通知':'已發布通知')+(manualNotificationDbAvailable?'':'（目前僅此裝置）'));
 }
