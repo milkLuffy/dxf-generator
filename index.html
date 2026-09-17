@@ -32557,7 +32557,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       sumRow('平均單價（元/噸）','pr-c-avgprice',false)+
       '</div>'+
       '<div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6">'+
-        'H 每噸單價 =（C 工時金額 ＋ D 管理費 ＋ E 查驗因素 ＋ 基本柱金額）÷ 本區噸數（依「柱公式.xlsx / CBC」）。'+
+        'H 每噸單價 =（C 工時金額 ＋ D 管理費 ＋ E 查驗因素 ＋ 基本柱金額）÷ 本區噸數（依「柱公式.xlsx / CBC」）。基本柱金額（0F~5F）不算進 A，不收管理費與查驗因素。'+
       '</div></div>';
   }
   // 唯讀檢視:輸入欄設 readonly/disabled,會改資料的按鈕隱藏;選工程區的按鈕保持可按。
@@ -32781,8 +32781,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       else if(it.div) mhTxt=mhFmt(p/num(it.div));
       else mhTxt=mhFmt(p*MH_PER_YUAN);
       setTxt('pr-mh-bg-'+i, mhTxt);
-      if(curSec==='實作時算') B+=amt; else A+=amt;
-      if(it.base) baseCol+=amt;
+      if(it.base) baseCol+=amt;   // 基本柱金額(0F~5F)不算 A、不收管理費/查驗因素,只加進每噸分子
+      else if(curSec==='實作時算') B+=amt; else A+=amt;
     }
     var C=A+B;
     var mgmt=(st.summary.mgmtRate===''||st.summary.mgmtRate==null)?0.1:num(st.summary.mgmtRate);
@@ -32812,8 +32812,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         setTxt('pr-amt-'+side.k+'-'+i,'$'+fmt(amt));
         var mh=it.floor?it.floor:(it.mh!=null&&it.mh!==''?mhFmt(num(it.mh)):(it.div?mhFmt(p/num(it.div)):mhFmt(p*MH_PER_YUAN)));
         setTxt('pr-mh-'+side.k+'-'+i,mh);
-        if(sec==='實作時算') B+=amt; else A+=amt;
-        if(it.base) base+=amt;
+        if(it.base) base+=amt;   // 基本柱金額(0F~5F)不算 A、不收管理費/查驗因素,只加進每噸分子
+        else if(sec==='實作時算') B+=amt; else A+=amt;
       });
       var C=A+B,D=C*mgmt,E=(C+D)*insp,ton=num(header[side.hkg])/1000;
       var H=ton?(C+D+E+base)/ton:0;
@@ -32985,8 +32985,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(g.cat==='col'){
       var aRows=[],bRows=[],baseRows=[];
       sides.forEach(function(side,si){
-        aRows.push({t:'n',v:0,f:sumRowsFor(si,function(x){return x.sec!=='實作時算';})});
-        bRows.push({t:'n',v:0,f:sumRowsFor(si,function(x){return x.sec==='實作時算';})});
+        aRows.push({t:'n',v:0,f:sumRowsFor(si,function(x){return !x.base&&x.sec!=='實作時算';})});   // 基本柱金額另列,不算 A
+        bRows.push({t:'n',v:0,f:sumRowsFor(si,function(x){return !x.base&&x.sec==='實作時算';})});
         baseRows.push({t:'n',v:0,f:sumRowsFor(si,function(x){return x.base;})});
       });
       var ra=addSummary('A 基本加工費',aRows),rb=addSummary('B 實作加工費',bRows);
@@ -33086,8 +33086,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
             : {t:'n',v:p/345,f:'C'+excelRow+'/345'};
           rows.push([seqMisc,it.name||'',p,mhCell,q,{t:'n',v:amt,f:'C'+excelRow+'*E'+excelRow}]);
           itemRows.push(excelRow);
-          if(sec==='實作時算') workRows.push(excelRow); else basicRows.push(excelRow);
-          if(it.base) baseRows.push(excelRow);
+          if(it.base) baseRows.push(excelRow);   // 基本柱金額另列,不算 A
+          else if(sec==='實作時算') workRows.push(excelRow); else basicRows.push(excelRow);
         });
         function sumFormula(list){return list.length?'SUM('+list.map(function(r){return 'F'+r;}).join(',')+')':'0';}
         rows.push([]);
@@ -33197,8 +33197,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         var jt=st.items[j];
         if(jt.cat){ curSec=jt.cat; continue; }
         var jamt=num(jt.bg)*num(jt.qbg);
-        if(curSec==='實作時算') B+=jamt; else A+=jamt;
-        if(jt.base) baseCol+=jamt;
+        if(jt.base) baseCol+=jamt;   // 基本柱金額(0F~5F)不算 A、不收管理費/查驗因素,只加進每噸分子
+        else if(curSec==='實作時算') B+=jamt; else A+=jamt;
       }
       var C=A+B;
       var mgmt=(st.summary.mgmtRate===''||st.summary.mgmtRate==null)?0.1:num(st.summary.mgmtRate);
@@ -33279,8 +33279,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
           if(it.cat){sec=it.cat;return;}
           var p=num(it[side.priceF]),q=num(it[side.qtyF]),amt=p*q;
           if(q>0) partItems.push({idx:itemIdx,name:it.name||'',sec:sec,bgP:p,bgQ:q,bgAmt:amt,price:p,qty:q,amt:amt,floor:it.floor||'',sbna:false});
-          if(sec==='實作時算') B+=amt; else A+=amt;
-          if(it.base) base+=amt;
+          if(it.base) base+=amt;   // 基本柱金額(0F~5F)不算 A、不收管理費/查驗因素,只加進每噸分子
+          else if(sec==='實作時算') B+=amt; else A+=amt;
         });
         var kg=num(h[side.hkg]),ton=kg/1000,cnt=num(h[side.hcnt]),res;
         if(g.cat==='col'){
@@ -33310,8 +33310,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         if(it.cat){ curSec=it.cat; continue; }
         var p=num(it.bg), q=num(it.qbg), amt=p*q;
         if(q>0) items.push({name:it.name||'', sec:curSec, price:p, qty:q, amt:amt, floor:it.floor||''});
-        if(curSec==='實作時算') B+=amt; else A+=amt;
-        if(it.base) baseCol+=amt;
+        if(it.base) baseCol+=amt;   // 基本柱金額(0F~5F)不算 A、不收管理費/查驗因素,只加進每噸分子
+        else if(curSec==='實作時算') B+=amt; else A+=amt;
       }
       var C=A+B;
       var mgmt=(s.mgmtRate===''||s.mgmtRate==null)?0.1:num(s.mgmtRate);
