@@ -5795,7 +5795,9 @@ window.normalizeFullWidth=function(value){
           <div class="lab-group-h" style="margin-top:0">③ 照片(第二頁,自動縮放進格子;超過 6 張自動增加照片頁)</div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <label class="btn" style="cursor:pointer">📷 選擇照片<input type="file" id="lm-photo-file" accept="image/png,image/jpeg" multiple style="display:none" onchange="lmAddPhotos(this)"/></label>
+            <button type="button" class="btn" id="lm-photo-sort" style="display:none" onclick="lmSortPhotosByShot()" title="讀照片裡記錄的拍攝時間排序;經過 LINE 等軟體的照片通常沒有拍攝時間">🕐 依拍攝時間排序</button>
             <button type="button" class="btn" id="lm-photo-delall" style="display:none" onclick="lmDelAllPhotos()">🗑 刪除所有照片</button>
+            <span id="lm-photo-sortmsg" style="font-size:12px;color:var(--text3)"></span>
             <div class="lm-field" style="min-width:320px;flex:1"><label>照片說明 <span style="color:var(--danger);font-weight:700">＊有照片必填</span>(所有照片格統一顯示)</label><input class="search-input" id="lm-caption" placeholder="輸入照片說明(有放照片就必填)" oninput="lmCaptionCheck(false)"/><div id="lm-caption-warn" class="lm-cap-warn" style="display:none">⚠ 照片說明未填寫,無法產生點工單</div></div>
           </div>
           <div id="lm-photo-selbar" class="lm-photo-selbar" style="display:none"><span>已選 <b id="lm-photo-selcnt">0</b> 張</span>
@@ -45646,7 +45648,8 @@ window.lmAddPhotos=async function(inp){
         try{ const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w*sc)); c.height=Math.max(1,Math.round(h*sc));
           c.getContext('2d').drawImage(img,0,0,c.width,c.height); thumb=c.toDataURL('image/jpeg',0.82); }catch(e){}
         let full=String(rd.result); try{ full=URL.createObjectURL(f); }catch(e){}
-        res({mime:f.type==='image/png'?'png':'jpeg',b64:String(rd.result).split(',')[1],w,h,thumb,full});
+        const b64=String(rd.result).split(',')[1];
+        res({mime:f.type==='image/png'?'png':'jpeg',b64,w,h,thumb,full,shot:lmExifShotTime(b64)});
       };
       img.src=String(rd.result);};
     rd.readAsDataURL(f);
@@ -45654,6 +45657,50 @@ window.lmAddPhotos=async function(inp){
   const loaded=await Promise.all(files.slice(0,room).map(load));
   loaded.forEach(p=>{ if(p&&lmPhotos.length<30) lmPhotos.push(p); });
   lmRenderPhotos();
+};
+// 讀 JPEG 的 EXIF 拍攝時間(DateTimeOriginal,沒有就用 DateTime),回傳 'YYYY-MM-DD HH:MM:SS' 或 ''。
+// 只解開檔頭前 256KB,EXIF 一定在最前面;PNG、被 LINE 等軟體重新壓縮過的照片通常沒有 → ''。
+function lmExifShotTime(b64){
+  try{
+    const head=String(b64||'').slice(0,Math.min(String(b64||'').length,344000)).replace(/=+$/,'');
+    const bin=atob(head.slice(0,head.length-head.length%4));
+    const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+    if(u[0]!==0xFF||u[1]!==0xD8) return '';
+    let o=2;
+    while(o+4<u.length){
+      if(u[o]!==0xFF) return '';
+      const mk=u[o+1], len=(u[o+2]<<8)|u[o+3];
+      if(mk===0xDA||mk===0xD9) return '';
+      if(mk===0xE1 && u[o+4]===0x45&&u[o+5]===0x78&&u[o+6]===0x69&&u[o+7]===0x66){   // 'Exif'
+        const t=o+10, le=u[t]===0x49;
+        const r16=x=>le?(u[x]|(u[x+1]<<8)):((u[x]<<8)|u[x+1]);
+        const r32=x=>le?((u[x]|(u[x+1]<<8)|(u[x+2]<<16)|(u[x+3]<<24))>>>0):(((u[x]<<24)|(u[x+1]<<16)|(u[x+2]<<8)|u[x+3])>>>0);
+        const ascii=(off,n)=>{ let str=''; for(let i=0;i<n&&t+off+i<u.length;i++){ const ch=u[t+off+i]; if(!ch) break; str+=String.fromCharCode(ch); } return str; };
+        const readIfd=(ifd,want)=>{ const n=r16(t+ifd); const out={};
+          for(let i=0;i<n;i++){ const e=t+ifd+2+i*12; if(e+12>u.length) break; const tag=r16(e);
+            if(want.includes(tag)) out[tag]=(tag===0x8769)?r32(e+8):ascii(r32(e+8),r32(e+4)); }
+          return out; };
+        const ifd0=readIfd(r32(t+4),[0x0132,0x8769]);
+        let dt='';
+        if(ifd0[0x8769]){ const ex=readIfd(ifd0[0x8769],[0x9003,0x9004]); dt=ex[0x9003]||ex[0x9004]||''; }
+        dt=dt||ifd0[0x0132]||'';
+        const m=/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/.exec(dt);
+        return m&&m[1]!=='0000'?(m[1]+'-'+m[2]+'-'+m[3]+' '+m[4]+':'+m[5]+':'+m[6]):'';
+      }
+      o+=2+len;
+    }
+  }catch(e){}
+  return '';
+}
+// 依拍攝時間排序:有時間的由早到晚排前面,沒有時間的維持原本相對順序排在最後
+window.lmSortPhotosByShot=function(){
+  if(!lmPhotos.length) return;
+  const withT=lmPhotos.filter(p=>p.shot), noT=lmPhotos.filter(p=>!p.shot);
+  const msg=document.getElementById('lm-photo-sortmsg');
+  if(!withT.length){ if(msg) msg.textContent='這些照片都沒有拍攝時間(可能經過 LINE 等軟體),請用拖曳調整順序'; return; }
+  lmPhotos=withT.map((p,i)=>({p,i})).sort((a,b)=>a.p.shot.localeCompare(b.p.shot)||a.i-b.i).map(x=>x.p).concat(noT);
+  lmRenderPhotos();
+  if(msg) msg.textContent='已依拍攝時間排序 '+withT.length+' 張'+(noT.length?(';'+noT.length+' 張沒有拍攝時間,排在最後'):'');
 };
 function lmPhotoFree(p){ if(p&&p.full&&String(p.full).startsWith('blob:')){ try{ URL.revokeObjectURL(p.full); }catch(e){} } }
 window.lmDelPhoto=function(i){ const [p]=lmPhotos.splice(i,1); lmPhotoFree(p); lmPhotoSel.delete(p); lmRenderPhotos(); };
@@ -45664,6 +45711,8 @@ function lmPhotoSelUpdate(){
   const bar=document.getElementById('lm-photo-selbar'); if(bar) bar.style.display=n?'':'none';
   const cnt=document.getElementById('lm-photo-selcnt'); if(cnt) cnt.textContent=n;
   const all=document.getElementById('lm-photo-delall'); if(all) all.style.display=lmPhotos.length?'':'none';
+  const srt=document.getElementById('lm-photo-sort'); if(srt) srt.style.display=lmPhotos.length>1?'':'none';
+  if(!lmPhotos.length){ const m=document.getElementById('lm-photo-sortmsg'); if(m) m.textContent=''; }
   const el=document.getElementById('lm-photo-grid');
   if(el) Array.prototype.forEach.call(el.children,(card,i)=>{ const on=lmPhotoSel.has(lmPhotos[i]); card.classList.toggle('selected',on); const cb=card.querySelector('.lm-photo-chk input'); if(cb) cb.checked=on; });
 }
@@ -45686,7 +45735,7 @@ function lmRenderPhotos(){
   const el=document.getElementById('lm-photo-grid');if(!el)return;
   lmPhotoBind(el);
   if(!lmPhotos.length){ const c=document.getElementById('lm-caption'); if(c){ c.classList.remove('lm-invalid'); delete c.dataset.lmChecked; } const w=document.getElementById('lm-caption-warn'); if(w) w.style.display='none'; }   // 沒照片就不必填說明
-  el.innerHTML=lmPhotos.map((p,i)=>'<div class="lm-photo" draggable="true"><label class="lm-photo-chk" draggable="false" title="選取(可多選後一次刪除)"><input type="checkbox"></label><span class="lm-photo-n">'+(i+1)+'</span><img src="'+(p.thumb||p.url||'')+'" draggable="false" decoding="async"/><button class="lm-photo-x" draggable="false" title="刪除">✕</button></div>').join('');
+  el.innerHTML=lmPhotos.map((p,i)=>'<div class="lm-photo" draggable="true" title="'+(p.shot?'拍攝時間 '+p.shot:'沒有拍攝時間')+'"><label class="lm-photo-chk" draggable="false" title="選取(可多選後一次刪除)"><input type="checkbox"></label><span class="lm-photo-n">'+(i+1)+'</span><img src="'+(p.thumb||p.url||'')+'" draggable="false" decoding="async"/><button class="lm-photo-x" draggable="false" title="刪除">✕</button></div>').join('');
   lmPhotoSelUpdate();
 }
 function lmPhotoRenumber(el){ Array.prototype.forEach.call(el.children,(c,i)=>{ const n=c.querySelector('.lm-photo-n'); if(n) n.textContent=i+1; }); }
