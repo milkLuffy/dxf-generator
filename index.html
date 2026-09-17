@@ -1913,6 +1913,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .ship-cars{margin:8px 0 2px 28px;font-size:14px}
 .ship-cars input{width:64px;padding:4px 6px;font-size:15px;text-align:center;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text)}
 .ship-foot{border-top:1px solid var(--border);margin-top:10px;padding-top:10px}
+.ship-dash-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--rad);cursor:pointer;transition:background .15s;font-size:12.5px;min-width:0}
+.ship-dash-item:hover{background:var(--bg3)}
+.ship-dash-bed{flex:0 0 auto;min-width:42px;font-family:var(--mono);font-weight:700;color:var(--text)}
+.ship-dash-n{flex:0 0 auto;font-family:var(--mono);color:var(--accent2)}
+.ship-dash-proj{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
+.ship-dash-recv{flex:0 0 auto;font-family:var(--mono);font-size:11.5px;color:var(--text3)}
 .ship-foot textarea{box-sizing:border-box;width:100%;min-height:64px;resize:vertical;font-family:var(--mono);font-size:13px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px}
 #daily-table td input{field-sizing:content;width:auto;min-width:2ch;max-width:44ch;box-sizing:border-box}
 /* 每日產量:分類卡片式(收合/展開) */
@@ -3564,11 +3570,13 @@ window.normalizeFullWidth=function(value){
             <div class="dash-mini-tabs">
               <button type="button" class="dash-mini-tab active" id="dash-mini-tab-sp" onclick="dashMiniTab('sp')">上線準備<span class="dash-proj-count" id="dash-sp-count"></span></button>
               <button type="button" class="dash-mini-tab" id="dash-mini-tab-ld" onclick="dashMiniTab('ld')">月排程進度<span class="dash-proj-count" id="dash-ld-count"></span></button>
+              <button type="button" class="dash-mini-tab" id="dash-mini-tab-ship" onclick="dashMiniTab('ship')">待出貨<span class="dash-proj-count" id="dash-ship-count"></span></button>
             </div>
             <button class="btn-sm btn-export" id="dash-mini-go" onclick="navTo('prod')">CP 頁</button>
           </div>
           <div id="dash-ready" class="dash-mini-scroll"><span style="color:var(--text3);font-size:13px">載入中...</span></div>
           <div id="dash-loading-due" class="dash-mini-scroll" style="display:none"><span style="color:var(--text3);font-size:13px">載入中...</span></div>
+          <div id="dash-ship" class="dash-mini-scroll" style="display:none"><span style="color:var(--text3);font-size:13px">載入中...</span></div>
         </div>
 
         <!-- 待辦事項 ／ 公司公佈欄：同一張卡片兩個分頁(預設停在待辦事項) -->
@@ -14970,6 +14978,7 @@ async function loadDashboard() {
   }
   if(typeof rdyDashLoad==='function') rdyDashLoad();   // 上線準備(取代原 SP 備料進度;獨立載入,不阻塞主頁其他區塊)
   if(typeof ldDashLoad==='function') ldDashLoad();     // 月排程進度(同上)
+  if(typeof shipDashLoad==='function') shipDashLoad(); // 待出貨(依柱位摘要,點開派車看板)
   if(typeof ldDashPlan==='function') ldDashPlan();     // 產量卡上的月排程達成率
 }
 
@@ -28443,39 +28452,90 @@ function shipModalEl(){
   document.body.appendChild(m);
   return m;
 }
-async function openShipBoard(reload){
-  shipModalEl(); openModal('ship-board-modal');
-  const body=document.getElementById('ship-body');
-  if(reload||!shipBoardRows.length){
-    body.innerHTML='<div class="empty-state">載入中...</div>';
-    shipBoardSel={};
-    try{
-      const [lay,dly,pre]=await Promise.all([
-        sbFetchAll('/rest/v1/layout_items?select=id,proj_num,zone_code,part_no,bed,qty,status&ship_date=is.null'),
-        sbFetchAll('/rest/v1/daily_output?select=date,proj_num,part_no,serial_no,inspect_time'),
-        sbFetchAll('/rest/v1/pre_inspections?select=proj_num,part_no'),
-        dailyLoadRecv('')
-      ]);
-      const K=(a,b)=>String(a||'').trim().toUpperCase()+'|'+String(b||'').trim().toUpperCase();
-      const preKeys=new Set((Array.isArray(pre.data)?pre.data:[]).map(x=>K(x.proj_num,x.part_no)));
-      const lastInsp=new Map();   // 構件 → 最近一次報驗(取受檢時間)
-      (Array.isArray(dly.data)?dly.data:[]).forEach(x=>{
-        const k=K(x.proj_num,x.part_no), cur=lastInsp.get(k);
-        if(!cur||String(x.date)>String(cur.date)) lastInsp.set(k,x);
-      });
-      shipBoardRows=(Array.isArray(lay.data)?lay.data:[]).filter(r=>{
-        if(!String(r.part_no||'').trim()||r.status==='HOLD'||r.status==='已出貨') return false;
-        const k=K(r.proj_num,r.part_no);
-        return lastInsp.has(k)&&!preKeys.has(k);
-      }).map(r=>{
+// 載入待出貨構件(看板與主頁分頁共用)。只抓「未出貨」的上線配置;每日產量只抓最早上線日之後的,主頁才不會變慢。
+let shipBoardLoadedAt=0, shipBoardLoading=null;
+function shipLoadRows(){
+  if(shipBoardLoading) return shipBoardLoading;
+  shipBoardLoading=(async()=>{
+    const lay=await sbFetchAll('/rest/v1/layout_items?select=id,proj_num,zone_code,part_no,bed,qty,status,work_date&ship_date=is.null');
+    const layRows=(Array.isArray(lay.data)?lay.data:[]).filter(r=>String(r.part_no||'').trim()&&r.status!=='HOLD'&&r.status!=='已出貨');
+    const fallback=(()=>{ const d=new Date(); d.setDate(d.getDate()-365); return d.toISOString().slice(0,10); })();
+    const wds=layRows.map(r=>String(r.work_date||'').slice(0,10)).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x)).sort();
+    const since=(wds.length&&layRows.every(r=>r.work_date))?wds[0]:fallback;   // 有沒填上線日的就放寬到一年
+    const [dly,pre]=await Promise.all([
+      sbFetchAll('/rest/v1/daily_output?select=date,proj_num,part_no,serial_no&date=gte.'+since),
+      sbFetchAll('/rest/v1/pre_inspections?select=proj_num,part_no'),
+      dailyLoadRecv(since)
+    ]);
+    const K=(a,b)=>String(a||'').trim().toUpperCase()+'|'+String(b||'').trim().toUpperCase();
+    const preKeys=new Set((Array.isArray(pre.data)?pre.data:[]).map(x=>K(x.proj_num,x.part_no)));
+    const lastInsp=new Map();   // 構件 → 最近一次報驗(取受檢時間)
+    (Array.isArray(dly.data)?dly.data:[]).forEach(x=>{
+      const k=K(x.proj_num,x.part_no), cur=lastInsp.get(k);
+      if(!cur||String(x.date)>String(cur.date)) lastInsp.set(k,x);
+    });
+    shipBoardRows=layRows.filter(r=>{ const k=K(r.proj_num,r.part_no); return lastInsp.has(k)&&!preKeys.has(k); })
+      .map(r=>{
         const d=lastInsp.get(K(r.proj_num,r.part_no));
         return {id:r.id, proj:String(r.proj_num||'').trim(), zone:String(r.zone_code||'').trim(), part:String(r.part_no||'').trim(),
           qty:Math.max(1,parseInt(r.qty)||1), bed:shipBedLabel(r.bed), col:shipIsColumn(r.zone_code),
           inspDate:String(d.date||''), recv:dailyRecvOf(d)};
       }).filter(r=>r.bed!=='HOLD');
-    }catch(e){ console.warn('ship board',e); body.innerHTML='<div class="empty-state" style="color:var(--danger)">載入失敗</div>'; return; }
+    shipBoardLoadedAt=Date.now();
+    return shipBoardRows;
+  })();
+  shipBoardLoading.then(()=>{ shipBoardLoading=null; },()=>{ shipBoardLoading=null; });
+  return shipBoardLoading;
+}
+async function openShipBoard(reload, pickBed){
+  shipModalEl(); openModal('ship-board-modal');
+  const body=document.getElementById('ship-body');
+  if(reload||!shipBoardLoadedAt||Date.now()-shipBoardLoadedAt>5*60000){
+    body.innerHTML='<div class="empty-state">載入中...</div>';
+    shipBoardSel={};
+    try{ await shipLoadRows(); }
+    catch(e){ console.warn('ship board',e); body.innerHTML='<div class="empty-state" style="color:var(--danger)">載入失敗</div>'; return; }
+    if(typeof shipDashRender==='function') shipDashRender();
   }
-  shipRender();
+  if(pickBed && pickBed!=='未排柱位' && shipBoardRows.some(r=>r.bed===pickBed)){ shipBoardSel={}; shipToggleBed(pickBed,true); }
+  else shipRender();
+  if(pickBed){ const el=[...document.querySelectorAll('#ship-body .ship-bed-h input')].find(i=>i.dataset.bed===pickBed); if(el) el.closest('.ship-bed').scrollIntoView({block:'nearest'}); }
+}
+// 主頁「待出貨」分頁:每個柱位一行摘要,點了開看板並先勾好那個柱位
+function shipDashSummary(){
+  const beds=new Map();
+  shipBoardRows.forEach(r=>{
+    const g=beds.get(r.bed)||{bed:r.bed,beam:0,col:0,projs:new Set(),recvs:new Set()};
+    if(r.col) g.col+=r.qty; else g.beam+=r.qty;
+    g.projs.add(r.proj); if(r.recv) g.recvs.add(r.recv);
+    beds.set(r.bed,g);
+  });
+  return [...beds.values()].sort((a,b)=>shipBedOrder(a.bed,b.bed));
+}
+function shipDashRender(){
+  const box=document.getElementById('dash-ship'); if(!box) return;
+  const list=shipDashSummary(), cnt=document.getElementById('dash-ship-count');
+  const bedN=list.filter(g=>g.bed!=='未排柱位').length;
+  if(cnt) cnt.textContent=bedN?('· '+bedN):'';
+  if(!list.length){ box.innerHTML='<span style="color:var(--text3);font-size:13px">目前沒有已報驗、待出貨的構件</span>'; return; }
+  box.innerHTML=list.map(g=>{
+    const rv=[...g.recvs].sort();
+    return '<div class="ship-dash-item" data-bed="'+esc(g.bed)+'" onclick="openShipBoard(false,this.dataset.bed)" title="點一下開啟待出貨看板">'
+      +'<span class="ship-dash-bed">'+esc(g.bed)+'</span>'
+      +'<span class="ship-dash-n">'+[g.beam?'樑 '+g.beam:'',g.col?'柱 '+g.col:''].filter(Boolean).join('・')+'</span>'
+      +'<span class="ship-dash-proj">'+esc([...g.projs].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).join('、'))+'</span>'
+      +(rv.length?'<span class="ship-dash-recv">受檢 '+esc(rv[0])+(rv.length>1?' 等':'')+'</span>':'')
+      +'</div>';
+  }).join('');
+}
+async function shipDashLoad(){
+  const box=document.getElementById('dash-ship'); if(!box) return;
+  const tab=document.getElementById('dash-mini-tab-ship');
+  const allowed=typeof pagePerm!=='function'||pagePerm('layout')!=='hide';
+  if(tab) tab.style.display=allowed?'':'none';
+  if(!allowed) return;
+  try{ await shipLoadRows(); shipDashRender(); }
+  catch(e){ console.warn('ship dash',e); box.innerHTML='<span style="color:var(--text3);font-size:13px">載入失敗</span>'; }
 }
 function shipRender(){
   const body=document.getElementById('ship-body'); if(!body) return;
@@ -50089,15 +50149,18 @@ function ldAddOpen(){
 
 // 主頁小卡:上線準備 ／ 月排程進度 兩個分頁共用同一格(分頁 id 沿用舊的 sp)
 function dashMiniTab(t){
-  const sp=(t!=='ld');
-  const spBox=document.getElementById('dash-ready'), ldBox=document.getElementById('dash-loading-due');
-  if(spBox) spBox.style.display=sp?'':'none';
-  if(ldBox) ldBox.style.display=sp?'none':'';
-  const a=document.getElementById('dash-mini-tab-sp'), b=document.getElementById('dash-mini-tab-ld');
-  if(a) a.classList.toggle('active',sp);
-  if(b) b.classList.toggle('active',!sp);
+  if(t!=='ld'&&t!=='ship') t='sp';
+  const boxes={sp:'dash-ready',ld:'dash-loading-due',ship:'dash-ship'};
+  Object.keys(boxes).forEach(k=>{
+    const box=document.getElementById(boxes[k]); if(box) box.style.display=(k===t)?'':'none';
+    const tab=document.getElementById('dash-mini-tab-'+k); if(tab) tab.classList.toggle('active',k===t);
+  });
   const go=document.getElementById('dash-mini-go');
-  if(go){ go.textContent=sp?'CP 頁':'月排程'; go.onclick=function(){ navTo(sp?'prod':'loading'); }; }
+  if(go){
+    go.textContent=t==='sp'?'CP 頁':t==='ld'?'月排程':'派車';
+    go.onclick=function(){ if(t==='ship') openShipBoard(); else navTo(t==='sp'?'prod':'loading'); };
+  }
+  if(t==='ship'&&typeof shipDashRender==='function') shipDashRender();
 }
 
 /* 主頁小卡:未來 14 個工作天內要交管料、或已經逾期的工程區。
