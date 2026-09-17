@@ -12192,6 +12192,8 @@ const ERRLOG_OPTIONAL_TABLES=/^\/rest\/v1\/(calendar_events|error_log)\b/;
 // 讀寫失敗(表格空白、存不進去的常見原因)自動記進錯誤紀錄;401 是登入過期,另有重新登入流程處理
 function errlogHttp(status, method, path, data){
   if(status===401||!window.errlogPush) return;
+  // 登入憑證過期時 Supabase Auth 回 403(不是 401),接著會自動換新憑證,屬正常流程
+  if(status===403 && /^\/auth\/v1\//.test(path||'')) return;
   if(status===404 && ERRLOG_OPTIONAL_TABLES.test(path||'')) return;
   const dm=data&&typeof data==='object' ? (data.message||data.error_description||data.error||'') : String(data||'');
   window.errlogPush({kind:'http', message:'HTTP '+status+' '+method+' '+String(path||'').split('?')[0].replace('/rest/v1/','')+(dm?':'+String(dm).slice(0,300):''),
