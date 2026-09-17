@@ -1894,6 +1894,22 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 #daily-table input{text-align:center;cursor:default}
 /* 每日產量:每欄以內容自動撐開(顯示資訊優先),內容放得下後表格 width:100% 會把剩餘寬度平均分配 */
 #daily-table{table-layout:auto}
+.ship-modal{max-width:760px;width:96vw;display:flex;flex-direction:column;max-height:92vh}
+.ship-body{overflow:auto;flex:1 1 auto;min-height:120px;display:flex;flex-direction:column;gap:10px;padding-right:2px}
+.ship-bed{border:1px solid var(--border);border-radius:10px;background:var(--bg2);padding:8px 12px}
+.ship-bed.on{border-color:var(--accent2);box-shadow:inset 3px 0 0 var(--accent2)}
+.ship-bed-h{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:16px}
+.ship-bed-h input{width:18px;height:18px;accent-color:var(--accent2)}
+.ship-bed-n{margin-left:auto;font-size:12px;color:var(--text2);font-family:var(--mono)}
+.ship-proj{margin:6px 0 0 28px}
+.ship-proj-h{display:flex;gap:10px;align-items:baseline;font-size:13px}
+.ship-proj-h span{font-size:12px;color:var(--accent2);font-family:var(--mono)}
+.ship-parts{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:3px;font-size:12px;font-family:var(--mono);color:var(--text2)}
+.ship-cols label{display:inline-flex;align-items:center;gap:4px;cursor:pointer;color:var(--text)}
+.ship-cars{margin:8px 0 2px 28px;font-size:14px}
+.ship-cars input{width:64px;padding:4px 6px;font-size:15px;text-align:center;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text)}
+.ship-foot{border-top:1px solid var(--border);margin-top:10px;padding-top:10px}
+.ship-foot textarea{box-sizing:border-box;width:100%;min-height:64px;resize:vertical;font-family:var(--mono);font-size:13px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px}
 #daily-table td input{field-sizing:content;width:auto;min-width:2ch;max-width:44ch;box-sizing:border-box}
 /* 每日產量:分類卡片式(收合/展開) */
 #page-daily .daily-mode-label{font-size:11px;font-family:var(--mono);color:var(--text3);margin-left:4px}
@@ -3605,6 +3621,7 @@ window.normalizeFullWidth=function(value){
         <div class="layout-tabs">
           <button class="layout-tab active" id="ltab-input" onclick="layoutSwitchTab('input')">明細輸入</button>
           <button class="layout-tab" id="ltab-chart" onclick="layoutSwitchTab('chart')">配置圖</button>
+          <button class="btn-sm btn-export" style="margin-left:auto;align-self:center" onclick="openShipBoard()" title="已報驗、還沒出貨的構件依柱位整理,可勾選產生派車訊息">🚛 待出貨看板</button>
         </div>
 
         <!-- 明細輸入 -->
@@ -12044,6 +12061,7 @@ function viewToHash(v) {
   if (!v) return '#/dashboard';
   if (v.proj) return v.zone ? ('#/proj/'+v.proj+'/zone/'+v.zone) : ('#/proj/'+v.proj);
   if (v.page === 'layout' && v.tab === 'chart') return '#/layout/chart';
+  if (v.page === 'layout' && v.tab === 'ship') return '#/layout/ship';
   if (v.page === 'multilevel' && v.ma === 'results') return '#/multilevel/results';
   if (v.page === 'loading' && (v.ldtab || v.ldym)) return '#/loading/'+(v.ldtab==='board'?'board':'plan')+(v.ldym?'/'+v.ldym:'');   // 月排程/上線白板 + 月份
   if (v.page === 'prod') {
@@ -12066,6 +12084,7 @@ function hashToView(h) {
     return v;
   }
   if (p[0] === 'layout' && p[1] === 'chart') return { page:'layout', tab:'chart' };
+  if (p[0] === 'layout' && p[1] === 'ship') return { page:'layout', tab:'ship' };   // 推播「報驗完成」點開 → 待出貨看板
   if (p[0] === 'multilevel' && p[1] === 'results') return { page:'multilevel', ma:'results' };
   if (p[0] === 'loading' && p[1]) { const v={page:'loading', ldtab:p[1]==='board'?'board':'plan'}; if(/^\d{4}-\d{2}$/.test(p[2]||'')) v.ldym=p[2]; return v; }
   if (p[0] === 'prod' && p[1] === 'receipt' && p[2] === 'status') return {page:'prod',ptab:'receipt',cphome:1,cpstatus:decodeURIComponent(p[3]||'all')};
@@ -12094,6 +12113,7 @@ async function applyView(v) {
     } else {
       navTo((v && v.page) ? v.page : 'dashboard', v || null);
       if (v && v.page === 'layout' && v.tab === 'chart') layoutSwitchTab('chart', false);
+      if (v && v.page === 'layout' && v.tab === 'ship' && typeof openShipBoard === 'function') openShipBoard();
     }
   } catch(e) { /* 還原失敗就維持在目前畫面 */ }
   _applyingPop = false;
@@ -19852,6 +19872,7 @@ const PUSH_TOPICS=[
   {k:'todo',     label:'⏰ 待辦到期／逾期',        sub:'自己的待辦、指派給自己的團體待辦(今天、明天到期與已逾期)', perm:'todo'},
   {k:'handover', label:'🚚 交管料日快到',          sub:'3 個工作天內要交管料或已逾期的工程區', perm:'loading'},
   {k:'ready',    label:'🚩 上線準備逾期(紅燈)',  sub:'過了準備期限還沒備齊的工程區', perm:'prod'},
+  {k:'ship',     label:'📦 報驗完成(待出貨)',     sub:'13:00 推今天上午報驗、08:00 推前一天下午報驗,依柱位整理;點開可產生派車訊息', perm:'layout'},
   {k:'notice',   label:'🙏 公司通知(含農曆拜拜)', sub:'通知管理發佈的通知,在輪到的日子推送(農曆通知含前一天提醒)', perm:''}
 ];
 function pushSupported(){ return 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification!=='undefined'; }
@@ -28133,6 +28154,137 @@ document.addEventListener('keydown', e => {
     e.preventDefault(); layoutRedo();
   }
 });
+
+// ── 待出貨看板:已報驗、還沒出貨的構件依「柱位」整理,勾選後產生派車訊息 ──
+// 柱位=上線配置的床位(D9~D10 只取 D9、補兩位數 D09);床位空白歸「未排柱位」、HOLD 不列。
+// 柱/樑依工程區代號尾字:C=柱(問支數,逐支勾),其餘(G/B/雜項)=樑(問車數)。棟別固定 C棟。
+// 已報驗判定比照線上進度表:每日產量有這個構件、且不是預報(pre_inspections)。
+let shipBoardRows=[], shipBoardSel={};
+function shipBedLabel(bed){
+  const s=String(bed||'').trim();
+  if(!s) return '未排柱位';
+  if(/^HOLD$/i.test(s)) return 'HOLD';
+  const m=s.match(/^([A-Za-z]+)\s*(\d+)/);
+  return m ? m[1].toUpperCase()+String(+m[2]).padStart(2,'0') : s;
+}
+function shipIsColumn(zone){ return /C$/i.test(String(zone||'').trim()); }
+function shipBedOrder(a,b){
+  if(a==='未排柱位') return 1; if(b==='未排柱位') return -1;
+  return a.localeCompare(b,undefined,{numeric:true});
+}
+function shipModalEl(){
+  let m=document.getElementById('ship-board-modal');
+  if(m) return m;
+  m=document.createElement('div'); m.className='modal-overlay'; m.id='ship-board-modal';
+  m.onclick=e=>{ if(e.target===m) closeModal('ship-board-modal'); };
+  m.innerHTML='<div class="modal ship-modal"><div class="modal-title" style="display:flex;align-items:center;gap:8px">🚛 待出貨看板'
+    +'<span id="ship-sum" style="font-size:12px;font-weight:400;color:var(--text3)"></span>'
+    +'<button class="btn-sm" style="margin-left:auto" onclick="openShipBoard(true)">↻ 重新整理</button></div>'
+    +'<div id="ship-body" class="ship-body"><div class="empty-state">載入中...</div></div>'
+    +'<div class="ship-foot"><textarea id="ship-msg" readonly placeholder="勾選柱位後,這裡會產生派車訊息"></textarea>'
+    +'<div class="modal-actions" style="margin-top:8px"><button class="btn-modal-cancel" onclick="closeModal(\'ship-board-modal\')">關閉</button>'
+    +'<button class="btn-modal-ok" id="ship-copy" onclick="shipCopyMsg()">複製派車訊息</button></div></div></div>';
+  document.body.appendChild(m);
+  return m;
+}
+async function openShipBoard(reload){
+  shipModalEl(); openModal('ship-board-modal');
+  const body=document.getElementById('ship-body');
+  if(reload||!shipBoardRows.length){
+    body.innerHTML='<div class="empty-state">載入中...</div>';
+    shipBoardSel={};
+    try{
+      const [lay,dly,pre]=await Promise.all([
+        sbFetchAll('/rest/v1/layout_items?select=id,proj_num,zone_code,part_no,bed,qty,status&ship_date=is.null'),
+        sbFetchAll('/rest/v1/daily_output?select=date,proj_num,part_no,serial_no,inspect_time'),
+        sbFetchAll('/rest/v1/pre_inspections?select=proj_num,part_no'),
+        dailyLoadRecv('')
+      ]);
+      const K=(a,b)=>String(a||'').trim().toUpperCase()+'|'+String(b||'').trim().toUpperCase();
+      const preKeys=new Set((Array.isArray(pre.data)?pre.data:[]).map(x=>K(x.proj_num,x.part_no)));
+      const lastInsp=new Map();   // 構件 → 最近一次報驗(取受檢時間)
+      (Array.isArray(dly.data)?dly.data:[]).forEach(x=>{
+        const k=K(x.proj_num,x.part_no), cur=lastInsp.get(k);
+        if(!cur||String(x.date)>String(cur.date)) lastInsp.set(k,x);
+      });
+      shipBoardRows=(Array.isArray(lay.data)?lay.data:[]).filter(r=>{
+        if(!String(r.part_no||'').trim()||r.status==='HOLD'||r.status==='已出貨') return false;
+        const k=K(r.proj_num,r.part_no);
+        return lastInsp.has(k)&&!preKeys.has(k);
+      }).map(r=>{
+        const d=lastInsp.get(K(r.proj_num,r.part_no));
+        return {id:r.id, proj:String(r.proj_num||'').trim(), zone:String(r.zone_code||'').trim(), part:String(r.part_no||'').trim(),
+          qty:Math.max(1,parseInt(r.qty)||1), bed:shipBedLabel(r.bed), col:shipIsColumn(r.zone_code),
+          inspDate:String(d.date||''), recv:dailyRecvOf(d)};
+      }).filter(r=>r.bed!=='HOLD');
+    }catch(e){ console.warn('ship board',e); body.innerHTML='<div class="empty-state" style="color:var(--danger)">載入失敗</div>'; return; }
+  }
+  shipRender();
+}
+function shipRender(){
+  const body=document.getElementById('ship-body'); if(!body) return;
+  const beds=new Map();
+  shipBoardRows.forEach(r=>{ if(!beds.has(r.bed)) beds.set(r.bed,[]); beds.get(r.bed).push(r); });
+  const order=[...beds.keys()].sort(shipBedOrder);
+  const total=shipBoardRows.reduce((a,r)=>a+r.qty,0);
+  const sum=document.getElementById('ship-sum'); if(sum) sum.textContent=total?('共 '+total+' 支 · '+order.length+' 個柱位'):'';
+  if(!order.length){ body.innerHTML='<div class="empty-state">目前沒有已報驗、待出貨的構件</div>'; shipBuildMsg(); return; }
+  body.innerHTML=order.map(bed=>{
+    const list=beds.get(bed), sel=shipBoardSel[bed]||{};
+    const beamN=list.filter(r=>!r.col).reduce((a,r)=>a+r.qty,0), colN=list.filter(r=>r.col).reduce((a,r)=>a+r.qty,0);
+    const bedKey=esc(bed), noBed=bed==='未排柱位';
+    const projs=new Map(); list.forEach(r=>{ if(!projs.has(r.proj)) projs.set(r.proj,[]); projs.get(r.proj).push(r); });
+    let h='<div class="ship-bed'+(sel.on?' on':'')+'">'
+      +'<label class="ship-bed-h"><input type="checkbox"'+(sel.on?' checked':'')+(noBed?' disabled title="未排柱位,無法產生派車訊息"':'')+' data-bed="'+bedKey+'" onchange="shipToggleBed(this.dataset.bed,this.checked)">'
+      +'<b>'+esc(bed)+'</b><span class="ship-bed-n">'+[beamN?'樑 '+beamN+' 支':'',colN?'柱 '+colN+' 支':''].filter(Boolean).join(' · ')+'</span></label>';
+    [...projs.keys()].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).forEach(pj=>{
+      const pr=projs.get(pj), recvs=[...new Set(pr.map(r=>r.recv).filter(Boolean))].sort();
+      h+='<div class="ship-proj"><div class="ship-proj-h"><b>'+esc(pj)+'</b>'+(recvs.length?'<span>受檢 '+esc(recvs.join('、'))+'</span>':'')+'</div>';
+      const beams=pr.filter(r=>!r.col), cols=pr.filter(r=>r.col);
+      if(beams.length) h+='<div class="ship-parts">'+beams.map(r=>'<span>'+esc(r.part)+(r.qty>1?' ×'+r.qty:'')+'</span>').join('')+'</div>';
+      if(cols.length) h+='<div class="ship-parts ship-cols">'+cols.map(r=>'<label><input type="checkbox"'+(sel.on&&sel.cols&&sel.cols[r.id]?' checked':'')+(sel.on?'':' disabled')
+        +' data-bed="'+bedKey+'" data-id="'+esc(r.id)+'" onchange="shipToggleCol(this.dataset.bed,this.dataset.id,this.checked)">柱 '+esc(r.part)+(r.qty>1?' ×'+r.qty:'')+'</label>').join('')+'</div>';
+      h+='</div>';
+    });
+    if(sel.on&&beamN) h+='<div class="ship-cars">樑：出 <input type="number" min="0" step="1" inputmode="numeric" value="'+(sel.cars==null?1:sel.cars)+'" data-bed="'+bedKey+'" oninput="shipSetCars(this.dataset.bed,this.value)"> 車</div>';
+    return h+'</div>';
+  }).join('');
+  shipBuildMsg();
+}
+window.shipToggleBed=function(bed,on){
+  const list=shipBoardRows.filter(r=>r.bed===bed);
+  const sel=shipBoardSel[bed]||(shipBoardSel[bed]={cars:1,cols:{}});
+  sel.on=!!on;
+  if(on){ sel.cols={}; list.filter(r=>r.col).forEach(r=>{ sel.cols[r.id]=true; }); }   // 勾柱位時柱子預設全勾,不出的再取消
+  shipRender();
+};
+window.shipToggleCol=function(bed,id,on){
+  const sel=shipBoardSel[bed]; if(!sel) return;
+  const r=shipBoardRows.find(x=>String(x.id)===String(id)); if(!r) return;
+  if(on) sel.cols[r.id]=true; else delete sel.cols[r.id];
+  shipBuildMsg();
+};
+window.shipSetCars=function(bed,v){ const sel=shipBoardSel[bed]; if(!sel) return; sel.cars=Math.max(0,parseInt(v)||0); shipBuildMsg(); };
+function shipBuildMsg(){
+  const lines=[];
+  Object.keys(shipBoardSel).filter(b=>shipBoardSel[b].on).sort(shipBedOrder).forEach(bed=>{
+    const sel=shipBoardSel[bed], list=shipBoardRows.filter(r=>r.bed===bed);
+    const cars=sel.cars==null?1:sel.cars;
+    if(list.some(r=>!r.col)&&cars>0) lines.push('C棟'+bed+'需出'+cars+'車 麻煩安排 謝謝');
+    const n=list.filter(r=>r.col&&sel.cols&&sel.cols[r.id]).reduce((a,r)=>a+r.qty,0);
+    if(n>0) lines.push('C棟'+bed+'需出'+n+'支柱子 麻煩安排 謝謝');
+  });
+  const ta=document.getElementById('ship-msg'); if(ta) ta.value=lines.join('\n');
+  const b=document.getElementById('ship-copy'); if(b){ b.disabled=!lines.length; b.textContent='複製派車訊息'+(lines.length?'（'+lines.length+' 則）':''); }
+}
+window.shipCopyMsg=async function(){
+  const ta=document.getElementById('ship-msg'), txt=ta?ta.value:''; if(!txt) return;
+  let ok=false;
+  try{ if(navigator.clipboard&&navigator.clipboard.writeText){ await navigator.clipboard.writeText(txt); ok=true; } }catch(e){}
+  if(!ok&&ta){ ta.removeAttribute('readonly'); ta.select(); try{ ok=document.execCommand('copy'); }catch(e){} ta.setAttribute('readonly',''); }
+  const b=document.getElementById('ship-copy');
+  if(b){ b.textContent=ok?'已複製 ✓ 到 LINE 先 @ 窗口再貼上':'複製失敗,請長按訊息框手動複製'; setTimeout(shipBuildMsg,2500); }
+};
 
 // ── 每日產量 (#5) ──
 let dailyRows = [];
@@ -48657,12 +48809,12 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     <div class="sop-warn"><b>派車一定要標註柱位。</b></div>
     <h4>訊息範本</h4>
     <p><b>進料</b></p>
-    <pre>@{{wu}} C棟D08需進料B820-8BG 一疊 麻煩安排 謝謝</pre>
-    <p><b>出貨樑</b></p>
-    <pre>@{{wu}} C棟D08需出一車 麻煩安排 謝謝</pre>
-    <p><b>出貨柱</b></p>
-    <pre>@{{wu}} C棟D08需出一支柱子 麻煩安排 謝謝</pre>
-    <div class="sop-note">格式：<code>@窗口 ［棟別］［柱位］ 需［動作］［品項/數量］ 麻煩安排 謝謝</code><br>出貨後記得<b>掃描出貨單至公司群組</b>。</div>`},
+    <pre>C棟D08需進料B820-8BG 一疊 麻煩安排 謝謝</pre>
+    <p><b>出貨樑</b>（問車數）</p>
+    <pre>C棟D08需出1車 麻煩安排 謝謝</pre>
+    <p><b>出貨柱</b>（問支數）</p>
+    <pre>C棟D08需出1支柱子 麻煩安排 謝謝</pre>
+    <div class="sop-note">格式：<code>［棟別］［柱位(兩位數，D9→D09)］需［動作］［數量］ 麻煩安排 謝謝</code><br>在 LINE 先打 <b>@</b> 選 {{wu}}，再貼上訊息（貼上的 @文字不會真的標記到人）。<br>出貨訊息可到「上線配置 → 🚛 待出貨看板」勾選柱位自動產生。<br>出貨後記得<b>掃描出貨單至公司群組</b>。</div>`},
 
   {id:'gas',group:'safety',icon:'🧯',title:'每週氣體檢查',sub:'每週五固定檢查並上傳',kw:'氣體檢查 每週五 上傳 長榮鎮山二次加工群組',body:`
     <p>每週五固定檢查一次，並上傳至<b>長榮鎮山二次加工群組</b>。</p>`},

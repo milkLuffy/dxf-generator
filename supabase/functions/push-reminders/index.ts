@@ -3,6 +3,8 @@
 //  ・交管料日:3 個工作天內或已逾期(14 個工作天內)的工程區 → 推給有訂閱「交管料」的人
 //  ・通知管理發佈的通知(含農曆每月循環):輪到的日子推給有訂閱「公司通知」的人
 //  ・上線準備紅燈:網頁端算好的快照(push_ready_snapshot) → 推給有訂閱「上線準備」的人
+//  ・報驗完成(待出貨):台灣時間 13:00 推今天上午報驗、08:00 推前一天下午報驗,依柱位整理 → 訂閱「ship」的人
+//    (pg_cron 另排 08:00/13:00 兩個排程呼叫同一支;也可帶 {mode:'ship', half:'am'|'pm', date:'YYYY-MM-DD'} 手動觸發)
 // 另外支援 {mode:'test'}:登入者自己按「傳送測試通知」。
 import { sendWebPush } from './webpush.js';
 import { lunarOccurrences, loadTwCalendar } from './lunar.js';
@@ -40,6 +42,7 @@ function json(data: unknown, status = 200) {
 
 // ── 日期(一律用台灣時間) ──
 function taipeiToday() { return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10); }
+function taipeiHour() { return new Date(Date.now() + 8 * 3600 * 1000).getUTCHours(); }
 function d(ymd: string) { return new Date(ymd + 'T00:00:00Z'); }
 function iso(x: Date) { return x.toISOString().slice(0, 10); }
 function addDays(ymd: string, n: number) { const x = d(ymd); x.setUTCDate(x.getUTCDate() + n); return iso(x); }
@@ -125,6 +128,68 @@ async function buildReadyMessage(today: string): Promise<Msg | null> {
   };
 }
 
+// 報驗完成(待出貨):規則同網頁「待出貨看板」
+//  柱位=上線配置床位(D9~D10 取 D9、補兩位數 D09;空白=未排柱位),柱/樑看工程區尾字 C;預報構件不算
+function bedLabel(bed: string) {
+  const s = String(bed || '').trim();
+  if (!s) return '未排柱位';
+  const m = s.match(/^([A-Za-z]+)\s*(\d+)/);
+  return m ? m[1].toUpperCase() + String(+m[2]).padStart(2, '0') : s;
+}
+function recvFmt(dd: string, tt: string) {
+  const m = String(dd || '').match(/(\d{1,2})\s*[\/\-.月]\s*(\d{1,2})\s*日?\s*$/);
+  if (!m) return '';
+  const p2 = (x: string | number) => String(x).padStart(2, '0');
+  const tm = String(tt || '').match(/(\d{1,2})\s*[:：]\s*(\d{2})/);
+  return p2(m[1]) + '/' + p2(m[2]) + (tm ? ' ' + p2(tm[1]) + ':' + tm[2] : '');
+}
+async function buildShipMessage(date: string, half: 'am' | 'pm'): Promise<Msg | null> {
+  const K = (a: unknown, b: unknown) => String(a || '').trim().toUpperCase() + '|' + String(b || '').trim().toUpperCase();
+  const [daily, pre, layout, reports] = await Promise.all([
+    rest('daily_output?date=eq.' + date + '&select=proj_num,zone_code,part_no,serial_no,inspect_time') as Promise<any[]>,
+    rest('pre_inspections?select=proj_num,part_no') as Promise<any[]>,
+    rest('layout_items?ship_date=is.null&select=proj_num,part_no,bed,status') as Promise<any[]>,
+    rest('inspection_reports?report_date=eq.' + date + '&select=proj_num,serial_no,recv_date:snapshot->>recv_date,recv_time:snapshot->>recv_time') as Promise<any[]>,
+  ]);
+  const preKeys = new Set(pre.map(x => K(x.proj_num, x.part_no)));
+  const bedOf = new Map<string, string>();
+  for (const l of layout) { const k = K(l.proj_num, l.part_no); if (!bedOf.get(k) && String(l.bed || '').trim()) bedOf.set(k, String(l.bed)); }
+  const recvOf = new Map<string, string>();
+  for (const r of reports) { const t = recvFmt(r.recv_date, r.recv_time); if (t) recvOf.set(K(r.proj_num, r.serial_no), t); }
+  const beds = new Map<string, { beam: number; col: number; projs: Set<string> }>();
+  const recvs = new Set<string>();
+  let total = 0;
+  for (const r of daily) {
+    const t = String(r.inspect_time || '');
+    const isPm = t >= '12:00';
+    if ((half === 'pm') !== isPm) continue;
+    const k = K(r.proj_num, r.part_no);
+    if (preKeys.has(k)) continue;
+    const bedRaw = bedOf.get(k) || '';
+    if (/^HOLD$/i.test(bedRaw.trim())) continue;
+    const bed = bedLabel(bedRaw);
+    const g = beds.get(bed) || { beam: 0, col: 0, projs: new Set<string>() };
+    if (/C$/i.test(String(r.zone_code || '').trim())) g.col++; else g.beam++;
+    g.projs.add(String(r.proj_num || '').trim());
+    beds.set(bed, g);
+    const rv = recvOf.get(K(r.proj_num, r.serial_no)); if (rv) recvs.add(rv);
+    total++;
+  }
+  if (!total) return null;
+  const order = [...beds.keys()].sort((a, b) => a === '未排柱位' ? 1 : b === '未排柱位' ? -1 : a.localeCompare(b, undefined, { numeric: true }));
+  const lines = order.map(b => {
+    const g = beds.get(b)!;
+    return b + '：' + [g.beam ? '樑 ' + g.beam : '', g.col ? '柱 ' + g.col : ''].filter(Boolean).join('・') + '（' + [...g.projs].sort().join('、') + '）';
+  });
+  const rv = [...recvs].sort();
+  const head = rv.length ? '受檢 ' + rv[0] + (rv.length > 1 ? ' 等' : '') + '\n' : '';
+  return {
+    title: '📦 報驗完成 ' + total + ' 支 · ' + order.length + ' 個柱位',
+    body: head + listBody(lines, 3),
+    tag: 'ship-' + date + '-' + half, url: APP_URL + '#/layout/ship',
+  };
+}
+
 // 通知管理(app_notifications):規則同網頁 manualNotificationOccurrence
 async function buildNoticeMessages(today: string): Promise<Msg[]> {
   const rows = await rest('app_notifications?select=*&is_active=not.is.false') as any[];
@@ -193,6 +258,17 @@ Deno.serve(async req => {
   const subs = await rest('push_subscriptions?select=*') as Sub[];
   if (!subs.length) return json({ ok: true, today, subscriptions: 0 });
   const has = (s: Sub, t: string) => (s.topics || []).includes(t);
+
+  // 報驗完成(待出貨):08:00/13:00 的排程,或手動帶 mode:'ship'。07:30 的每日提醒不受影響。
+  const hour = taipeiHour();
+  if (body.mode === 'ship' || (body.mode !== 'daily' && (hour === 8 || hour === 13))) {
+    const half: 'am' | 'pm' = body.half === 'am' || body.half === 'pm' ? body.half : (hour >= 12 ? 'am' : 'pm');
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date || '')) ? String(body.date) : (half === 'am' ? today : addDays(today, -1));
+    const msg = await buildShipMessage(date, half);
+    const t = subs.filter(s => has(s, 'ship'));
+    if (msg && t.length) await deliver(t, msg, stats);
+    return json({ ok: true, mode: 'ship', date, half, pieces: msg ? msg.title : null, devices: t.length, ...stats });
+  }
 
   const report: Record<string, number> = {};
   const todoMsgs = await buildTodoMessages(today, subs);
