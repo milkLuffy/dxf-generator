@@ -5352,7 +5352,8 @@ window.normalizeFullWidth=function(value){
       #page-labor .lm-photo{position:relative;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg3);cursor:grab;transition:box-shadow .12s,transform .12s,border-color .12s}
       #page-labor .lm-photo:active{cursor:grabbing}
       #page-labor .lm-photo.dragging{opacity:.4}
-      #page-labor .lm-photo.drag-over{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2) inset}
+      #page-labor .lm-photo.drop-before{border-left-color:var(--accent2);box-shadow:inset 5px 0 0 var(--accent2)}
+      #page-labor .lm-photo.drop-after{border-right-color:var(--accent2);box-shadow:inset -5px 0 0 var(--accent2)}
       #page-labor .lm-photo img{width:100%;height:110px;object-fit:contain;display:block;pointer-events:none}
       #page-labor .lm-photo .lm-photo-x{position:absolute;top:4px;right:4px;border:0;border-radius:50%;width:22px;height:22px;background:rgba(0,0,0,.55);color:#fff;cursor:pointer}
       #page-labor .lm-photo .lm-photo-n{position:absolute;top:4px;left:6px;font-size:11px;color:#fff;text-shadow:0 1px 2px #000}
@@ -44753,17 +44754,25 @@ function lmRenderPhotos(){
   const el=document.getElementById('lm-photo-grid');if(!el)return;
   el.innerHTML=lmPhotos.map((p,i)=>'<div class="lm-photo" draggable="true" data-i="'+i+'" ondragstart="lmPhotoDragStart(event,'+i+')" ondragover="lmPhotoDragOver(event,'+i+')" ondragleave="lmPhotoDragLeave(event)" ondrop="lmPhotoDrop(event,'+i+')" ondragend="lmPhotoDragEnd(event)"><span class="lm-photo-n">'+(i+1)+'</span><img src="'+p.url+'"/><button class="lm-photo-x" onclick="lmDelPhoto('+i+')" draggable="false">✕</button></div>').join('');
 }
-// 照片拖曳排序:按住照片拖到另一張的位置即可調整順序(Word 也照這個順序帶入)
-let lmPhotoDragFrom=null;
-window.lmPhotoDragStart=function(e,i){lmPhotoDragFrom=i;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',String(i));}catch(_){}
+// 照片拖曳排序(插入式,不是交換):拖到某張的左半邊=插在它前面、右半邊=插在它後面,藍色直條標出插入位置。
+// 例:1 2 3 4 5 把 2 拖到 4 的右半邊 → 1 3 4 2 5。Word 也照這個順序帶入。
+let lmPhotoDragFrom=null, lmPhotoDropAt=null;   // lmPhotoDropAt = 插入到原陣列的哪個位置之前(0..length)
+function lmPhotoClearMarks(){document.querySelectorAll('#lm-photo-grid .lm-photo.drop-before,#lm-photo-grid .lm-photo.drop-after').forEach(x=>x.classList.remove('drop-before','drop-after'));}
+window.lmPhotoDragStart=function(e,i){lmPhotoDragFrom=i;lmPhotoDropAt=null;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',String(i));}catch(_){}
   const el=e.currentTarget;if(el)setTimeout(()=>el.classList.add('dragging'),0);};
 window.lmPhotoDragOver=function(e,i){if(lmPhotoDragFrom===null)return;e.preventDefault();e.dataTransfer.dropEffect='move';
-  const el=e.currentTarget;if(el&&lmPhotoDragFrom!==i)el.classList.add('drag-over');};
-window.lmPhotoDragLeave=function(e){const el=e.currentTarget;if(el)el.classList.remove('drag-over');};
-window.lmPhotoDrop=function(e,i){e.preventDefault();const from=lmPhotoDragFrom;lmPhotoDragFrom=null;
-  if(from===null||from===i){lmRenderPhotos();return;}
-  const [m]=lmPhotos.splice(from,1);lmPhotos.splice(i,0,m);lmRenderPhotos();};
-window.lmPhotoDragEnd=function(e){lmPhotoDragFrom=null;lmRenderPhotos();};
+  const el=e.currentTarget;if(!el)return;
+  const r=el.getBoundingClientRect(), after=e.clientX>r.left+r.width/2;
+  const at=after?i+1:i;
+  lmPhotoDropAt=at;
+  lmPhotoClearMarks();
+  if(at===lmPhotoDragFrom||at===lmPhotoDragFrom+1)return;   // 放回原位,不標示
+  el.classList.add(after?'drop-after':'drop-before');};
+window.lmPhotoDragLeave=function(e){const el=e.currentTarget;if(el&&!el.contains(e.relatedTarget))el.classList.remove('drop-before','drop-after');};
+window.lmPhotoDrop=function(e,i){e.preventDefault();const from=lmPhotoDragFrom;let at=lmPhotoDropAt;lmPhotoDragFrom=null;lmPhotoDropAt=null;
+  if(from===null||at===null||at===from||at===from+1){lmRenderPhotos();return;}
+  const [m]=lmPhotos.splice(from,1);if(at>from)at--;lmPhotos.splice(at,0,m);lmRenderPhotos();};
+window.lmPhotoDragEnd=function(e){lmPhotoDragFrom=null;lmPhotoDropAt=null;lmRenderPhotos();};
 let lmBusy=false;   // 防連點:產生中不允許再按
 // 照片表結構:6 列 = 3 組(每組=影像列+說明列),每列 2 格 → 每頁 6 張。
 // 奇數張時仍保留右側儲存格的完整寬度，只隱藏內容與外框。
