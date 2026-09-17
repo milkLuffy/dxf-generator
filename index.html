@@ -4526,12 +4526,14 @@ window.normalizeFullWidth=function(value){
         <button class="btn" id="insp-folder-btn" onclick="inspChooseSaveFolder()"><img class="action-icon" src="assets/icons/fixed-folder.png" alt="">設定固定「報驗」資料夾</button>
         <button class="btn btn-gen" onclick="generateInspection()">▶ 產生申驗單 Word</button>
         <label class="insp-attach-opt" title="依勾選構件的圖號,從「圖面快搜」抓對應的製造圖頁,合併成 PDF 存在申驗單旁邊"><input type="checkbox" id="insp-attach-drawings" checked onchange="inspAttachToggle(this)"/>同時產生附圖 PDF</label>
+        <button class="btn" id="insp-attach-only" onclick="inspAttachOnly()" title="不產生 Word,只把目前勾選構件的製造圖合併成 PDF">📎 只產生附圖</button>
         <button class="btn" id="insp-open-word-btn" onclick="inspOpenLastInWord()" disabled><img class="action-icon" src="assets/icons/word-doc.png" alt="">用 Word 開啟</button>
       </div>
       <div class="notice-bar" id="insp-folder-status" style="margin-top:10px;padding:10px 14px">
         內網第一次使用需選擇「鎮山共用資料夾／報驗」；之後此電腦會自動沿用。外網則直接下載至 Downloads。
       </div>
       <div class="statusbar" id="insp-statusbar"><div class="dot"></div><span id="insp-status-text">就緒</span></div>
+      <div class="notice-bar" id="insp-attach-result" style="display:none;margin-top:8px;padding:10px 14px;line-height:1.9"></div>
 
       <div class="notice-bar" style="margin-top:16px">
         <strong>範本說明：</strong>後三頁（NDT表、查驗成績單）全公司共用，只需用「設定共用後三頁」上傳一次完整四頁檔即可。之後每個新工程只要上傳<strong>第一頁</strong>的 .docx，系統會自動標記第一頁並接上共用的後三頁，組成完整四頁。系統自動偵測「工程名稱」「申請日期」「檢驗日期」「成品編號／構件編號」欄位；申請日期帶今天、檢驗日期帶明天。（若上傳的是完整四頁，仍照舊運作。）
@@ -25989,9 +25991,11 @@ async function inspBuildDocx(checked, ctx) {
   const fname = (ctx.proj_no || '申驗單') + '_申驗單_' + ymd + '_' + docNo + (ctx.fnameSuffix || '') + '.docx';
   const saveResult = await inspSaveDocx(out, fname, ctx.proj_no || '');
   inspLastAttachState = null;
+  const attachBox = document.getElementById('insp-attach-result');
+  if (attachBox) { attachBox.style.display = 'none'; attachBox.innerHTML = ''; }
   if (inspAttachEnabled() && ctx.zoneId) {
     try { inspLastAttachState = await inspSaveDrawingAttachment(checked, ctx, fname); }
-    catch (e) { console.warn('報驗附圖失敗', e); inspLastAttachState = { ok:false, error:e.message || String(e) }; }
+    catch (e) { console.warn('報驗附圖失敗', e); inspLastAttachState = { ok:false, error:e.message || String(e) }; inspShowAttachResult(inspLastAttachState); }
   }
   // 一般報驗單同步封存到雲端；預報補送檔另有生命週期，不覆蓋正式批次備份。
   inspLastArchiveState = ctx.fnameSuffix ? null : await inspArchiveDocx(out, fname, checked, Object.assign({}, ctx, {
@@ -26048,12 +26052,14 @@ function inspAttachSummary() {
   if (!s.pages) return '　⚠ 附圖沒有產生：勾選構件都找不到已標記的圖面（請先到「圖面快搜」上傳並標記圖號頁碼）';
   return '　＋ 附圖 ' + s.pages + ' 頁（' + s.fileName + '）' + miss;
 }
-async function inspSaveDrawingAttachment(checked, ctx, docxName) {
+// 依構件圖號找圖面快搜的頁並合併;回傳 {rows, missing, bytes}
+async function inspMergeDrawingAttachment(checked, zoneId, title) {
+  setInspStatus('📎 附圖：查詢圖面快搜索引…', true);
   const [pageResult, fileResult] = await Promise.all([
-    sbFetchAll('/rest/v1/drawing_page_drawings?select=file_id,drawing_no,page_no&zone_id=eq.' + encodeURIComponent(ctx.zoneId)),
-    sbFetch('/rest/v1/drawing_files?select=id,zone_id,original_name,storage_key,storage_parts,page_count,created_at&zone_id=eq.' + encodeURIComponent(ctx.zoneId) + '&order=created_at.desc')
+    sbFetchAll('/rest/v1/drawing_page_drawings?select=file_id,drawing_no,page_no&zone_id=eq.' + encodeURIComponent(zoneId)),
+    sbFetch('/rest/v1/drawing_files?select=id,zone_id,original_name,storage_key,storage_parts,page_count,created_at&zone_id=eq.' + encodeURIComponent(zoneId) + '&order=created_at.desc')
   ]);
-  if (!pageResult.ok || !fileResult.ok) throw new Error('讀取圖面快搜索引失敗');
+  if (!pageResult.ok || !fileResult.ok) throw new Error('讀取圖面快搜索引失敗（HTTP ' + (pageResult.ok ? fileResult.status : pageResult.status) + '）');
   const files = Array.isArray(fileResult.data) ? fileResult.data : [];
   // 同一圖號若有多份上傳(改版重傳),只用最新上傳那份 PDF 的頁
   const fileRank = new Map(files.map((f, i) => [f.id, i]));
@@ -26069,7 +26075,7 @@ async function inspSaveDrawingAttachment(checked, ctx, docxName) {
   checked.forEach(c => {
     const k = dsNorm(c && c.drawing_no);
     const list = k ? pagesByDrawing.get(k) : null;
-    if (!list || !list.length) { if (c && c.part_no) missing.push(c.part_no); return; }
+    if (!list || !list.length) { if (c && c.part_no) missing.push(c.part_no + (c.drawing_no ? '（圖號 ' + c.drawing_no + '）' : '（BOM 沒填圖號）')); return; }
     const newest = Math.min(...list.map(p => fileRank.get(p.file_id)));
     list.filter(p => fileRank.get(p.file_id) === newest)
       .sort((a, b) => a.page_no - b.page_no)
@@ -26080,12 +26086,66 @@ async function inspSaveDrawingAttachment(checked, ctx, docxName) {
         rows.push({ part_no: c.part_no, drawing_no: c.drawing_no, file_id: p.file_id, page_no: p.page_no });
       });
   });
-  if (!rows.length) return { ok:true, pages:0, missing };
+  if (!rows.length) return { rows, missing, bytes:null };
+  setInspStatus('📎 附圖：下載並合併 ' + rows.length + ' 頁製造圖（原始 PDF 較大時要等一下）…', true);
+  const bytes = await dsMergeRowsToPdf(rows, (done, total) => setInspStatus('📎 附圖：合併中 ' + done + ' / ' + total + ' 頁…', true), title, files);
+  return { rows, missing, bytes };
+}
+async function inspSaveDrawingAttachment(checked, ctx, docxName) {
   const title = (ctx.proj_no || '') + ' 申驗單 ' + (ctx.docNo || '') + ' 附圖';
-  const bytes = await dsMergeRowsToPdf(rows, null, title, files);
+  const m = await inspMergeDrawingAttachment(checked, ctx.zoneId, title);
+  if (!m.bytes) { inspShowAttachResult({ ok:true, pages:0, missing:m.missing }); return { ok:true, pages:0, missing:m.missing }; }
   const pdfName = docxName.replace(/\.docx$/i, '') + '_附圖.pdf';
-  const saved = await inspSaveDocx(new Blob([bytes], { type:'application/pdf' }), pdfName, ctx.proj_no || '');
-  return { ok:true, pages:rows.length, missing, fileName:(saved && saved.fileName) || pdfName };
+  const blob = new Blob([m.bytes], { type:'application/pdf' });
+  const saved = await inspSaveDocx(blob, pdfName, ctx.proj_no || '');
+  const state = { ok:true, pages:m.rows.length, missing:m.missing, fileName:(saved && saved.fileName) || pdfName,
+    where:(saved && !saved.directDownload) ? ('已存到「' + (saved.folderName || '申驗單') + '」資料夾') : '已下載（若瀏覽器網址列出現「封鎖多個下載」請按允許，或用下方按鈕下載）' };
+  inspShowAttachResult(state, blob);
+  return state;
+}
+// 報驗頁「產生」按鈕下方的附圖結果列:可直接開啟／下載,不必去資料夾找
+let inspAttachUrl = '';
+function inspShowAttachResult(s, blob) {
+  const box = document.getElementById('insp-attach-result');
+  if (!box) return;
+  if (inspAttachUrl) { try { URL.revokeObjectURL(inspAttachUrl); } catch (_) {} inspAttachUrl = ''; }
+  const e = v => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  let html = '';
+  if (!s.ok) html = '⚠ 附圖沒有產生：' + e(s.error);
+  else if (!s.pages) html = '⚠ 附圖沒有產生：勾選的構件在「圖面快搜」都找不到已標記頁碼的圖面（要先在圖面快搜選同一個工程區上傳 PDF 並標記圖號）';
+  else {
+    inspAttachUrl = URL.createObjectURL(blob);
+    const name = e(s.fileName || '附圖.pdf');
+    html = '📎 附圖 <b>' + s.pages + '</b> 頁：' + name + (s.where ? '　' + e(s.where) : '')
+      + '　<a class="btn" style="padding:3px 10px;font-size:12px" href="' + inspAttachUrl + '" target="_blank" rel="noopener">開啟</a>'
+      + ' <a class="btn" style="padding:3px 10px;font-size:12px" href="' + inspAttachUrl + '" download="' + name + '">下載</a>';
+  }
+  if (s.missing && s.missing.length) html += '<div style="margin-top:4px;color:var(--text3)">找不到圖面的構件：' + e(s.missing.slice(0, 15).join('、')) + (s.missing.length > 15 ? '…等 ' + s.missing.length + ' 支' : '') + '</div>';
+  box.innerHTML = html;
+  box.style.display = '';
+}
+// 不產 Word,只用目前勾選的構件做附圖(補做、或先確認圖面對不對)
+async function inspAttachOnly() {
+  const checked = Array.from(document.querySelectorAll('.insp-comp-chk:checked')).map(c => inspComponents[parseInt(c.dataset.idx)]).filter(Boolean);
+  const zid = document.getElementById('insp-zone').value;
+  if (!zid) { setInspStatus('請先選擇工程區', false); return; }
+  if (!checked.length) { setInspStatus('請至少勾選一個構件', false); return; }
+  const btn = document.getElementById('insp-attach-only');
+  if (btn) btn.disabled = true;
+  try {
+    const proj = allBOM.find(p => String(p.id) === String(document.getElementById('insp-proj').value));
+    const zoneObj = (inspZones || []).find(z => String(z.id) === String(zid));
+    const d = new Date(), ymd = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+    const name = [(proj && proj.proj_num) || '', (zoneObj && zoneObj.zone_code) || '', '附圖', ymd].filter(Boolean).join('_').replace(/[\\/:*?"<>|]/g, '') + '.pdf';
+    const m = await inspMergeDrawingAttachment(checked, zid, name.replace(/\.pdf$/, ''));
+    if (!m.bytes) { inspShowAttachResult({ ok:true, pages:0, missing:m.missing }); setInspStatus('附圖沒有產生（見下方說明）', false); return; }
+    inspShowAttachResult({ ok:true, pages:m.rows.length, missing:m.missing, fileName:name, where:'按「開啟」或「下載」' }, new Blob([m.bytes], { type:'application/pdf' }));
+    setInspStatus('📎 附圖已合併 ' + m.rows.length + ' 頁（見下方）', !m.missing.length);
+  } catch (err) {
+    console.error(err);
+    inspShowAttachResult({ ok:false, error:err.message || String(err) });
+    setInspStatus('附圖失敗：' + (err.message || err), false);
+  } finally { if (btn) btn.disabled = false; }
 }
 
 // 解析某工程要用的第一頁範本(不動 UI):有自訂第一頁用自訂,否則用共用預設封面。
@@ -26243,7 +26303,7 @@ async function generateInspection() {
       setInspStatus('已將 ' + preChecked.length + ' 項預報構件存入暫存區並計入每日產量（本次未產生申驗單）', true);
 
     if (realChecked.length && inspLastArchiveState && !inspLastArchiveState.ok) {
-      setInspStatus('⚠ Word 已產生，但雲端備份失敗：' + inspLastArchiveState.error + '。請保留本機檔案並確認已執行 inspection_reports_migration.sql。', false);
+      setInspStatus('⚠ Word 已產生，但雲端備份失敗：' + inspLastArchiveState.error + '。請保留本機檔案並確認已執行 inspection_reports_migration.sql。' + inspAttachSummary(), false);
     }
 
     // 及時重新整理「可報數量」(重讀每日產量) + 預報暫存區
