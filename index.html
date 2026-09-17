@@ -398,6 +398,25 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .pr-ctbl-wide th:nth-child(6),.pr-ctbl-wide td:nth-child(6){width:64px;text-align:center}
 .pr-ctbl-wide input.pr-price,.pr-ctbl-wide input.pr-qty{width:100%}
 .pr-ctbl-wide input.pr-iname{width:100%}
+.pr-ctbl input.pr-price.pr-price-diff{background:rgba(234,179,8,.18);border-color:#d4a72c;color:var(--text)}
+.pr-pi-add{display:inline-block;margin-top:3px;font-size:11px;color:var(--accent2);cursor:pointer;white-space:nowrap}
+.pr-pi-add:hover{text-decoration:underline}
+.pi-modal{max-width:min(860px,96vw)!important;width:100%;padding:18px 20px!important}
+.pi-head{display:flex;align-items:center;gap:8px}
+.pi-note{font-size:12px;color:var(--text3);line-height:1.7;margin-bottom:8px}
+.pi-scroll{max-height:62vh;overflow:auto;border:1px solid var(--border);border-radius:var(--rad)}
+.pi-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.pi-tbl th{position:sticky;top:0;background:var(--bg3);color:var(--text3);font-size:11px;font-weight:600;padding:6px 8px;text-align:left;z-index:1}
+.pi-tbl th.num{text-align:right}
+.pi-tbl td{padding:4px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.pi-tbl td.pi-sec{background:var(--bg3);color:var(--accent);font-weight:700}
+.pi-tbl th:first-child,.pi-tbl td:first-child{width:55%}
+.pi-tbl td.pi-mh{font-family:var(--mono);font-size:12px;color:var(--text3);white-space:nowrap}
+.pi-tbl input.pi-name,.pi-tbl input.pi-num{width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:5px 7px;font-size:13px}
+.pi-tbl input.pi-num{text-align:right;font-family:var(--mono);max-width:120px;margin-left:auto;display:block}
+.pi-tbl tr.pi-off td{opacity:.45}
+.pi-tbl .pr-delbtn{border:1px solid var(--border);background:transparent;color:var(--danger,#e0555b);border-radius:6px;font-size:11.5px;padding:3px 8px;cursor:pointer}
+.pi-tbl .pr-addbtn{border:1px dashed var(--border);background:transparent;color:var(--text2);border-radius:6px;font-size:12px;padding:4px 10px;cursor:pointer}
 .pr-ctbl-wide .pr-delbtn{border:1px solid var(--border);background:transparent;color:var(--danger,#e0555b);border-radius:6px;font-size:11.5px;padding:3px 8px;cursor:pointer}
 .pr-ctbl-wide .pr-delbtn:hover{border-color:var(--danger,#e0555b);background:rgba(224,85,91,.1)}
 .pr-ctbl-wide tr.pr-addrow td{text-align:left;height:auto;padding:4px 8px 8px}
@@ -4665,6 +4684,7 @@ window.normalizeFullWidth=function(value){
           <button class="ov-neg-btn" id="pr-flt-done" onclick="pricingSetFilter('done')">已議價（唯讀）</button>
           <button class="ov-neg-btn" id="pr-flt-all" onclick="pricingSetFilter('all')">全部</button>
         </div>
+        <button class="btn" style="margin:0 0 8px 8px;vertical-align:top" onclick="pricingItemsOpen()">📋 計價單價表</button>
         <div class="proj-row">
           <select class="filter-select" id="pricing-proj" onchange="pricingLoadProject()" style="width:100%;padding:9px 12px;font-size:14px">
             <option value="">— 選擇工程 —</option>
@@ -31674,7 +31694,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       if(known[name]) return;
       var row={name:name,custom:true,imported:true};
       (g.sides||[]).forEach(function(side){
-        row[side.priceF]=0;
+        var ref=(typeof piRefPrice==='function')?piRefPrice(g,side,name):null;
+        row[side.priceF]=ref!=null?ref:0;
         row[side.qtyF]=importedQty(side,name);
       });
       items.push(row);
@@ -32181,6 +32202,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     return (z.price_note && String(z.price_note).trim()!=='') || z.unit_price!=null;
   }
   window.pricingInit=async function(){
+    try{ await piLoad(); }catch(e){ console.warn('pricing_items load failed',e); }
     var sel=document.getElementById('pricing-proj');
     document.getElementById('pricing-tabs').style.display='none';
     document.getElementById('pricing-sheet').innerHTML='<div class="empty-state">請先選擇工程</div>';
@@ -32415,7 +32437,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       if(it.cat){ rows+=addRow(sec); sec=it.cat; rows+='<tr><td class="pr-cat" colspan="6">'+esc(it.cat)+'</td></tr>'; continue; }
       var pv=it[side.priceF], na=(pv==null||pv==='');
       var nameCell = it.custom
-        ? '<input class="pr-iname" value="'+escAttr(it.name||'')+'" oninput="pricingCell('+i+',\'name\',this.value)" placeholder="項目名稱">'
+        ? '<input class="pr-iname" value="'+escAttr(it.name||'')+'" oninput="pricingCell('+i+',\'name\',this.value)" placeholder="項目名稱（可從單價表挑）" list="pr-pi-list" onchange="pricingNamePicked('+i+',this.value)">'
         : esc(it.name||'');
       var del='<td class="pr-delc"><button class="pr-delbtn" onclick="pricingDelRowAsk('+i+')">刪除</button></td>';
       // 自訂項目可以只屬於其中一側(例如只有 9BG 要的加工)。另一側按「⊘」變「—」,按「＋ 本側也加」補回來。
@@ -32426,8 +32448,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
           ? '<tr><td class="pr-name">'+nameCell+'</td><td class="pr-nap" colspan="4">'+onBtn+'</td>'+del+'</tr>'
           : '<tr><td class="pr-name">'+nameCell+'</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-amtc">—</td>'+del+'</tr>';
       } else {
-        rows+='<tr><td class="pr-name">'+nameCell+offBtn+'</td>'+
-          '<td><input class="pr-price" value="'+escAttr(pv)+'" oninput="pricingCell('+i+',\''+side.priceF+'\',this.value)"></td>'+
+        rows+='<tr><td class="pr-name">'+nameCell+offBtn+piAddLink(g,side,it,i)+'</td>'+
+          '<td><input class="pr-price'+piDiffAttr(g,side,it)+'" value="'+escAttr(pv)+'" oninput="pricingCell('+i+',\''+side.priceF+'\',this.value)"></td>'+
           '<td class="pr-mhc"><span id="pr-mh-'+k+'-'+i+'">0</span></td>'+
           '<td><input class="pr-qty" id="pr-qty-'+k+'-'+i+'" value="'+escAttr(num(it[side.qtyF])?it[side.qtyF]:'')+'" oninput="pricingCell('+i+',\''+side.qtyF+'\',this.value)"></td>'+
           '<td class="pr-amtc"><span id="pr-amt-'+k+'-'+i+'">$0</span></td>'+del+'</tr>';
@@ -32455,11 +32477,11 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     st.items.forEach(function(it,i){
       if(it.cat){ rows+=addRow(sec); sec=it.cat; rows+='<tr><td class="pr-cat" colspan="6">'+esc(it.cat)+'</td></tr>'; return; }
       var pv=it[side.priceF],na=pv==null||pv==='';
-      var name=it.custom?'<input class="pr-iname" value="'+escAttr(it.name||'')+'" oninput="pricingCell('+i+',\'name\',this.value)" placeholder="項目名稱">':esc(it.name||'');
+      var name=it.custom?'<input class="pr-iname" value="'+escAttr(it.name||'')+'" oninput="pricingCell('+i+',\'name\',this.value)" placeholder="項目名稱（可從單價表挑）" list="pr-pi-list" onchange="pricingNamePicked('+i+',this.value)">':esc(it.name||'');
       var del='<td class="pr-delc"><button class="pr-delbtn" onclick="pricingDelRowAsk('+i+')">刪除</button></td>';
       if(na){rows+='<tr><td class="pr-name">'+name+'</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-nap">—</td><td class="pr-amtc">—</td>'+del+'</tr>';return;}
-      rows+='<tr><td class="pr-name">'+name+'</td>'+
-        '<td><input class="pr-price" value="'+escAttr(pv)+'" oninput="pricingCell('+i+',\''+side.priceF+'\',this.value)"></td>'+
+      rows+='<tr><td class="pr-name">'+name+piAddLink(g,side,it,i)+'</td>'+
+        '<td><input class="pr-price'+piDiffAttr(g,side,it)+'" value="'+escAttr(pv)+'" oninput="pricingCell('+i+',\''+side.priceF+'\',this.value)"></td>'+
         '<td class="pr-mhc"><span id="pr-mh-'+k+'-'+i+'">0</span></td>'+
         '<td><input class="pr-qty" value="'+escAttr(num(it[side.qtyF])?it[side.qtyF]:'')+'" oninput="pricingCell('+i+',\''+side.qtyF+'\',this.value)"></td>'+
         '<td class="pr-amtc"><span id="pr-amt-'+k+'-'+i+'">$0</span></td>'+del+'</tr>';
@@ -32479,7 +32501,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   }
   function colMultiFooter(st){
     return '<div class="pr-card"><div class="pr-toolbar">'+
-      '<button class="btn" onclick="pricingReset()">↺ 恢復表定項目</button>'+
+      '<button class="btn" onclick="pricingReset()">↺ 恢復表定項目</button>'+piApplyBtn()+
       '<button class="btn" onclick="pricingReautofill()">↻ 重新帶入公斤/支數</button>'+
       '<button class="btn" onclick="pricingApplyImported()">↧ 帶入已核對數量</button>'+
       '<button class="btn btn-gen" onclick="pricingSave()">✓ 儲存</button>'+
@@ -32559,7 +32581,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
   function footerHTML(g, st){
     var isBeam=g.cat==='beam', multi=g.sides.length>=2;
     var toolbar='<div class="pr-toolbar">'+
-      '<button class="btn" onclick="pricingReset()">↺ 重設為表定</button>'+
+      '<button class="btn" onclick="pricingReset()">↺ 重設為表定</button>'+piApplyBtn()+
       '<button class="btn" onclick="pricingReautofill()">↻ 重新帶入公斤/支數</button>'+
       '<button class="btn" onclick="pricingApplyImported()">↧ 帶入已核對數量</button>'+
       '<button class="btn btn-gen" style="flex:0 0 auto" onclick="pricingSave()">💾 儲存</button>'+
@@ -32624,7 +32646,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       el.style.display='none';
     });
     // 刪除列與單側開關是 <span>,不在上面那輪裡,要另外拿掉
-    host.querySelectorAll('.pr-del,.pr-sideon').forEach(function(el){ el.style.display='none'; });
+    host.querySelectorAll('.pr-del,.pr-sideon,.pr-pi-add').forEach(function(el){ el.style.display='none'; });
   }
   function pricingRender(){
     if(!PROJ) return;
@@ -32648,6 +32670,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       html+='<div class="pr-cards-row">'+g.sides.map(function(side){ return cardHTML(g, side, st); }).join('')+'</div>';
       html+=footerHTML(g, st);
     }
+    html+=piDatalist(g);
     document.getElementById('pricing-sheet').innerHTML=html;
     pricingRecalc();
     pricingLockInputs();
@@ -32740,6 +32763,228 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       });
     });
   })();
+
+  // ── 計價單價表(pricing_items):表定項目與單價存雲端,新工程、恢復表定、新增列挑項目都從這裡帶 ──
+  // 沒建表(或讀不到)時退回程式內建的 RAW / RAW_COL,行為跟以前一樣。
+  // 已存過的工程計價表不自動改價;與單價表不同的單價格標黃,由使用者按「套用單價表價格」決定。
+  var RAW_BUILTIN=RAW.slice(), RAW_COL_BUILTIN=RAW_COL.slice();
+  var PI_ITEMS=null, PI_DB=false, PI_TAB='beam';
+  var PI_SECTIONS={beam:['基本','實作時算'], col:['柱基本單價','基本','實作時算']};
+  function piCatOf(g){ return g&&g.cat==='col'?'col':'beam'; }
+  function piSeedRows(){
+    var rows=[], add=function(cat,src){
+      var sec=cat==='col'?'柱基本單價':'基本', sort=0;
+      src.forEach(function(r){
+        if(r.cat){ sec=r.cat; if(cat==='col'&&r.cat==='基本'&&!rows.some(function(x){return x.cat==='col'&&x.section==='基本';})) sec='基本'; return; }
+        var s=(cat==='col'&&r.base)?'柱基本單價':sec;
+        sort+=10;
+        rows.push({cat:cat, section:s, name:r.name, price_bg:(r.bg==null||r.bg==='')?null:num(r.bg), price_sb:(r.sb==null||r.sb==='')?null:num(r.sb),
+          floor:r.floor||null, mh:(r.mh==null?null:num(r.mh)), div:r.div||null, sort:sort, active:true});
+      });
+    };
+    add('beam',RAW_BUILTIN); add('col',RAW_COL_BUILTIN);
+    return rows;
+  }
+  async function piLoad(){
+    var r=await sbFetchAll('/rest/v1/pricing_items?select=*&order=cat,sort,id');
+    if(!r.ok){ PI_DB=false; PI_ITEMS=null; piApply(); return; }
+    PI_DB=true;
+    var data=Array.isArray(r.data)?r.data:[];
+    if(!data.length && !window._roActive){   // 第一次:把內建表定匯入
+      var ins=await sbFetch('/rest/v1/pricing_items',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(piSeedRows())});
+      if(ins.ok&&Array.isArray(ins.data)) data=ins.data;
+    }
+    PI_ITEMS=data.length?data:null;
+    piApply();
+  }
+  function piActive(cat){ return (PI_ITEMS||[]).filter(function(x){ return x.cat===cat&&x.active!==false; }); }
+  function piSectionsOf(cat){
+    var secs=PI_SECTIONS[cat].slice();
+    piActive(cat).forEach(function(x){ if(secs.indexOf(x.section)<0) secs.push(x.section); });
+    return secs;
+  }
+  function piToRaw(cat){
+    var out=[];
+    piSectionsOf(cat).forEach(function(sec){
+      var list=piActive(cat).filter(function(x){ return x.section===sec; }).sort(function(a,b){ return (a.sort-b.sort)||(a.id-b.id); });
+      if(!list.length && !(cat==='col'||sec==='基本'||sec==='實作時算')) return;
+      out.push({cat:sec});
+      list.forEach(function(x){
+        var o={name:x.name, bg:x.price_bg==null?null:num(x.price_bg), sb:x.price_sb==null?null:num(x.price_sb)};
+        if(x.floor) o.floor=x.floor;
+        if(x.mh!=null) o.mh=num(x.mh);
+        if(x.div) o.div=num(x.div);
+        if(cat==='col'&&sec==='柱基本單價') o.base=true;
+        out.push(o);
+      });
+    });
+    return out;
+  }
+  function piApply(){
+    if(!PI_ITEMS){ RAW=RAW_BUILTIN; RAW_COL=RAW_COL_BUILTIN; }
+    else { RAW=piToRaw('beam'); RAW_COL=piToRaw('col'); }
+  }
+  function piFind(cat,name){
+    var n=String(name||'').trim(); if(!n) return null;
+    if(PI_ITEMS) return piActive(cat).find(function(x){ return String(x.name).trim()===n; })||null;
+    var hit=(cat==='col'?RAW_COL_BUILTIN:RAW_BUILTIN).find(function(r){ return !r.cat&&String(r.name).trim()===n; });
+    return hit?{name:hit.name, price_bg:hit.bg, price_sb:hit.sb, floor:hit.floor, mh:hit.mh, div:hit.div}:null;
+  }
+  // 某一側該用單價表的哪一欄:柱子用大樑欄;大小樑依該側來源(大樑/小樑);雜項用小樑
+  function piRefPrice(g,side,name){
+    var x=piFind(piCatOf(g),name); if(!x) return null;
+    var f=g.cat==='col'?'price_bg':((side&&side.sourcePrice)==='bg'?'price_bg':'price_sb');
+    return (x[f]==null||x[f]==='')?null:num(x[f]);
+  }
+  function piIsDiff(g,side,it){
+    if(!it||it.cat) return false;
+    var pv=it[side.priceF]; if(pv==null||pv==='') return false;
+    var ref=piRefPrice(g,side,it.name);
+    return ref!=null && Math.abs(num(pv)-ref)>1e-9;
+  }
+  function piDiffAttr(g,side,it){
+    if(!piIsDiff(g,side,it)) return '';
+    return ' pr-price-diff" title="單價表的單價是 '+fmt(piRefPrice(g,side,it.name))+'，按下方「套用單價表價格」可更新';
+  }
+  function piDiffCount(g,st){
+    var n=0; if(!g||!st) return 0;
+    st.items.forEach(function(it){ (g.sides||[]).forEach(function(side){ if(piIsDiff(g,side,it)) n++; }); });
+    return n;
+  }
+  function piApplyBtn(){
+    var g=curGroup(), st=S(), n=piDiffCount(g,st);
+    return n?'<button class="btn" style="border-color:#d4a72c;color:#b7791f" onclick="pricingApplyTablePrices()">⇪ 套用單價表價格（'+n+' 格不同）</button>':'';
+  }
+  // 自訂項目(單價表還沒有這個名稱)旁邊給「＋單價表」
+  function piAddLink(g,side,it,i){
+    if(!PI_DB||!it||!it.custom||!String(it.name||'').trim()||piFind(piCatOf(g),it.name)) return '';
+    return ' <span class="pr-pi-add" onclick="pricingAddToTable('+i+')" title="把這個項目與目前單價存進單價表，之後其他工程也能直接挑">＋單價表</span>';
+  }
+  function piDatalist(g){
+    var cat=piCatOf(g), names=PI_ITEMS?piActive(cat).map(function(x){return x.name;}):(cat==='col'?RAW_COL_BUILTIN:RAW_BUILTIN).filter(function(r){return !r.cat;}).map(function(r){return r.name;});
+    return '<datalist id="pr-pi-list">'+names.map(function(n){ return '<option value="'+escAttr(n)+'"></option>'; }).join('')+'</datalist>';
+  }
+  function piSectionOfIndex(st,idx){ var sec=null; for(var i=0;i<=idx&&i<st.items.length;i++){ if(st.items[i].cat) sec=st.items[i].cat; } return sec; }
+
+  // 新增列打名稱時選到單價表的項目 → 各側帶入單價(與工時規則)
+  window.pricingNamePicked=function(idx,name){
+    var st=S(), g=curGroup(); if(!st||!g||!st.items[idx]) return;
+    var x=piFind(piCatOf(g),name); if(!x) return;
+    var it=st.items[idx];
+    (g.sides||[]).forEach(function(side){
+      if(it[side.priceF]==null||it[side.priceF]==='') return;   // 本側關掉的不動
+      var ref=piRefPrice(g,side,name);
+      if(ref!=null) it[side.priceF]=ref;
+    });
+    if(g.cat==='col'){ if(x.floor) it.floor=x.floor; if(x.mh!=null&&x.mh!=='') it.mh=num(x.mh); if(x.div) it.div=num(x.div); }
+    pricingRender();
+  };
+  window.pricingApplyTablePrices=async function(){
+    var st=S(), g=curGroup(); if(!st||!g) return;
+    var n=piDiffCount(g,st); if(!n) return;
+    if(!await uiConfirm('把這張計價表裡 '+n+' 格與單價表不同的單價，改成單價表的價格？\n（數量不會動；改完記得按儲存）')) return;
+    st.items.forEach(function(it){ (g.sides||[]).forEach(function(side){ if(piIsDiff(g,side,it)) it[side.priceF]=piRefPrice(g,side,it.name); }); });
+    pricingRender();
+  };
+  window.pricingAddToTable=async function(idx){
+    var st=S(), g=curGroup(); if(!st||!g||!st.items[idx]) return;
+    var it=st.items[idx], cat=piCatOf(g), name=String(it.name||'').trim();
+    var row={cat:cat, section:piSectionOfIndex(st,idx)||'基本', name:name, active:true, updated_name:(currentUser&&currentUser.name)||null};
+    (g.sides||[]).forEach(function(side){
+      var v=it[side.priceF]; if(v==null||v==='') return;
+      if(cat==='col') row.price_bg=num(v);
+      else if(side.sourcePrice==='bg') row.price_bg=num(v); else row.price_sb=num(v);
+    });
+    if(cat==='col'){ row.div=it.div||null; row.mh=(it.mh==null||it.mh==='')?null:num(it.mh); row.floor=it.floor||null; }
+    row.sort=piActive(cat).filter(function(x){return x.section===row.section;}).reduce(function(m,x){return Math.max(m,x.sort||0);},0)+10;
+    var price=[row.price_bg!=null?(cat==='col'?'單價 ':'大樑 ')+fmt(row.price_bg):'', row.price_sb!=null?'小樑 '+fmt(row.price_sb):''].filter(Boolean).join('、')||'（單價 0）';
+    if(!await uiConfirm('把「'+name+'」加入'+(cat==='col'?'柱子':'大小樑／雜項')+'單價表的「'+row.section+'」？\n'+price)) return;
+    var r=await sbFetch('/rest/v1/pricing_items',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)});
+    if(!r.ok){ alert('加入失敗（HTTP '+r.status+'）'+(r.data&&r.data.code==='23505'?'：單價表已有同名項目':'')); return; }
+    PI_ITEMS=(PI_ITEMS||[]).concat(r.data||[]); piApply();
+    pricingRender();
+  };
+
+  // ── 單價表編輯視窗 ──
+  function piCanEdit(){ return PI_DB && !window._roActive && (typeof pagePerm!=='function'||pagePerm('pricing')==='edit'); }
+  window.pricingItemsOpen=async function(){
+    var m=document.getElementById('pi-modal');
+    if(!m){
+      m=document.createElement('div'); m.className='modal-overlay'; m.id='pi-modal';
+      m.onclick=function(e){ if(e.target===m) m.classList.remove('show'); };
+      m.innerHTML='<div class="modal pi-modal"><div class="pi-head"><div class="modal-title" style="margin:0">📋 計價單價表</div><span style="flex:1"></span>'+
+        '<button class="btn" onclick="document.getElementById(\'pi-modal\').classList.remove(\'show\')">關閉</button></div>'+
+        '<div class="layout-tabs" style="margin:10px 0 8px"><button class="layout-tab" id="pi-tab-beam" onclick="pricingItemsTab(\'beam\')">大小樑／雜項</button><button class="layout-tab" id="pi-tab-col" onclick="pricingItemsTab(\'col\')">柱子</button></div>'+
+        '<div id="pi-body"></div></div>';
+      document.body.appendChild(m);
+    }
+    m.classList.add('show');
+    document.getElementById('pi-body').innerHTML='<div class="empty-state">載入中…</div>';
+    await piLoad();
+    pricingItemsTab(PI_TAB);
+  };
+  window.pricingItemsTab=function(cat){
+    PI_TAB=cat;
+    ['beam','col'].forEach(function(c){ var b=document.getElementById('pi-tab-'+c); if(b) b.classList.toggle('active',c===cat); });
+    var body=document.getElementById('pi-body'); if(!body) return;
+    if(!PI_DB){ body.innerHTML='<div class="empty-state">單價表還沒建立，請先在 Supabase SQL Editor 執行 pricing_items_migration.sql。<br>在那之前計價頁照舊使用程式內建的表定單價。</div>'; return; }
+    var edit=piCanEdit(), isCol=cat==='col';
+    var head='<tr><th>項目名稱</th>'+(isCol?'<th class="num">單價</th><th>工時</th>':'<th class="num">大樑單價</th><th class="num">小樑單價<br><small>(雜項用這欄)</small></th>')+'<th>停用</th><th></th></tr>';
+    var all=(PI_ITEMS||[]).filter(function(x){ return x.cat===cat; });
+    var secs=PI_SECTIONS[cat].slice(); all.forEach(function(x){ if(secs.indexOf(x.section)<0) secs.push(x.section); });
+    var inp=function(x,f,cls){ var v=x[f]; return '<input class="'+(cls||'')+'" value="'+escAttr(v==null?'':v)+'"'+(edit?'':' readonly')+' onchange="pricingItemSet('+x.id+',\''+f+'\',this.value)">'; };
+    var rows='';
+    secs.forEach(function(sec){
+      rows+='<tr><td class="pi-sec" colspan="'+(isCol?5:5)+'">'+esc(sec)+'</td></tr>';
+      all.filter(function(x){ return x.section===sec; }).sort(function(a,b){ return (a.sort-b.sort)||(a.id-b.id); }).forEach(function(x){
+        var mh=x.floor?esc(x.floor):(x.mh!=null?esc(fmt(num(x.mh)))+' mh':(x.div?'單價÷'+esc(x.div):'單價×8÷2750'));
+        rows+='<tr'+(x.active===false?' class="pi-off"':'')+'><td>'+inp(x,'name','pi-name')+'</td>'+
+          (isCol?'<td class="num">'+inp(x,'price_bg','pi-num')+'</td><td class="pi-mh">'+mh+'</td>'
+                :'<td class="num">'+inp(x,'price_bg','pi-num')+'</td><td class="num">'+inp(x,'price_sb','pi-num')+'</td>')+
+          '<td style="text-align:center"><input type="checkbox"'+(x.active===false?' checked':'')+(edit?'':' disabled')+' onchange="pricingItemSet('+x.id+',\'active\',!this.checked)"></td>'+
+          '<td>'+(edit?'<button class="pr-delbtn" onclick="pricingItemDel('+x.id+')">刪除</button>':'')+'</td></tr>';
+      });
+      if(edit) rows+='<tr><td colspan="5"><button class="pr-addbtn" onclick="pricingItemAdd(\''+cat+'\',\''+escAttr(sec)+'\')">＋ 新增列（'+esc(sec)+'）</button></td></tr>';
+    });
+    body.innerHTML='<div class="pi-note">改這裡只影響之後：新工程、「恢復表定項目」、新增列挑項目。已存過的工程計價表不會自動改價，不同的單價會標黃，可在該工程按「套用單價表價格」。'+(isCol?'':'雜項沿用小樑單價；小樑單價空白＝小樑不適用。')+(edit?'':'<br><b>目前帳號只能檢視。</b>')+'</div>'+
+      '<div class="pi-scroll"><table class="pi-tbl"><thead>'+head+'</thead><tbody>'+rows+'</tbody></table></div>';
+  };
+  async function piAfterChange(){ piApply(); if(PROJ&&S()) pricingRender(); }
+  window.pricingItemSet=async function(id,field,val){
+    var x=(PI_ITEMS||[]).find(function(r){ return r.id===id; }); if(!x) return;
+    var v=val;
+    if(field==='price_bg'||field==='price_sb'){ v=String(val).trim()===''?null:num(String(val).replace(/,/g,'')); }
+    if(field==='name'){ v=String(val).trim(); if(!v){ alert('項目名稱不可空白'); pricingItemsTab(PI_TAB); return; } }
+    var patch={}; patch[field]=v; patch.updated_name=(currentUser&&currentUser.name)||null; patch.updated_at=new Date().toISOString();
+    var r=await sbFetch('/rest/v1/pricing_items?id=eq.'+id,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(patch)});
+    if(!r.ok){ alert('儲存失敗（HTTP '+r.status+'）'+(r.data&&r.data.code==='23505'?'：已有同名項目':'')); pricingItemsTab(PI_TAB); return; }
+    x[field]=v;
+    if(field==='active') pricingItemsTab(PI_TAB);
+    piAfterChange();
+  };
+  window.pricingItemAdd=async function(cat,sec){
+    var sort=(PI_ITEMS||[]).filter(function(x){ return x.cat===cat&&x.section===sec; }).reduce(function(m,x){ return Math.max(m,x.sort||0); },0)+10;
+    var name='新項目';
+    for(var n=2; piFind(cat,name)||(PI_ITEMS||[]).some(function(x){return x.cat===cat&&x.name===name;}); n++) name='新項目 '+n;
+    var row={cat:cat, section:sec, name:name, price_bg:0, price_sb:cat==='col'?null:0, sort:sort, active:true, updated_name:(currentUser&&currentUser.name)||null};
+    if(cat==='col') row.div=(sec==='實作時算')?345:344;
+    var r=await sbFetch('/rest/v1/pricing_items',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)});
+    if(!r.ok){ alert('新增失敗（HTTP '+r.status+'）'); return; }
+    PI_ITEMS=(PI_ITEMS||[]).concat(r.data||[]);
+    pricingItemsTab(cat);
+    var ins=document.querySelectorAll('#pi-body input.pi-name'); var last=[].find.call(ins,function(el){ return el.value===name; });
+    if(last){ last.focus(); last.select(); }
+    piAfterChange();
+  };
+  window.pricingItemDel=async function(id){
+    var x=(PI_ITEMS||[]).find(function(r){ return r.id===id; }); if(!x) return;
+    if(!await uiConfirm('確定從單價表刪除「'+x.name+'」項目？\n已存過的工程計價表不受影響。',{danger:true,okText:'刪除'})) return;
+    var r=await sbFetch('/rest/v1/pricing_items?id=eq.'+id,{method:'DELETE',headers:{Prefer:'return=minimal'}});
+    if(!r.ok){ alert('刪除失敗（HTTP '+r.status+'）'); return; }
+    PI_ITEMS=PI_ITEMS.filter(function(r2){ return r2.id!==id; }); if(!PI_ITEMS.length) PI_ITEMS=null;
+    pricingItemsTab(PI_TAB);
+    piAfterChange();
+  };
 
   // ── 即時更新單格 ──
   window.pricingCell=function(idx,field,val){
