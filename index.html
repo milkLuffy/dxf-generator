@@ -35366,8 +35366,12 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
           : row.util_pending
             ? '<td><input class="ov-in-l num bl-util-locked" disabled placeholder="本區支數尚未完成" title="截至本次結束日，此工程區完成支數尚未達 BOM 總支數"></td>'
             : '<td><input id="'+pfx+'-uprice" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,row.zid,'util_bill_price')+' value="'+escAttr(fmtBill(ubp))+'" placeholder="水電請款" oninput="blCell('+round+','+row.zid+',\'util_bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>';
-      var mainPriceCell=row.carry_from_first&&row.first_billed
+      // 承接列:主件第一次已請款 → 只顯示「mm/dd已請款」。但第二次這格若已經填了金額,仍要顯示出來並標紅,
+      // 否則金額看不到卻照樣算進「實際請款金額」,會變成重複請款。
+      var mainPriceCell=row.carry_from_first&&row.first_billed&&!billNum(bp)
         ? '<td class="num"><span class="ov-noutil">'+row.first_paid_label+'</span></td>'
+        : row.carry_from_first&&row.first_billed
+        ? '<td><div class="ov-noutil" style="font-size:10px">'+row.first_paid_label+'</div><input id="'+pfx+'-price" class="ov-in-l num bl-grid-cell" style="border-color:var(--danger,#e0555b);color:var(--danger,#e0555b)"'+gridAttrs(round,row.zid,'bill_price')+' value="'+escAttr(fmtBill(bp))+'" title="主件已在第一次計價請款，第二次又填了請款價格，可能重複請款；只請水電的話請清空這格" oninput="blCell('+round+','+row.zid+',\'bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>'
         : '<td><input id="'+pfx+'-price" class="ov-in-l num bl-grid-cell"'+gridAttrs(round,row.zid,'bill_price')+' value="'+escAttr(fmtBill(bp))+'" placeholder="請款價格" oninput="blCell('+round+','+row.zid+',\'bill_price\',this.value)" onblur="this.value=blFmtBill(this.value)"></td>';
       // 水電重量欄:已在別期請過 → mm/dd已請款;第二次計價且全區未完成 → 下拉(待全區完成／本區水電重量=提早請款)
       var utilWeightCell = row.has_util&&row.util_paid_label
@@ -35725,6 +35729,11 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     blDirty[k]=true;
     blSaved('編輯中…','var(--text3)');
     blRenderSummary(round);   // 只更新摘要,保留輸入焦點
+    // 第一次的主件請款狀態改變 → 第二次的水電承接列要跟著切換(已請款就不再顯示噸數/總價/請款價格)
+    if(round===1 && field==='bill_price' && (blRowsCache[2]||[]).some(function(r){ return r.carry_from_first && r.zid===zid; })){
+      var carryRow=(blRowsCache[2]||[]).find(function(r){ return r.carry_from_first && r.zid===zid; });
+      if(!!carryRow.first_billed!==billedValue(rec.bill_price)){ blRenderRound(2); blRenderSummary(2); }
+    }
     scheduleBlAutosave();     // 自動儲存
   };
 
