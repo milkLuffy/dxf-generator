@@ -28783,16 +28783,39 @@ window.shipDispatchDelete=async function(id){
   shipRender(); shipDashRender();
 };
 let shipArriveId=null;
-window.shipArriveOpen=function(id){
-  const d=shipDispatches.find(x=>Number(x.id)===Number(id)); if(!d) return;
-  shipArriveId=d.id;
+function shipArriveModalEl(){
   let m=document.getElementById('ship-arrive-modal');
   if(!m){
     m=document.createElement('div'); m.className='modal-overlay'; m.id='ship-arrive-modal';
     m.onclick=e=>{ if(e.target===m) closeModal('ship-arrive-modal'); };
     document.body.appendChild(m);
   }
+  return m;
+}
+// 開視窗前先重抓一次待出貨清單:這裡只能出現【已報驗、還沒出貨】的構件,
+// 看板開太久或別人在線上進度表改過時,才不會把已出貨、還沒報驗的編號一併列出來。
+window.shipArriveOpen=async function(id){
+  if(!shipDispatches.some(x=>Number(x.id)===Number(id))) return;
+  shipArriveId=Number(id);
+  const m=shipArriveModalEl();
+  m.innerHTML='<div class="modal ship-modal" style="max-width:560px"><div class="modal-title">車到了</div>'
+    +'<div class="ship-body" style="max-height:46vh"><div class="empty-state">載入中...</div></div>'
+    +'<div class="modal-actions"><button class="btn-modal-cancel" onclick="closeModal(\'ship-arrive-modal\')">取消</button></div></div>';
+  openModal('ship-arrive-modal');
+  if(Date.now()-shipBoardLoadedAt>30000){                        // 剛抓過(例如才按過↻重新整理)就不必再抓一次
+    try{ await shipLoadRows(); }catch(e){ console.warn('ship arrive reload',e); }
+  }
+  if(Number(shipArriveId)!==Number(id)) return;                 // 等的時候又點了別趟
+  if(!(m.className||'').includes('show')) return;                // 載入中被關掉了
+  shipRender(); shipDashRender();
+  const d=shipDispatches.find(x=>Number(x.id)===Number(id));
+  if(!d){ closeModal('ship-arrive-modal'); alert('這趟已經記過車到時間了'); return; }
+  shipArriveRender(d);
+};
+function shipArriveRender(d){
+  const m=shipArriveModalEl();
   const ids=new Set((d.layout_ids||[]).map(String));
+  // shipBoardRows 本身就是「已報驗(每日產量有、非預報)且未出貨」的待出貨構件
   const pieces=shipBoardRows.filter(r=>(d.beds||[]).includes(r.bed) && (d.kind==='col' ? (ids.size?ids.has(String(r.id)):r.col) : !r.col));
   const byBed=new Map(); pieces.forEach(r=>{ if(!byBed.has(r.bed)) byBed.set(r.bed,[]); byBed.get(r.bed).push(r); });
   m.innerHTML='<div class="modal ship-modal" style="max-width:560px"><div class="modal-title">車到了 — '+esc(shipDispatchLabel(d))+'</div>'
@@ -28805,8 +28828,7 @@ window.shipArriveOpen=function(id){
     +'<div class="modal-actions"><button class="btn-modal-cancel" onclick="closeModal(\'ship-arrive-modal\')">取消</button>'
     +'<button class="btn-modal-cancel" onclick="shipArriveSave(false)">只記車到時間</button>'
     +'<button class="btn-modal-ok" id="ship-arr-ship" onclick="shipArriveSave(true)" disabled>記時間並標記勾選的為已出貨</button></div></div>';
-  openModal('ship-arrive-modal');
-};
+}
 window.shipArriveAll=function(on){ document.querySelectorAll('#ship-arrive-modal .ship-arr-chk').forEach(c=>{ c.checked=!!on; }); shipArriveCount(); };
 window.shipArriveCount=function(){
   const chk=[...document.querySelectorAll('#ship-arrive-modal .ship-arr-chk:checked')];
