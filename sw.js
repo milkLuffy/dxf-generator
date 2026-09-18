@@ -62,15 +62,40 @@ function versionOf(text) {
   return m ? m[1] : '';
 }
 
+// 快取裡的一筆小紀錄:上次確認過的伺服器指紋。不是真的檔案,只是借網址當 key。
+const META_URL = new URL('sc-meta.json', SCOPE).href;
+function fingerprintOf(res) {
+  return (res.headers.get('last-modified') || '') + '|' + (res.headers.get('content-length') || '');
+}
+async function readMeta(c) {
+  try { const r = await c.match(META_URL); return r ? await r.json() : null; } catch (e) { return null; }
+}
+async function writeMeta(c, obj) {
+  try { await c.put(META_URL, new Response(JSON.stringify(obj), { headers: { 'Content-Type': 'application/json' } })); } catch (e) {}
+}
+// 便宜的探詢:HEAD 只問標頭,不下載那 3.7MB。
+// 平常每 3 分鐘、每次切回分頁跑的都是這一段,標頭沒變就直接收工。
+async function probeFingerprint() {
+  try {
+    const r = await fetch(INDEX_URL, { method: 'HEAD', cache: 'no-cache' });
+    return r.ok ? fingerprintOf(r) : null;
+  } catch (e) { return null; }
+}
+
 // 背景確認 index.html 有沒有新版。
-// 這裡比對「整份內容」而不是 ETag:ETag 會因為壓縮方式、CDN 節點不同而變,
-// 之前沒推新版也一直跳「系統已更新」就是這個原因。
-async function checkIndex(c, notify) {
-  const fresh = await fetch(INDEX_URL, { cache: 'no-cache' });   // 帶 ETag 去問,沒變伺服器只回 304,很省流量
+// 指紋(Last-Modified+大小)有變才下載整份回來比對內容 —— 比對內容是為了不誤報:
+// ETag 會因為壓縮方式、CDN 節點不同而變,之前沒推新版也一直跳「系統已更新」就是這個原因。
+async function checkIndex(c, notify, force) {
+  const fp = await probeFingerprint();
+  const cachedNow = await c.match(INDEX_URL);
+  if (!force && fp && cachedNow) {
+    const meta = await readMeta(c);
+    if (meta && meta.fp === fp) return null;   // 跟上次確認過的一樣,不用再抓
+  }
+  const fresh = await fetch(INDEX_URL, { cache: 'no-cache' });
   if (!fresh.ok) return fresh;
   const newText = await fresh.clone().text();
-  const prev = await c.match(INDEX_URL);
-  const oldText = prev ? await prev.text().catch(() => '') : '';
+  const oldText = cachedNow ? await cachedNow.text().catch(() => '') : '';
   const changed = !!oldText && oldText !== newText;
   // index.html 有 3MB 以上,快取空間不足時 put 會失敗。
   // 以前這裡失敗是無聲的,結果快取永遠停在舊版 → 每次開都拿舊的、每次都跳「系統已更新」,
@@ -81,7 +106,9 @@ async function checkIndex(c, notify) {
     stored = false;
     try { await c.delete(INDEX_URL); } catch (e2) {}
   }
+  await writeMeta(c, { fp: fp || fingerprintOf(fresh), ver: versionOf(newText), stored });
   if (notify && changed) {
+    // stored=true 代表新版已經躺在快取裡,頁面那邊直接重新載入就是秒開,不用再等下載
     const msg = { type: 'sc-new-version', version: versionOf(newText), from: versionOf(oldText), stored };
     const all = await self.clients.matchAll({ type: 'window' });
     all.forEach(cl => cl.postMessage(msg));
@@ -93,23 +120,22 @@ function offlineResponse() {
   return new Response('<meta charset="utf-8"><p style="font:16px sans-serif;padding:24px">目前沒有網路,且這台裝置還沒有離線快取。請連上網路後再開一次。</p>', { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 }
 
-// 使用者按了提示列的「重新載入」→ 下一次開主頁一定走網路,不看快取。
-// (光靠刪快取會跟重整搶時間,搶輸就又拿到舊的那份,所以再加這道保險)
+// 只有「快取存不進去」那種情況才需要強制走網路(那時快取已經被刪掉,本來就沒得用)。
+// 正常情況下提示跳出來時新版早就在快取裡了,直接重新載入是秒開的,不必等下載。
 let forceFreshIndex = false;
 
 async function serveIndex() {
   const c = await caches.open(SHELL_CACHE);
   const force = forceFreshIndex; forceFreshIndex = false;
   const cached = await c.match(INDEX_URL);
-  const refresh = checkIndex(c, !force && !!cached);   // 他自己按的那次不用再提示一遍
+  const refresh = checkIndex(c, !force && !!cached, force);   // 他自己按的那次不用再提示一遍
   refresh.catch(() => {});
-  if (force) {
-    try { return { response: await refresh, refresh }; }
-    catch (e) { return { refresh, response: cached || offlineResponse() }; }   // 真的沒網路才退回快取
-  }
-  if (cached) return { response: cached, refresh };
-  try { return { response: await refresh, refresh }; }
-  catch (e) { return { refresh, response: offlineResponse() }; }
+  if (cached && !force) return { response: cached, refresh };   // 先給快取,秒開
+  try {
+    const r = await refresh;
+    if (r) return { response: r, refresh };
+  } catch (e) {}
+  return { refresh, response: cached || offlineResponse() };
 }
 
 // 頁面開著不動時,由頁面每隔幾分鐘叫我們再確認一次(不用等到重新整理才發現新版)
@@ -117,11 +143,11 @@ async function serveIndex() {
 self.addEventListener('message', ev => {
   const d = ev.data || {};
   if (d.type === 'sc-check') {
-    ev.waitUntil(caches.open(SHELL_CACHE).then(c => checkIndex(c, true)).catch(() => {}));
+    ev.waitUntil(caches.open(SHELL_CACHE).then(c => checkIndex(c, true, false)).catch(() => {}));
   }
   if (d.type === 'sc-reset') {
     forceFreshIndex = true;
-    const done = caches.open(SHELL_CACHE).then(c => c.delete(INDEX_URL)).catch(() => {});
+    const done = caches.open(SHELL_CACHE).then(c => Promise.all([c.delete(INDEX_URL), c.delete(META_URL)])).catch(() => {});
     ev.waitUntil(done);
     if (ev.source) done.then(() => { try { ev.source.postMessage({ type: 'sc-reset-done' }); } catch (e) {} });
   }

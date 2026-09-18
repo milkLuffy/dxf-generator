@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.18.6"/>
+<meta name="sc-version" content="2026.09.18.8"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -6359,7 +6359,10 @@ window.normalizeFullWidth=function(value){
             <div><i>伺服器最新</i><b id="hl-ver-live">—</b></div>
           </div>
           <div class="hl-ver-note" id="hl-ver-note"></div>
-          <button class="btn" onclick="healthVerLoad()">↻ 重新檢查版本</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" onclick="healthVerLoad()">↻ 重新檢查版本</button>
+            <button class="btn" onclick="if(confirm('會清掉這台裝置的離線快取並重新下載整個系統(約 4MB,要花幾秒)。\n畫面卡在舊版時才需要這樣做。\n\n確定要強制更新嗎?'))scForceUpdate()">強制更新（清除離線快取）</button>
+          </div>
         </div>
         <div class="toolbar">
           <button class="btn btn-gen" id="hl-run-btn" onclick="healthRunCheck()">▶ 開始檢查</button>
@@ -51844,13 +51847,29 @@ async function ldDashPlan(){
   function paint(){ var el=document.getElementById('side-ver'); if(el) el.textContent='v'+(myVer()||'?'); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',paint); else paint();
   // 點側邊欄那行 → 立刻問伺服器有沒有新版(有的話下面會跳綠色提示列)
+  // 最後的逃生口:把離線快取整個清掉、service worker 註銷,再重新載入。
+  // 不管卡在哪一層(快取存不進去、sw 沒更新、加到主畫面的 App 停在舊版)都能救回來。
+  window.scForceUpdate=async function(){
+    try{ if(window.caches){ var ks=await caches.keys();
+      await Promise.all(ks.filter(function(k){return k.indexOf('sc-')===0;}).map(function(k){return caches.delete(k);})); } }catch(e){}
+    try{ if(navigator.serviceWorker){ var rs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(rs.map(function(r){return r.unregister();})); } }catch(e){}
+    location.replace(location.pathname+'?fresh='+Date.now()+location.hash);   // 換個網址,繞開任何一層舊快取
+  };
   window.scCheckNow=function(btn){
-    if(typeof scAskCheck!=='function'){ alert('這台裝置沒有啟用離線快取,重新整理就是最新版\n目前版本 v'+(myVer()||'?')); return; }
+    if(typeof scAskCheck!=='function'){
+      if(confirm('這台裝置沒有啟用離線快取,重新整理就是最新版。\n目前版本 v'+(myVer()||'?')+'\n\n還是要強制重新下載嗎?')) scForceUpdate();
+      return;
+    }
     if(btn){ btn.disabled=true; btn.textContent='檢查中…'; }
     scAskCheck(true);
     setTimeout(function(){
-      if(btn){ btn.disabled=false; btn.textContent=document.getElementById('sc-update-bar')?'有新版,請重新載入':'v'+(myVer()||'?')+' 已是最新'; }
-      setTimeout(paint,2500);
+      if(btn) btn.disabled=false;
+      if(document.getElementById('sc-update-bar')){ if(btn) btn.textContent='有新版,請重新載入'; return; }
+      if(btn) btn.textContent='v'+(myVer()||'?')+' 已是最新';
+      setTimeout(paint,3000);
+      // 他自己來按,通常就是覺得畫面怪怪的 —— 給一條一定救得回來的路
+      if(confirm('目前是 v'+(myVer()||'?')+',已經是最新版。\n\n如果畫面看起來還是舊的,可以強制清掉離線快取重新下載(要花幾秒)。\n要現在強制更新嗎?')) scForceUpdate();
     },2500);
   };
   // 系統健康頁:目前 / 離線快取 / 伺服器最新 三個版本一起看,卡住時一眼看得出來
@@ -51900,7 +51919,7 @@ async function ldDashPlan(){
     if(d.type==='sc-new-version' && hadController){
       // 已經在跑這個版本了就不用吵他(通常是快取沒更新到,悄悄叫 sw 把舊的丟掉就好)
       if(d.version && d.version===scMyVer()) scAskReset();
-      else scShowUpdateBar(d.version);
+      else scShowUpdateBar(d.version, d.stored!==false);
     }
     if(d.type==='sc-reset-done' && scReloadPending){ scReloadPending=false; location.reload(); }
     if(d.type==='sc-open' && d.url){ try{ var u=new URL(d.url); if(u.hash && u.hash!==location.hash) location.hash=u.hash; }catch(e){} }
@@ -51944,7 +51963,9 @@ async function ldDashPlan(){
     if(ver) return '系統已更新：'+ver+'版,請重新載入';
     return '系統已更新'+(cur?'（目前 '+cur+'）':'')+',請重新載入';
   }
-  function scShowUpdateBar(ver){
+  // ready=true:新版已經在快取裡,直接重新載入就是秒開;
+  // ready=false:快取存不進去(空間不足),那次重整要現場下載 3.7MB,按鈕要先講一聲
+  function scShowUpdateBar(ver,ready){
     var old=document.getElementById('sc-update-bar');
     if(old){ var sp=old.querySelector('.sc-up-msg'); if(sp) sp.textContent=scUpdateText(ver); return; }
     var bar=document.createElement('div');
@@ -51954,7 +51975,11 @@ async function ldDashPlan(){
       +'<button type="button" class="sc-up-x" aria-label="關閉">×</button>';
     bar.querySelector('.sc-up-msg').textContent=scUpdateText(ver);
     var go=bar.querySelector('.sc-up-go');
-    go.onclick=function(){ go.disabled=true; go.textContent='載入中…'; scReload(); };
+    go.onclick=function(){
+      go.disabled=true;
+      if(ready!==false){ go.textContent='載入中…'; location.reload(); }     // 快取已經是新版,秒開
+      else { go.textContent='下載新版中…'; scReload(); }                    // 要重抓,會久一點
+    };
     bar.querySelector('.sc-up-x').onclick=function(){ bar.remove(); };
     document.body.appendChild(bar);
   }
