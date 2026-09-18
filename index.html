@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.18.9"/>
+<meta name="sc-version" content="2026.09.18.10"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -44558,10 +44558,55 @@ function spTrackOpenStatusSheet(btn){
 }
 function spTrackCloseStatusSheet(){document.getElementById('spStatusSheet')?.remove();}
 async function spTrackSetReceiptAllocation(item,zone,on,el){
-  const g=spTrackModalGroup;if(!g?.receiptMeta)return;el.disabled=true;const key=g.key,matching=g.rows.filter(r=>!r._receiptVirtual&&String(r.item||'')===item&&spTrackZones(r.zone).includes(zone));
-  if(on&&!matching.length){const payload={proj_no:g.proj,zone,dwg_no:g.dwg,order_no:g.ord,item,make:'',status:'-',remark:'',cp_receipt_id:g.receiptMeta.itemReceiptIds[item]||null};let res=await sbFetch('/rest/v1/sp_track',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)});if(!res.ok&&res.status===400){delete payload.cp_receipt_id;res=await sbFetch('/rest/v1/sp_track',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)});}if(!res.ok||!Array.isArray(res.data)||!res.data[0]){el.checked=false;el.disabled=false;spxHint('工程區項目配置儲存失敗',true);return;}const row=res.data[0];row._key=++spxSeq;prodTrack.push(row);
-  }else if(!on&&matching.length){const progressed=matching.some(r=>!['','-'].includes(String(r.status||'')));if(progressed&&!await uiConfirm('「'+prodItemLabel(item)+' / '+zone+'」已有進度，確定取消配置？')){el.checked=true;el.disabled=false;return;}for(const row of matching){const remain=spTrackZones(row.zone).filter(z=>z!==zone);if(row.id!=null){const res=remain.length?await sbFetch('/rest/v1/sp_track?id=eq.'+encodeURIComponent(row.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({zone:spTrackZoneText(remain)})}):await sbFetch('/rest/v1/sp_track?id=eq.'+encodeURIComponent(row.id),{method:'DELETE'});if(!res.ok){el.checked=true;el.disabled=false;spxHint('工程區項目配置儲存失敗',true);return;}}if(remain.length)row.zone=spTrackZoneText(remain);else prodTrack=prodTrack.filter(x=>x!==row);}}
-  spTrackRenderCurrentList();spTrackModalGroup=spTrackOuterGroups.find(x=>x.key===key)||spTrackBuildGroups().find(x=>x.key===key)||null;if(spTrackModalGroup)spTrackRenderCPModal();else spTrackCloseCP();prodRenderBoard();prodReadinessChanged(true);spxHint('✓ 工程區項目配置已儲存');
+  // sp_track.zone 本來就能放多個工程區(用「、」隔開),所以同一個項目橫跨 8DG／8DB
+  // 應該是「同一列的 zone 加一個」,不是「再開一列」——
+  // 舊版打勾是新開一列、取消勾卻是從原列移除,兩邊不對稱,結果同一個項目會重複出現,
+  // 取消再勾一次又多一列。這裡改成兩邊都動同一列。
+  const g=spTrackModalGroup; if(!g?.receiptMeta) return;
+  el.disabled=true;
+  const key=g.key;
+  const itemRows=g.rows.filter(r=>!r._receiptVirtual&&String(r.item||'')===item);
+  const matching=itemRows.filter(r=>spTrackZones(r.zone).includes(zone));
+  const fail=()=>{ el.checked=!on; el.disabled=false; spxHint('工程區項目配置儲存失敗',true); };
+  if(on&&!matching.length){
+    const host=itemRows[0];
+    if(host){   // 這個項目已經有列了 → 把工程區併進去
+      const text=spTrackZoneText(spTrackZones(host.zone).concat([zone]));
+      if(host.id!=null){
+        const res=await sbFetch('/rest/v1/sp_track?id=eq.'+encodeURIComponent(host.id),
+          {method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({zone:text})});
+        if(!res.ok) return fail();
+      }
+      host.zone=text;
+    }else{      // 這個項目還沒有任何列(原本只是收圖帶出來的虛擬列) → 才真的新增一列
+      const payload={proj_no:g.proj,zone,dwg_no:g.dwg,order_no:g.ord,item,make:'',status:'-',remark:'',cp_receipt_id:g.receiptMeta.itemReceiptIds[item]||null};
+      let res=await sbFetch('/rest/v1/sp_track',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)});
+      if(!res.ok&&res.status===400){ delete payload.cp_receipt_id;
+        res=await sbFetch('/rest/v1/sp_track',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)}); }
+      if(!res.ok||!Array.isArray(res.data)||!res.data[0]) return fail();
+      const row=res.data[0]; row._key=++spxSeq; prodTrack.push(row);
+    }
+  }else if(!on&&matching.length){
+    const progressed=matching.some(r=>!['','-'].includes(String(r.status||'')));
+    if(progressed&&!await uiConfirm('「'+prodItemLabel(item)+' / '+zone+'」已有進度，確定取消配置？')){ el.checked=true; el.disabled=false; return; }
+    for(const row of matching){
+      const remain=spTrackZones(row.zone).filter(z=>z!==zone);
+      if(row.id!=null){
+        const res=remain.length
+          ? await sbFetch('/rest/v1/sp_track?id=eq.'+encodeURIComponent(row.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({zone:spTrackZoneText(remain)})})
+          : await sbFetch('/rest/v1/sp_track?id=eq.'+encodeURIComponent(row.id),{method:'DELETE'});
+        if(!res.ok) return fail();
+      }
+      if(remain.length) row.zone=spTrackZoneText(remain);
+      else prodTrack=prodTrack.filter(x=>x!==row);
+    }
+  }
+  prodMemoReset();   // 剛動過 prodTrack,重建群組前一定要把快取清掉,不然會讀到舊的列
+  spTrackRenderCurrentList();
+  spTrackModalGroup=spTrackOuterGroups.find(x=>x.key===key)||spTrackBuildGroups().find(x=>x.key===key)||null;
+  if(spTrackModalGroup) spTrackRenderCPModal(); else spTrackCloseCP();
+  prodRenderBoard(); prodReadinessChanged(true);
+  spxHint('✓ 工程區項目配置已儲存');
 }
 function spTrackReceiptCategoryForItem(item){const pair=Object.entries(CPR_TO_SP_ITEM).find(([,mapped])=>mapped===item);return pair?pair[0]:item;}
 let spTrackReceiptItemSaveChain=Promise.resolve();
