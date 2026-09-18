@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.18.4"/>
+<meta name="sc-version" content="2026.09.18.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -233,6 +233,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .user-info{flex:1;min-width:0}
 .user-name{font-size:12px;color:var(--nav-text-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .user-role{font-family:var(--mono);font-size:10px;color:var(--nav-text)}
+.side-ver{display:block;margin-top:2px;padding:0;border:0;background:none;font-family:var(--mono);font-size:10px;color:var(--nav-text);opacity:.6;cursor:pointer;text-align:left}
+.side-ver:hover{opacity:1;text-decoration:underline}
 .btn-logout-side{background:none;border:none;color:var(--nav-text);cursor:pointer;font-size:14px;padding:4px;transition:color .15s}
 .btn-logout-side:hover{color:var(--danger)}
 /* ── 桌機:預設只顯示圖示軌;游標移入時浮出子選單面板(疊出、主內容不位移);可釘選常駐 ── */
@@ -1941,6 +1943,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .ship-mat-row>label.narrow{flex:0 1 96px}
 .ship-mat-msg{box-sizing:border-box;width:100%;min-height:56px;resize:vertical;font-family:var(--mono);font-size:13px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px}
 .ship-mat-hint{font-size:12px;color:var(--danger,#e0555b)}
+.hl-ver-card{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.hl-ver-h{font-size:13px;font-weight:700;color:var(--text)}
+.hl-ver-grid{display:flex;gap:26px;flex-wrap:wrap}
+.hl-ver-grid i{display:block;font-style:normal;font-size:11px;color:var(--text3);margin-bottom:2px}
+.hl-ver-grid b{font-family:var(--mono);font-size:15px;color:var(--text)}
+.hl-ver-note{font-size:12px;color:var(--text2)}
 .ship-mat-recent{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--text3)}
 .ship-mat-recent:empty{display:none}
 .ship-mat-chip{border:1px solid var(--border);background:var(--bg3);color:var(--text);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--mono)}
@@ -3174,6 +3182,7 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
         <div class="user-info">
           <div class="user-name" id="sidebar-name">—</div>
           <div class="user-role" id="sidebar-role">—</div>
+          <button type="button" class="side-ver" id="side-ver" onclick="scCheckNow(this)" title="目前使用的版本。點一下立刻檢查有沒有新版">—</button>
         </div>
         <button class="btn-logout-side admin-preview-side" id="admin-preview-toggle-side" onclick="toggleAdminPreview()" title="一般使用者預覽" aria-label="一般使用者預覽" style="display:none"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2.5"/></svg></button>
         <button class="btn-logout-side" onclick="logout()" title="登出">⏻</button>
@@ -6325,6 +6334,16 @@ window.normalizeFullWidth=function(value){
       </div>
 
       <div id="hl-pane-check" style="display:none">
+        <div class="card hl-ver-card">
+          <div class="hl-ver-h">版本</div>
+          <div class="hl-ver-grid">
+            <div><i>目前使用中</i><b id="hl-ver-now">—</b></div>
+            <div><i>離線快取那份</i><b id="hl-ver-cache">—</b></div>
+            <div><i>伺服器最新</i><b id="hl-ver-live">—</b></div>
+          </div>
+          <div class="hl-ver-note" id="hl-ver-note"></div>
+          <button class="btn" onclick="healthVerLoad()">↻ 重新檢查版本</button>
+        </div>
         <div class="toolbar">
           <button class="btn btn-gen" id="hl-run-btn" onclick="healthRunCheck()">▶ 開始檢查</button>
           <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)"><input type="checkbox" id="hl-opt-pages" checked/> 連同逐頁巡檢(會自動切換每個頁面,約 1～2 分鐘)</label>
@@ -21546,6 +21565,7 @@ function healthTab(t){
     document.getElementById('hl-pane-'+k).style.display=k===t?'':'none';
   });
   if(t==='errors' && !healthErrRows.length) healthErrLoad();
+  if(t==='check' && typeof healthVerLoad==='function') healthVerLoad();
 }
 async function healthErrLoad(){
   const body=document.getElementById('hl-err-body'), banner=document.getElementById('hl-err-banner');
@@ -51799,6 +51819,53 @@ async function ldDashPlan(){
 
 </script>
 <script>
+// ── 版本顯示:側邊欄最下面那行 v____,系統健康頁另有三個版本對照 ──
+// 版本號來自 <meta name="sc-version">;離線快取沒啟用(本機、非 https)時這裡照樣看得到。
+(function(){
+  function myVer(){ var m=document.querySelector('meta[name="sc-version"]'); return m?String(m.content||'').trim():''; }
+  window.scVersion=myVer;
+  function paint(){ var el=document.getElementById('side-ver'); if(el) el.textContent='v'+(myVer()||'?'); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',paint); else paint();
+  // 點側邊欄那行 → 立刻問伺服器有沒有新版(有的話下面會跳綠色提示列)
+  window.scCheckNow=function(btn){
+    if(typeof scAskCheck!=='function'){ alert('這台裝置沒有啟用離線快取,重新整理就是最新版\n目前版本 v'+(myVer()||'?')); return; }
+    if(btn){ btn.disabled=true; btn.textContent='檢查中…'; }
+    scAskCheck(true);
+    setTimeout(function(){
+      if(btn){ btn.disabled=false; btn.textContent=document.getElementById('sc-update-bar')?'有新版,請重新載入':'v'+(myVer()||'?')+' 已是最新'; }
+      setTimeout(paint,2500);
+    },2500);
+  };
+  // 系統健康頁:目前 / 離線快取 / 伺服器最新 三個版本一起看,卡住時一眼看得出來
+  var RE=/sc-version["']\s+content=["']([^"']+)/;
+  window.scVersionInfo=async function(){
+    var url=new URL('index.html',location.href).href, out={now:myVer()||'(沒有版本號)',cache:'',live:''};
+    try{
+      if(!window.caches){ out.cache='(這個瀏覽器沒有快取功能)'; }
+      else{ var c=await caches.open('sc-shell-v1'), hit=await c.match(url);
+        out.cache=hit?(((await hit.text()).match(RE)||[])[1]||'(沒有版本號)'):'(沒有離線快取)'; }
+    }catch(e){ out.cache='(讀不到)'; }
+    try{
+      var r=await fetch(url,{cache:'no-cache'});
+      out.live=r.ok?(((await r.text()).match(RE)||[])[1]||'(沒有版本號)'):'(讀不到 '+r.status+')';
+    }catch(e){ out.live='(沒有網路)'; }
+    return out;
+  };
+  window.healthVerLoad=async function(){
+    var set=function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
+    set('hl-ver-now','讀取中…'); set('hl-ver-cache','讀取中…'); set('hl-ver-live','讀取中…'); set('hl-ver-note','');
+    var v=await scVersionInfo();
+    set('hl-ver-now',v.now); set('hl-ver-cache',v.cache); set('hl-ver-live',v.live);
+    var note='';
+    if(/^\(/.test(v.live)) note='連不到伺服器,無法確認有沒有新版。';
+    else if(v.now!==v.live) note='伺服器上有新版('+v.live+')。按畫面下方綠色提示列的「重新載入」,或側邊欄的版本那行檢查一次。';
+    else if(!/^\(/.test(v.cache)&&v.cache!==v.live) note='已經是最新版;離線快取那份還是舊的,下次開會自動修正。';
+    else note='已經是最新版。';
+    set('hl-ver-note',note);
+  };
+})();
+</script>
+<script>
 // ── 離線快取(PWA):第二次打開直接用本機那份秒開,背景確認新版 ──
 (function(){
   if(!('serviceWorker' in navigator) || !window.isSecureContext || location.protocol==='file:') return;
@@ -51832,6 +51899,7 @@ async function ldDashPlan(){
     scLastAsk=Date.now();
     try{ c.postMessage({type:'sc-check'}); }catch(e){}
   }
+  window.scAskCheck=scAskCheck;
   navigator.serviceWorker.ready.then(function(){ setTimeout(function(){ scAskCheck(true); },4000); }).catch(function(){});
   setInterval(function(){ if(!document.hidden) scAskCheck(true); },3*60000);
   document.addEventListener('visibilitychange',function(){ if(!document.hidden) scAskCheck(); });
