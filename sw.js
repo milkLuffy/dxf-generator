@@ -89,14 +89,27 @@ async function checkIndex(c, notify) {
   return fresh;
 }
 
+function offlineResponse() {
+  return new Response('<meta charset="utf-8"><p style="font:16px sans-serif;padding:24px">目前沒有網路,且這台裝置還沒有離線快取。請連上網路後再開一次。</p>', { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+}
+
+// 使用者按了提示列的「重新載入」→ 下一次開主頁一定走網路,不看快取。
+// (光靠刪快取會跟重整搶時間,搶輸就又拿到舊的那份,所以再加這道保險)
+let forceFreshIndex = false;
+
 async function serveIndex() {
   const c = await caches.open(SHELL_CACHE);
+  const force = forceFreshIndex; forceFreshIndex = false;
   const cached = await c.match(INDEX_URL);
-  const refresh = checkIndex(c, !!cached);
+  const refresh = checkIndex(c, !force && !!cached);   // 他自己按的那次不用再提示一遍
   refresh.catch(() => {});
+  if (force) {
+    try { return { response: await refresh, refresh }; }
+    catch (e) { return { refresh, response: cached || offlineResponse() }; }   // 真的沒網路才退回快取
+  }
   if (cached) return { response: cached, refresh };
   try { return { response: await refresh, refresh }; }
-  catch (e) { return { refresh, response: new Response('<meta charset="utf-8"><p style="font:16px sans-serif;padding:24px">目前沒有網路,且這台裝置還沒有離線快取。請連上網路後再開一次。</p>', { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }) }; }
+  catch (e) { return { refresh, response: offlineResponse() }; }
 }
 
 // 頁面開著不動時,由頁面每隔幾分鐘叫我們再確認一次(不用等到重新整理才發現新版)
@@ -107,6 +120,7 @@ self.addEventListener('message', ev => {
     ev.waitUntil(caches.open(SHELL_CACHE).then(c => checkIndex(c, true)).catch(() => {}));
   }
   if (d.type === 'sc-reset') {
+    forceFreshIndex = true;
     const done = caches.open(SHELL_CACHE).then(c => c.delete(INDEX_URL)).catch(() => {});
     ev.waitUntil(done);
     if (ev.source) done.then(() => { try { ev.source.postMessage({ type: 'sc-reset-done' }); } catch (e) {} });
