@@ -1919,7 +1919,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .ship-bed-recv{font-family:var(--mono);font-size:12px;color:var(--accent2)}
 .ship-hist-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--text2)}
 .ship-hist-bar b{color:var(--text)}
-.ship-hist-bar input{padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text)}
+.ship-hist-bar input,.ship-hist-bar select{padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text)}
 .ship-hist-wrap{overflow:auto;border:1px solid var(--border);border-radius:8px}
 .ship-hist-tbl{width:100%;border-collapse:collapse;font-size:13px}
 .ship-hist-tbl th,.ship-hist-tbl td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
@@ -1927,7 +1927,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .ship-hist-tbl td.txt{text-align:left}
 .ship-hist-tbl tr.late td{color:var(--danger,#e0555b)}
 .ship-wait-box{border:1px solid var(--yellow,#f5b83d);background:rgba(245,184,61,.08);border-radius:10px;padding:8px 12px}
-.ship-wait-h{font-weight:700;font-size:13px;margin-bottom:4px}
+.ship-wait-h{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;margin-bottom:4px}
+.ship-wait-h .btn-sm{margin-left:auto;font-weight:600}
+/* 進料派車 */
+.ship-tag-in{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--accent2);border:1px solid currentColor;border-radius:999px;padding:1px 7px}
+.ship-mat-form{display:flex;flex-direction:column;gap:10px;font-size:13px}
+.ship-mat-form label{display:flex;flex-direction:column;gap:3px;color:var(--text2);min-width:0}
+.ship-mat-form input,.ship-mat-form select{box-sizing:border-box;width:100%;padding:6px 8px;font-size:15px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text)}
+.ship-mat-form input:disabled{opacity:.45}
+.ship-mat-row{display:flex;gap:8px;flex-wrap:wrap}
+.ship-mat-row>label{flex:1 1 130px}
+.ship-mat-row>label.narrow{flex:0 1 96px}
+.ship-mat-msg{box-sizing:border-box;width:100%;min-height:56px;resize:vertical;font-family:var(--mono);font-size:13px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px}
+.ship-mat-hint{font-size:12px;color:var(--danger,#e0555b)}
 .ship-wait-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 0;border-top:1px dashed var(--border);font-size:13px}
 .ship-wait-row:first-of-type{border-top:0}
 .ship-wait-msg{font-weight:600}
@@ -28746,8 +28758,12 @@ function shipWaitTxt(iso){
   return Math.floor(m/1440)+' 天';
 }
 function shipHm(iso){ const d=new Date(iso); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
-function shipDispatchLabel(d){ return 'C棟'+(d.beds||[]).join('.')+(d.kind==='col'?(' · '+(d.col_qty||0)+' 支柱子'):(' · '+(d.cars||0)+' 車')); }
-function shipBedDispatch(bed){ return shipDispatches.filter(d=>(d.beds||[]).includes(bed)); }
+function shipIsIn(d){ return String((d&&d.dir)||'out')==='in'; }   // dir:out=出貨(舊資料沒這欄也算出貨)、in=進料
+function shipDispatchLabel(d){
+  if(shipIsIn(d)) return 'C棟'+(d.beds||[]).join('.')+' 進料'+(d.note?' '+d.note:'');
+  return 'C棟'+(d.beds||[]).join('.')+(d.kind==='col'?(' · '+(d.col_qty||0)+' 支柱子'):(' · '+(d.cars||0)+' 車'));
+}
+function shipBedDispatch(bed){ return shipDispatches.filter(d=>!shipIsIn(d)&&(d.beds||[]).includes(bed)); }   // 柱位上的「已派車」只算出貨
 async function shipRecordDispatch(txt){
   const meta=shipLastMeta; if(!meta) return;
   if(shipLastRecorded.txt===txt && Date.now()-shipLastRecorded.at<10*60000) return;   // 同一則訊息 10 分鐘內重複複製不重記
@@ -28765,15 +28781,114 @@ async function shipRecordDispatch(txt){
   setTimeout(()=>{ shipRender(); shipDashRender(); },2600);   // 等「已複製」字樣顯示完再重畫
 }
 function shipWaitBoxHtml(){
-  if(!shipDispatches.length) return shipDispatchReady===false?'<div class="ship-wait-note">尚未建立派車紀錄表(ship_dispatches_migration.sql),派車時間不會記錄</div>':'';
-  return '<div class="ship-wait-box"><div class="ship-wait-h">等車中 '+shipDispatches.length+' 趟</div>'
+  if(shipDispatchReady===false) return '<div class="ship-wait-note">尚未建立派車紀錄表(ship_dispatches_migration.sql),派車時間不會記錄</div>';
+  return '<div class="ship-wait-box"><div class="ship-wait-h">等車中 '+shipDispatches.length+' 趟'
+      +'<button class="btn-sm btn-export" onclick="shipMatOpen()" title="叫車載材料進廠:記派車時間,車到再按一下">＋ 進料派車</button></div>'
     +shipDispatches.map(d=>'<div class="ship-wait-row">'
+      +(shipIsIn(d)?'<span class="ship-tag-in">進料</span>':'')
       +'<span class="ship-wait-msg">'+esc(shipDispatchLabel(d))+'</span>'
       +'<span class="ship-wait-t" data-at="'+esc(d.dispatched_at)+'">派車 '+shipHm(d.dispatched_at)+' · 已等 '+shipWaitTxt(d.dispatched_at)+'</span>'
-      +'<button class="btn-sm btn-export" onclick="shipArriveOpen('+Number(d.id)+')">車到了</button>'
+      +'<button class="btn-sm btn-export" onclick="'+(shipIsIn(d)?'shipArriveIn':'shipArriveOpen')+'('+Number(d.id)+')">車到了</button>'
       +'<button class="ship-wait-x" title="派錯了,刪除這筆派車紀錄" onclick="shipDispatchDelete('+Number(d.id)+')">✕</button>'
       +'</div>').join('')+'</div>';
 }
+// ── 進料派車:叫車載材料進廠。只記「派車→車到」時間,不牽涉構件,也不做進料登記 ──
+// 訊息照現場講法:C棟D08需進料B820-8BB一疊 麻煩安排 謝謝(疊/支/剩餘全部三選一)
+const SHIP_MAT_CN=['','一','兩','三','四','五','六','七','八','九','十'];
+function shipMatVal(id){ const el=document.getElementById(id); return el?String(el.value||'').trim():''; }
+function shipMatBeds(){ return shipMatVal('ship-mat-bed').split(/[.、,，\s]+/).map(x=>shipBedLabel(x)).filter(x=>x&&x!=='未排柱位'); }
+function shipMatQtyTxt(){
+  const mode=shipMatVal('ship-mat-mode'), n=Math.max(0,parseInt(shipMatVal('ship-mat-qty'))||0);
+  if(mode==='all') return '剩餘全部';
+  if(!n) return '';
+  if(mode==='pcs') return '約'+n+'支';
+  return (n<=10?SHIP_MAT_CN[n]:String(n))+'疊';
+}
+function shipMatNote(){ return shipMatVal('ship-mat-part')+shipMatQtyTxt(); }
+function shipMatText(){ return 'C棟'+shipMatBeds().join('.')+'需進料'+shipMatNote()+' 麻煩安排 謝謝'; }
+window.shipMatMsg=function(){
+  const q=document.getElementById('ship-mat-qty'); if(q) q.disabled=shipMatVal('ship-mat-mode')==='all';
+  const ta=document.getElementById('ship-mat-msg'); if(ta&&!ta.dataset.edited) ta.value=shipMatText();
+  const ok=!!(shipMatBeds().length&&shipMatVal('ship-mat-part'));
+  ['ship-mat-ok','ship-mat-ok2'].forEach(id=>{ const b=document.getElementById(id); if(b) b.disabled=!ok; });
+};
+// 柱位打完自動帶工程編號/工程區(看板上那個柱位只對到一個工程時才帶,不用自己打)
+window.shipMatBedFill=function(){
+  shipMatMsg();
+  const beds=shipMatBeds(); if(!beds.length) return;
+  const rows=shipBoardRows.filter(r=>beds.includes(r.bed));
+  const projs=[...new Set(rows.map(r=>r.proj).filter(Boolean))], zones=[...new Set(rows.map(r=>r.zone).filter(Boolean))];
+  const p=document.getElementById('ship-mat-proj'), z=document.getElementById('ship-mat-zone');
+  if(p&&!p.value&&projs.length===1) p.value=projs[0];
+  if(z&&!z.value&&zones.length===1) z.value=zones[0];
+};
+window.shipMatOpen=function(){
+  let m=document.getElementById('ship-mat-modal');
+  if(!m){
+    m=document.createElement('div'); m.className='modal-overlay'; m.id='ship-mat-modal';
+    m.onclick=e=>{ if(e.target===m) closeModal('ship-mat-modal'); };
+    document.body.appendChild(m);
+  }
+  const beds=[...new Set(shipBoardRows.map(r=>r.bed))].filter(b=>b&&b!=='未排柱位').sort(shipBedOrder);
+  m.innerHTML='<div class="modal ship-modal" style="max-width:520px"><div class="modal-title">🚛 進料派車</div>'
+    +'<div class="ship-mat-form">'
+      +'<div class="ship-mat-row"><label><span>柱位（必填）</span><input id="ship-mat-bed" list="ship-mat-beds" placeholder="D08" autocomplete="off" oninput="shipMatBedFill()"></label>'
+        +'<label><span>進料編號（必填）</span><input id="ship-mat-part" placeholder="B820-8BB" autocomplete="off" oninput="shipMatMsg()"></label></div>'
+      +'<datalist id="ship-mat-beds">'+beds.map(b=>'<option value="'+esc(b)+'"></option>').join('')+'</datalist>'
+      +'<div class="ship-mat-row"><label class="narrow"><span>數量</span><select id="ship-mat-mode" onchange="shipMatMsg()"><option value="stack">疊</option><option value="pcs">支（約）</option><option value="all">剩餘全部</option></select></label>'
+        +'<label class="narrow"><span>幾</span><input id="ship-mat-qty" type="number" min="1" step="1" inputmode="numeric" value="1" oninput="shipMatMsg()"></label>'
+        +'<label><span>工程編號（選填）</span><input id="ship-mat-proj" autocomplete="off"></label>'
+        +'<label><span>工程區（選填）</span><input id="ship-mat-zone" autocomplete="off"></label></div>'
+      +'<label><span>派車訊息（可自己改）</span><textarea id="ship-mat-msg" class="ship-mat-msg" oninput="this.dataset.edited=1"></textarea></label>'
+      +'<div class="ship-mat-hint" id="ship-mat-hint"></div>'
+    +'</div>'
+    +'<div class="modal-actions"><button class="btn-modal-cancel" onclick="closeModal(\'ship-mat-modal\')">取消</button>'
+    +'<button class="btn-modal-cancel" id="ship-mat-ok2" onclick="shipMatSave(false)">只記派車時間</button>'
+    +'<button class="btn-modal-ok" id="ship-mat-ok" onclick="shipMatSave(true)">複製訊息並記派車時間</button></div></div>';
+  openModal('ship-mat-modal');
+  shipMatMsg();
+  setTimeout(()=>{ const el=document.getElementById('ship-mat-bed'); if(el) el.focus(); },30);
+};
+window.shipMatSave=async function(copy){
+  const beds=shipMatBeds(); if(!beds.length){ alert('請填柱位'); return; }
+  if(!shipMatVal('ship-mat-part')){ alert('請填進料編號'); return; }
+  const ta=document.getElementById('ship-mat-msg'), txt=ta?String(ta.value||'').trim():'';
+  let copied=false;
+  if(copy&&txt){   // 複製要在按鈕這個動作裡做完,先複製再寫資料庫
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText){ await navigator.clipboard.writeText(txt); copied=true; } }catch(e){}
+    if(!copied&&ta){ ta.select(); try{ copied=document.execCommand('copy'); }catch(e){} }
+  }
+  const rec={dir:'in', kind:'mat', beds:beds, note:shipMatNote(), message:txt,
+    proj_num:shipMatVal('ship-mat-proj')||null, zone_code:shipMatVal('ship-mat-zone')||null,
+    created_by_name:(currentUser&&currentUser.name)||''};
+  const r=await sbFetch('/rest/v1/ship_dispatches',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify([rec])});
+  if(!r.ok){
+    const err=JSON.stringify(r.data||'');
+    alert(/dir|note|proj_num|zone_code/.test(err)
+      ? '進料派車要先執行 ship_dispatches_migration.sql(補 dir／note／proj_num／zone_code 欄位)'
+      : '記錄失敗('+r.status+')');
+    return;
+  }
+  if(Array.isArray(r.data)) shipDispatches=shipDispatches.concat(r.data);
+  shipRender(); shipDashRender();
+  if(copy&&!copied){   // 複製失敗:視窗留著讓他自己選取複製,時間已經記下了
+    const h=document.getElementById('ship-mat-hint');
+    if(h) h.textContent='訊息沒複製成功,請自己選取上面的訊息複製(派車時間已經記下了)';
+    ['ship-mat-ok','ship-mat-ok2'].forEach(id=>{ const b=document.getElementById(id); if(b) b.disabled=true; });
+    return;
+  }
+  closeModal('ship-mat-modal');
+};
+// 進料的「車到了」:只記到達時間,不用勾構件
+window.shipArriveIn=async function(id){
+  const d=shipDispatches.find(x=>Number(x.id)===Number(id)); if(!d) return;
+  if(!await uiConfirm('記下車到時間?\n'+shipDispatchLabel(d)+'\n(派車 '+shipHm(d.dispatched_at)+' · 等了 '+shipWaitTxt(d.dispatched_at)+')')) return;
+  const r=await sbFetch('/rest/v1/ship_dispatches?id=eq.'+Number(d.id),{method:'PATCH',headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify({arrived_at:new Date().toISOString(),arrived_by_name:(currentUser&&currentUser.name)||''})});
+  if(!r.ok){ alert('記錄車到時間失敗('+r.status+')'); return; }
+  shipDispatches=shipDispatches.filter(x=>Number(x.id)!==Number(d.id));
+  shipRender(); shipDashRender();
+};
 window.shipDispatchDelete=async function(id){
   const d=shipDispatches.find(x=>Number(x.id)===Number(id)); if(!d) return;
   if(!await uiConfirm('刪除這筆派車紀錄?\n'+shipDispatchLabel(d)+'(派車 '+shipHm(d.dispatched_at)+')',{danger:true})) return;
@@ -28795,7 +28910,8 @@ function shipArriveModalEl(){
 // 開視窗前先重抓一次待出貨清單:這裡只能出現【已報驗、還沒出貨】的構件,
 // 看板開太久或別人在線上進度表改過時,才不會把已出貨、還沒報驗的編號一併列出來。
 window.shipArriveOpen=async function(id){
-  if(!shipDispatches.some(x=>Number(x.id)===Number(id))) return;
+  const d0=shipDispatches.find(x=>Number(x.id)===Number(id)); if(!d0) return;
+  if(shipIsIn(d0)) return shipArriveIn(id);   // 進料只記時間
   shipArriveId=Number(id);
   const m=shipArriveModalEl();
   m.innerHTML='<div class="modal ship-modal" style="max-width:560px"><div class="modal-title">車到了</div>'
@@ -28859,7 +28975,7 @@ window.shipArriveSave=async function(withShip){
 };
 // ── 派車紀錄分頁:依月份列出每一趟(派車、到達、等了多久),上方是當月統計,可匯出 Excel ──
 const SHIP_LATE_MIN=120;   // 等超過 2 小時標紅
-let shipHistRows=[];
+let shipHistRows=[], shipHistDir='all';   // 出貨/進料篩選:all | out | in
 function shipYmOf(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function shipMinBetween(a,b){ return Math.round((new Date(b)-new Date(a))/60000); }
 function shipDurTxt(min){
@@ -28871,7 +28987,10 @@ function shipDurTxt(min){
 async function shipHistLoad(){
   const box=document.getElementById('ship-hist'); if(!box) return;
   let ym=(document.getElementById('ship-hist-ym')||{}).value||shipYmOf(new Date());
-  box.innerHTML='<div class="ship-hist-bar"><input type="month" id="ship-hist-ym" value="'+esc(ym)+'" onchange="shipHistLoad()"><span id="ship-hist-stat"></span>'
+  box.innerHTML='<div class="ship-hist-bar"><input type="month" id="ship-hist-ym" value="'+esc(ym)+'" onchange="shipHistLoad()">'
+    +'<select id="ship-hist-dir" onchange="shipHistSetDir(this.value)">'
+      +['all','out','in'].map(v=>'<option value="'+v+'"'+(shipHistDir===v?' selected':'')+'>'+(v==='all'?'全部':v==='out'?'出貨':'進料')+'</option>').join('')
+    +'</select><span id="ship-hist-stat"></span>'
     +'<button class="btn-sm btn-export" style="margin-left:auto" onclick="shipHistExport()">⬇ 匯出 Excel</button></div><div id="ship-hist-list"><div class="empty-state">載入中...</div></div>';
   const y=+ym.slice(0,4), mo=+ym.slice(5,7);
   const from=new Date(y,mo-1,1).toISOString(), to=new Date(y,mo,1).toISOString();
@@ -28879,29 +28998,39 @@ async function shipHistLoad(){
   const list=document.getElementById('ship-hist-list'); if(!list) return;
   if(!r.ok){ list.innerHTML='<div class="empty-state">讀不到派車紀錄(請確認已執行 ship_dispatches_migration.sql)</div>'; return; }
   shipHistRows=Array.isArray(r.data)?r.data:[];
-  const done=shipHistRows.filter(d=>d.arrived_at), waits=done.map(d=>shipMinBetween(d.dispatched_at,d.arrived_at));
-  const avg=waits.length?Math.round(waits.reduce((a,b)=>a+b,0)/waits.length):null, late=waits.filter(m=>m>SHIP_LATE_MIN).length, open=shipHistRows.length-done.length;
+  shipHistRender();
+}
+window.shipHistSetDir=function(v){ shipHistDir=v; shipHistRender(); };
+function shipHistFiltered(){ return shipHistRows.filter(d=>shipHistDir==='all'||(shipIsIn(d)?'in':'out')===shipHistDir); }
+function shipHistRender(){
+  const list=document.getElementById('ship-hist-list'); if(!list) return;
+  const rows=shipHistFiltered();
+  const done=rows.filter(d=>d.arrived_at), waits=done.map(d=>shipMinBetween(d.dispatched_at,d.arrived_at));
+  const avg=waits.length?Math.round(waits.reduce((a,b)=>a+b,0)/waits.length):null, late=waits.filter(m=>m>SHIP_LATE_MIN).length, open=rows.length-done.length;
   const stat=document.getElementById('ship-hist-stat');
-  if(stat) stat.innerHTML='本月 <b>'+shipHistRows.length+'</b> 趟 · 平均等 <b>'+shipDurTxt(avg)+'</b> · 超過 2 小時 <b'+(late?' style="color:var(--danger)"':'')+'>'+late+'</b> 趟'+(open?' · 未到 <b>'+open+'</b> 趟':'');
-  if(!shipHistRows.length){ list.innerHTML='<div class="empty-state">這個月沒有派車紀錄</div>'; return; }
-  list.innerHTML='<div class="ship-hist-wrap"><table class="ship-hist-tbl"><thead><tr><th>日期</th><th>派車</th><th>到達</th><th>等了</th><th>內容</th><th>派車人</th><th>記錄車到</th><th>標記出貨</th></tr></thead><tbody>'
-    +shipHistRows.map(d=>{
+  if(stat) stat.innerHTML='本月 <b>'+rows.length+'</b> 趟 · 平均等 <b>'+shipDurTxt(avg)+'</b> · 超過 2 小時 <b'+(late?' style="color:var(--danger)"':'')+'>'+late+'</b> 趟'+(open?' · 未到 <b>'+open+'</b> 趟':'');
+  if(!rows.length){ list.innerHTML='<div class="empty-state">這個月沒有'+(shipHistDir==='in'?'進料':shipHistDir==='out'?'出貨':'')+'派車紀錄</div>'; return; }
+  list.innerHTML='<div class="ship-hist-wrap"><table class="ship-hist-tbl"><thead><tr><th>日期</th><th>派車</th><th>到達</th><th>等了</th><th>類別</th><th>內容</th><th>派車人</th><th>記錄車到</th><th>標記出貨</th></tr></thead><tbody>'
+    +rows.map(d=>{
       const dd=new Date(d.dispatched_at), min=d.arrived_at?shipMinBetween(d.dispatched_at,d.arrived_at):null;
       const lateCls=(min!=null&&min>SHIP_LATE_MIN)||(!d.arrived_at&&shipMinBetween(d.dispatched_at,new Date().toISOString())>SHIP_LATE_MIN)?' class="late"':'';
       return '<tr'+lateCls+'><td>'+String(dd.getMonth()+1).padStart(2,'0')+'/'+String(dd.getDate()).padStart(2,'0')+'</td>'
         +'<td>'+shipHm(d.dispatched_at)+'</td><td>'+(d.arrived_at?shipHm(d.arrived_at):'(未到)')+'</td>'
         +'<td class="num">'+(d.arrived_at?shipDurTxt(min):'等 '+shipWaitTxt(d.dispatched_at))+'</td>'
+        +'<td>'+(shipIsIn(d)?'進料':'出貨')+'</td>'
         +'<td class="txt">'+esc(shipDispatchLabel(d))+'</td><td>'+esc(d.created_by_name||'')+'</td><td>'+esc(d.arrived_by_name||'')+'</td>'
         +'<td class="num">'+((d.shipped_ids||[]).length?(d.shipped_ids.length+' 項'):'—')+'</td></tr>';
     }).join('')+'</tbody></table></div>';
 }
 window.shipHistLoad=shipHistLoad;
 window.shipHistExport=function(){
-  if(!shipHistRows.length){ alert('這個月沒有派車紀錄'); return; }
+  const rows=shipHistFiltered();
+  if(!rows.length){ alert('這個月沒有派車紀錄'); return; }
   const fmt=iso=>{ if(!iso) return ''; const d=new Date(iso); return d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+' '+shipHm(iso); };
-  const aoa=[['派車時間','到達時間','等車(分鐘)','柱位','種類','車數','柱子支數','派車人','記錄車到','標記出貨項數']]
-    .concat(shipHistRows.slice().reverse().map(d=>[fmt(d.dispatched_at),fmt(d.arrived_at),d.arrived_at?shipMinBetween(d.dispatched_at,d.arrived_at):'',
-      'C棟'+(d.beds||[]).join('.'),d.kind==='col'?'柱':'樑',d.cars||'',d.col_qty||'',d.created_by_name||'',d.arrived_by_name||'',(d.shipped_ids||[]).length||'']));
+  const aoa=[['派車時間','到達時間','等車(分鐘)','類別','柱位','種類','進料內容','車數','柱子支數','派車人','記錄車到','標記出貨項數']]
+    .concat(rows.slice().reverse().map(d=>[fmt(d.dispatched_at),fmt(d.arrived_at),d.arrived_at?shipMinBetween(d.dispatched_at,d.arrived_at):'',
+      shipIsIn(d)?'進料':'出貨','C棟'+(d.beds||[]).join('.'),shipIsIn(d)?'材料':(d.kind==='col'?'柱':'樑'),shipIsIn(d)?(d.note||''):'',
+      d.cars||'',d.col_qty||'',d.created_by_name||'',d.arrived_by_name||'',(d.shipped_ids||[]).length||'']));
   const ws=XLSX.utils.aoa_to_sheet(aoa), wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'派車紀錄');
   XLSX.writeFile(wb,'派車紀錄_'+((document.getElementById('ship-hist-ym')||{}).value||'')+'.xlsx');
