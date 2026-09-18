@@ -45815,12 +45815,13 @@ function lmSpAutoFill(sp){
 // 照片:縮圖用小張 JPEG(原圖動輒數 MB,格子裡直接放原圖會讓拖曳卡頓),放大檢視才用原圖(object URL,不佔字串記憶體)。
 // b64 原圖只給產生 Word 用。
 const LM_THUMB_PX=360;
-// 依「選檔順序」加入(每張讀檔完成的先後不固定,以前會打亂順序);超過 30 張的部分略過
+// 依「選檔順序」加入(每張讀檔完成的先後不固定,以前會打亂順序)。
+// 張數不限(Word 每 6 張一頁會自動加頁);但一次只讀 LM_PHOTO_BATCH 張,
+// 免得一口氣把上百張原圖同時展開吃光記憶體,順便可以邊讀邊看到進度。
+const LM_PHOTO_BATCH=4;
 window.lmAddPhotos=async function(inp){
   const files=Array.from(inp.files||[]);inp.value='';
-  const room=30-lmPhotos.length;
-  if(room<=0){alert('最多 30 張照片(5 頁)');return;}
-  if(files.length>room) alert('最多 30 張照片(5 頁),只加入前 '+room+' 張');
+  if(!files.length) return;
   const load=f=>new Promise(res=>{
     const rd=new FileReader();
     rd.onerror=()=>res(null);
@@ -45838,8 +45839,16 @@ window.lmAddPhotos=async function(inp){
       img.src=String(rd.result);};
     rd.readAsDataURL(f);
   });
-  const loaded=await Promise.all(files.slice(0,room).map(load));
-  loaded.forEach(p=>{ if(p&&lmPhotos.length<30) lmPhotos.push(p); });
+  const msg=document.getElementById('lm-photo-sortmsg'), show=files.length>LM_PHOTO_BATCH;
+  let ok=0, bad=0;
+  for(let i=0;i<files.length;i+=LM_PHOTO_BATCH){
+    if(msg&&show) msg.textContent='讀取照片中 '+Math.min(i+LM_PHOTO_BATCH,files.length)+' / '+files.length+' 張...';
+    const part=await Promise.all(files.slice(i,i+LM_PHOTO_BATCH).map(load));
+    part.forEach(p=>{ if(p){ lmPhotos.push(p); ok++; } else bad++; });
+    lmRenderPhotos();
+  }
+  if(msg) msg.textContent=show?('已加入 '+ok+' 張'+(bad?('、'+bad+' 張讀不到'):'')):'';
+  if(bad&&!show) alert(bad+' 張照片讀不到,已略過');
   lmRenderPhotos();
 };
 // 讀 JPEG 的 EXIF 拍攝時間(DateTimeOriginal,沒有就用 DateTime),回傳 'YYYY-MM-DD HH:MM:SS' 或 ''。
