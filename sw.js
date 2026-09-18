@@ -14,9 +14,13 @@ self.addEventListener('install', ev => {
   ev.waitUntil((async () => {
     const c = await caches.open(SHELL_CACHE);
     await Promise.all(PRECACHE.map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => {})));
+    // index.html 有 4MB。已經有快取就別在安裝時再抓一次 —— 背景檢查本來就會更新,
+    // 不然每次改版(sw.js 一變就重裝)都要多下載 4MB,開頁會明顯變慢。
     try {
-      const r = await fetch(INDEX_URL, { cache: 'reload' });
-      if (r.ok) await c.put(INDEX_URL, r);
+      if (!(await c.match(INDEX_URL))) {
+        const r = await fetch(INDEX_URL, { cache: 'reload' });
+        if (r.ok) await c.put(INDEX_URL, r);
+      }
     } catch (e) {}
     await self.skipWaiting();
   })());
@@ -97,15 +101,14 @@ async function checkIndex(c, notify, force) {
   const newText = await fresh.clone().text();
   const oldText = cachedNow ? await cachedNow.text().catch(() => '') : '';
   const changed = !!oldText && oldText !== newText;
-  // index.html 有 3MB 以上,快取空間不足時 put 會失敗。
-  // 以前這裡失敗是無聲的,結果快取永遠停在舊版 → 每次開都拿舊的、每次都跳「系統已更新」,
-  // 按重新載入也沒用。現在存不進去就把舊的那份刪掉,下次直接走網路拿新版。
+  // index.html 有 4MB,快取空間不足時 put 會失敗。
+  // 注意:失敗時**不可以**把舊的那份刪掉。刪掉之後快取就空了,
+  // 之後每一次開頁都得現場下載 4MB(serveIndex 沒快取只能 await 網路),整個系統會變超慢。
+  // 正確做法是留著舊的(至少開得快),然後把 stored=false 告訴頁面:
+  // 提示列的「重新載入」那次會強制走網路拿新版,使用者也可以按「強制更新」清空間。
   let stored = true;
   try { await c.put(INDEX_URL, fresh.clone()); }
-  catch (e) {
-    stored = false;
-    try { await c.delete(INDEX_URL); } catch (e2) {}
-  }
+  catch (e) { stored = false; }
   await writeMeta(c, { fp: fp || fingerprintOf(fresh), ver: versionOf(newText), stored });
   if (notify && changed) {
     // stored=true 代表新版已經躺在快取裡,頁面那邊直接重新載入就是秒開,不用再等下載
@@ -142,6 +145,14 @@ async function serveIndex() {
 // sc-reset:按「重新載入」時先把快取那份 index.html 丟掉,確保重整一定拿到新版
 self.addEventListener('message', ev => {
   const d = ev.data || {};
+  if (d.type === 'sc-status' && ev.source) {
+    ev.waitUntil((async () => {
+      const c = await caches.open(SHELL_CACHE);
+      const meta = await readMeta(c);
+      const has = !!(await c.match(INDEX_URL));
+      try { ev.source.postMessage({ type: 'sc-status-result', hasIndex: has, meta: meta }); } catch (e) {}
+    })().catch(() => {}));
+  }
   if (d.type === 'sc-check') {
     ev.waitUntil(caches.open(SHELL_CACHE).then(c => checkIndex(c, true, false)).catch(() => {}));
   }

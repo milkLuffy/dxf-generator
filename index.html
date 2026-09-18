@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.18.8"/>
+<meta name="sc-version" content="2026.09.18.9"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -6359,6 +6359,7 @@ window.normalizeFullWidth=function(value){
             <div><i>伺服器最新</i><b id="hl-ver-live">—</b></div>
           </div>
           <div class="hl-ver-note" id="hl-ver-note"></div>
+          <div class="hl-ver-note" id="hl-ver-speed"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn" onclick="healthVerLoad()">↻ 重新檢查版本</button>
             <button class="btn" onclick="if(confirm('會清掉這台裝置的離線快取並重新下載整個系統(約 4MB,要花幾秒)。\n畫面卡在舊版時才需要這樣做。\n\n確定要強制更新嗎?'))scForceUpdate()">強制更新（清除離線快取）</button>
@@ -51898,7 +51899,33 @@ async function ldDashPlan(){
     else if(!/^\(/.test(v.cache)&&v.cache!==v.live) note='已經是最新版;離線快取那份還是舊的,下次開會自動修正。';
     else note='已經是最新版。';
     set('hl-ver-note',note);
+    set('hl-ver-speed',await scSpeedNote());
   };
+  // 開這一頁花了多久、是從離線快取還是網路來的 —— 抱怨「變慢」時先看這行
+  async function scSpeedNote(){
+    var n=performance.getEntriesByType('navigation')[0];
+    if(!n) return '';
+    var from=n.transferSize>0?'網路下載 '+(n.transferSize/1048576).toFixed(1)+'MB':'離線快取(沒有下載)';
+    var txt='這次開啟:'+Math.round(n.responseEnd)+' ms 拿到內容 · 來源 '+from;
+    var st=await scSwStatus();
+    if(st){
+      txt+=' · 快取裡'+(st.hasIndex?'有':'沒有')+'主程式';
+      if(st.meta&&st.meta.stored===false) txt+=' · ⚠ 上次存不進快取(空間不足),建議按上面的「強制更新」清一次';
+    }
+    return txt;
+  }
+  function scSwStatus(){
+    return new Promise(function(res){
+      var c=navigator.serviceWorker&&navigator.serviceWorker.controller;
+      if(!c) return res(null);
+      var done=false;
+      var on=function(ev){ var d=ev.data||{}; if(d.type==='sc-status-result'){ done=true;
+        navigator.serviceWorker.removeEventListener('message',on); res(d); } };
+      navigator.serviceWorker.addEventListener('message',on);
+      try{ c.postMessage({type:'sc-status'}); }catch(e){ return res(null); }
+      setTimeout(function(){ if(!done){ navigator.serviceWorker.removeEventListener('message',on); res(null); } },1500);
+    });
+  }
 })();
 </script>
 <script>
