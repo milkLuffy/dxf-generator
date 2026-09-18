@@ -28521,7 +28521,8 @@ document.addEventListener('keydown', e => {
 
 // ── 待出貨看板:已報驗、還沒出貨的構件依「柱位」整理,勾選後產生派車訊息 ──
 // 柱位=上線配置的床位(D9~D10 只取 D9、補兩位數 D09);床位空白歸「未排柱位」、HOLD 不列。
-// 柱/樑依工程區代號尾字:C=柱(問支數,逐支勾),其餘(G/B/雜項)=樑(問車數)。棟別固定 C棟。
+// 柱/樑依工程區代號尾字:C=柱(訊息寫幾支),其餘(G/B/雜項)=樑(訊息寫幾車)。棟別固定 C棟。
+// 樑、柱都逐支勾(勾柱位時預設全勾),勾了哪幾支會記進派車紀錄,「車到了」就只列那幾支。
 // 已報驗判定比照線上進度表:每日產量有這個構件、且不是預報(pre_inspections)。
 let shipBoardRows=[], shipBoardSel={};
 function shipBedLabel(bed){
@@ -28667,53 +28668,70 @@ function shipRender(){
   if(!order.length){ body.innerHTML=shipWaitBoxHtml()+'<div class="empty-state">目前沒有已報驗、待出貨的構件</div>'; shipBuildMsg(); return; }
   body.innerHTML=shipWaitBoxHtml()+order.map(key=>{
     const list=groups.get(key), sel=shipBoardSel[key]||{}, bed=shipGroupBed(key), recv=shipGroupRecv(key);
-    const beamN=list.filter(r=>!r.col).reduce((a,r)=>a+r.qty,0), colN=list.filter(r=>r.col).reduce((a,r)=>a+r.qty,0);
     const k=esc(key), noBed=bed==='未排柱位';
     const projs=new Map(); list.forEach(r=>{ if(!projs.has(r.proj)) projs.set(r.proj,[]); projs.get(r.proj).push(r); });
     let h='<div class="ship-bed'+(sel.on?' on':'')+'">'
       +'<label class="ship-bed-h"><input type="checkbox"'+(sel.on?' checked':'')+(noBed?' disabled title="未排柱位,無法產生派車訊息"':'')+' data-key="'+k+'" onchange="shipToggleBed(this.dataset.key,this.checked)">'
       +'<b>'+esc(bed)+'</b>'+(recv?'<span class="ship-bed-recv">受檢 '+esc(recv)+'</span>':'')
       +(shipBedDispatch(bed).length?'<span class="ship-bed-disp">已派車 '+shipBedDispatch(bed).map(d=>shipHm(d.dispatched_at)).join('、')+'</span>':'')
-      +'<span class="ship-bed-n">'+[beamN?'樑 '+beamN+' 支':'',colN?'柱 '+colN+' 支':''].filter(Boolean).join(' · ')+'</span></label>';
+      +'<span class="ship-bed-n" data-key="'+k+'">'+shipBedCountTxt(key)+'</span></label>';
     [...projs.keys()].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).forEach(pj=>{
       const pr=projs.get(pj);
       h+='<div class="ship-proj"><div class="ship-proj-h"><b>'+esc(pj)+'</b></div>';
       const beams=pr.filter(r=>!r.col), cols=pr.filter(r=>r.col);
-      if(beams.length) h+='<div class="ship-parts">'+beams.map(r=>'<span>'+esc(r.part)+(r.qty>1?' ×'+r.qty:'')+'</span>').join('')+'</div>';
-      if(cols.length) h+='<div class="ship-parts ship-cols">'+cols.map(r=>'<label><input type="checkbox"'+(sel.on&&sel.cols&&sel.cols[r.id]?' checked':'')+(sel.on?'':' disabled')
-        +' data-key="'+k+'" data-id="'+esc(r.id)+'" onchange="shipToggleCol(this.dataset.key,this.dataset.id,this.checked)">柱 '+esc(r.part)+(r.qty>1?' ×'+r.qty:'')+'</label>').join('')+'</div>';
+      const chk=r=>'<label><input type="checkbox"'+(sel.on&&sel.pick&&sel.pick[r.id]?' checked':'')+(sel.on?'':' disabled')
+        +' data-key="'+k+'" data-id="'+esc(r.id)+'" onchange="shipTogglePart(this.dataset.key,this.dataset.id,this.checked)">'
+        +(r.col?'柱 ':'')+esc(r.part)+(r.qty>1?' ×'+r.qty:'')+'</label>';
+      if(beams.length) h+='<div class="ship-parts ship-cols">'+beams.map(chk).join('')+'</div>';
+      if(cols.length) h+='<div class="ship-parts ship-cols">'+cols.map(chk).join('')+'</div>';
       h+='</div>';
     });
     return h+'</div>';
   }).join('');
   shipBuildMsg();
 }
+// 柱位標題右邊的支數:沒勾就顯示總數,勾了顯示「勾的/總數」
+function shipBedCountTxt(key){
+  const list=shipBoardRows.filter(r=>shipGroupKey(r)===key), sel=shipBoardSel[key]||{};
+  const q=(arr,onlyPick)=>arr.filter(r=>!onlyPick||(sel.on&&sel.pick&&sel.pick[r.id])).reduce((a,r)=>a+r.qty,0);
+  const beams=list.filter(r=>!r.col), cols=list.filter(r=>r.col);
+  const txt=(arr,label)=>{ const n=q(arr,false); return n?(label+' '+(sel.on?q(arr,true)+'/'+n:n)+' 支'):''; };
+  return [txt(beams,'樑'),txt(cols,'柱')].filter(Boolean).join(' · ');
+}
 window.shipToggleBed=function(key,on){
   const list=shipBoardRows.filter(r=>shipGroupKey(r)===key);
-  const sel=shipBoardSel[key]||(shipBoardSel[key]={cols:{}});
+  const sel=shipBoardSel[key]||(shipBoardSel[key]={pick:{}});
   sel.on=!!on;
-  if(on){ sel.cols={}; list.filter(r=>r.col).forEach(r=>{ sel.cols[r.id]=true; }); }   // 勾柱位時柱子預設全勾,不出的再取消
+  if(on){ sel.pick={}; list.forEach(r=>{ sel.pick[r.id]=true; }); }   // 勾柱位時樑、柱都預設全勾,不出的再取消
   shipRender();
 };
-window.shipToggleCol=function(key,id,on){
+// 逐支勾(樑、柱共用):只更新訊息與標題支數,不整塊重畫,免得勾到一半跳掉
+window.shipTogglePart=function(key,id,on){
   const sel=shipBoardSel[key]; if(!sel) return;
   const r=shipBoardRows.find(x=>String(x.id)===String(id)); if(!r) return;
-  if(on) sel.cols[r.id]=true; else delete sel.cols[r.id];
+  if(!sel.pick) sel.pick={};
+  if(on) sel.pick[r.id]=true; else delete sel.pick[r.id];
+  const el=[...document.querySelectorAll('#ship-body .ship-bed-n[data-key]')].find(e=>e.dataset.key===key);
+  if(el) el.textContent=shipBedCountTxt(key);
   shipBuildMsg();
 };
 // 車數是「所有勾選柱位的樑合起來」幾車,不是每個柱位各自幾車
 let shipCars=1;
 window.shipSetCars=function(v){ shipCars=Math.max(0,parseInt(v)||0); shipBuildMsg(); };
 function shipBuildMsg(){
-  const lines=[], beamBeds=[], colBeds=[], colIds=[]; let colN=0;
+  const lines=[], beamBeds=[], beamIds=[], colBeds=[], colIds=[]; let beamN=0, colN=0;
   Object.keys(shipBoardSel).filter(k=>shipBoardSel[k].on).sort(shipGroupOrder).forEach(key=>{
     const sel=shipBoardSel[key], bed=shipGroupBed(key), list=shipBoardRows.filter(r=>shipGroupKey(r)===key);
-    if(list.some(r=>!r.col) && !beamBeds.includes(bed)) beamBeds.push(bed);   // 同柱位兩個受檢時段只列一次
-    const picked=list.filter(r=>r.col&&sel.cols&&sel.cols[r.id]);
-    const n=picked.reduce((a,r)=>a+r.qty,0);
-    if(n>0){ if(!colBeds.includes(bed)) colBeds.push(bed); colN+=n; picked.forEach(r=>colIds.push(String(r.id))); }
+    const pick=list.filter(r=>sel.pick&&sel.pick[r.id]);
+    const bm=pick.filter(r=>!r.col), cl=pick.filter(r=>r.col);
+    if(bm.length){                                                           // 同柱位兩個受檢時段只列一次
+      if(!beamBeds.includes(bed)) beamBeds.push(bed);
+      beamN+=bm.reduce((a,r)=>a+r.qty,0); bm.forEach(r=>beamIds.push(String(r.id)));
+    }
+    const n=cl.reduce((a,r)=>a+r.qty,0);
+    if(n>0){ if(!colBeds.includes(bed)) colBeds.push(bed); colN+=n; cl.forEach(r=>colIds.push(String(r.id))); }
   });
-  shipLastMeta={beamBeds, cars:shipCars, colBeds, colN, colIds};
+  shipLastMeta={beamBeds, cars:shipCars, beamIds, beamN, colBeds, colN, colIds};
   // 多個柱位合併成一則:C棟D05.D11需出1車
   if(beamBeds.length&&shipCars>0) lines.push('C棟'+beamBeds.join('.')+'需出'+shipCars+'車 麻煩安排 謝謝');
   if(colN>0) lines.push('C棟'+colBeds.join('.')+'需出'+colN+'支柱子 麻煩安排 謝謝');
@@ -28722,9 +28740,10 @@ function shipBuildMsg(){
     carsEl.style.display=beamBeds.length?'':'none';
     if(beamBeds.length){
       const inp=carsEl.querySelector('input');
-      if(!inp) carsEl.innerHTML='樑（<span id="ship-cars-beds"></span>）合計出 <input type="number" min="0" step="1" inputmode="numeric" value="'+shipCars+'" oninput="shipSetCars(this.value)"> 車';
+      if(!inp) carsEl.innerHTML='樑（<span id="ship-cars-beds"></span>）勾了 <b id="ship-cars-n"></b> 支,合計出 <input type="number" min="0" step="1" inputmode="numeric" value="'+shipCars+'" oninput="shipSetCars(this.value)"> 車';
       else if(String(inp.value)!==String(shipCars) && document.activeElement!==inp) inp.value=shipCars;
       const bb=document.getElementById('ship-cars-beds'); if(bb) bb.textContent=beamBeds.join('.');
+      const bn=document.getElementById('ship-cars-n'); if(bn) bn.textContent=beamN;
     }
   }
   const ta=document.getElementById('ship-msg'); if(ta) ta.value=lines.join('\n');
@@ -28770,7 +28789,7 @@ async function shipRecordDispatch(txt){
   if(shipDispatchReady===false){ return; }
   const who=(currentUser&&currentUser.name)||'';
   const recs=[];
-  if(meta.beamBeds.length&&meta.cars>0) recs.push({kind:'beam',beds:meta.beamBeds,cars:meta.cars,message:'C棟'+meta.beamBeds.join('.')+'需出'+meta.cars+'車',created_by_name:who});
+  if(meta.beamBeds.length&&meta.cars>0) recs.push({kind:'beam',beds:meta.beamBeds,cars:meta.cars,layout_ids:meta.beamIds,message:'C棟'+meta.beamBeds.join('.')+'需出'+meta.cars+'車',created_by_name:who});
   if(meta.colN>0) recs.push({kind:'col',beds:meta.colBeds,col_qty:meta.colN,layout_ids:meta.colIds,message:'C棟'+meta.colBeds.join('.')+'需出'+meta.colN+'支柱子',created_by_name:who});
   if(!recs.length) return;
   const r=await sbFetch('/rest/v1/ship_dispatches',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(recs)});
@@ -28931,8 +28950,10 @@ window.shipArriveOpen=async function(id){
 function shipArriveRender(d){
   const m=shipArriveModalEl();
   const ids=new Set((d.layout_ids||[]).map(String));
-  // shipBoardRows 本身就是「已報驗(每日產量有、非預報)且未出貨」的待出貨構件
-  const pieces=shipBoardRows.filter(r=>(d.beds||[]).includes(r.bed) && (d.kind==='col' ? (ids.size?ids.has(String(r.id)):r.col) : !r.col));
+  // shipBoardRows 本身就是「已報驗(每日產量有、非預報)且未出貨」的待出貨構件;
+  // 派車時勾了哪幾支就只列那幾支,舊紀錄沒記(ids 空)才退回依樑/柱整個柱位列。
+  const pieces=shipBoardRows.filter(r=>(d.beds||[]).includes(r.bed)
+    && (ids.size ? ids.has(String(r.id)) : (d.kind==='col'?r.col:!r.col)));
   const byBed=new Map(); pieces.forEach(r=>{ if(!byBed.has(r.bed)) byBed.set(r.bed,[]); byBed.get(r.bed).push(r); });
   m.innerHTML='<div class="modal ship-modal" style="max-width:560px"><div class="modal-title">車到了 — '+esc(shipDispatchLabel(d))+'</div>'
     +'<div class="ship-arrive-time">派車 '+shipHm(d.dispatched_at)+' → 到達 '+shipHm(new Date().toISOString())+' · 等了 '+shipWaitTxt(d.dispatched_at)+'</div>'
