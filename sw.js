@@ -131,9 +131,12 @@ async function serveIndex() {
   const c = await caches.open(SHELL_CACHE);
   const force = forceFreshIndex; forceFreshIndex = false;
   const cached = await c.match(INDEX_URL);
-  const refresh = checkIndex(c, !force && !!cached, force);   // 他自己按的那次不用再提示一遍
+  // 有快取 → 只回快取,開頁的當下什麼都不做。
+  // 以前會順便跑 checkIndex:遇到新版時等於一邊開頁、一邊在背景抓 4MB 又寫 4MB 快取,
+  // 開頁就會明顯頓一下。更新檢查改成由頁面載完幾秒後自己來問(sc-check),不擋開頁。
+  if (cached && !force) return { response: cached, refresh: null };
+  const refresh = checkIndex(c, false, force);   // 沒快取(或他自己按了重新載入)才真的去抓
   refresh.catch(() => {});
-  if (cached && !force) return { response: cached, refresh };   // 先給快取,秒開
   try {
     const r = await refresh;
     if (r) return { response: r, refresh };

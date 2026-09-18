@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.18.11"/>
+<meta name="sc-version" content="2026.09.18.12"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -44509,7 +44509,10 @@ function spTrackGroupItemRows(g,item){
 function spTrackReceiptAllocationHTML(g){
   const meta=g?.receiptMeta;if(!meta)return'';const zones=[...meta.zones],items=[...meta.items].sort((a,b)=>PROD_ITEMS.indexOf(a)-PROD_ITEMS.indexOf(b));if(zones.length===1)return'';if(!zones.length||!items.length)return'<div class="sp-receipt-allocation"><div class="sp-allocation-title">工程區項目配置</div><div class="prod-no">收圖資料尚未提供可配置的工程區或 SP 項目。</div></div>';
   const head='<div class="sp-allocation-cell sp-allocation-item">項目＼工程區</div>'+zones.map(z=>'<div class="sp-allocation-cell"><span class="sp-zone-tag">'+esc(z)+'</span></div>').join('');
-  const rows=items.map(item=>'<div class="sp-allocation-cell sp-allocation-item">'+prodItemTag(item)+'</div>'+zones.map(zone=>{const checked=spTrackGroupItemRows(g,item).some(r=>spTrackZones(r.zone).includes(zone));return '<label class="sp-allocation-cell"><input type="checkbox" data-item="'+esc(item)+'" data-zone="'+esc(zone)+'" '+(checked?'checked ':'')+'onchange="spTrackSetReceiptAllocation(this.dataset.item,this.dataset.zone,this.checked,this)"></label>';}).join('')).join('');
+  // 每一格都呼叫 spTrackGroupItemRows 會把 prodTrack 全表掃過 items×zones 次;整張表先建一次索引就好
+  const rowsByItem=new Map();
+  (prodTrack||[]).forEach(r=>{ if(spTrackGroupKey(r)!==g.key) return; const it=String(r.item||''); if(!rowsByItem.has(it)) rowsByItem.set(it,[]); rowsByItem.get(it).push(r); });
+  const rows=items.map(item=>'<div class="sp-allocation-cell sp-allocation-item">'+prodItemTag(item)+'</div>'+zones.map(zone=>{const checked=(rowsByItem.get(item)||[]).some(r=>spTrackZones(r.zone).includes(zone));return '<label class="sp-allocation-cell"><input type="checkbox" data-item="'+esc(item)+'" data-zone="'+esc(zone)+'" '+(checked?'checked ':'')+'onchange="spTrackSetReceiptAllocation(this.dataset.item,this.dataset.zone,this.checked,this)"></label>';}).join('')).join('');
   return '<div class="sp-receipt-allocation"><div class="sp-allocation-title">工程區項目配置｜勾選該工程區實際具有的項目</div><div class="sp-allocation-grid" style="grid-template-columns:145px repeat('+zones.length+',minmax(78px,1fr))">'+head+rows+'</div></div>';
 }
 let spTrackModalEditGroups={};
@@ -52015,7 +52018,11 @@ async function ldDashPlan(){
     try{ c.postMessage({type:'sc-check'}); }catch(e){}
   }
   window.scAskCheck=scAskCheck;
-  navigator.serviceWorker.ready.then(function(){ setTimeout(function(){ scAskCheck(true); },4000); }).catch(function(){});
+  // 第一次檢查等頁面完全安頓下來再做(抓新版要 4MB,別跟開頁搶資源)
+  navigator.serviceWorker.ready.then(function(){
+    var go=function(){ setTimeout(function(){ scAskCheck(true); },8000); };
+    if(document.readyState==='complete') go(); else window.addEventListener('load',go);
+  }).catch(function(){});
   setInterval(function(){ if(!document.hidden) scAskCheck(true); },3*60000);
   document.addEventListener('visibilitychange',function(){ if(!document.hidden) scAskCheck(); });
   window.addEventListener('focus',function(){ scAskCheck(); });
