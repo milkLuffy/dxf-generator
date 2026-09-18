@@ -7,6 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
+<meta name="sc-version" content="2026.09.18.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -28664,6 +28665,7 @@ async function shipDashLoad(){
   catch(e){ console.warn('ship dash',e); box.innerHTML='<span style="color:var(--text3);font-size:13px">載入失敗</span>'; }
 }
 function shipRender(){
+  shipMatWaitRender();   // 進料分頁的等車中清單跟著更新
   const body=document.getElementById('ship-body'); if(!body) return;
   const groups=new Map();
   shipBoardRows.forEach(r=>{ const k=shipGroupKey(r); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(r); });
@@ -28804,20 +28806,60 @@ async function shipRecordDispatch(txt){
   shipBoardSel={}; shipCars=1;
   setTimeout(()=>{ shipRender(); shipDashRender(); },2600);   // 等「已複製」字樣顯示完再重畫
 }
+function shipWaitRowHtml(d){
+  return '<div class="ship-wait-row">'
+    +(shipIsIn(d)?'<span class="ship-tag-in">進料</span>':'')
+    +'<span class="ship-wait-msg">'+esc(shipDispatchLabel(d))+'</span>'
+    +'<span class="ship-wait-t" data-at="'+esc(d.dispatched_at)+'">派車 '+shipHm(d.dispatched_at)+' · 已等 '+shipWaitTxt(d.dispatched_at)+'</span>'
+    +'<button class="btn-sm btn-export" onclick="'+(shipIsIn(d)?'shipArriveIn':'shipArriveOpen')+'('+Number(d.id)+')">車到了</button>'
+    +'<button class="ship-wait-x" title="派錯了,刪除這筆派車紀錄" onclick="shipDispatchDelete('+Number(d.id)+')">✕</button>'
+    +'</div>';
+}
 function shipWaitBoxHtml(){
   if(!shipDispatches.length) return shipDispatchReady===false?'<div class="ship-wait-note">尚未建立派車紀錄表(ship_dispatches_migration.sql),派車時間不會記錄</div>':'';
   return '<div class="ship-wait-box"><div class="ship-wait-h">等車中 '+shipDispatches.length+' 趟（含進料）</div>'
-    +shipDispatches.map(d=>'<div class="ship-wait-row">'
-      +(shipIsIn(d)?'<span class="ship-tag-in">進料</span>':'')
-      +'<span class="ship-wait-msg">'+esc(shipDispatchLabel(d))+'</span>'
-      +'<span class="ship-wait-t" data-at="'+esc(d.dispatched_at)+'">派車 '+shipHm(d.dispatched_at)+' · 已等 '+shipWaitTxt(d.dispatched_at)+'</span>'
-      +'<button class="btn-sm btn-export" onclick="'+(shipIsIn(d)?'shipArriveIn':'shipArriveOpen')+'('+Number(d.id)+')">車到了</button>'
-      +'<button class="ship-wait-x" title="派錯了,刪除這筆派車紀錄" onclick="shipDispatchDelete('+Number(d.id)+')">✕</button>'
-      +'</div>').join('')+'</div>';
+    +shipDispatches.map(shipWaitRowHtml).join('')+'</div>';
+}
+// 進料派車分頁上方也列自己這幾趟,叫完車不用切回待出貨分頁就能按「車到了」
+function shipMatWaitRender(){
+  const el=document.getElementById('ship-mat-wait'); if(!el) return;
+  const ins=shipDispatches.filter(shipIsIn);
+  el.innerHTML=ins.length?('<div class="ship-wait-box" style="margin-bottom:10px"><div class="ship-wait-h">進料等車中 '+ins.length+' 趟（車到了按這裡）</div>'
+    +ins.map(shipWaitRowHtml).join('')+'</div>'):'';
 }
 // ── 進料派車:叫車載材料進廠。只記「派車→車到」時間,不牽涉構件,也不做進料登記 ──
 // 訊息照現場講法:C棟D08需進料B820-8BB一疊 麻煩安排 謝謝(疊/支/剩餘全部三選一)
+// 「進料編號」其實就是工程編號-工程區,所以不再手打,改成兩個下拉;
+// 只列 BOM 裡還沒完成的:工程狀態不是「已完成」,而且底下還有非「已完成／轉包」的工程區。
 const SHIP_MAT_CN=['','一','兩','三','四','五','六','七','八','九','十'];
+let shipMatBom=null, shipMatBomLoading=null;
+function shipMatBomLoad(){
+  if(shipMatBom) return Promise.resolve(shipMatBom);
+  if(shipMatBomLoading) return shipMatBomLoading;
+  shipMatBomLoading=(async()=>{
+    const [pr,zr]=await Promise.all([
+      sbFetchAll('/rest/v1/projects?select=id,proj_num,proj_name,status'),
+      sbFetchAll('/rest/v1/zones?select=project_id,zone_code,status&order=zone_code')
+    ]);
+    const byId=new Map();
+    (Array.isArray(pr.data)?pr.data:[]).forEach(p=>{
+      const num=String(p.proj_num||'').trim();
+      if(!num||String(p.status||'').trim()==='已完成') return;
+      byId.set(p.id,{num:num,name:String(p.proj_name||'').trim(),zones:[]});
+    });
+    (Array.isArray(zr.data)?zr.data:[]).forEach(z=>{
+      const p=byId.get(z.project_id); if(!p) return;
+      const st=String(z.status||'').trim(), code=String(z.zone_code||'').trim();
+      if(!code||st==='已完成'||st===ZONE_SUB_STATUS) return;   // 已完成、轉包的區不用進料
+      p.zones.push({code:code,status:st});
+    });
+    shipMatBom=[...byId.values()].filter(p=>p.zones.length)
+      .sort((a,b)=>a.num.localeCompare(b.num,undefined,{numeric:true}));
+    return shipMatBom;
+  })();
+  shipMatBomLoading.then(()=>{ shipMatBomLoading=null; },()=>{ shipMatBomLoading=null; shipMatBom=null; });
+  return shipMatBomLoading;
+}
 function shipMatVal(id){ const el=document.getElementById(id); return el?String(el.value||'').trim():''; }
 function shipMatBeds(){ return shipMatVal('ship-mat-bed').split(/[.、,，\s]+/).map(x=>shipBedLabel(x)).filter(x=>x&&x!=='未排柱位'); }
 function shipMatQtyTxt(){
@@ -28827,23 +28869,49 @@ function shipMatQtyTxt(){
   if(mode==='pcs') return '約'+n+'支';
   return (n<=10?SHIP_MAT_CN[n]:String(n))+'疊';
 }
-function shipMatNote(){ return shipMatVal('ship-mat-part')+shipMatQtyTxt(); }
+// 進料編號 = 工程編號-工程區(兩個都選了才成立),訊息與 note 欄都沿用這個寫法
+function shipMatPart(){ const p=shipMatVal('ship-mat-proj'), z=shipMatVal('ship-mat-zone'); return (p&&z)?(p+'-'+z):''; }
+function shipMatNote(){ return shipMatPart()+shipMatQtyTxt(); }
 function shipMatText(){ return 'C棟'+shipMatBeds().join('.')+'需進料'+shipMatNote()+' 麻煩安排 謝謝'; }
 window.shipMatMsg=function(){
   const q=document.getElementById('ship-mat-qty'); if(q) q.disabled=shipMatVal('ship-mat-mode')==='all';
   const ta=document.getElementById('ship-mat-msg'); if(ta&&!ta.dataset.edited) ta.value=shipMatText();
-  const ok=!!(shipMatBeds().length&&shipMatVal('ship-mat-part'));
+  const ok=!!(shipMatBeds().length&&shipMatPart());
   ['ship-mat-ok','ship-mat-ok2'].forEach(id=>{ const b=document.getElementById(id); if(b) b.disabled=!ok; });
 };
-// 柱位打完自動帶工程編號/工程區(看板上那個柱位只對到一個工程時才帶,不用自己打)
+// 選了工程編號 → 工程區下拉換成那個工程底下還沒完成的區
+function shipMatZoneFill(){
+  const zs=document.getElementById('ship-mat-zone'); if(!zs) return;
+  const p=(shipMatBom||[]).find(x=>x.num===shipMatVal('ship-mat-proj'));
+  const cur=zs.value, zones=p?p.zones:[];
+  zs.innerHTML='<option value="">'+(p?'請選擇…':'（先選工程編號）')+'</option>'
+    +zones.map(z=>'<option value="'+esc(z.code)+'">'+esc(z.code)+(z.status?'（'+esc(z.status)+'）':'')+'</option>').join('');
+  if(cur&&zones.some(z=>z.code===cur)) zs.value=cur;
+}
+window.shipMatProjChange=function(){ shipMatZoneFill(); shipMatMsg(); };
+async function shipMatProjFill(){
+  if(!document.getElementById('ship-mat-proj')) return;
+  let list=[];
+  try{ list=await shipMatBomLoad(); }catch(e){ console.warn('ship mat bom',e); }
+  const el=document.getElementById('ship-mat-proj'); if(!el) return;   // 載入中看板被關掉了
+  const cur=el.value;
+  el.innerHTML=(list.length?'<option value="">請選擇…</option>':'<option value="">（讀不到未完成的工程）</option>')
+    +list.map(p=>'<option value="'+esc(p.num)+'">'+esc(p.num)+(p.name?'　'+esc(p.name):'')+'</option>').join('');
+  if(cur&&list.some(p=>p.num===cur)) el.value=cur;
+  shipMatZoneFill(); shipMatMsg();
+}
+// 柱位打完自動帶工程編號/工程區(看板上那個柱位只對到一個工程時才帶,不用自己選)
 window.shipMatBedFill=function(){
-  shipMatMsg();
-  const beds=shipMatBeds(); if(!beds.length) return;
-  const rows=shipBoardRows.filter(r=>beds.includes(r.bed));
-  const projs=[...new Set(rows.map(r=>r.proj).filter(Boolean))], zones=[...new Set(rows.map(r=>r.zone).filter(Boolean))];
+  const beds=shipMatBeds();
   const p=document.getElementById('ship-mat-proj'), z=document.getElementById('ship-mat-zone');
-  if(p&&!p.value&&projs.length===1) p.value=projs[0];
-  if(z&&!z.value&&zones.length===1) z.value=zones[0];
+  if(beds.length&&p&&z){
+    const rows=shipBoardRows.filter(r=>beds.includes(r.bed));
+    const projs=[...new Set(rows.map(r=>r.proj).filter(Boolean))], zones=[...new Set(rows.map(r=>r.zone).filter(Boolean))];
+    // 下拉裡沒有的(工程或工程區已完成)就不硬帶,讓他自己選
+    if(!p.value&&projs.length===1&&[...p.options].some(o=>o.value===projs[0])){ p.value=projs[0]; shipMatZoneFill(); }
+    if(!z.value&&zones.length===1&&[...z.options].some(o=>o.value===zones[0])) z.value=zones[0];
+  }
+  shipMatMsg();
 };
 // 從別的地方(例如選單)直接開進料派車
 window.shipMatOpen=async function(){ await openShipBoard(); shipTab('mat'); };
@@ -28853,25 +28921,25 @@ function shipMatRender(){
   const opts=beds.map(b=>'<option value="'+esc(b)+'"></option>').join('');
   if(box.querySelector('#ship-mat-bed')){   // 已經畫過:只更新柱位建議,不清掉打到一半的內容
     const dl=document.getElementById('ship-mat-beds'); if(dl) dl.innerHTML=opts;
-    shipMatMsg(); return;
+    shipMatWaitRender(); shipMatProjFill(); shipMatMsg(); return;
   }
-  box.innerHTML='<div class="ship-mat-form">'
-      +'<div class="ship-mat-row"><label><span>柱位（必填）</span><input id="ship-mat-bed" list="ship-mat-beds" placeholder="D08" autocomplete="off" oninput="shipMatBedFill()"></label>'
-        +'<label><span>進料編號（必填）</span><input id="ship-mat-part" placeholder="B820-8BB" autocomplete="off" oninput="shipMatMsg()"></label></div>'
+  box.innerHTML='<div id="ship-mat-wait"></div><div class="ship-mat-form">'
+      +'<div class="ship-mat-row"><label><span>柱位（必填）</span><input id="ship-mat-bed" list="ship-mat-beds" placeholder="D08" autocomplete="off" oninput="shipMatBedFill()"></label></div>'
       +'<datalist id="ship-mat-beds">'+opts+'</datalist>'
+      +'<div class="ship-mat-row"><label><span>工程編號（必填）</span><select id="ship-mat-proj" onchange="shipMatProjChange()"><option value="">載入中…</option></select></label>'
+        +'<label><span>工程區（必填）</span><select id="ship-mat-zone" onchange="shipMatMsg()"><option value="">（先選工程編號）</option></select></label></div>'
       +'<div class="ship-mat-row"><label class="narrow"><span>數量</span><select id="ship-mat-mode" onchange="shipMatMsg()"><option value="stack">疊</option><option value="pcs">支（約）</option><option value="all">剩餘全部</option></select></label>'
-        +'<label class="narrow"><span>幾</span><input id="ship-mat-qty" type="number" min="1" step="1" inputmode="numeric" value="1" oninput="shipMatMsg()"></label>'
-        +'<label><span>工程編號（選填）</span><input id="ship-mat-proj" autocomplete="off"></label>'
-        +'<label><span>工程區（選填）</span><input id="ship-mat-zone" autocomplete="off"></label></div>'
+        +'<label class="narrow"><span>幾</span><input id="ship-mat-qty" type="number" min="1" step="1" inputmode="numeric" value="1" oninput="shipMatMsg()"></label></div>'
       +'<label><span>派車訊息（可自己改）</span><textarea id="ship-mat-msg" class="ship-mat-msg" oninput="this.dataset.edited=1"></textarea></label>'
       +'<div class="ship-mat-hint" id="ship-mat-hint"></div>'
     +'</div>';
-  shipMatMsg();
+  shipMatWaitRender(); shipMatProjFill(); shipMatMsg();
   setTimeout(()=>{ const el=document.getElementById('ship-mat-bed'); if(el) el.focus(); },30);
 }
 window.shipMatSave=async function(copy){
   const beds=shipMatBeds(); if(!beds.length){ alert('請填柱位'); return; }
-  if(!shipMatVal('ship-mat-part')){ alert('請填進料編號'); return; }
+  if(!shipMatVal('ship-mat-proj')){ alert('請選工程編號'); return; }
+  if(!shipMatVal('ship-mat-zone')){ alert('請選工程區'); return; }
   const ta=document.getElementById('ship-mat-msg'), txt=ta?String(ta.value||'').trim():'';
   let copied=false;
   if(copy&&txt){   // 複製要在按鈕這個動作裡做完,先複製再寫資料庫
@@ -28901,7 +28969,8 @@ window.shipMatSave=async function(copy){
   shipTab('board');   // 回出貨分頁:剛記的這趟就在「等車中」,車到了按同一顆
 };
 function shipMatClear(){
-  ['ship-mat-part','ship-mat-proj','ship-mat-zone'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['ship-mat-proj','ship-mat-zone'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  shipMatZoneFill();
   const q=document.getElementById('ship-mat-qty'); if(q) q.value=1;
   const mo=document.getElementById('ship-mat-mode'); if(mo) mo.value='stack';
   const ta=document.getElementById('ship-mat-msg'); if(ta){ delete ta.dataset.edited; }
@@ -51630,17 +51699,40 @@ async function ldDashPlan(){
   });
   navigator.serviceWorker.addEventListener('message',function(ev){
     var d=ev.data||{};
-    if(d.type==='sc-new-version' && hadController) scShowUpdateBar();
+    if(d.type==='sc-new-version' && hadController) scShowUpdateBar(d.version);
     if(d.type==='sc-open' && d.url){ try{ var u=new URL(d.url); if(u.hash && u.hash!==location.hash) location.hash=u.hash; }catch(e){} }
   });
-  function scShowUpdateBar(){
-    if(document.getElementById('sc-update-bar')) return;
+  // 目前這份 index.html 的版本號(<meta name="sc-version">)
+  function scMyVer(){ var m=document.querySelector('meta[name="sc-version"]'); return m?String(m.content||'').trim():''; }
+  // 開著不動也要能發現新版:切回分頁、每 3 分鐘各問一次 service worker(最短間隔 60 秒)
+  var scLastAsk=0;
+  function scAskCheck(force){
+    var c=navigator.serviceWorker.controller;
+    if(!c || navigator.onLine===false) return;
+    if(!force && Date.now()-scLastAsk<60000) return;
+    scLastAsk=Date.now();
+    try{ c.postMessage({type:'sc-check'}); }catch(e){}
+  }
+  navigator.serviceWorker.ready.then(function(){ setTimeout(function(){ scAskCheck(true); },4000); }).catch(function(){});
+  setInterval(function(){ if(!document.hidden) scAskCheck(true); },3*60000);
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) scAskCheck(); });
+  window.addEventListener('focus',function(){ scAskCheck(); });
+  function scUpdateText(ver){
+    var cur=scMyVer();
+    if(ver && cur && ver!==cur) return '系統已更新：'+ver+'版（目前 '+cur+'）,請重新載入';
+    if(ver) return '系統已更新：'+ver+'版,請重新載入';
+    return '系統已更新'+(cur?'（目前 '+cur+'）':'')+',請重新載入';
+  }
+  function scShowUpdateBar(ver){
+    var old=document.getElementById('sc-update-bar');
+    if(old){ var sp=old.querySelector('span'); if(sp) sp.textContent=scUpdateText(ver); return; }
     var bar=document.createElement('div');
     bar.id='sc-update-bar';
     bar.style.cssText='position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:100000;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px;border-radius:10px;background:#1f7a55;color:#fff;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:calc(100vw - 32px)';
-    bar.innerHTML='<span>系統已更新,重新載入即可使用新版</span>'
+    bar.innerHTML='<span></span>'
       +'<button type="button" style="border:0;border-radius:6px;padding:6px 12px;background:#fff;color:#1f7a55;font-weight:600;font-size:14px;cursor:pointer">重新載入</button>'
       +'<button type="button" aria-label="關閉" style="border:0;background:transparent;color:#fff;font-size:18px;cursor:pointer;padding:0 4px">×</button>';
+    bar.querySelector('span').textContent=scUpdateText(ver);
     var btns=bar.querySelectorAll('button');
     btns[0].onclick=function(){ location.reload(); };
     btns[1].onclick=function(){ bar.remove(); };

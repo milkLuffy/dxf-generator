@@ -55,29 +55,48 @@ self.addEventListener('fetch', ev => {
   if (url.origin === SCOPE.origin && url.pathname.startsWith(SCOPE.pathname + 'assets/')) { ev.respondWith(staleWhileRevalidate(req)); return; }
 });
 
-function versionTag(res) {
-  return res && (res.headers.get('etag') || res.headers.get('last-modified') || '');
+// index.html 裡的 <meta name="sc-version" content="...">,拿來顯示「系統已更新 X 版」
+const VERSION_RE = /<meta\s+name=["']sc-version["']\s+content=["']([^"']+)["']/i;
+function versionOf(text) {
+  const m = text && text.match(VERSION_RE);
+  return m ? m[1] : '';
+}
+
+// 背景確認 index.html 有沒有新版。
+// 這裡比對「整份內容」而不是 ETag:ETag 會因為壓縮方式、CDN 節點不同而變,
+// 之前沒推新版也一直跳「系統已更新」就是這個原因。
+async function checkIndex(c, notify) {
+  const fresh = await fetch(INDEX_URL, { cache: 'no-cache' });   // 帶 ETag 去問,沒變伺服器只回 304,很省流量
+  if (!fresh.ok) return fresh;
+  const newText = await fresh.clone().text();
+  const prev = await c.match(INDEX_URL);
+  const oldText = prev ? await prev.text().catch(() => '') : '';
+  await c.put(INDEX_URL, fresh.clone());
+  if (notify && oldText && oldText !== newText) {
+    const msg = { type: 'sc-new-version', version: versionOf(newText), from: versionOf(oldText) };
+    const all = await self.clients.matchAll({ type: 'window' });
+    all.forEach(cl => cl.postMessage(msg));
+  }
+  return fresh;
 }
 
 async function serveIndex() {
   const c = await caches.open(SHELL_CACHE);
   const cached = await c.match(INDEX_URL);
-  const refresh = (async () => {
-    const fresh = await fetch(INDEX_URL, { cache: 'no-cache' });   // 用 ETag 確認,沒變只會回 304,很省流量
-    if (!fresh.ok) return fresh;
-    const changed = cached && versionTag(fresh) !== versionTag(cached);
-    await c.put(INDEX_URL, fresh.clone());
-    if (changed) {
-      const all = await self.clients.matchAll({ type: 'window' });
-      all.forEach(cl => cl.postMessage({ type: 'sc-new-version' }));
-    }
-    return fresh;
-  })();
+  const refresh = checkIndex(c, !!cached);
   refresh.catch(() => {});
   if (cached) return { response: cached, refresh };
   try { return { response: await refresh, refresh }; }
   catch (e) { return { refresh, response: new Response('<meta charset="utf-8"><p style="font:16px sans-serif;padding:24px">目前沒有網路,且這台裝置還沒有離線快取。請連上網路後再開一次。</p>', { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }) }; }
 }
+
+// 頁面開著不動時,由頁面每隔幾分鐘叫我們再確認一次(不用等到重新整理才發現新版)
+self.addEventListener('message', ev => {
+  const d = ev.data || {};
+  if (d.type === 'sc-check') {
+    ev.waitUntil(caches.open(SHELL_CACHE).then(c => checkIndex(c, true)).catch(() => {}));
+  }
+});
 
 async function cacheFirst(req) {
   const c = await caches.open(LIB_CACHE);
