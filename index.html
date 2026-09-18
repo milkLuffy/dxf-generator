@@ -1913,7 +1913,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .ship-cars{margin:0 0 8px;font-size:14px}
 .ship-cars input{width:64px;padding:4px 6px;font-size:15px;text-align:center;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text)}
 .ship-foot{border-top:1px solid var(--border);margin-top:10px;padding-top:10px}
-.ship-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin:-4px 0 10px}
+.ship-tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--border);margin:-4px 0 10px}
 .ship-tab{background:none;border:0;border-bottom:2px solid transparent;padding:6px 12px;color:var(--text3);font-weight:600;cursor:pointer}
 .ship-tab.active{color:var(--text);border-bottom-color:var(--accent2)}
 .ship-bed-recv{font-family:var(--mono);font-size:12px;color:var(--accent2)}
@@ -3890,7 +3890,7 @@ window.normalizeFullWidth=function(value){
         <div class="layout-tabs">
           <button class="layout-tab active" id="ltab-input" onclick="layoutSwitchTab('input')">明細輸入</button>
           <button class="layout-tab" id="ltab-chart" onclick="layoutSwitchTab('chart')">配置圖</button>
-          <button class="btn-sm btn-export" style="margin-left:auto;align-self:center" onclick="openShipBoard()" title="已報驗、還沒出貨的構件依柱位整理,可勾選產生派車訊息">🚛 待出貨看板</button>
+          <button class="btn-sm btn-export" style="margin-left:auto;align-self:center" onclick="openShipBoard()" title="出貨:已報驗未出貨的構件依柱位整理,勾選產生派車訊息;另有進料派車與派車紀錄">🚛 派車看板</button>
         </div>
 
         <!-- 明細輸入 -->
@@ -28542,28 +28542,33 @@ function shipModalEl(){
   if(m) return m;
   m=document.createElement('div'); m.className='modal-overlay'; m.id='ship-board-modal';
   m.onclick=e=>{ if(e.target===m) closeModal('ship-board-modal'); };
-  m.innerHTML='<div class="modal ship-modal"><div class="modal-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">🚛 待出貨看板'
+  m.innerHTML='<div class="modal ship-modal"><div class="modal-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">🚛 派車看板'
     +'<span id="ship-sum" style="font-size:12px;font-weight:400;color:var(--text3)"></span>'
     +'<button class="btn-sm" style="margin-left:auto" onclick="openShipBoard(true)">↻ 重新整理</button></div>'
     +'<div class="ship-tabs"><button type="button" class="ship-tab active" data-t="board" onclick="shipTab(\'board\')">待出貨</button>'
+    +'<button type="button" class="ship-tab" data-t="mat" onclick="shipTab(\'mat\')">進料派車</button>'
     +'<button type="button" class="ship-tab" data-t="hist" onclick="shipTab(\'hist\')">派車紀錄</button></div>'
     +'<div id="ship-body" class="ship-body"><div class="empty-state">載入中...</div></div>'
+    +'<div id="ship-mat" class="ship-body" style="display:none"></div>'
     +'<div id="ship-hist" class="ship-body" style="display:none"></div>'
     +'<div class="ship-foot" id="ship-foot"><div class="ship-cars" id="ship-cars" style="display:none"></div><textarea id="ship-msg" readonly placeholder="勾選柱位後,這裡會產生派車訊息"></textarea>'
     +'<div class="modal-actions" style="margin-top:8px"><button class="btn-modal-cancel" onclick="closeModal(\'ship-board-modal\')">關閉</button>'
     +'<button class="btn-modal-ok" id="ship-copy" onclick="shipCopyMsg()">複製派車訊息</button></div></div>'
+    +'<div class="modal-actions" id="ship-mat-foot" style="display:none"><button class="btn-modal-cancel" onclick="closeModal(\'ship-board-modal\')">關閉</button>'
+      +'<button class="btn-modal-cancel" id="ship-mat-ok2" onclick="shipMatSave(false)">只記派車時間</button>'
+      +'<button class="btn-modal-ok" id="ship-mat-ok" onclick="shipMatSave(true)">複製訊息並記派車時間</button></div>'
     +'<div class="modal-actions" id="ship-hist-foot" style="display:none"><button class="btn-modal-cancel" onclick="closeModal(\'ship-board-modal\')">關閉</button></div></div>';
   document.body.appendChild(m);
   return m;
 }
 window.shipTab=function(t){
   document.querySelectorAll('#ship-board-modal .ship-tab').forEach(b=>b.classList.toggle('active',b.dataset.t===t));
-  const hist=t==='hist';
-  document.getElementById('ship-body').style.display=hist?'none':'';
-  document.getElementById('ship-foot').style.display=hist?'none':'';
-  document.getElementById('ship-hist').style.display=hist?'':'none';
-  document.getElementById('ship-hist-foot').style.display=hist?'':'none';
-  if(hist) shipHistLoad();
+  const show=(id,on)=>{ const el=document.getElementById(id); if(el) el.style.display=on?'':'none'; };
+  show('ship-body',t==='board');    show('ship-foot',t==='board');
+  show('ship-mat', t==='mat');      show('ship-mat-foot', t==='mat');
+  show('ship-hist',t==='hist');     show('ship-hist-foot',t==='hist');
+  if(t==='mat')  shipMatRender();
+  if(t==='hist') shipHistLoad();
 };
 // 載入待出貨構件(看板與主頁分頁共用)。只抓「未出貨」的上線配置;每日產量只抓最早上線日之後的,主頁才不會變慢。
 let shipBoardLoadedAt=0, shipBoardLoading=null;
@@ -28665,7 +28670,7 @@ function shipRender(){
   const order=[...groups.keys()].sort(shipGroupOrder);
   const total=shipBoardRows.reduce((a,r)=>a+r.qty,0), bedCnt=new Set(shipBoardRows.map(r=>r.bed)).size;
   const sum=document.getElementById('ship-sum'); if(sum) sum.textContent=total?('共 '+total+' 支 · '+bedCnt+' 個柱位'):'';
-  if(!order.length){ body.innerHTML=shipWaitBoxHtml()+'<div class="empty-state">目前沒有已報驗、待出貨的構件</div>'; shipBuildMsg(); return; }
+  if(!order.length){ body.innerHTML=shipWaitBoxHtml()+'<div class="empty-state">目前沒有已報驗、待出貨的構件<br>要叫料進廠請切到上面的「進料派車」</div>'; shipBuildMsg(); return; }
   body.innerHTML=shipWaitBoxHtml()+order.map(key=>{
     const list=groups.get(key), sel=shipBoardSel[key]||{}, bed=shipGroupBed(key), recv=shipGroupRecv(key);
     const k=esc(key), noBed=bed==='未排柱位';
@@ -28800,9 +28805,8 @@ async function shipRecordDispatch(txt){
   setTimeout(()=>{ shipRender(); shipDashRender(); },2600);   // 等「已複製」字樣顯示完再重畫
 }
 function shipWaitBoxHtml(){
-  if(shipDispatchReady===false) return '<div class="ship-wait-note">尚未建立派車紀錄表(ship_dispatches_migration.sql),派車時間不會記錄</div>';
-  return '<div class="ship-wait-box"><div class="ship-wait-h">等車中 '+shipDispatches.length+' 趟'
-      +'<button class="btn-sm btn-export" onclick="shipMatOpen()" title="叫車載材料進廠:記派車時間,車到再按一下">＋ 進料派車</button></div>'
+  if(!shipDispatches.length) return shipDispatchReady===false?'<div class="ship-wait-note">尚未建立派車紀錄表(ship_dispatches_migration.sql),派車時間不會記錄</div>':'';
+  return '<div class="ship-wait-box"><div class="ship-wait-h">等車中 '+shipDispatches.length+' 趟（含進料）</div>'
     +shipDispatches.map(d=>'<div class="ship-wait-row">'
       +(shipIsIn(d)?'<span class="ship-tag-in">進料</span>':'')
       +'<span class="ship-wait-msg">'+esc(shipDispatchLabel(d))+'</span>'
@@ -28841,33 +28845,30 @@ window.shipMatBedFill=function(){
   if(p&&!p.value&&projs.length===1) p.value=projs[0];
   if(z&&!z.value&&zones.length===1) z.value=zones[0];
 };
-window.shipMatOpen=function(){
-  let m=document.getElementById('ship-mat-modal');
-  if(!m){
-    m=document.createElement('div'); m.className='modal-overlay'; m.id='ship-mat-modal';
-    m.onclick=e=>{ if(e.target===m) closeModal('ship-mat-modal'); };
-    document.body.appendChild(m);
-  }
+// 從別的地方(例如選單)直接開進料派車
+window.shipMatOpen=async function(){ await openShipBoard(); shipTab('mat'); };
+function shipMatRender(){
+  const box=document.getElementById('ship-mat'); if(!box) return;
   const beds=[...new Set(shipBoardRows.map(r=>r.bed))].filter(b=>b&&b!=='未排柱位').sort(shipBedOrder);
-  m.innerHTML='<div class="modal ship-modal" style="max-width:520px"><div class="modal-title">🚛 進料派車</div>'
-    +'<div class="ship-mat-form">'
+  const opts=beds.map(b=>'<option value="'+esc(b)+'"></option>').join('');
+  if(box.querySelector('#ship-mat-bed')){   // 已經畫過:只更新柱位建議,不清掉打到一半的內容
+    const dl=document.getElementById('ship-mat-beds'); if(dl) dl.innerHTML=opts;
+    shipMatMsg(); return;
+  }
+  box.innerHTML='<div class="ship-mat-form">'
       +'<div class="ship-mat-row"><label><span>柱位（必填）</span><input id="ship-mat-bed" list="ship-mat-beds" placeholder="D08" autocomplete="off" oninput="shipMatBedFill()"></label>'
         +'<label><span>進料編號（必填）</span><input id="ship-mat-part" placeholder="B820-8BB" autocomplete="off" oninput="shipMatMsg()"></label></div>'
-      +'<datalist id="ship-mat-beds">'+beds.map(b=>'<option value="'+esc(b)+'"></option>').join('')+'</datalist>'
+      +'<datalist id="ship-mat-beds">'+opts+'</datalist>'
       +'<div class="ship-mat-row"><label class="narrow"><span>數量</span><select id="ship-mat-mode" onchange="shipMatMsg()"><option value="stack">疊</option><option value="pcs">支（約）</option><option value="all">剩餘全部</option></select></label>'
         +'<label class="narrow"><span>幾</span><input id="ship-mat-qty" type="number" min="1" step="1" inputmode="numeric" value="1" oninput="shipMatMsg()"></label>'
         +'<label><span>工程編號（選填）</span><input id="ship-mat-proj" autocomplete="off"></label>'
         +'<label><span>工程區（選填）</span><input id="ship-mat-zone" autocomplete="off"></label></div>'
       +'<label><span>派車訊息（可自己改）</span><textarea id="ship-mat-msg" class="ship-mat-msg" oninput="this.dataset.edited=1"></textarea></label>'
       +'<div class="ship-mat-hint" id="ship-mat-hint"></div>'
-    +'</div>'
-    +'<div class="modal-actions"><button class="btn-modal-cancel" onclick="closeModal(\'ship-mat-modal\')">取消</button>'
-    +'<button class="btn-modal-cancel" id="ship-mat-ok2" onclick="shipMatSave(false)">只記派車時間</button>'
-    +'<button class="btn-modal-ok" id="ship-mat-ok" onclick="shipMatSave(true)">複製訊息並記派車時間</button></div></div>';
-  openModal('ship-mat-modal');
+    +'</div>';
   shipMatMsg();
   setTimeout(()=>{ const el=document.getElementById('ship-mat-bed'); if(el) el.focus(); },30);
-};
+}
 window.shipMatSave=async function(copy){
   const beds=shipMatBeds(); if(!beds.length){ alert('請填柱位'); return; }
   if(!shipMatVal('ship-mat-part')){ alert('請填進料編號'); return; }
@@ -28890,14 +28891,23 @@ window.shipMatSave=async function(copy){
   }
   if(Array.isArray(r.data)) shipDispatches=shipDispatches.concat(r.data);
   shipRender(); shipDashRender();
-  if(copy&&!copied){   // 複製失敗:視窗留著讓他自己選取複製,時間已經記下了
+  if(copy&&!copied){   // 複製失敗:表單留著讓他自己選取複製,時間已經記下了
     const h=document.getElementById('ship-mat-hint');
     if(h) h.textContent='訊息沒複製成功,請自己選取上面的訊息複製(派車時間已經記下了)';
     ['ship-mat-ok','ship-mat-ok2'].forEach(id=>{ const b=document.getElementById(id); if(b) b.disabled=true; });
     return;
   }
-  closeModal('ship-mat-modal');
+  shipMatClear();
+  shipTab('board');   // 回出貨分頁:剛記的這趟就在「等車中」,車到了按同一顆
 };
+function shipMatClear(){
+  ['ship-mat-part','ship-mat-proj','ship-mat-zone'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const q=document.getElementById('ship-mat-qty'); if(q) q.value=1;
+  const mo=document.getElementById('ship-mat-mode'); if(mo) mo.value='stack';
+  const ta=document.getElementById('ship-mat-msg'); if(ta){ delete ta.dataset.edited; }
+  const h=document.getElementById('ship-mat-hint'); if(h) h.textContent='';
+  shipMatMsg();
+}
 // 進料的「車到了」:只記到達時間,不用勾構件
 window.shipArriveIn=async function(id){
   const d=shipDispatches.find(x=>Number(x.id)===Number(id)); if(!d) return;
