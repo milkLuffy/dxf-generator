@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.18.1"/>
+<meta name="sc-version" content="2026.09.18.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1941,6 +1941,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .ship-mat-row>label.narrow{flex:0 1 96px}
 .ship-mat-msg{box-sizing:border-box;width:100%;min-height:56px;resize:vertical;font-family:var(--mono);font-size:13px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px}
 .ship-mat-hint{font-size:12px;color:var(--danger,#e0555b)}
+.ship-mat-recent{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--text3)}
+.ship-mat-recent:empty{display:none}
+.ship-mat-chip{border:1px solid var(--border);background:var(--bg3);color:var(--text);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--mono)}
+.ship-mat-chip:hover{border-color:var(--accent2);color:var(--accent2)}
+.ship-mat-chip.on{border-color:var(--accent2);background:rgba(90,170,255,.14);color:var(--accent2)}
 .ship-wait-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 0;border-top:1px dashed var(--border);font-size:13px}
 .ship-wait-row:first-of-type{border-top:0}
 .ship-wait-msg{font-weight:600}
@@ -28616,6 +28621,7 @@ function shipGroupOrder(a,b){
     ||((shipGroupRecv(a)?0:1)-(shipGroupRecv(b)?0:1))||shipGroupRecv(a).localeCompare(shipGroupRecv(b));
 }
 async function openShipBoard(reload, pickKey){
+  if(reload) shipMatBom=null;   // ↻ 重新整理連進料選單一起重抓(工程區可能剛上線完)
   shipModalEl(); openModal('ship-board-modal'); shipTab('board');
   const body=document.getElementById('ship-body');
   if(reload||!shipBoardLoadedAt||Date.now()-shipBoardLoadedAt>5*60000){
@@ -28829,36 +28835,111 @@ function shipMatWaitRender(){
 }
 // ── 進料派車:叫車載材料進廠。只記「派車→車到」時間,不牽涉構件,也不做進料登記 ──
 // 訊息照現場講法:C棟D08需進料B820-8BB一疊 麻煩安排 謝謝(疊/支/剩餘全部三選一)
-// 「進料編號」其實就是工程編號-工程區,所以不再手打,改成兩個下拉;
-// 只列 BOM 裡還沒完成的:工程狀態不是「已完成」,而且底下還有非「已完成／轉包」的工程區。
+// 「進料編號」其實就是工程編號-工程區,所以不再手打,改成兩個下拉。
+// 選單只留「還需要進料」的,不然太雜 —— 以下都不列:
+//   工程:狀態 已完成／異常／轉包
+//   工程區:狀態 已完成／轉包
+//   工程區:BOM 構件的 A201(上線日期)已經全部登記完 → 料都進來了,不用再叫
+// A201 判定與工程區狀態引擎同一套:layout_items 有上線日期,或 component_ext.extra.A201 有值
+// (托樑走 extra.A201);非本公司製作的構件不列入計算。
 const SHIP_MAT_CN=['','一','兩','三','四','五','六','七','八','九','十'];
-let shipMatBom=null, shipMatBomLoading=null;
+const SHIP_MAT_SKIP_PROJ=['已完成','異常','轉包'];
+let shipMatBom=null, shipMatBomLoading=null, shipMatRecent=[];
+// in.(...) 一次塞太多會讓網址過長,切段抓再合併
+async function shipMatFetchIn(path, values, chunk){
+  const out=[];
+  for(let i=0;i<values.length;i+=chunk){
+    const r=await sbFetchAll(path+'('+values.slice(i,i+chunk).join(',')+')');
+    if(Array.isArray(r.data)) out.push(...r.data);
+  }
+  return out;
+}
+function shipMatKey(proj,zone){ return String(proj||'').trim().toUpperCase()+'||'+String(zone||'').trim(); }
 function shipMatBomLoad(){
   if(shipMatBom) return Promise.resolve(shipMatBom);
   if(shipMatBomLoading) return shipMatBomLoading;
   shipMatBomLoading=(async()=>{
     const [pr,zr]=await Promise.all([
       sbFetchAll('/rest/v1/projects?select=id,proj_num,proj_name,status'),
-      sbFetchAll('/rest/v1/zones?select=project_id,zone_code,status&order=zone_code')
+      sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,status&order=zone_code')
     ]);
     const byId=new Map();
     (Array.isArray(pr.data)?pr.data:[]).forEach(p=>{
-      const num=String(p.proj_num||'').trim();
-      if(!num||String(p.status||'').trim()==='已完成') return;
-      byId.set(p.id,{num:num,name:String(p.proj_name||'').trim(),zones:[]});
+      const num=String(p.proj_num||'').trim(), st=String(p.status||'').trim();
+      if(!num||SHIP_MAT_SKIP_PROJ.includes(st)) return;
+      byId.set(p.id,{num:num,name:String(p.proj_name||'').trim(),status:st,zones:[]});
     });
+    const cand=[];   // 還沒篩 A201 的候選工程區
     (Array.isArray(zr.data)?zr.data:[]).forEach(z=>{
       const p=byId.get(z.project_id); if(!p) return;
       const st=String(z.status||'').trim(), code=String(z.zone_code||'').trim();
-      if(!code||st==='已完成'||st===ZONE_SUB_STATUS) return;   // 已完成、轉包的區不用進料
-      p.zones.push({code:code,status:st});
+      if(!code||st==='已完成'||st===ZONE_SUB_STATUS) return;
+      const zone={id:z.id,code:code,status:st,proj:p};
+      cand.push(zone); p.zones.push(zone);
     });
+    // A201 全數上線的工程區踢掉
+    const doneZones=await shipMatAllOnlineZones(cand);
+    byId.forEach(p=>{ p.zones=p.zones.filter(z=>!doneZones.has(z.id))
+      .sort((a,b)=>bomStatusIdx(a.status)-bomStatusIdx(b.status)||a.code.localeCompare(b.code,undefined,{numeric:true})); });
     shipMatBom=[...byId.values()].filter(p=>p.zones.length)
-      .sort((a,b)=>a.num.localeCompare(b.num,undefined,{numeric:true}));
+      .sort((a,b)=>bomStatusIdx(a.status)-bomStatusIdx(b.status)||a.num.localeCompare(b.num,undefined,{numeric:true}));
+    await shipMatRecentLoad();
     return shipMatBom;
   })();
   shipMatBomLoading.then(()=>{ shipMatBomLoading=null; },()=>{ shipMatBomLoading=null; shipMatBom=null; });
   return shipMatBomLoading;
+}
+// 回傳「BOM 構件 A201 全部登記完」的工程區 id;沒有 BOM 構件的區不算(資料還沒匯,照樣要進料)
+async function shipMatAllOnlineZones(cand){
+  const done=new Set();
+  if(!cand.length) return done;
+  const zoneIds=cand.map(z=>z.id).filter(x=>x!=null);
+  const projNums=[...new Set(cand.map(z=>z.proj.num))].map(n=>'"'+n.replace(/"/g,'')+'"');
+  const [comps,exts,lays]=await Promise.all([
+    shipMatFetchIn('/rest/v1/components?select=zone_id,part_no&zone_id=in.', zoneIds, 200),
+    shipMatFetchIn('/rest/v1/component_ext?select=zone_id,part_no,extra&zone_id=in.', zoneIds, 200),
+    shipMatFetchIn('/rest/v1/layout_items?select=proj_num,zone_code,part_no&work_date=not.is.null&proj_num=in.', projNums, 100)
+  ]);
+  const extBy=new Map(); exts.forEach(e=>extBy.set(e.zone_id+'|'+e.part_no, e.extra||{}));
+  const onlineBy=new Map();   // 工程編號||工程區 → 已上線的構件編號
+  lays.forEach(l=>{
+    if(!l.part_no) return;
+    const k=shipMatKey(l.proj_num,l.zone_code);
+    if(!onlineBy.has(k)) onlineBy.set(k,new Set());
+    onlineBy.get(k).add(String(l.part_no).trim().toUpperCase());
+  });
+  const partsBy=new Map(); comps.forEach(c=>{ if(!partsBy.has(c.zone_id)) partsBy.set(c.zone_id,[]); partsBy.get(c.zone_id).push(c.part_no); });
+  cand.forEach(z=>{
+    const parts=partsBy.get(z.id)||[];
+    const online=onlineBy.get(shipMatKey(z.proj.num,z.code))||new Set();
+    let total=0, on=0;
+    parts.forEach(pn=>{
+      const e=extBy.get(z.id+'|'+pn)||{};
+      if(e[NONCO_KEY]==='1'||e[NONCO_KEY]===true) return;   // 非本公司製作,不列入
+      total++;
+      if(online.has(String(pn||'').trim().toUpperCase())||(e.A201&&String(e.A201).trim())) on++;
+    });
+    if(total>0&&on>=total) done.add(z.id);
+  });
+  return done;
+}
+// 最近兩筆進料的工程編號-工程區(直接從派車紀錄推,不另存)。
+// 只留還在選單裡的 —— A201 全數上線、工程區完工的會自動掉出去,換下一筆遞補。
+async function shipMatRecentLoad(){
+  shipMatRecent=[];
+  if(shipDispatchReady===false) return;
+  const r=await sbFetch('/rest/v1/ship_dispatches?select=proj_num,zone_code,dispatched_at&dir=eq.in&proj_num=not.is.null&order=dispatched_at.desc&limit=60');
+  if(!r.ok||!Array.isArray(r.data)) return;
+  const seen=new Set();
+  for(const d of r.data){
+    const proj=String(d.proj_num||'').trim(), zone=String(d.zone_code||'').trim();
+    if(!proj||!zone) continue;
+    const k=proj+'-'+zone; if(seen.has(k)) continue;
+    const p=(shipMatBom||[]).find(x=>x.num===proj);
+    if(!p||!p.zones.some(z=>z.code===zone)) continue;   // 已經不在選單裡就跳過,換下一筆
+    seen.add(k); shipMatRecent.push({proj:proj,zone:zone});
+    if(shipMatRecent.length>=2) break;
+  }
 }
 function shipMatVal(id){ const el=document.getElementById(id); return el?String(el.value||'').trim():''; }
 function shipMatBeds(){ return shipMatVal('ship-mat-bed').split(/[.、,，\s]+/).map(x=>shipBedLabel(x)).filter(x=>x&&x!=='未排柱位'); }
@@ -28878,27 +28959,57 @@ window.shipMatMsg=function(){
   const ta=document.getElementById('ship-mat-msg'); if(ta&&!ta.dataset.edited) ta.value=shipMatText();
   const ok=!!(shipMatBeds().length&&shipMatPart());
   ['ship-mat-ok','ship-mat-ok2'].forEach(id=>{ const b=document.getElementById(id); if(b) b.disabled=!ok; });
+  shipMatRecentRender();
 };
-// 選了工程編號 → 工程區下拉換成那個工程底下還沒完成的區
+// 選了工程編號 → 工程區下拉換成那個工程底下還要進料的區(進行中排前面)
 function shipMatZoneFill(){
   const zs=document.getElementById('ship-mat-zone'); if(!zs) return;
   const p=(shipMatBom||[]).find(x=>x.num===shipMatVal('ship-mat-proj'));
   const cur=zs.value, zones=p?p.zones:[];
   zs.innerHTML='<option value="">'+(p?'請選擇…':'（先選工程編號）')+'</option>'
-    +zones.map(z=>'<option value="'+esc(z.code)+'">'+esc(z.code)+(z.status?'（'+esc(z.status)+'）':'')+'</option>').join('');
+    +shipMatGroupOpts(zones,z=>z.status,z=>z.code,z=>z.code);
   if(cur&&zones.some(z=>z.code===cur)) zs.value=cur;
 }
+// 依狀態分組(進行中 → 未開始 → 其他),同組內維持原本排序
+function shipMatGroupOpts(list,stOf,valOf,txtOf){
+  const groups=[];
+  list.forEach(x=>{
+    const st=String(stOf(x)||'').trim()||'其他';
+    let g=groups.find(y=>y.st===st); if(!g){ g={st:st,items:[]}; groups.push(g); }
+    g.items.push(x);
+  });
+  groups.sort((a,b)=>bomStatusIdx(a.st)-bomStatusIdx(b.st));
+  return groups.map(g=>'<optgroup label="'+esc(g.st)+'">'
+    +g.items.map(x=>'<option value="'+esc(valOf(x))+'">'+esc(txtOf(x))+'</option>').join('')+'</optgroup>').join('');
+}
 window.shipMatProjChange=function(){ shipMatZoneFill(); shipMatMsg(); };
+// 點最近進料的那顆按鈕:工程編號、工程區一次帶好
+window.shipMatPick=function(proj,zone){
+  const p=document.getElementById('ship-mat-proj'), z=document.getElementById('ship-mat-zone');
+  if(!p||!z) return;
+  p.value=proj; shipMatZoneFill(); z.value=zone;
+  shipMatMsg(); shipMatRecentRender();
+  const bed=document.getElementById('ship-mat-bed'); if(bed&&!bed.value) bed.focus();
+};
+function shipMatRecentRender(){
+  const el=document.getElementById('ship-mat-recent'); if(!el) return;
+  if(!shipMatRecent.length){ el.innerHTML=''; return; }
+  const cur=shipMatPart();
+  el.innerHTML='<span>最近進料</span>'+shipMatRecent.map(x=>{
+    const k=x.proj+'-'+x.zone;
+    return '<button type="button" class="ship-mat-chip'+(cur===k?' on':'')+'" onclick="shipMatPick(\''+esc(x.proj)+'\',\''+esc(x.zone)+'\')">'+esc(k)+'</button>';
+  }).join('');
+}
 async function shipMatProjFill(){
   if(!document.getElementById('ship-mat-proj')) return;
   let list=[];
   try{ list=await shipMatBomLoad(); }catch(e){ console.warn('ship mat bom',e); }
   const el=document.getElementById('ship-mat-proj'); if(!el) return;   // 載入中看板被關掉了
   const cur=el.value;
-  el.innerHTML=(list.length?'<option value="">請選擇…</option>':'<option value="">（讀不到未完成的工程）</option>')
-    +list.map(p=>'<option value="'+esc(p.num)+'">'+esc(p.num)+(p.name?'　'+esc(p.name):'')+'</option>').join('');
+  el.innerHTML=(list.length?'<option value="">請選擇…</option>':'<option value="">（沒有還需要進料的工程）</option>')
+    +shipMatGroupOpts(list,p=>p.status,p=>p.num,p=>p.num+(p.name?'　'+p.name:''));
   if(cur&&list.some(p=>p.num===cur)) el.value=cur;
-  shipMatZoneFill(); shipMatMsg();
+  shipMatZoneFill(); shipMatRecentRender(); shipMatMsg();
 }
 // 柱位打完自動帶工程編號/工程區(看板上那個柱位只對到一個工程時才帶,不用自己選)
 window.shipMatBedFill=function(){
@@ -28926,6 +29037,7 @@ function shipMatRender(){
   box.innerHTML='<div id="ship-mat-wait"></div><div class="ship-mat-form">'
       +'<div class="ship-mat-row"><label><span>柱位（必填）</span><input id="ship-mat-bed" list="ship-mat-beds" placeholder="D08" autocomplete="off" oninput="shipMatBedFill()"></label></div>'
       +'<datalist id="ship-mat-beds">'+opts+'</datalist>'
+      +'<div class="ship-mat-recent" id="ship-mat-recent"></div>'
       +'<div class="ship-mat-row"><label><span>工程編號（必填）</span><select id="ship-mat-proj" onchange="shipMatProjChange()"><option value="">載入中…</option></select></label>'
         +'<label><span>工程區（必填）</span><select id="ship-mat-zone" onchange="shipMatMsg()"><option value="">（先選工程編號）</option></select></label></div>'
       +'<div class="ship-mat-row"><label class="narrow"><span>數量</span><select id="ship-mat-mode" onchange="shipMatMsg()"><option value="stack">疊</option><option value="pcs">支（約）</option><option value="all">剩餘全部</option></select></label>'
@@ -28958,6 +29070,8 @@ window.shipMatSave=async function(copy){
     return;
   }
   if(Array.isArray(r.data)) shipDispatches=shipDispatches.concat(r.data);
+  shipMatRecent=[{proj:rec.proj_num,zone:rec.zone_code}]
+    .concat(shipMatRecent.filter(x=>!(x.proj===rec.proj_num&&x.zone===rec.zone_code))).slice(0,2);
   shipRender(); shipDashRender();
   if(copy&&!copied){   // 複製失敗:表單留著讓他自己選取複製,時間已經記下了
     const h=document.getElementById('ship-mat-hint');
