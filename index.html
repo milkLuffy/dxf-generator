@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.18.2"/>
+<meta name="sc-version" content="2026.09.18.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -51813,7 +51813,12 @@ async function ldDashPlan(){
   });
   navigator.serviceWorker.addEventListener('message',function(ev){
     var d=ev.data||{};
-    if(d.type==='sc-new-version' && hadController) scShowUpdateBar(d.version);
+    if(d.type==='sc-new-version' && hadController){
+      // 已經在跑這個版本了就不用吵他(通常是快取沒更新到,悄悄叫 sw 把舊的丟掉就好)
+      if(d.version && d.version===scMyVer()) scAskReset();
+      else scShowUpdateBar(d.version);
+    }
+    if(d.type==='sc-reset-done' && scReloadPending){ scReloadPending=false; location.reload(); }
     if(d.type==='sc-open' && d.url){ try{ var u=new URL(d.url); if(u.hash && u.hash!==location.hash) location.hash=u.hash; }catch(e){} }
   });
   // 目前這份 index.html 的版本號(<meta name="sc-version">)
@@ -51831,6 +51836,20 @@ async function ldDashPlan(){
   setInterval(function(){ if(!document.hidden) scAskCheck(true); },3*60000);
   document.addEventListener('visibilitychange',function(){ if(!document.hidden) scAskCheck(); });
   window.addEventListener('focus',function(){ scAskCheck(); });
+  // 叫 service worker 丟掉快取裡那份 index.html,下次載入一定走網路
+  var scReloadPending=false;
+  function scAskReset(){
+    var c=navigator.serviceWorker.controller;
+    if(!c) return false;
+    try{ c.postMessage({type:'sc-reset'}); return true; }catch(e){ return false; }
+  }
+  // 按「重新載入」:先請 sw 把舊快取丟掉再重整,不然快取存不進去時會一直重整還是舊版
+  function scReload(){
+    if(scAskReset()){
+      scReloadPending=true;
+      setTimeout(function(){ if(scReloadPending){ scReloadPending=false; location.reload(); } },1200);   // sw 沒回也照樣重整
+    } else { location.reload(); }
+  }
   function scUpdateText(ver){
     var cur=scMyVer();
     if(ver && cur && ver!==cur) return '系統已更新：'+ver+'版（目前 '+cur+'）,請重新載入';
@@ -51848,7 +51867,7 @@ async function ldDashPlan(){
       +'<button type="button" aria-label="關閉" style="border:0;background:transparent;color:#fff;font-size:18px;cursor:pointer;padding:0 4px">×</button>';
     bar.querySelector('span').textContent=scUpdateText(ver);
     var btns=bar.querySelectorAll('button');
-    btns[0].onclick=function(){ location.reload(); };
+    btns[0].onclick=function(){ btns[0].disabled=true; btns[0].textContent='載入中…'; scReload(); };
     btns[1].onclick=function(){ bar.remove(); };
     document.body.appendChild(bar);
   }

@@ -71,9 +71,18 @@ async function checkIndex(c, notify) {
   const newText = await fresh.clone().text();
   const prev = await c.match(INDEX_URL);
   const oldText = prev ? await prev.text().catch(() => '') : '';
-  await c.put(INDEX_URL, fresh.clone());
-  if (notify && oldText && oldText !== newText) {
-    const msg = { type: 'sc-new-version', version: versionOf(newText), from: versionOf(oldText) };
+  const changed = !!oldText && oldText !== newText;
+  // index.html 有 3MB 以上,快取空間不足時 put 會失敗。
+  // 以前這裡失敗是無聲的,結果快取永遠停在舊版 → 每次開都拿舊的、每次都跳「系統已更新」,
+  // 按重新載入也沒用。現在存不進去就把舊的那份刪掉,下次直接走網路拿新版。
+  let stored = true;
+  try { await c.put(INDEX_URL, fresh.clone()); }
+  catch (e) {
+    stored = false;
+    try { await c.delete(INDEX_URL); } catch (e2) {}
+  }
+  if (notify && changed) {
+    const msg = { type: 'sc-new-version', version: versionOf(newText), from: versionOf(oldText), stored };
     const all = await self.clients.matchAll({ type: 'window' });
     all.forEach(cl => cl.postMessage(msg));
   }
@@ -91,10 +100,16 @@ async function serveIndex() {
 }
 
 // 頁面開著不動時,由頁面每隔幾分鐘叫我們再確認一次(不用等到重新整理才發現新版)
+// sc-reset:按「重新載入」時先把快取那份 index.html 丟掉,確保重整一定拿到新版
 self.addEventListener('message', ev => {
   const d = ev.data || {};
   if (d.type === 'sc-check') {
     ev.waitUntil(caches.open(SHELL_CACHE).then(c => checkIndex(c, true)).catch(() => {}));
+  }
+  if (d.type === 'sc-reset') {
+    const done = caches.open(SHELL_CACHE).then(c => c.delete(INDEX_URL)).catch(() => {});
+    ev.waitUntil(done);
+    if (ev.source) done.then(() => { try { ev.source.postMessage({ type: 'sc-reset-done' }); } catch (e) {} });
   }
 });
 
