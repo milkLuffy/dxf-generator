@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.18.10"/>
+<meta name="sc-version" content="2026.09.18.11"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -44499,10 +44499,17 @@ function spTrackZoneChecks(g){
   return all.map(z=>'<label style="display:inline-flex;align-items:center;gap:5px;margin:3px 10px 3px 0;cursor:pointer"><input type="checkbox" '+((g.zones||[]).includes(z)?'checked ':'')+'onchange="spTrackToggleZone(\''+z.replace(/'/g,"\\'")+'\',this.checked,this)"><span>'+esc(z)+'</span></label>').join('');
 }
 function spTrackZoneEditor(g){return '<div class="sp-notion-tags">'+(g.zones||[]).map(z=>'<span class="sp-zone-tag" style="gap:5px">'+esc(z)+'<button type="button" title="移除" style="border:0;background:none;color:inherit;cursor:pointer;padding:0" onclick="spTrackRemoveZone(\''+z.replace(/'/g,"\\'")+'\')">×</button></span>').join('')+'</div>';}
+// 在工程區詳情頁,g.rows 只含「有這個工程區」的列 —— 拿它去判斷別的工程區會看錯(顯示沒打勾),
+// 也會把既有的列當成不存在而重複新增。這個 CP 的某個項目到底有哪幾列,一律回頭查完整的 prodTrack。
+function spTrackGroupItemRows(g,item){
+  const key=g&&g.key; if(!key) return [];
+  const it=String(item||'');
+  return (prodTrack||[]).filter(r=>spTrackGroupKey(r)===key&&String(r.item||'')===it);
+}
 function spTrackReceiptAllocationHTML(g){
   const meta=g?.receiptMeta;if(!meta)return'';const zones=[...meta.zones],items=[...meta.items].sort((a,b)=>PROD_ITEMS.indexOf(a)-PROD_ITEMS.indexOf(b));if(zones.length===1)return'';if(!zones.length||!items.length)return'<div class="sp-receipt-allocation"><div class="sp-allocation-title">工程區項目配置</div><div class="prod-no">收圖資料尚未提供可配置的工程區或 SP 項目。</div></div>';
   const head='<div class="sp-allocation-cell sp-allocation-item">項目＼工程區</div>'+zones.map(z=>'<div class="sp-allocation-cell"><span class="sp-zone-tag">'+esc(z)+'</span></div>').join('');
-  const rows=items.map(item=>'<div class="sp-allocation-cell sp-allocation-item">'+prodItemTag(item)+'</div>'+zones.map(zone=>{const checked=g.rows.some(r=>!r._receiptVirtual&&String(r.item||'')===item&&spTrackZones(r.zone).includes(zone));return '<label class="sp-allocation-cell"><input type="checkbox" data-item="'+esc(item)+'" data-zone="'+esc(zone)+'" '+(checked?'checked ':'')+'onchange="spTrackSetReceiptAllocation(this.dataset.item,this.dataset.zone,this.checked,this)"></label>';}).join('')).join('');
+  const rows=items.map(item=>'<div class="sp-allocation-cell sp-allocation-item">'+prodItemTag(item)+'</div>'+zones.map(zone=>{const checked=spTrackGroupItemRows(g,item).some(r=>spTrackZones(r.zone).includes(zone));return '<label class="sp-allocation-cell"><input type="checkbox" data-item="'+esc(item)+'" data-zone="'+esc(zone)+'" '+(checked?'checked ':'')+'onchange="spTrackSetReceiptAllocation(this.dataset.item,this.dataset.zone,this.checked,this)"></label>';}).join('')).join('');
   return '<div class="sp-receipt-allocation"><div class="sp-allocation-title">工程區項目配置｜勾選該工程區實際具有的項目</div><div class="sp-allocation-grid" style="grid-template-columns:145px repeat('+zones.length+',minmax(78px,1fr))">'+head+rows+'</div></div>';
 }
 let spTrackModalEditGroups={};
@@ -44565,7 +44572,7 @@ async function spTrackSetReceiptAllocation(item,zone,on,el){
   const g=spTrackModalGroup; if(!g?.receiptMeta) return;
   el.disabled=true;
   const key=g.key;
-  const itemRows=g.rows.filter(r=>!r._receiptVirtual&&String(r.item||'')===item);
+  const itemRows=spTrackGroupItemRows(g,item);   // 不能用 g.rows:工程區詳情頁只看得到本區的列
   const matching=itemRows.filter(r=>spTrackZones(r.zone).includes(zone));
   const fail=()=>{ el.checked=!on; el.disabled=false; spxHint('工程區項目配置儲存失敗',true); };
   if(on&&!matching.length){
