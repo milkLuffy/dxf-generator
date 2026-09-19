@@ -29407,11 +29407,10 @@ window.shipMatSave=async function(copy){
     proj_num:shipMatVal('ship-mat-proj')||null, zone_code:shipMatVal('ship-mat-zone')||null,
     created_by_name:(currentUser&&currentUser.name)||''};
   const r=await sbFetch('/rest/v1/ship_dispatches',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify([rec])});
-  if(!r.ok){
-    const err=JSON.stringify(r.data||'');
-    alert(/dir|note|proj_num|zone_code/.test(err)
-      ? '進料派車要先執行 ship_dispatches_migration.sql(補 dir／note／proj_num／zone_code 欄位)'
-      : '記錄失敗('+r.status+')');
+  if(!r.ok){   // 直接把資料庫回的原因顯示出來,不然只看到 400 不知道要修什麼
+    const d=(r.data&&typeof r.data==='object')?r.data:{};
+    const why=[d.message,d.details,d.hint].filter(Boolean).join('\n')||String(JSON.stringify(r.data||'')).slice(0,300);
+    alert('記錄失敗('+r.status+')\n'+why+'\n\n通常是 ship_dispatches_migration.sql 還沒執行、或不是最新版(進料要 dir／note／proj_num／zone_code 欄位,kind 也要允許 mat),請到 Supabase SQL Editor 再跑一次。');
     return;
   }
   if(Array.isArray(r.data)) shipDispatches=shipDispatches.concat(r.data);
