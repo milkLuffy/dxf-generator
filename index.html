@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.19.5"/>
+<meta name="sc-version" content="2026.09.19.6"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -29469,7 +29469,8 @@ window.shipDispatchDelete=async function(id){
   shipDispatches=shipDispatches.filter(x=>Number(x.id)!==Number(id));
   shipRender(); shipDashRender();
 };
-let shipArriveId=null;
+let shipArriveId=null, shipArriveAllBeds=false, shipArrivePick=null, shipArriveMainIds=[];
+// shipArrivePick = 這車要標記已出貨的 layout_items.id(派車時勾的 + 車到了現場補勾的)
 function shipArriveModalEl(){
   let m=document.getElementById('ship-arrive-modal');
   if(!m){
@@ -29484,7 +29485,7 @@ function shipArriveModalEl(){
 window.shipArriveOpen=async function(id){
   const d0=shipDispatches.find(x=>Number(x.id)===Number(id)); if(!d0) return;
   if(shipIsIn(d0)) return shipArriveIn(id);   // 進料只記時間
-  shipArriveId=Number(id);
+  shipArriveId=Number(id); shipArriveAllBeds=false; shipArrivePick=null;
   const m=shipArriveModalEl();
   m.innerHTML='<div class="modal ship-modal" style="max-width:560px"><div class="modal-title">車到了</div>'
     +'<div class="ship-body" style="max-height:46vh"><div class="empty-state">載入中...</div></div>'
@@ -29504,33 +29505,69 @@ function shipArriveRender(d){
   const m=shipArriveModalEl();
   const ids=new Set((d.layout_ids||[]).map(String));
   const pre=ids.size>0;   // 派車時就勾好了這車要載哪幾支 → 這裡預設全部帶進來,沒載到的再取消(舊紀錄沒記才要自己勾)
+  const inBeds=r=>(d.beds||[]).includes(r.bed);
   // shipBoardRows 本身就是「已報驗(每日產量有、非預報)且未出貨」的待出貨構件;
-  // 派車時勾了哪幾支就只列那幾支,舊紀錄沒記(ids 空)才退回依樑/柱整個柱位列。
-  const pieces=shipBoardRows.filter(r=>(d.beds||[]).includes(r.bed)
-    && (ids.size ? ids.has(String(r.id)) : (d.kind==='col'?r.col:!r.col)));
-  const byBed=new Map(); pieces.forEach(r=>{ if(!byBed.has(r.bed)) byBed.set(r.bed,[]); byBed.get(r.bed).push(r); });
+  // 上半:派車時勾的那幾支,舊紀錄沒記(ids 空)才退回依樑/柱整個柱位列。
+  const main=shipBoardRows.filter(r=>inBeds(r)&&(pre?ids.has(String(r.id)):(d.kind==='col'?r.col:!r.col)));
+  const mainIds=new Set(main.map(r=>String(r.id)));
+  shipArriveMainIds=[...mainIds];
+  // 下半:派車時沒勾到卻也一起載走的,在這裡補勾。預設只列同柱位的,跨柱位要自己打開。
+  const extra=shipBoardRows.filter(r=>!mainIds.has(String(r.id))&&(shipArriveAllBeds||inBeds(r)));
+  if(!shipArrivePick) shipArrivePick=new Set(pre?mainIds:[]);
+  const grp=list=>{
+    const by=new Map(); list.forEach(r=>{ if(!by.has(r.bed)) by.set(r.bed,[]); by.get(r.bed).push(r); });
+    return [...by.keys()].sort(shipBedOrder).map(bed=>'<div class="ship-bed"><div class="ship-bed-h"><b>'+esc(bed)+'</b></div><div class="ship-parts ship-cols">'
+      +by.get(bed).map(r=>'<label><input type="checkbox" class="ship-arr-chk"'+(shipArrivePick.has(String(r.id))?' checked':'')+' value="'+esc(r.id)+'" data-qty="'+r.qty+'" onchange="shipArriveToggle(this.value,this.checked)">'
+        +(r.col?'柱 ':'')+esc(r.proj)+' '+esc(r.part)+(r.qty>1?' ×'+r.qty:'')+'</label>').join('')
+      +'</div></div>').join('');
+  };
+  const allOn=main.length&&main.every(r=>shipArrivePick.has(String(r.id)));
   m.innerHTML='<div class="modal ship-modal" style="max-width:560px"><div class="modal-title">車到了 — '+esc(shipDispatchLabel(d))+'</div>'
     +'<div class="ship-arrive-time">派車 '+shipHm(d.dispatched_at)+' → 到達 '+shipHm(new Date().toISOString())+' · 等了 '+shipWaitTxt(d.dispatched_at)+'</div>'
-    +'<div class="ship-arrive-h"><span>'+(pre?'派車時勾的 '+pieces.reduce((a,r)=>a+r.qty,0)+' 支已經全部帶進來,<b>沒載到的再取消</b>':'這車實際載走的構件(要順便標記已出貨才勾)')+'</span>'
-      +(pieces.length?'<label><input type="checkbox"'+(pre?' checked':'')+' onchange="shipArriveAll(this.checked)"> 全選</label>':'')+'</div>'
-    +'<div class="ship-body" style="max-height:46vh">'+(pieces.length?[...byBed.keys()].sort(shipBedOrder).map(bed=>'<div class="ship-bed"><div class="ship-bed-h"><b>'+esc(bed)+'</b></div><div class="ship-parts ship-cols">'
-        +byBed.get(bed).map(r=>'<label><input type="checkbox" class="ship-arr-chk"'+(pre?' checked':'')+' value="'+esc(r.id)+'" data-qty="'+r.qty+'" onchange="shipArriveCount()">'+(r.col?'柱 ':'')+esc(r.proj)+' '+esc(r.part)+(r.qty>1?' ×'+r.qty:'')+'</label>').join('')
-        +'</div></div>').join(''):'<div class="empty-state">這些柱位目前沒有待出貨的構件(可能已標記出貨)</div>')+'</div>'
+    +'<div class="ship-body" style="max-height:46vh">'
+      +'<div class="ship-arrive-h"><span>'+(pre?'派車時勾的 '+main.reduce((a,r)=>a+r.qty,0)+' 支已經全部帶進來,<b>沒載到的再取消</b>':'這車實際載走的構件(要順便標記已出貨才勾)')+'</span>'
+        +(main.length?'<label><input type="checkbox"'+(allOn?' checked':'')+' onchange="shipArriveAll(this.checked)"> 全選</label>':'')+'</div>'
+      +(main.length?grp(main):'<div class="empty-state">這些柱位目前沒有待出貨的構件(可能已標記出貨)</div>')
+      +'<div class="ship-arrive-h" style="margin-top:6px;border-top:1px dashed var(--border);padding-top:8px"><span>還多載了別的?<b>在這裡補勾</b></span>'
+        +'<label><input type="checkbox"'+(shipArriveAllBeds?' checked':'')+' onchange="shipArriveOtherBeds(this.checked)"> 連其他柱位一起列</label></div>'
+      +(extra.length?grp(extra):'<div class="ship-wait-note">'+(shipArriveAllBeds?'沒有其他待出貨的構件了':'這幾個柱位沒有其他待出貨的構件;要補勾別的柱位,打開上面那個')+'</div>')
+    +'</div>'
     +'<div class="modal-actions"><button class="btn-modal-cancel" onclick="closeModal(\'ship-arrive-modal\')">取消</button>'
     +'<button class="btn-modal-cancel" onclick="shipArriveSave(false)">只記車到,不標記出貨</button>'
     +'<button class="btn-modal-ok" id="ship-arr-ship" onclick="shipArriveSave(true)" disabled>車到了,標記已出貨</button></div></div>';
   shipArriveCount();   // 預設就勾好了,按鈕直接是可按的狀態
 }
-window.shipArriveAll=function(on){ document.querySelectorAll('#ship-arrive-modal .ship-arr-chk').forEach(c=>{ c.checked=!!on; }); shipArriveCount(); };
+// 全選只管上半的派車清單,補勾區維持自己勾的
+window.shipArriveAll=function(on){
+  shipArriveMainIds.forEach(id=>{ if(on) shipArrivePick.add(id); else shipArrivePick.delete(id); });
+  document.querySelectorAll('#ship-arrive-modal .ship-arr-chk').forEach(c=>{ if(shipArriveMainIds.includes(c.value)) c.checked=!!on; });
+  shipArriveCount();
+};
+window.shipArriveToggle=function(id,on){
+  if(!shipArrivePick) shipArrivePick=new Set();
+  if(on) shipArrivePick.add(String(id)); else shipArrivePick.delete(String(id));
+  shipArriveCount();
+};
+// 收起「其他柱位」時把那些勾選一起清掉:看不到卻被標記出貨最危險
+window.shipArriveOtherBeds=function(on){
+  const d=shipDispatches.find(x=>Number(x.id)===Number(shipArriveId)); if(!d) return;
+  shipArriveAllBeds=!!on;
+  if(!on&&shipArrivePick) [...shipArrivePick].forEach(id=>{
+    const r=shipBoardRows.find(x=>String(x.id)===String(id));
+    if(r&&!(d.beds||[]).includes(r.bed)) shipArrivePick.delete(id);
+  });
+  shipArriveRender(d);
+};
 window.shipArriveCount=function(){
-  const chk=[...document.querySelectorAll('#ship-arrive-modal .ship-arr-chk:checked')];
-  const n=chk.reduce((a,c)=>a+(parseInt(c.dataset.qty)||1),0);
+  const pick=shipArrivePick||new Set();
+  let n=0, ex=0;
+  pick.forEach(id=>{ const r=shipBoardRows.find(x=>String(x.id)===String(id)); n+=r?r.qty:1; if(!shipArriveMainIds.includes(String(id))) ex+=r?r.qty:1; });
   const b=document.getElementById('ship-arr-ship');
-  if(b){ b.disabled=!chk.length; b.textContent='車到了,標記已出貨'+(n?'（'+n+' 支）':''); }
+  if(b){ b.disabled=!pick.size; b.textContent='車到了,標記已出貨'+(n?'（'+n+' 支'+(ex?'、含補勾 '+ex:'')+'）':''); }
 };
 window.shipArriveSave=async function(withShip){
   const d=shipDispatches.find(x=>Number(x.id)===Number(shipArriveId)); if(!d) return;
-  const ids=withShip?[...document.querySelectorAll('#ship-arrive-modal .ship-arr-chk:checked')].map(c=>c.value):[];
+  const ids=withShip?[...(shipArrivePick||new Set())].map(String):[];
   if(withShip&&!ids.length) return;
   const today=(typeof todayStr==='function')?todayStr():dashTodayStr();   // 同線上進度表「選擇出貨構件」:出貨日期=今天、狀態=已出貨
   if(ids.length){
