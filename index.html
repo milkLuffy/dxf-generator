@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.19.1"/>
+<meta name="sc-version" content="2026.09.19.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1672,6 +1672,24 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
   .mobile-bottom-nav button.active{background:var(--nav-active);color:var(--nav-green-text)}
   .mobile-bottom-nav button:focus-visible{box-shadow:inset 0 0 0 2px var(--nav-green)}
 }
+
+/* ── 配置圖:選取與拖曳換位置 ── */
+.lc-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 8px;font-size:12px;color:var(--text3)}
+.lc-bar b{color:var(--accent2);font-family:var(--mono)}
+.lc-bar button{cursor:pointer;border:1px solid var(--border-hi);border-radius:7px;background:var(--bg3);color:var(--text2);font-size:11.5px;padding:3px 10px}
+.lc-bar button:hover{filter:brightness(1.15)}
+.layout-chart-table td.lc-td{cursor:grab;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.layout-chart-table th.lc-th{cursor:grab;-webkit-user-select:none;user-select:none}
+.layout-chart-table td.lc-sel{box-shadow:inset 0 0 0 2px var(--accent2)}
+.layout-chart-table th.lc-th.lc-sel{box-shadow:inset 0 0 0 2px var(--accent2)}
+.layout-chart-table td.lc-moving{opacity:.35}
+.layout-chart-table td.lc-ins-before{box-shadow:inset 0 3px 0 0 var(--accent3,#ff9f0a)}
+.layout-chart-table td.lc-ins-after{box-shadow:inset 0 -3px 0 0 var(--accent3,#ff9f0a)}
+.layout-chart-table td.lc-sel.lc-ins-before{box-shadow:inset 0 0 0 2px var(--accent2),inset 0 3px 0 0 var(--accent3,#ff9f0a)}
+.layout-chart-table td.lc-sel.lc-ins-after{box-shadow:inset 0 0 0 2px var(--accent2),inset 0 -3px 0 0 var(--accent3,#ff9f0a)}
+.lc-ghost{position:fixed;z-index:100001;pointer-events:none;padding:6px 12px;border:1px solid var(--accent2);border-radius:8px;background:var(--bg2);color:var(--text);font:600 12px var(--mono);box-shadow:0 8px 24px rgba(0,0,0,.45);opacity:.96}
+body.lc-dragging{cursor:grabbing}
+body.lc-dragging *{cursor:grabbing!important}
 
 /* ── 列印：橫式 A4 配置圖 ── */
 @media print {
@@ -9174,6 +9192,30 @@ window.uiConfirm=function(message,opts){
     mask.addEventListener('mousedown',function(e){ if(e.target===mask) finish(false); });
     document.addEventListener('keydown',onKey,true);
     setTimeout(function(){ ok.focus(); },30);
+  });
+};
+/* ── 多選項確認框 uiChoose(訊息,[{key,label,primary}]) → 回傳 key;取消回傳 null ── */
+window.uiChoose=function(message,choices){
+  choices=choices||[];
+  return new Promise(function(resolve){
+    const mask=document.createElement('div'); mask.id='confirm-mask';
+    const box=document.createElement('div'); box.className='confirm-box';
+    const ico=document.createElement('div'); ico.className='cf-ico'; ico.textContent='↔️';
+    const msg=document.createElement('div'); msg.className='cf-msg'; msg.textContent=String(message==null?'':message);
+    const btns=document.createElement('div'); btns.className='cf-btns'; btns.style.flexWrap='wrap';
+    box.appendChild(ico); box.appendChild(msg); box.appendChild(btns); mask.appendChild(box);
+    let done=false;
+    const finish=function(v){ if(done)return; done=true; document.removeEventListener('keydown',onKey,true); mask.remove(); resolve(v); };
+    function onKey(e){ e.stopPropagation(); if(e.key==='Escape'){ e.preventDefault(); finish(null); } }
+    choices.forEach(function(c){
+      const b=document.createElement('button'); b.type='button';
+      b.className='cf-btn'+(c.primary?' cf-ok':''); b.textContent=c.label;
+      b.onclick=function(){ finish(c.key); };
+      btns.appendChild(b);
+    });
+    (document.body||document.documentElement).appendChild(mask);
+    mask.addEventListener('mousedown',function(e){ if(e.target===mask) finish(null); });
+    document.addEventListener('keydown',onKey,true);
   });
 };
 const SUPA_URL = "https://eblatxdgcxyjvrpixbnr.supabase.co";
@@ -22836,6 +22878,8 @@ function layoutSaveAfterUndo() {
   layoutRows.forEach((r, i) => { if (r.part_no || r.bed) layoutMarkDirty(i); });
 }
 const BEDS = ['D4','D5','D6','D7','D8','D9~D10','D11~D12','D13~D14','D15','D16~D17','D18~D19','D19~D22','D22','D22~','HOLD'];
+// 配置圖的上下順序存在 layout_items.sort_no;資料庫還沒加這個欄位時自動退回「只換床位」
+let layoutHasSortCol = true;
 const STATUSES = ['上線中','待出貨','已出貨','HOLD'];
 let layoutRows = [];
 let layoutBOMCache = [];
@@ -22976,8 +23020,11 @@ async function layoutInit() {
     spec: it.spec || '', bed: it.bed || '', status: it.status || '上線中',
     inspected: !!it.inspected, inspect_no: it.inspect_no || '',
     done_date: it.done_date || '', net_weight: it.net_weight || '',
-    qty: it.qty || 1, ship_date: it.ship_date || '', _key: ++layoutRowSeq
+    qty: it.qty || 1, ship_date: it.ship_date || '', sort_no: (it.sort_no==null?null:+it.sort_no), _key: ++layoutRowSeq
   }));
+  // 資料庫還沒加 sort_no 欄位時(尚未跑 layout_sort_migration.sql),配置圖只能換床位、不能記順序
+  const _s0=(Array.isArray(r.data)?r.data:[])[0];
+  if (_s0) layoutHasSortCol = ('sort_no' in _s0);
   layoutRows.forEach(layoutApplyDailyStatus);
   pagerReset('layout');
   layoutEnsureBlankRow();
@@ -23019,7 +23066,7 @@ async function layoutLoadShipped() {
       spec: it.spec || '', bed: it.bed || '', status: it.status || '上線中',
       inspected: !!it.inspected, inspect_no: it.inspect_no || '',
       done_date: it.done_date || '', net_weight: it.net_weight || '',
-      qty: it.qty || 1, ship_date: it.ship_date || '', _key: ++layoutRowSeq
+      qty: it.qty || 1, ship_date: it.ship_date || '', sort_no: (it.sort_no==null?null:+it.sort_no), _key: ++layoutRowSeq
     });
   });
   layoutShippedLoaded = true;
@@ -23973,6 +24020,7 @@ async function layoutSaveAll() {
       net_weight: row.net_weight ? parseFloat(row.net_weight) : null,
       qty: parseInt(row.qty) || 1
     };
+    if (layoutHasSortCol) payload.sort_no = (row.sort_no==null?null:parseInt(row.sort_no));
     if (row.id) { payload.id = row.id; toUpdate.push(payload); }
     else toInsert.push({payload, row});
   });
@@ -24237,6 +24285,7 @@ async function layoutFlushDirty() {
         inspect_no: row.inspect_no || '', done_date: row.done_date || null, ship_date: row.ship_date || null,
         net_weight: row.net_weight ? parseFloat(row.net_weight) : null, qty: parseInt(row.qty) || 1
       };
+      if (layoutHasSortCol) payload.sort_no = (row.sort_no==null?null:parseInt(row.sort_no));
       if (row.id) {
         const r = await sbFetch('/rest/v1/layout_items?id=eq.' + row.id, {method:'PATCH', headers:{'Prefer':'return=minimal'}, body: JSON.stringify(payload)});
         if (r.ok) { row._dirty = false; saved++; }
@@ -24402,6 +24451,18 @@ function layoutRowInStat(row, key) {
   return true;
 }
 
+// ── 配置圖：每排由上往下排列，可用拖曳換位置（單個／多個／整排）──────────
+// 排序來源：layout_items.sort_no（拖過才有值）；沒有 sort_no 的照原本「新輸入的在上面」。
+let layoutChartSel = new Set();    // 選取中的構件 _key
+let layoutChartBed = {};           // 目前畫面上每個床位的排列（拖曳計算用）
+function layoutChartOrder(list) {
+  return list.slice().sort((a, b) => {
+    const sa = (a.sort_no == null) ? -1e9 : +a.sort_no;
+    const sb = (b.sort_no == null) ? -1e9 : +b.sort_no;
+    return sa - sb || (a._key || 0) - (b._key || 0);   // _key 遞增＝原本的載入順序
+  });
+}
+
 function renderLayoutChart() {
   const wrap = document.getElementById('layout-chart');
   const byBed = {};
@@ -24409,12 +24470,27 @@ function renderLayoutChart() {
   layoutRows.forEach(r => {
     if (r.part_no && r.bed && byBed[r.bed] && !r.ship_date) byBed[r.bed].push(r);
   });
+  BEDS.forEach(b => byBed[b] = layoutChartOrder(byBed[b]));
+  layoutChartBed = byBed;
+  // 已經不在畫面上的選取（改了床位、出貨…）要清掉，免得一直卡著
+  const live = new Set(); BEDS.forEach(b => byBed[b].forEach(r => live.add(r._key)));
+  Array.from(layoutChartSel).forEach(k => { if (!live.has(k)) layoutChartSel.delete(k); });
   const maxRows = Math.max(1, ...BEDS.map(b => byBed[b].length));
   // 一列可能是同編號多支構件:床位標題統計「實際支數」(數量加總),不是列數
   const qtyOf = r => { const n = parseInt(r.qty); return n > 0 ? n : 1; };
   const bedQty = b => byBed[b].reduce((s, r) => s + qtyOf(r), 0);
-  let html = '<table class="layout-chart-table"><thead><tr><th class="pos-col">柱位</th>';
-  BEDS.forEach(b => { html += '<th>'+b+' <span style="color:var(--text3);font-weight:400">('+bedQty(b)+')</span></th>'; });
+  const selN = layoutChartSel.size;
+  let html = '<div class="lc-bar no-print">' + (selN
+      ? '已選 <b>' + selN + '</b> 支 · 拖曳任一格就整批搬過去 <button type="button" onclick="layoutChartClearSel()">取消選取</button>'
+      : '點構件＝選取（再點一次取消）、點柱位標題＝選整排；拖曳可換位置' + (layoutTouchLike() ? '（長按再拖）' : ''))
+    + (layoutHasSortCol ? '' : ' <span style="color:var(--yellow)">· 尚未建立 sort_no 欄位，拖曳只會換柱位、記不住上下順序</span>')
+    + '</div>';
+  html += '<table class="layout-chart-table"><thead><tr><th class="pos-col">柱位</th>';
+  BEDS.forEach(b => {
+    const all = byBed[b].length > 0 && byBed[b].every(r => layoutChartSel.has(r._key));
+    html += '<th class="lc-th' + (all ? ' lc-sel' : '') + '" data-bed="' + b + '">' + b
+         + ' <span style="color:var(--text3);font-weight:400">(' + bedQty(b) + ')</span></th>';
+  });
   html += '</tr></thead><tbody>';
   for (let pos = 0; pos < maxRows; pos++) {
     html += '<tr><td class="pos-cell">'+(pos+1)+'</td>';
@@ -24423,14 +24499,239 @@ function renderLayoutChart() {
       if (item) {
         const q = qtyOf(item);
         const qTag = q > 1 ? '<span class="lcell-qty">×'+q+'</span>' : '';
-        html += '<td class="cell-'+item.status+'"><div class="lcell"><span class="lcell-part">'+item.part_no+qTag+'</span><span class="lcell-status st-'+item.status+'">'+item.status+'</span></div></td>';
+        html += '<td class="lc-td cell-'+item.status+(layoutChartSel.has(item._key)?' lc-sel':'')
+             + '" data-key="'+item._key+'" data-bed="'+b+'" data-pos="'+pos+'">'
+             + '<div class="lcell"><span class="lcell-part">'+item.part_no+qTag+'</span>'
+             + '<span class="lcell-status st-'+item.status+'">'+item.status+'</span></div></td>';
       }
-      else html += '<td></td>';
+      else html += '<td class="lc-td lc-empty" data-bed="'+b+'" data-pos="'+pos+'"></td>';
     });
     html += '</tr>';
   }
   html += '</tbody></table>';
   wrap.innerHTML = html;
+  layoutChartBindDrag(wrap);
+}
+
+function layoutTouchLike(){ return (navigator.maxTouchPoints || 0) > 0; }
+function layoutChartClearSel(){ layoutChartSel.clear(); renderLayoutChart(); }
+
+// ── 拖曳：滑鼠按住就拖，觸控長按 0.3 秒再拖（避免跟畫面捲動打架）──────────
+let _lcDrag = null;
+function layoutChartBindDrag(wrap) {
+  if (wrap._lcInit) return;
+  wrap._lcInit = true;
+  wrap.addEventListener('pointerdown', lcDown);
+  wrap.addEventListener('contextmenu', e => { if (_lcDrag && _lcDrag.moving) e.preventDefault(); });
+}
+function lcCellRows(td) {
+  // 這一格代表哪些構件：已選取的就整批，沒選取的就只有自己（並且把舊的選取清掉）
+  const key = td && td.dataset.key ? parseInt(td.dataset.key) : null;
+  if (key == null) return [];
+  if (!layoutChartSel.has(key)) { layoutChartSel.clear(); layoutChartSel.add(key); }
+  return Array.from(layoutChartSel);
+}
+function lcDown(e) {
+  if (e.button != null && e.button !== 0) return;
+  const th = e.target.closest && e.target.closest('th.lc-th');
+  const td = e.target.closest && e.target.closest('td.lc-td');
+  if (!th && !td) return;
+  const touch = (e.pointerType === 'touch' || e.pointerType === 'pen');
+  _lcDrag = { th: th || null, td: td || null, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
+              ready: !touch, moving: false, keys: [], timer: null, pid: e.pointerId };
+  if (touch) _lcDrag.timer = setTimeout(() => {
+    if (!_lcDrag) return;
+    _lcDrag.ready = true;
+    try { navigator.vibrate && navigator.vibrate(12); } catch(_) {}
+    lcStart();
+  }, 300);
+  window.addEventListener('pointermove', lcMove, {passive:false});
+  window.addEventListener('pointerup', lcUp, true);
+  window.addEventListener('pointercancel', lcCancel, true);
+}
+function lcBlockScroll(ev){ if (_lcDrag && _lcDrag.moving) ev.preventDefault(); }
+function layoutChartCanEdit(){ try { return pagePerm('layout') !== 'read'; } catch(_) { return true; } }
+function lcStart() {
+  const d = _lcDrag; if (!d || d.moving) return;
+  if (!layoutChartCanEdit()) { layoutToast('唯讀權限，無法搬動構件'); lcCleanup(); return; }
+  d.keys = d.th ? (layoutChartBed[d.th.dataset.bed] || []).map(r => r._key) : lcCellRows(d.td);
+  if (!d.keys.length) { lcCleanup(); return; }
+  d.srcBed = d.th ? d.th.dataset.bed : (d.td ? d.td.dataset.bed : '');
+  d.moving = true;
+  document.body.classList.add('lc-dragging');
+  document.addEventListener('touchmove', lcBlockScroll, {passive:false});
+  const g = document.createElement('div');
+  g.className = 'lc-ghost'; g.id = 'lc-ghost';
+  const first = layoutRowByKey(d.keys[0]);
+  g.textContent = d.keys.length > 1 ? (d.keys.length + ' 支構件') : ((first && first.part_no) || '構件');
+  document.body.appendChild(g);
+  lcMarkMoving();
+  lcGhostTo(d.x, d.y);
+}
+function layoutRowByKey(k){ return layoutRows.find(r => r._key === k) || null; }
+function lcMarkMoving() {
+  const set = new Set(_lcDrag ? _lcDrag.keys : []);
+  document.querySelectorAll('#layout-chart td.lc-td[data-key]').forEach(td => {
+    td.classList.toggle('lc-moving', set.has(parseInt(td.dataset.key)));
+  });
+}
+function lcGhostTo(x, y) {
+  const g = document.getElementById('lc-ghost'); if (!g) return;
+  g.style.left = (x + 14) + 'px'; g.style.top = (y + 14) + 'px';
+}
+function lcMove(e) {
+  const d = _lcDrag; if (!d) return;
+  d.x = e.clientX; d.y = e.clientY;
+  const far = Math.abs(e.clientX - d.x0) > 5 || Math.abs(e.clientY - d.y0) > 5;
+  if (!d.moving) {
+    if (!d.ready) { if (far) lcCleanup(); return; }   // 觸控長按前移動＝使用者想捲動畫面
+    if (far) lcStart(); else return;
+  }
+  e.preventDefault();
+  lcGhostTo(e.clientX, e.clientY);
+  lcHover(e.clientX, e.clientY);
+  lcAutoScroll(e.clientX, e.clientY);
+}
+// 目前指標下的落點：哪個柱位、插在第幾格（上半格＝插在它前面，下半格＝插在它後面）
+function lcHover(x, y) {
+  document.querySelectorAll('#layout-chart .lc-ins-before,#layout-chart .lc-ins-after')
+    .forEach(el => el.classList.remove('lc-ins-before','lc-ins-after'));
+  const el = document.elementFromPoint(x, y);
+  const cell = el && el.closest ? el.closest('#layout-chart td.lc-td,#layout-chart th.lc-th') : null;
+  if (!cell) { _lcDrag.drop = null; return; }
+  const bed = cell.dataset.bed;
+  const list = (layoutChartBed[bed] || []).filter(r => _lcDrag.keys.indexOf(r._key) < 0);
+  if (cell.tagName === 'TH') { _lcDrag.drop = {bed, index: list.length}; return; }   // 丟在標題＝排到最後
+  const key = cell.dataset.key ? parseInt(cell.dataset.key) : null;
+  if (key == null) { _lcDrag.drop = {bed, index: list.length}; return; }             // 空格＝排到最後
+  const rc = cell.getBoundingClientRect();
+  const after = (y - rc.top) > rc.height / 2;
+  let idx = list.findIndex(r => r._key === key);
+  if (idx < 0) idx = list.length; else idx = after ? idx + 1 : idx;
+  _lcDrag.drop = {bed, index: idx};
+  cell.classList.add(after ? 'lc-ins-after' : 'lc-ins-before');
+}
+function lcScrollParent(el) {
+  for (let n = el; n && n !== document.body; n = n.parentElement) {
+    const cs = getComputedStyle(n);
+    if (/(auto|scroll)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight + 4) return n;
+  }
+  return document.scrollingElement || document.documentElement;
+}
+function lcAutoScroll(x, y) {
+  const wrap = document.getElementById('layout-chart');
+  if (wrap) {
+    const r = wrap.getBoundingClientRect(), edge = 60;
+    if (x > r.right - edge) wrap.scrollLeft += 18;
+    else if (x < r.left + edge) wrap.scrollLeft -= 18;
+  }
+  const sc = lcScrollParent(wrap || document.body);
+  const vh = window.innerHeight || 800;
+  if (y > vh - 90) sc.scrollTop += 16;
+  else if (y < 90) sc.scrollTop -= 16;
+}
+function lcCleanup() {
+  if (_lcDrag && _lcDrag.timer) clearTimeout(_lcDrag.timer);
+  window.removeEventListener('pointermove', lcMove, {passive:false});
+  window.removeEventListener('pointerup', lcUp, true);
+  window.removeEventListener('pointercancel', lcCancel, true);
+  document.removeEventListener('touchmove', lcBlockScroll, {passive:false});
+  document.body.classList.remove('lc-dragging');
+  const g = document.getElementById('lc-ghost'); if (g) g.remove();
+  document.querySelectorAll('#layout-chart .lc-ins-before,#layout-chart .lc-ins-after')
+    .forEach(el => el.classList.remove('lc-ins-before','lc-ins-after'));
+  document.querySelectorAll('#layout-chart td.lc-moving').forEach(td => td.classList.remove('lc-moving'));
+  _lcDrag = null;
+}
+function lcCancel() { lcCleanup(); }
+function lcUp(e) {
+  const d = _lcDrag; if (!d) return;
+  if (!d.moving) {           // 沒拖動＝當成點一下：選取／取消選取
+    lcCleanup();
+    lcClick(d);
+    return;
+  }
+  const drop = d.drop, keys = d.keys.slice(), srcBed = d.srcBed, whole = !!d.th;
+  lcCleanup();
+  if (drop) layoutChartDrop(keys, srcBed, drop.bed, drop.index, whole);
+}
+function lcClick(d) {
+  if (d.th) {                // 點柱位標題＝整排全選 / 全取消
+    const list = layoutChartBed[d.th.dataset.bed] || [];
+    if (!list.length) { layoutChartSel.clear(); renderLayoutChart(); return; }
+    const all = list.every(r => layoutChartSel.has(r._key));
+    list.forEach(r => all ? layoutChartSel.delete(r._key) : layoutChartSel.add(r._key));
+    renderLayoutChart(); return;
+  }
+  const key = d.td && d.td.dataset.key ? parseInt(d.td.dataset.key) : null;
+  if (key == null) { layoutChartSel.clear(); renderLayoutChart(); return; }   // 點空格＝清除選取
+  if (layoutChartSel.has(key)) layoutChartSel.delete(key); else layoutChartSel.add(key);
+  renderLayoutChart();
+}
+
+// 放開：把這些構件搬到目標柱位的第 index 格。整排搬到「已經有構件」的柱位時先問要互換還是併過去。
+async function layoutChartDrop(keys, srcBed, tgtBed, index, wholeCol) {
+  if (!layoutChartCanEdit()) return;
+  // 搬動的先後照「畫面上的順序」(柱位由左到右、同排由上往下),不是點選的先後
+  const order = new Map();
+  BEDS.forEach((b, bi) => (layoutChartBed[b] || []).forEach((r, ri) => order.set(r._key, bi * 1000 + ri)));
+  const moving = keys.slice().sort((a, b) => (order.get(a) ?? 9e9) - (order.get(b) ?? 9e9))
+                     .map(layoutRowByKey).filter(Boolean);
+  if (!moving.length) return;
+  const srcList = (layoutChartBed[srcBed] || []);
+  const isWholeCol = (wholeCol || (srcList.length > 0 && srcList.every(r => keys.indexOf(r._key) >= 0)))
+                     && moving.every(r => r.bed === srcBed);
+  const tgtRest = (layoutChartBed[tgtBed] || []).filter(r => keys.indexOf(r._key) < 0);
+  let mode = 'insert';
+  if (isWholeCol && srcBed !== tgtBed && tgtRest.length) {
+    const pick = await uiChoose('把「' + srcBed + '」整排（' + moving.length + ' 支）搬到「' + tgtBed + '」，\n但 ' + tgtBed + ' 已經有 ' + tgtRest.length + ' 支構件。要怎麼處理？',
+      [{key:'swap', label:'兩排互換', primary:true}, {key:'insert', label:'併過去'}, {key:'cancel', label:'取消'}]);
+    if (!pick || pick === 'cancel') return;
+    mode = pick;
+  }
+  const touched = {};      // 床位 → 排好的新順序
+  BEDS.forEach(b => { if (b === srcBed || b === tgtBed) touched[b] = (layoutChartBed[b] || []).slice(); });
+  if (mode === 'swap') {
+    touched[tgtBed] = moving.slice();
+    touched[srcBed] = tgtRest.slice();
+  } else {
+    Object.keys(touched).forEach(b => { touched[b] = touched[b].filter(r => keys.indexOf(r._key) < 0); });
+    // 來源不只一排時（多選跨柱位），每一排都要重排
+    moving.forEach(r => { if (r.bed && !touched[r.bed]) touched[r.bed] = (layoutChartBed[r.bed] || []).filter(x => keys.indexOf(x._key) < 0); });
+    const list = touched[tgtBed] || [];
+    const at = Math.max(0, Math.min(index == null ? list.length : index, list.length));
+    list.splice(at, 0, ...moving);
+    touched[tgtBed] = list;
+  }
+  let changed = 0;
+  Object.keys(touched).forEach(bed => {
+    touched[bed].forEach((r, i) => {
+      const newSort = i + 1;
+      if (r.bed !== bed || r.sort_no !== newSort) {
+        r.bed = bed; r.sort_no = newSort;
+        const idx = layoutRows.indexOf(r);
+        if (idx >= 0) layoutMarkDirty(idx);
+        changed++;
+      }
+    });
+  });
+  layoutChartSel.clear();        // 搬完就放掉選取,免得下一次拖曳把舊的也一起帶走
+  renderLayoutChart();
+  if (changed) layoutChartToast(moving.length + ' 支已搬到 ' + tgtBed + (mode === 'swap' ? '（兩排互換）' : ''));
+}
+// 綠色的小提示(layoutToast 是紅色警告用的)
+let _lcToastTimer = null;
+function layoutChartToast(msg) {
+  let t = document.getElementById('lc-toast');
+  if (!t) {
+    t = document.createElement('div'); t.id = 'lc-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green);color:#03210a;font-family:var(--mono);font-size:13px;font-weight:700;padding:10px 20px;border-radius:8px;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.4)';
+    document.body.appendChild(t);
+  }
+  t.textContent = '✓ ' + msg;
+  t.style.display = 'block';
+  clearTimeout(_lcToastTimer);
+  _lcToastTimer = setTimeout(() => { t.style.display = 'none'; }, 2200);
 }
 
 function layoutPrintChart() {
