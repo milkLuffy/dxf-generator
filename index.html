@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.19.8"/>
+<meta name="sc-version" content="2026.09.20.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -4115,6 +4115,12 @@ window.normalizeFullWidth=function(value){
 .ibt-badge.yes{background:rgba(50,215,75,.14);color:var(--green);border:1px solid rgba(50,215,75,.35)}
 .ibt-badge.no{background:rgba(255,255,255,.06);color:var(--text3);border:1px solid var(--border)}
 .ibt-badge.none{background:rgba(255,159,10,.12);color:var(--accent);border:1px solid rgba(255,159,10,.35)}
+.ibt-badge.diff{background:rgba(255,214,10,.16);color:var(--yellow);border:1px solid rgba(255,214,10,.45)}
+.ibt-badge.wait{background:transparent;color:var(--text3);border:1px dashed var(--border)}
+.ibt-badge.click{cursor:pointer}
+.ibt-badge.click:hover{background:rgba(255,214,10,.3)}
+.insp-sug-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:4px 0 12px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);font-family:var(--mono);font-size:11px;color:var(--text2)}
+.insp-sug-bar .btn-sm{margin:-2px 0}
 .ma-subtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .ma-subtab{padding:5px 12px;font-size:11px}
 .ma-total-row td{font-weight:700;color:var(--text);background:var(--bg3);border-top:2px solid var(--border-hi)}
@@ -7433,8 +7439,9 @@ window.normalizeFullWidth=function(value){
       #page-inspect #insp-selected .insp-comp-table td:nth-child(5)::before{content:'圖號'}
       #page-inspect #insp-selected .insp-comp-table td:nth-child(6)::before{content:'版次'}
       #page-inspect #insp-selected .insp-comp-table td:nth-child(7)::before{content:'有／無板'}
-      #page-inspect #insp-selected .insp-comp-table td:nth-child(8)::before{content:'UT 部位'}
-      #page-inspect #insp-selected .insp-comp-table td:nth-child(9)::before{content:'預報'}
+      #page-inspect #insp-selected .insp-comp-table td:nth-child(8)::before{content:'有無板多階分析'}
+      #page-inspect #insp-selected .insp-comp-table td:nth-child(9)::before{content:'UT 部位'}
+      #page-inspect #insp-selected .insp-comp-table td:nth-child(10)::before{content:'預報'}
       #page-inspect #insp-selected .insp-ut-cell{align-items:flex-start}
       #page-inspect #insp-selected .insp-comp-table td{text-align:left!important}   /* 預報欄原本寫死置中 */
       #page-inspect .dxf-actions{flex-wrap:wrap}
@@ -13227,6 +13234,7 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
   initPanel();
   applyPermsUI();   // 依帳號權限顯示/隱藏各頁面與分類
   navPrefsCloudLoad();   // 常用功能/側邊欄偏好:用資料庫存的覆蓋本機快取(換電腦也一樣)
+  userOptsCloudLoad();   // 個人雜項開關(例:報驗要不要同時產附圖 PDF):同上,跟著帳號走
   // 操作紀錄:只有「真的登入」才記一筆;restore=true 是重新整理,記了只會洗版
   if(!restore) auditWrite({action:'login', ok:true});
   presenceStart();   // 開始回報/抓取線上狀態(右上角頭像)
@@ -13353,6 +13361,55 @@ function readNavPreferences(){
 function writeNavPreferences(value){
   try{localStorage.setItem(navPreferenceKey(),JSON.stringify(value));}catch(e){}
   navPrefsCloudSave(value);
+}
+// ── 個人雜項開關(跟著帳號走,不是跟著這台瀏覽器)──
+// 例:報驗的「同時產生附圖 PDF」。存 user_prefs.prefs,localStorage 只當快取讓畫面先秒畫,
+// 登入後用雲端的覆蓋。走 _sbRaw:不受唯讀頁面的寫入攔截、也不記進操作紀錄。
+// 欄位還沒加(未跑 user_prefs_opts_migration.sql)就只用本機,不報錯。
+let userOptsCache = null;
+let userOptsCloudOk = null;   // null=還不知道, true=可用, false=欄位不存在或沒權限
+function userOptsKey(){ return 'zhenshan_user_opts_' + (currentUser?.id || 'guest'); }
+function userOptsLocal(){
+  if (userOptsCache) return userOptsCache;
+  try { userOptsCache = JSON.parse(localStorage.getItem(userOptsKey()) || '{}') || {}; }
+  catch (e) { userOptsCache = {}; }
+  return userOptsCache;
+}
+function userOptGet(key, dflt){
+  const v = userOptsLocal()[key];
+  return v === undefined ? dflt : v;
+}
+function userOptsPush(){
+  // 還沒讀過雲端(null)就不上傳:剛登入時本機是預設值,先傳會把帳號原本的設定蓋掉
+  if (isGuest || !currentUser?.id || userOptsCloudOk !== true) return;
+  _sbRaw('/rest/v1/user_prefs?on_conflict=user_id', { method:'POST',
+    headers:{ 'Prefer':'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ user_id: currentUser.id, prefs: userOptsLocal(), updated_at: new Date().toISOString() }) })
+    .then(r => { if (r && !r.ok && (r.status === 404 || r.status === 400 || r.status === 401 || r.status === 403)) userOptsCloudOk = false; })
+    .catch(() => {});
+}
+function userOptSet(key, value){
+  const o = userOptsLocal();
+  o[key] = value;
+  try { localStorage.setItem(userOptsKey(), JSON.stringify(o)); } catch (e) {}
+  userOptsPush();
+}
+async function userOptsCloudLoad(){
+  userOptsCache = null;   // 換帳號要重讀對應的快取
+  if (isGuest || !currentUser?.id) return;
+  try {
+    const r = await _sbRaw('/rest/v1/user_prefs?select=prefs&user_id=eq.' + encodeURIComponent(currentUser.id));
+    if (!r || !r.ok) { userOptsCloudOk = false; return; }
+    userOptsCloudOk = true;
+    const rows = await r.json(), prefs = Array.isArray(rows) && rows[0] ? rows[0].prefs : null;
+    if (prefs && typeof prefs === 'object' && Object.keys(prefs).length) {
+      userOptsCache = prefs;
+      try { localStorage.setItem(userOptsKey(), JSON.stringify(prefs)); } catch (e) {}
+    } else if (Object.keys(userOptsLocal()).length) {
+      userOptsPush();   // 雲端還沒有 → 把這台電腦現有的設定傳上去
+    }
+    inspAttachInitCheckbox();   // 雲端值回來後,把畫面上的勾選框同步過去
+  } catch (e) { console.warn('個人開關雲端設定讀取失敗,改用本機', e); }
 }
 // 常用功能/側邊欄偏好原本只存在這台瀏覽器(換電腦、手機、清瀏覽資料就回到預設)→ 另存到資料庫 user_prefs,跟著帳號走。
 // localStorage 仍當快取(畫面先用它秒畫),登入後再用雲端的覆蓋。個人偏好走 _sbRaw:
@@ -21797,7 +21854,7 @@ const HEALTH_SCHEMA=[
   ['sp_progress','','sp_progress_view.sql(檢視表)'],
   ['audit_log','','audit_log_migration.sql'],
   ['user_presence','','audit_log_migration.sql(線上狀態)'],
-  ['user_prefs','','user_prefs_migration.sql(常用功能雲端同步)'],
+  ['user_prefs','prefs','user_prefs_migration.sql(常用功能雲端同步)、user_prefs_opts_migration.sql(個人開關)'],
   ['error_log','resolved_at,resolved_by','error_log_migration.sql(本頁錯誤紀錄)']
 ];
 // 其餘程式有用到的資料表:只確認存在、讀得到
@@ -25903,6 +25960,113 @@ function base64ToArrayBuffer(b64) {
   return bytes.buffer;
 }
 
+// ── 「有無板多階分析」欄 ──
+// 選完工程區後在背景查多階判定,查回來才重繪「已勾選構件」表。純顯示:不改下拉、不寫資料庫,
+// 也不 await,所以報驗流程的速度完全不受影響。
+let inspBoardSug = { token:0, loading:false, hit:null, map:null, err:'' };
+let inspBoardUndo = [];   // 每按一次套用推一筆 [{c, prev}]，可以一直復原回去
+function inspBoardSugReset() {
+  inspBoardSug.token++; inspBoardSug.loading = false;
+  inspBoardSug.hit = null; inspBoardSug.map = null; inspBoardSug.err = '';
+  inspBoardUndo = [];
+}
+async function inspBoardSugLoad(projNum, zoneCode) {
+  if (!projNum || !zoneCode) return;
+  if (typeof maBoardMapFor !== 'function') return;   // 多階模組還沒掛上:安靜略過,不影響報驗
+  const token = ++inspBoardSug.token;
+  inspBoardSug.loading = true; inspBoardSug.hit = null; inspBoardSug.map = null; inspBoardSug.err = '';
+  inspRenderSelected();
+  let r;
+  try { r = await maBoardMapFor(projNum, zoneCode); }
+  catch (e) { r = { ok:false, err:String((e && e.message) || e) }; }
+  if (token !== inspBoardSug.token) return;   // 期間又換了工程區,這次的結果作廢
+  inspBoardSug.loading = false;
+  inspBoardSug.err = r.ok ? '' : (r.err || '讀取失敗');
+  inspBoardSug.hit = r.ok ? (r.hit || null) : null;
+  inspBoardSug.map = r.ok ? (r.map || {}) : null;
+  inspRenderSelected();
+}
+function inspSugAttr(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').split('\n').join('&#10;');
+}
+// 單一構件的建議:cls 決定顏色,tip 是滑鼠提示(只有「有板」和「無資料」才有)
+function inspBoardSugOf(c) {
+  if (inspBoardSug.loading) return { cls:'wait', text:'查詢中…', tip:'' };
+  if (inspBoardSug.err) return { cls:'none', text:'讀取失敗', tip:inspBoardSug.err };
+  if (!inspBoardSug.map) return { cls:'wait', text:'—', tip:'' };
+  if (!inspBoardSug.hit) return { cls:'wait', text:'—', tip:'此工程區未建多階分析，沒有建議可比對' };
+  const g = inspBoardSug.map[String((c && c.part_no) || '').trim().toUpperCase()];
+  if (!g) return { cls:'none', text:'找不到', tip:'多階資料中找不到此構件編號' };
+  const same = /無板$/.test(String((c && c._board) || '')) === (g.verdict === '無板');
+  if (g.verdict === '有板') return { cls: same ? 'yes' : 'diff', text: same ? '有板' : '建議有板',
+    tip: same ? (g.whyShort || '') : ('點一下就改成有板' + (g.whyShort ? '\n' + g.whyShort : '')) };
+  // 無板沒東西可列,一致時不給提示;跟目前選擇不同才提示可以點
+  return { cls: same ? 'no' : 'diff', text: same ? '無板' : '建議無板', tip: same ? '' : '點一下就改成無板' };
+}
+// 套用建議:只改「有／無板」這一個下拉的值,跟手動選一樣,不寫資料庫、不碰產單流程
+function inspBoardSugSet(c) {
+  if (!c || !inspBoardSug.map) return false;
+  const g = inspBoardSug.map[String(c.part_no || '').trim().toUpperCase()];
+  if (!g) return false;
+  const prefix = ((c.spec || '').match(/^[A-Za-z]+/) || [''])[0];
+  c._board = prefix + g.verdict;
+  return true;
+}
+function inspBoardSugApplyOne(idx) {
+  const c = inspComponents[idx];
+  if (!c || inspBoardSugOf(c).cls !== 'diff') return;   // 只有跟建議不同的才能點
+  const prev = c._board;
+  if (!inspBoardSugSet(c)) return;
+  inspBoardUndo.push([{ c:c, prev:prev }]);
+  inspRenderSelected();
+}
+// 復原最後一次套用（單支或整批都算一次），可以連按往回退
+function inspBoardSugUndoLast() {
+  const last = inspBoardUndo.pop();
+  if (!last) return;
+  last.forEach(x => { x.c._board = x.prev; });
+  inspRenderSelected();
+}
+async function inspBoardSugApplyAll() {
+  const items = [...document.querySelectorAll('#insp-components .insp-comp-chk:checked')]
+    .map(cb => inspComponents[parseInt(cb.dataset.idx)]).filter(Boolean);
+  const targets = items.filter(c => inspBoardSugOf(c).cls === 'diff');
+  if (!targets.length) return;
+  if (!await uiConfirm('要把 ' + targets.length + ' 支構件的「有／無板」改成分析判定的值嗎？\n沒有建議、或已經一致的不會動；改完還是可以自己調。')) return;
+  const snap = targets.map(c => ({ c:c, prev:c._board }));
+  targets.forEach(inspBoardSugSet);
+  inspBoardUndo.push(snap);
+  inspRenderSelected();
+}
+function inspBoardSugBar(items) {
+  if (inspBoardSug.loading) return '<div class="insp-sug-bar"><span style="color:var(--text3)">🧩 有無板多階分析查詢中…</span></div>';
+  if (inspBoardSug.err) return '<div class="insp-sug-bar"><span style="color:var(--accent)">🧩 有無板多階分析讀取失敗：' + inspSugAttr(inspBoardSug.err) + '</span></div>';
+  if (!inspBoardSug.map) return '';
+  if (!inspBoardSug.hit) return '<div class="insp-sug-bar"><span style="color:var(--text3)">🧩 此工程區未建多階分析，沒有建議可比對</span></div>';
+  let yes = 0, no = 0, miss = 0, diff = 0;
+  items.forEach(c => {
+    const s = inspBoardSugOf(c);
+    if (s.cls === 'none') { miss++; return; }
+    if (s.cls === 'diff') diff++;
+    if (String(s.text).indexOf('有板') >= 0) yes++; else no++;
+  });
+  // 一行就好:統計 + 一鍵套用 + 復原;解釋性的字一律收進滑鼠提示
+  const undo = inspBoardUndo.length
+    ? '<button type="button" class="btn-sm btn-export" style="flex:none;padding:3px 10px" ' +
+      'onclick="inspBoardSugUndoLast()" title="還原上一次的套用，可以連按往回退">↶ 復原 ' +
+      inspBoardUndo[inspBoardUndo.length - 1].length + ' 支</button>'
+    : '';
+  return '<div class="insp-sug-bar">' +
+    '<span title="依多階資料自動判定；只是建議，不會自己改你的選擇">🧩 有無板多階分析</span>' +
+    '<span style="color:var(--green)">有板 ' + yes + '</span><span>無板 ' + no + '</span>' +
+    (miss ? '<span style="color:var(--accent)" title="多階資料中找不到這幾支的構件編號">找不到 ' + miss + '</span>' : '') +
+    (diff ? '<span style="color:var(--yellow)">與選擇不同 ' + diff + '</span>' +
+            '<button type="button" class="btn-sm btn-export" style="flex:none;padding:3px 10px" ' +
+            'onclick="inspBoardSugApplyAll()" title="只改跟建議不同的那幾支；找不到的不會動">照建議修改 ' + diff + ' 支</button>'
+          : '<span style="color:var(--text3)">與你的選擇一致</span>') +
+    undo + '</div>';
+}
 // 有／無板全區試算:整個工程區跑一遍多階判定,只開彈窗顯示,不改報驗頁任何欄位
 function inspBoardTrialOpen(btn) {
   const pid = document.getElementById('insp-proj').value;
@@ -25916,6 +26080,7 @@ function inspBoardTrialOpen(btn) {
 }
 async function inspLoadComponents() {
   const zid = document.getElementById('insp-zone').value;
+  inspBoardSugReset();   // 切換工程區:舊的有無板多階分析立刻作廢
   const el = document.getElementById('insp-components');
   const selWrap = document.getElementById('insp-selected');
   const statEl = document.getElementById('insp-sel-stat');
@@ -25977,6 +26142,7 @@ async function inspLoadComponents() {
   el.innerHTML = html;
   inspRenderSelected();
   inspUpdateSelCount();
+  inspBoardSugLoad(projNum, zoneCode);   // 不 await:建議查回來才重繪
 }
 function inspQtyChange(sel) {
   const idx = parseInt(sel.dataset.idx);
@@ -26105,7 +26271,7 @@ function inspRenderSelected() {
   const items = checks.map(c => inspComponents[parseInt(c.dataset.idx)]).filter(Boolean);
   if (!items.length) { wrap.innerHTML = '<div class="empty-state">尚未勾選構件</div>'; return; }
   items.sort((a, b) => (parseInt(a.seq) || 0) - (parseInt(b.seq) || 0));
-  let html = '<div class="insp-comp-wrap"><div class="insp-comp-scroll"><table class="insp-comp-table"><thead><tr><th>序號</th><th>構件編號</th><th>規格</th><th>報驗支數</th><th>圖號</th><th>版次</th><th>有/無板</th><th>UT部位</th><th title="勾選=預報構件：這次不列入申驗單，但仍計入每日產量，暫存於下方「預報構件暫存區」等真正報驗時補單">預報</th></tr></thead><tbody>';
+  let html = '<div class="insp-comp-wrap">' + inspBoardSugBar(items) + '<div class="insp-comp-scroll"><table class="insp-comp-table"><thead><tr><th>序號</th><th>構件編號</th><th>規格</th><th>報驗支數</th><th>圖號</th><th>版次</th><th>有/無板</th><th title="依多階資料自動判定；只是建議，不會改左邊的選擇">有無板多階分析</th><th>UT部位</th><th title="勾選=預報構件：這次不列入申驗單，但仍計入每日產量，暫存於下方「預報構件暫存區」等真正報驗時補單">預報</th></tr></thead><tbody>';
   items.forEach(c => {
     const idx = inspComponents.indexOf(c);
     const prefix = ((c.spec||'').match(/^[A-Za-z]+/) || [''])[0];
@@ -26122,8 +26288,12 @@ function inspRenderSelected() {
         (ei === utList.length - 1 ? '<button type="button" class="insp-ut-add" onclick="inspUTAdd(' + idx + ')" title="再新增一個UT部位">＋</button>' : '') +
       '</span>').join('') +
     '</div>';
+    const sug = inspBoardSugOf(c);
+    const sugCell = '<td class="insp-board-col"><span class="ibt-badge ' + sug.cls + (sug.cls === 'diff' ? ' click' : '') + '"' +
+      (sug.cls === 'diff' ? ' onclick="inspBoardSugApplyOne(' + idx + ')"' : '') +
+      (sug.tip ? ' title="' + inspSugAttr(sug.tip) + '"' : '') + '>' + sug.text + '</span></td>';
     const preChk = '<td class="insp-pre-col" style="text-align:center"><input type="checkbox" class="insp-pre-chk"' + (c._pre ? ' checked' : '') + ' onchange="inspTogglePre(' + idx + ',this)" title="勾選=預報構件（這次不出單、暫存待補報）"/></td>';
-    html += '<tr' + (c._pre ? ' class="insp-pre-row"' : '') + '><td>' + (c.seq||'') + '</td><td>' + (c.part_no||'') + '</td><td>' + (c.spec||'') + '</td><td>' + (c._inspQty||1) + '</td><td>' + (c.drawing_no||'') + '</td><td>' + inspCompRev(c.part_no||'') + '</td><td class="insp-board-col">' + boardSel + '</td><td class="insp-board-col">' + utSel + '</td>' + preChk + '</tr>';
+    html += '<tr' + (c._pre ? ' class="insp-pre-row"' : '') + '><td>' + (c.seq||'') + '</td><td>' + (c.part_no||'') + '</td><td>' + (c.spec||'') + '</td><td>' + (c._inspQty||1) + '</td><td>' + (c.drawing_no||'') + '</td><td>' + inspCompRev(c.part_no||'') + '</td><td class="insp-board-col">' + boardSel + '</td>' + sugCell + '<td class="insp-board-col">' + utSel + '</td>' + preChk + '</tr>';
   });
   html += '</tbody></table></div></div>';
   wrap.innerHTML = html;
@@ -26981,19 +27151,29 @@ async function inspBuildDocx(checked, ctx) {
 // 產申驗單時,依勾選構件的「圖號」到圖面快搜的頁碼標記(drawing_page_drawings)找對應頁,
 // 依構件順序合併成一份 PDF,和申驗單存在同一個資料夾(檔名＝申驗單檔名 + _附圖.pdf)。
 let inspLastAttachState = null;
-const INSP_ATTACH_KEY = 'insp_attach_drawings_v1';
+// 這個開關跟著帳號走(存 user_prefs.prefs),不是跟著瀏覽器
+const INSP_ATTACH_KEY = 'inspAttachDrawings';
+const INSP_ATTACH_OLD_KEY = 'insp_attach_drawings_v1';   // 舊版:只存在這台瀏覽器
 function inspAttachEnabled() {
   const el = document.getElementById('insp-attach-drawings');
   if (el) return el.checked;
-  try { return localStorage.getItem(INSP_ATTACH_KEY) !== '0'; } catch (e) { return true; }
+  return userOptGet(INSP_ATTACH_KEY, true) !== false;
 }
 function inspAttachToggle(el) {
-  try { localStorage.setItem(INSP_ATTACH_KEY, el.checked ? '1' : '0'); } catch (e) {}
+  userOptSet(INSP_ATTACH_KEY, !!el.checked);
+}
+// 舊版存在這台瀏覽器的設定:第一次讀到就搬進個人偏好,之後跟著帳號走
+function inspAttachMigrateLocal() {
+  if (userOptGet(INSP_ATTACH_KEY, undefined) !== undefined) return;
+  let old = null;
+  try { old = localStorage.getItem(INSP_ATTACH_OLD_KEY); } catch (e) {}
+  if (old !== null) userOptSet(INSP_ATTACH_KEY, old !== '0');
 }
 function inspAttachInitCheckbox() {
   const el = document.getElementById('insp-attach-drawings');
   if (!el) return;
-  try { el.checked = localStorage.getItem(INSP_ATTACH_KEY) !== '0'; } catch (e) { el.checked = true; }
+  inspAttachMigrateLocal();
+  el.checked = userOptGet(INSP_ATTACH_KEY, true) !== false;
 }
 function inspAttachWarn() {
   const s = inspLastAttachState;
@@ -50156,6 +50336,35 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   function maBoardUp(v){return String(v==null?'':v).trim().toUpperCase();}
   var MA_BOARD_NO_MATCH='多階資料中找不到此構件編號';
 
+  // 這個工程區每支構件的有／無板判定;報驗頁「有無板多階分析」欄與全區試算共用同一套。
+  // 回傳 {ok, err, hit, map}:map 的 key 是大寫構件編號,沒有的 key 代表多階資料裡找不到這支。
+  window.maBoardMapFor=async function(projNum,zoneCode){
+    if(isGuest||!currentSession)return {ok:false,err:'訪客模式無法讀取多階資料'};
+    var ar=await sbFetch('/rest/v1/multilevel_analyses?select=id,project_no,zone_code,mother_no,created_at&project_no=ilike.'+encodeURIComponent(projNum)+'&order=created_at.desc&limit=200');
+    if(!ar||!ar.ok)return {ok:false,err:maDbError(ar)};
+    var list=(Array.isArray(ar.data)?ar.data:[]).filter(function(a){return maBoardUp(a.project_no)===maBoardUp(projNum);});
+    var hit=list.find(function(a){return maBoardUp(a.zone_code)===maBoardUp(zoneCode);})||list.find(function(a){return maBoardUp(a.mother_no)===maBoardUp(zoneCode);})||null;
+    if(!hit)return {ok:true,hit:null,map:{}};
+    var ir=await sbFetchAll('/rest/v1/multilevel_analysis_items?select=component_no,component_spec,part_no,specification,quantity,category&analysis_id=eq.'+hit.id);
+    if(!ir||!ir.ok||!Array.isArray(ir.data))return {ok:false,err:maDbError(ir)};
+    var byComp={};
+    ir.data.forEach(function(r){
+      var k=maBoardUp(r.component_no);if(!k)return;
+      if(!byComp[k])byComp[k]={componentSpec:'',items:[]};
+      if(!byComp[k].componentSpec&&r.component_spec)byComp[k].componentSpec=r.component_spec;
+      byComp[k].items.push(r);
+    });
+    var map={};
+    Object.keys(byComp).forEach(function(k){
+      // 舊紀錄可能含母件本體(存檔時的比對只認完全相同),所以這裡再排一次
+      var hits=maBoardHits(maPartItems(byComp[k]));
+      map[k]={verdict:hits.length?'有板':'無板',
+        whyNo:maBoardWhy(hits,'no',0),whyShort:maBoardWhy(hits,'no',8),whySpec:maBoardWhy(hits,'spec',0),
+        note:hits.length?'':'第一層零件都不算板（成品材／FB／水電 H／帷幕 Q）'};
+    });
+    return {ok:true,hit:hit,map:map};
+  };
+
   // 全區試算:報驗頁按鈕呼叫。只讀不寫,不碰報驗流程。
   window.maBoardTrialRun=async function(projNum,zoneCode,zoneId,btn){
     if(isGuest||!currentSession){alert('訪客模式無法讀取多階資料；請先登入');return;}
@@ -50164,36 +50373,18 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       var cr=await sbFetchAll('/rest/v1/components?select=seq,part_no,spec,qty&zone_id=eq.'+encodeURIComponent(zoneId)+'&order=seq');
       if(!cr||!cr.ok||!Array.isArray(cr.data)){alert('讀取構件失敗：'+maDbError(cr));return;}
       if(!cr.data.length){alert('此工程區沒有構件資料');return;}
-      var ar=await sbFetch('/rest/v1/multilevel_analyses?select=id,project_no,zone_code,mother_no,created_at&project_no=ilike.'+encodeURIComponent(projNum)+'&order=created_at.desc&limit=200');
-      if(!ar||!ar.ok){alert('查詢多階分析失敗：'+maDbError(ar));return;}
-      var list=(Array.isArray(ar.data)?ar.data:[]).filter(function(a){return maBoardUp(a.project_no)===maBoardUp(projNum);});
-      var hit=list.find(function(a){return maBoardUp(a.zone_code)===maBoardUp(zoneCode);})||list.find(function(a){return maBoardUp(a.mother_no)===maBoardUp(zoneCode);})||null;
-      var byComp={};
-      if(hit){
-        var ir=await sbFetchAll('/rest/v1/multilevel_analysis_items?select=component_no,component_spec,part_no,specification,quantity,category&analysis_id=eq.'+hit.id);
-        if(!ir||!ir.ok||!Array.isArray(ir.data)){alert('讀取多階明細失敗：'+maDbError(ir));return;}
-        ir.data.forEach(function(r){
-          var k=maBoardUp(r.component_no);if(!k)return;
-          if(!byComp[k])byComp[k]={componentSpec:'',items:[]};
-          if(!byComp[k].componentSpec&&r.component_spec)byComp[k].componentSpec=r.component_spec;
-          byComp[k].items.push(r);
-        });
-      }
+      var m=await maBoardMapFor(projNum,zoneCode);
+      if(!m.ok){alert('查詢多階資料失敗：'+m.err);return;}
       maBoardTrial.label=projNum+'-'+zoneCode;
       maBoardTrial.rows=cr.data.map(function(c){
         var row={seq:c.seq,part_no:c.part_no||'',spec:c.spec||'',verdict:'無資料',note:'',whyNo:'',whySpec:''};
-        if(!hit){row.note='此工程區未建多階分析';return row;}
-        var g=byComp[maBoardUp(c.part_no)];
+        if(!m.hit){row.note='此工程區未建多階分析';return row;}
+        var g=m.map[maBoardUp(c.part_no)];
         if(!g){row.note=MA_BOARD_NO_MATCH;return row;}
-        // 舊紀錄可能含母件本體(存檔時的比對只認完全相同),所以這裡再排一次
-        var hits=maBoardHits(maPartItems({componentSpec:g.componentSpec,items:g.items}));
-        row.verdict=hits.length?'有板':'無板';
-        row.note=hits.length?'':'第一層零件都不算板（成品材／FB／水電 H／帷幕 Q）';
-        row.whyNo=maBoardWhy(hits,'no',0);
-        row.whySpec=maBoardWhy(hits,'spec',0);
+        row.verdict=g.verdict;row.note=g.note;row.whyNo=g.whyNo;row.whySpec=g.whySpec;
         return row;
       });
-      maBoardTrialRender(hit);
+      maBoardTrialRender(m.hit);
       openModal('insp-board-modal');
     }finally{
       if(btn){btn.disabled=false;btn.textContent=btn.dataset.label||btn.textContent;}
