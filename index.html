@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.19.2"/>
+<meta name="sc-version" content="2026.09.19.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -4113,7 +4113,7 @@ window.normalizeFullWidth=function(value){
       <div class="ma-intro ma-no-print ma-entry-only">
         <div>
           <div class="ma-intro-title">構件零件、帷幕與水電，一次整理</div>
-          <p>貼入 MDB0R070 多階資料後，系統會以單星號辨識構件、保留雙星號第一層零件、忽略三星號拆解列，再依最右側代碼將 Q 分為帷幕、H 分為水電，並產生可搭配 PDF 或 CAD 圖面的 Word 匯出 Prompt。</p>
+          <p>貼入 MDB0R070 多階資料後，系統會以單星號辨識構件、保留雙星號第一層零件、忽略三星號拆解列，再依最右側代碼將 Q 分為帷幕、H 分為水電，並產生可搭配 PDF 或 CAD 圖面的 Word 匯出 Prompt。原始報表文字檔，或別人整理成 Tab 分欄（貼過 Excel）的版本，都會自動辨識，換頁重複出現的頁首與表頭會直接略過。</p>
         </div>
         <div class="ma-local-badge">分析在本機 · 按儲存才上傳</div>
       </div>
@@ -49439,12 +49439,71 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     return {components:components,projectNo:projectNo,zoneCode:zoneCode};
   }
 
+  // MDB0R070 報表被人整理成 Tab 分欄（例如先貼進 Excel 再複製出來）時的解析。
+  // 各家整理出來的欄位數不一定一樣（有的 15 欄、有的 17 欄），所以欄位位置一律從表頭推算，不寫死。
+  // 換頁時夾雜的頁首、表頭、虛線列因為第 0 欄不是星號，會自動被跳過。
+  function maParseMdbTab(raw){
+    var lines=String(raw||'').split(/\r?\n/),cols=null;
+    for(var i=0;i<lines.length&&!cols;i++){
+      if(lines[i].indexOf('\t')<0)continue;
+      var head=lines[i].split('\t').map(function(v){return v.replace(/\s+/g,'');});
+      var find=function(re){for(var n=0;n<head.length;n++)if(re.test(head[n]))return n;return -1;};
+      // 「材質   單／位」這種被切成兩欄的表頭也要認得
+      var c={level:find(/^階層$/),seq:find(/^序號$/),no:find(/^構件編號$/),spec:find(/^規格$/),
+        mat:find(/^材質/),unit:find(/^(單位|位)$/),qty:find(/^數量$/),code:find(/^代碼$/),draw:find(/^圖號$/)};
+      if(c.level===0&&c.no>0&&c.spec>c.no&&c.qty>c.spec&&c.code>c.qty)cols=c;
+    }
+    if(!cols)return null;
+    var components=[],current=null;
+    lines.forEach(function(line){
+      if(line.indexOf('\t')<0)return;
+      var cells=line.split('\t');
+      if(cells.length<=cols.qty)return;
+      var level=String(cells[0]||'').trim();
+      if(!/^\*{1,3}$/.test(level))return;
+      var cell=function(n){return n>=0?String(cells[n]==null?'':cells[n]).trim():'';};
+      // 編號超過欄寬時尾巴會溢到品名欄，形如「0         高張力圓」「BF        鋼板」，要接回編號
+      var partNo=cell(cols.no),first=cols.no+1<cols.spec?String(cells[cols.no+1]==null?'':cells[cols.no+1]):'';
+      var over=first.match(/^([0-9A-Za-z#*\-\/]+)\s{2,}/);
+      if(over){partNo+=over[1];first=first.slice(over[0].length);}
+      if(!partNo)return;
+      if(level==='*'){
+        var drawing=cell(cols.draw);
+        if(!drawing)for(var k=cells.length-1;k>cols.code;k--){if(cell(k)){drawing=cell(k);break;}}
+        current={componentNo:partNo,drawingNo:drawing,componentSpec:cell(cols.spec),items:[]};
+        components.push(current);
+        return;
+      }
+      // *** 及更深階層不是第一層零件，依既有分析規則忽略。
+      if(level!=='**'||!current)return;
+      var name=first.trim();
+      for(var m=cols.no+2;m<cols.spec;m++)name+=cell(m);
+      // 材質欄寬不夠時尾巴會擠到單位欄，形如「A108GR10」+「18 ST」
+      var mat=cell(cols.mat),unit=cell(cols.unit),split=unit.match(/^(\S+)\s+(\S+)$/);
+      if(split){mat+=split[1];unit=split[2];}
+      var qty=cell(cols.qty),code=cell(cols.code);
+      current.items.push({
+        sequence:Number(cell(cols.seq))||0,
+        partNo:partNo,
+        description:name,
+        specification:cell(cols.spec),
+        material:mat,
+        unit:unit,
+        quantity:qty===''?'':Number(qty),
+        code:code==='Q'||code==='H'?code:''
+      });
+    });
+    return components.length?components:null;
+  }
+
   window.maParseData=function(){
     var raw=(document.getElementById('ma-raw-input').value||'').replace(/^\uFEFF/,'');
     if(!raw.trim()){alert('請先貼上或選擇多階資料文字檔');return;}
     var components=[],current=null;
     var tabular=maParseTabular(raw);
+    var mdbTab=tabular?null:maParseMdbTab(raw);
     if(tabular){components=tabular.components;}
+    else if(mdbTab){components=mdbTab;}
     else{
       raw.split(/\r?\n/).forEach(function(line){
         var root=line.match(/^\*(?!\*)\s+\d+\s+(\S+)/);
