@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.19.7"/>
+<meta name="sc-version" content="2026.09.19.8"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2574,6 +2574,20 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
   </div>
 </div>
 
+<div class="modal-overlay" id="insp-board-modal">
+  <div class="modal" style="max-width:1100px;width:96vw">
+    <div class="modal-title">有／無板全區試算 — <span id="ibt-title" style="color:var(--accent2)">—</span></div>
+    <div class="ibt-sum" id="ibt-sum">—</div>
+    <div class="section-label" style="margin:0">只是試算：不會改動報驗頁的任何欄位，也不會寫進資料庫。規則＝排除母件本體後，第一層零件只要還有不是成品材／FB／水電 H／帷幕 Q 的零件，就判有板。</div>
+    <div class="ibt-wrap" id="ibt-body"></div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="maBoardTrialExport()">⬇ 匯出 Excel</button>
+      <span style="flex:1"></span>
+      <button class="btn-modal-cancel" onclick="closeModal('insp-board-modal')">關閉</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="bl-zone-modal">
   <div class="modal" style="max-width:960px;width:96vw">
     <div class="modal-title">報驗構件 — <span id="bzd-title" style="color:var(--accent2)">—</span></div>
@@ -4090,6 +4104,17 @@ window.normalizeFullWidth=function(value){
 .ma-tag.q{background:rgba(191,90,242,.14);color:var(--purple);border:1px solid rgba(191,90,242,.35)}
 .ma-tag.h{background:rgba(64,200,224,.12);color:var(--accent3);border:1px solid rgba(64,200,224,.35)}
 .ma-tag.sp{background:rgba(255,255,255,.08);color:var(--text2);border:1px solid var(--border)}
+/* ── 有／無板全區試算(報驗頁按鈕開啟的彈窗) ── */
+.ibt-sum{display:flex;flex-wrap:wrap;gap:14px;font-family:var(--mono);font-size:11px;color:var(--text2)}
+.ibt-wrap{overflow:auto;max-height:60vh;border:1px solid var(--border);border-radius:var(--rad)}
+.ibt-table{border-collapse:collapse;width:100%;min-width:820px;font-size:12px}
+.ibt-table th{position:sticky;top:0;z-index:1;background:var(--bg3);color:var(--text2);font-family:var(--mono);font-weight:500;text-align:left;padding:7px 9px;border-bottom:1px solid var(--border)}
+.ibt-table td{padding:6px 9px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top;line-height:1.6}
+.ibt-table td.code{font-family:var(--mono);color:var(--text)}
+.ibt-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-family:var(--mono);font-size:10px;font-weight:600;white-space:nowrap}
+.ibt-badge.yes{background:rgba(50,215,75,.14);color:var(--green);border:1px solid rgba(50,215,75,.35)}
+.ibt-badge.no{background:rgba(255,255,255,.06);color:var(--text3);border:1px solid var(--border)}
+.ibt-badge.none{background:rgba(255,159,10,.12);color:var(--accent);border:1px solid rgba(255,159,10,.35)}
 .ma-subtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .ma-subtab{padding:5px 12px;font-size:11px}
 .ma-total-row td{font-weight:700;color:var(--text);background:var(--bg3);border-top:2px solid var(--border-hi)}
@@ -4915,7 +4940,7 @@ window.normalizeFullWidth=function(value){
         </div>
       </div>
 
-      <div class="section-label" style="margin-bottom:8px">③ 勾選要報驗的構件</div>
+      <div class="section-label" style="margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">③ 勾選要報驗的構件<button type="button" class="btn-sm btn-export" style="flex:none" onclick="inspBoardTrialOpen(this)" title="用多階資料把整個工程區跑一遍有／無板判定；只顯示結果，不會改動任何欄位">🧩 有／無板全區試算</button></div>
       <div id="insp-components"><div class="empty-state">請先選擇工程與工程區</div></div>
 
       <div class="section-label" style="margin-top:24px;margin-bottom:8px">④ 已勾選構件（依序號排列）<span class="insp-sel-stat" id="insp-sel-stat"></span></div>
@@ -25878,6 +25903,17 @@ function base64ToArrayBuffer(b64) {
   return bytes.buffer;
 }
 
+// 有／無板全區試算:整個工程區跑一遍多階判定,只開彈窗顯示,不改報驗頁任何欄位
+function inspBoardTrialOpen(btn) {
+  const pid = document.getElementById('insp-proj').value;
+  const zid = document.getElementById('insp-zone').value;
+  if (!pid || !zid) { alert('請先選擇工程與工程區'); return; }
+  const proj = allBOM.find(p => String(p.id) === String(pid));
+  const zoneObj = (inspZones || []).find(z => String(z.id) === String(zid));
+  if (!proj || !zoneObj) { alert('找不到工程或工程區資料，請重新選擇'); return; }
+  if (typeof maBoardTrialRun !== 'function') { alert('多階分析模組尚未載入，請重新整理頁面後再試'); return; }
+  maBoardTrialRun(proj.proj_num || '', zoneObj.zone_code || '', zid, btn);
+}
 async function inspLoadComponents() {
   const zid = document.getElementById('insp-zone').value;
   const el = document.getElementById('insp-components');
@@ -49432,12 +49468,34 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var cat=maPartCategory(item),g=MA_CAT_GROUP[key];
     return g?g.indexOf(cat)>=0:cat===key;
   }
-  // 規格與構件規格相同的列視為母件本體，整筆排除（不顯示、不統計、不下載）
+  // 規格拆成「斷面」與「長度」:BH700X350X12X22X8350 → 斷面 BH700X350X12X22、長度 8350
+  function maSpecSection(spec){
+    var s=String(spec==null?'':spec).trim().toUpperCase().replace(/\s+/g,'');
+    if(!s)return null;
+    var parts=s.split(/[X×]/);
+    if(parts.length<2)return null;
+    var last=parts[parts.length-1];
+    if(!/^\d+(?:\.\d+)?$/.test(last))return null;
+    return {section:parts.slice(0,-1).join('X'),length:Number(last)};
+  }
+  // 母件本體的列整筆排除（不顯示、不統計、不下載、不存進資料庫）。
+  // 本體規格常因切斜、扣封板而與構件規格差幾十 mm（例:構件 BH700X350X12X22X8350、本體零件 BH700X350X12X22X8330）,
+  // 所以除了「完全相同」外,斷面相同、只差最後一段長度的也算本體。
+  // 三道保險避免誤殺真的附加型鋼:數量必須是 1、長度差 5% 以內、一支構件只排除一筆。
   function maPartItems(c){
     var cs=String(c&&c.componentSpec!=null?c.componentSpec:'').trim();
+    var csSec=maSpecSection(cs),bodyTaken=false;
     return c.items.filter(function(i){
       var s=String(i.specification==null?'':i.specification).trim();
-      return !(s!==''&&s===cs);
+      if(s==='')return true;
+      if(cs!==''&&s===cs)return false;
+      if(bodyTaken||!csSec||!(csSec.length>0))return true;
+      var sec=maSpecSection(s);
+      if(!sec||sec.section!==csSec.section)return true;
+      if(Number(i.quantity)!==1)return true;
+      if(Math.abs(sec.length-csSec.length)/csSec.length>0.05)return true;
+      bodyTaken=true;
+      return false;
     });
   }
   function maSumQty(items){return items.reduce(function(s,i){var q=Number(i.quantity);return s+(isNaN(q)?0:q);},0);}
@@ -50068,6 +50126,113 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       maSetSaveStatus('「'+label+'」尚未建立多階資料分析：請貼上多階資料 → 開始分析 → 儲存分析結果，之後就能從 CP 看板直接開啟',true);
       var raw=document.getElementById('ma-raw-input');if(raw&&!raw.value.trim())setTimeout(function(){raw.focus();},300);
     }
+  };
+
+  // ── 有／無板自動判定 ──
+  // 規則:排除母件本體後,第一層零件只要還有「不是成品材、不是 FB、不是水電 H、不是帷幕 Q」的,就算有板。
+  // 亦即 SP、角鐵 L,以及本體以外額外的 BH/RH/BOX/BT/U(托樑、補強 H)都算有板。
+  // H(水電)、Q(帷幕)暫定不算板:圖面有時沒畫、多階表卻有,先當不算;要改規則只動這個陣列。
+  var MA_BOARD_NOT=['成品材','FB','H','Q'];
+  var MA_BOARD_FIRST=['SP','L'];
+  // 分類優先用存檔時寫進資料庫的 category,畫面看到什麼分類就用什麼判定;現場解析出來的才即時算
+  function maItemCat(i){return (i&&i.category)?i.category:maPartCategory(i);}
+  function maBoardHits(items){return items.filter(function(i){return MA_BOARD_NOT.indexOf(maItemCat(i))<0;});}
+  // 依據文字:依分類分組,格式「SP×5：S247、XH9…等 23 種」;field='spec' 列規格,否則列零件編號
+  function maBoardWhy(hits,field,limit){
+    var order=[],map={};
+    hits.forEach(function(i){
+      var c=maItemCat(i);
+      if(!map[c]){map[c]=[];order.push(c);}
+      map[c].push(String((field==='spec'?i.specification:(i.partNo!=null?i.partNo:i.part_no))||'').trim());
+    });
+    // 顯示順序固定:SP、L 排前面(最常見),其餘依分頁順序,每一列格式才一致
+    var rank=function(c){var n=MA_BOARD_FIRST.indexOf(c);if(n>=0)return n;var m=MA_PART_ORDER.indexOf(c);return 100+(m<0?99:m);};
+    return order.sort(function(x,y){return rank(x)-rank(y);}).map(function(c){
+      var list=map[c],show=limit>0?list.slice(0,limit):list;
+      return c+'×'+list.length+'：'+show.join('、')+(list.length>show.length?'…等 '+list.length+' 種':'');
+    }).join('\n');
+  }
+  var maBoardTrial={rows:[],label:''};
+  function maBoardUp(v){return String(v==null?'':v).trim().toUpperCase();}
+  var MA_BOARD_NO_MATCH='多階資料中找不到此構件編號';
+
+  // 全區試算:報驗頁按鈕呼叫。只讀不寫,不碰報驗流程。
+  window.maBoardTrialRun=async function(projNum,zoneCode,zoneId,btn){
+    if(isGuest||!currentSession){alert('訪客模式無法讀取多階資料；請先登入');return;}
+    if(btn){btn.disabled=true;btn.dataset.label=btn.textContent;btn.textContent='試算中…';}
+    try{
+      var cr=await sbFetchAll('/rest/v1/components?select=seq,part_no,spec,qty&zone_id=eq.'+encodeURIComponent(zoneId)+'&order=seq');
+      if(!cr||!cr.ok||!Array.isArray(cr.data)){alert('讀取構件失敗：'+maDbError(cr));return;}
+      if(!cr.data.length){alert('此工程區沒有構件資料');return;}
+      var ar=await sbFetch('/rest/v1/multilevel_analyses?select=id,project_no,zone_code,mother_no,created_at&project_no=ilike.'+encodeURIComponent(projNum)+'&order=created_at.desc&limit=200');
+      if(!ar||!ar.ok){alert('查詢多階分析失敗：'+maDbError(ar));return;}
+      var list=(Array.isArray(ar.data)?ar.data:[]).filter(function(a){return maBoardUp(a.project_no)===maBoardUp(projNum);});
+      var hit=list.find(function(a){return maBoardUp(a.zone_code)===maBoardUp(zoneCode);})||list.find(function(a){return maBoardUp(a.mother_no)===maBoardUp(zoneCode);})||null;
+      var byComp={};
+      if(hit){
+        var ir=await sbFetchAll('/rest/v1/multilevel_analysis_items?select=component_no,component_spec,part_no,specification,quantity,category&analysis_id=eq.'+hit.id);
+        if(!ir||!ir.ok||!Array.isArray(ir.data)){alert('讀取多階明細失敗：'+maDbError(ir));return;}
+        ir.data.forEach(function(r){
+          var k=maBoardUp(r.component_no);if(!k)return;
+          if(!byComp[k])byComp[k]={componentSpec:'',items:[]};
+          if(!byComp[k].componentSpec&&r.component_spec)byComp[k].componentSpec=r.component_spec;
+          byComp[k].items.push(r);
+        });
+      }
+      maBoardTrial.label=projNum+'-'+zoneCode;
+      maBoardTrial.rows=cr.data.map(function(c){
+        var row={seq:c.seq,part_no:c.part_no||'',spec:c.spec||'',verdict:'無資料',note:'',whyNo:'',whySpec:''};
+        if(!hit){row.note='此工程區未建多階分析';return row;}
+        var g=byComp[maBoardUp(c.part_no)];
+        if(!g){row.note=MA_BOARD_NO_MATCH;return row;}
+        // 舊紀錄可能含母件本體(存檔時的比對只認完全相同),所以這裡再排一次
+        var hits=maBoardHits(maPartItems({componentSpec:g.componentSpec,items:g.items}));
+        row.verdict=hits.length?'有板':'無板';
+        row.note=hits.length?'':'第一層零件都不算板（成品材／FB／水電 H／帷幕 Q）';
+        row.whyNo=maBoardWhy(hits,'no',0);
+        row.whySpec=maBoardWhy(hits,'spec',0);
+        return row;
+      });
+      maBoardTrialRender(hit);
+      openModal('insp-board-modal');
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent=btn.dataset.label||btn.textContent;}
+    }
+  };
+  function maBoardTrialRender(hit){
+    var rows=maBoardTrial.rows;
+    var yes=0,no=0,miss=0,none=0;
+    rows.forEach(function(r){
+      if(r.verdict==='有板')yes++;
+      else if(r.verdict==='無板')no++;
+      else if(r.note===MA_BOARD_NO_MATCH)miss++;
+      else none++;
+    });
+    var t=document.getElementById('ibt-title');if(t)t.textContent=maBoardTrial.label;
+    var s=document.getElementById('ibt-sum');
+    if(s)s.innerHTML='<span>構件 '+rows.length+'</span>'+
+      '<span style="color:var(--green)">有板 '+yes+'</span>'+
+      '<span>無板 '+no+'</span>'+
+      (miss?'<span style="color:var(--accent)">找不到編號 '+miss+'</span>':'')+
+      (none?'<span style="color:var(--text3)">未建分析 '+none+'</span>':'')+
+      (hit?'<span style="color:var(--text3)">依據分析 #'+hit.id+'（'+maEsc(maHistoryDate(hit.created_at))+'）</span>'
+          :'<span style="color:var(--accent)">此工程區沒有已儲存的多階分析</span>');
+    var host=document.getElementById('ibt-body');if(!host)return;
+    host.innerHTML='<table class="ibt-table"><thead><tr><th style="width:54px">序號</th><th style="width:132px">構件編號</th><th style="width:186px">規格</th><th style="width:74px">判定</th><th>依據</th></tr></thead><tbody>'+
+      rows.map(function(r){
+        var cls=r.verdict==='有板'?'yes':(r.verdict==='無板'?'no':'none');
+        var why=r.verdict==='有板'?maEsc(r.whyNo).replace(/\n/g,'<br>'):'<span style="color:var(--text3)">'+maEsc(r.note)+'</span>';
+        return '<tr><td>'+maEsc(r.seq)+'</td><td class="code">'+maEsc(r.part_no)+'</td><td class="code">'+maEsc(r.spec)+'</td>'+
+          '<td><span class="ibt-badge '+cls+'">'+maEsc(r.verdict)+'</span></td><td>'+why+'</td></tr>';
+      }).join('')+'</tbody></table>';
+  }
+  window.maBoardTrialExport=function(){
+    if(!maBoardTrial.rows.length){alert('請先執行試算');return;}
+    var flat=function(v){return String(v||'').replace(/\n/g,' ／ ');};
+    maSaveWorkbook('有無板試算_'+maBoardTrial.label+'.xlsx',[{name:'有無板試算',rows:maBoardTrial.rows.map(function(r){
+      return {'工程區':maBoardTrial.label,'序號':r.seq,'構件編號':r.part_no,'規格':r.spec,'判定':r.verdict,
+        '依據（零件編號）':flat(r.whyNo),'依據（規格）':flat(r.whySpec),'備註':r.note};
+    })}]);
   };
 
   window.maClearAll=function(){
