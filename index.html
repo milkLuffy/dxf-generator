@@ -7595,7 +7595,9 @@ window.normalizeFullWidth=function(value){
     .att-m-stats .none.has b{color:var(--red)}
     .att-m-hint{margin:6px 2px 0;font-size:12px;line-height:1.6;color:var(--text3)}
     .att-m-empty{padding:18px 8px;text-align:center;font-size:14px;color:var(--text3)}
-    .att-m-allin{width:100%;min-height:46px;margin-top:10px;border:1px dashed rgba(50,215,75,.6);border-radius:12px;background:rgba(50,215,75,.08);color:var(--green);font:600 15px var(--sans);cursor:pointer}
+    .att-m-allrow{display:flex;gap:8px;margin-top:10px}
+    .att-m-allin{flex:1;min-width:0;min-height:46px;border:1px dashed rgba(50,215,75,.6);border-radius:12px;background:rgba(50,215,75,.08);color:var(--green);font:600 15px var(--sans);cursor:pointer}
+    .att-m-allin.off{border-color:var(--border);background:var(--bg3);color:var(--text2)}
     .att-m-group{margin-top:16px}
     .att-m-ghead{display:flex;justify-content:space-between;margin:0 2px 8px;font:600 13px var(--sans);color:var(--text3)}
     .att-m-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
@@ -7607,6 +7609,7 @@ window.normalizeFullWidth=function(value){
     .att-m-chip.is-in .nm::before{content:'✓ '}
     .att-m-chip.is-leave{border-color:rgba(255,214,10,.45);background:rgba(255,214,10,.12);color:var(--yellow)}
     .att-m-chip.is-ot{border-color:rgba(10,132,255,.6);background:rgba(10,132,255,.16);color:var(--accent2)}
+    .att-m-chip.is-in.is-pre{border-style:dashed;background:rgba(50,215,75,.09)}
     .att-m-chip:is(.is-in,.is-leave,.is-ot) .sub{color:inherit;opacity:.85}
     .att-m-list{display:flex;flex-direction:column;gap:6px}
     .att-m-row{display:flex;align-items:center;gap:10px;box-sizing:border-box;width:100%;min-height:54px;padding:8px 10px 8px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg3);color:var(--text);text-align:left;cursor:pointer;font-family:var(--sans)}
@@ -31816,6 +31819,54 @@ function attMPeople(){
   }).filter(Boolean);
 }
 
+// ── 點名預設：一開始就當作「全部到齊」，只要把沒來的人點掉 ──────────────
+// 預設出勤規則：週一~週五全部到齊；週六現場(本工/外勞)照常、辦公人員預設休息(通常只有 1~2 人值班)；
+// 週日全部休息。老闆不點名，維持「未登記」。
+function attMDefaultIn(x,date){
+  if(!date||x.boss) return false;
+  const w=new Date(date+'T00:00:00').getDay();
+  if(w===0) return false;                        // 週日：只點有來的人
+  if(w===6) return x.cat!=='辦公人員';            // 週六：辦公室只有值班，現場照常
+  return true;
+}
+// 「休息／不用上班」不必選假別，資料庫也不留紀錄(沒紀錄＝沒上班)。
+// 但整天都沒人出工的日子(例：全廠休假)資料庫會是空的，只好在本機記一下「這天點過了」，
+// 免得下次打開又跳回「預設到齊」。只影響預設畫面，不影響任何統計。
+function attMRolledDates(){ try{ return JSON.parse(localStorage.getItem('attMRolled')||'[]')||[]; }catch(_){ return []; } }
+function attMSetRolled(date,on){
+  if(!date) return;
+  try{ const a=attMRolledDates().filter(d=>d!==date); if(on) a.push(date); localStorage.setItem('attMRolled',JSON.stringify(a.slice(-90))); }catch(_){}
+}
+function attMIsRolled(date,people){ return people.some(x=>x.work>0||x.ot>0) || attMRolledDates().indexOf(date)>=0; }
+
+// attMPre＝「還在預設狀態」的日期：畫面先照預設顯示，但**還沒寫進資料庫**，
+// 免得只是翻日期看看就被寫進一整天的出勤。第一次點人名／全部到齊／完成點名時才真的寫入。
+let attMPre='';
+function attMState(x,date){
+  if(x.state!=='none') return x.state;
+  return (attMPre===date && attMDefaultIn(x,date))?'in':'off';
+}
+function attMPreCommit(){
+  const date=(document.getElementById('att-date')||{}).value||'';
+  if(!attMPre||attMPre!==date) return;
+  attMPre='';
+  let n=0;
+  attMPeople().forEach(x=>{
+    if(!attMDefaultIn(x,date)) return;
+    const tr=attMRow(x.name); if(!tr) return;
+    if(x.state==='none'){ attMSetWork(tr,8); n++; }
+    // 事先登記「半天假」的人：另外半天一樣算上班（全天假就整天不上班）
+    else if(x.state==='leave' && x.work<=0 && x.leave_hours>0 && x.leave_hours<8){ attMSetWork(tr,8-x.leave_hours); n++; }
+  });
+  if(n) attSaveNow(); else attMSetRolled(date,true);   // 預設全休(週日)：沒東西可寫，記一下已點名
+}
+function attMPreHint(date){
+  const w=new Date(date+'T00:00:00').getDay();
+  if(w===6) return '週六預設：現場全部到齊、辦公人員休息。點有來值班的辦公人員，沒來的現場人員點一下改成休息。';
+  if(w===0) return '週日預設全部休息，只要點今天有來的人。';
+  return '預設全部到齊，只要把沒來的人點掉（變成「休息」）。要記假別的人可以在「完成點名」裡選，不選就是休息。';
+}
+
 function attMRender(){
   const wrap=document.getElementById('att-m-wrap'); if(!wrap) return;
   const card=wrap.closest('.card'), mobile=spTrackIsMobile();
@@ -31823,31 +31874,38 @@ function attMRender(){
   if(!mobile){ wrap.innerHTML=''; attMCloseSheet(); return; }
   const date=(document.getElementById('att-date')||{}).value||'';
   if(!date||!attRoster.length){ wrap.innerHTML='<div class="att-m-empty">'+(date?'尚無人員，請至「公司名冊」新增':'請選擇日期')+'</div>'; return; }
-  const people=attMPeople(), cnt={in:0,leave:0,none:0};
-  people.forEach(x=>{ if(!(x.state==='none'&&x.boss)) cnt[x.state]++; });   // 老闆不必點名：沒登記不算「未點」
-  // 換日期時決定預設畫面：還有人沒點名 → 點名；每個人都有結果 → 明細
-  if(attMViewDate!==date||!attMView){ attMViewDate=date; attMView=cnt.none?'roll':'list'; }
+  const people=attMPeople();
+  const rolled=attMIsRolled(date,people);
+  attMPre=rolled?'':date;        // 還沒點過名的日子 → 畫面先照「預設」顯示（尚未寫入）
+  const cnt={in:0,leave:0,off:0}, real={in:0,leave:0,off:0};
+  people.forEach(x=>{ if(x.state==='none'&&x.boss) return;   // 老闆不必點名：沒登記不算休息
+    cnt[attMState(x,date)]++; real[x.state==='none'?'off':x.state]++; });
+  // 換日期時決定預設畫面：還沒點過名 → 點名；點過了 → 明細
+  if(attMViewDate!==date||!attMView){ attMViewDate=date; attMView=rolled?'list':'roll'; }
   const v=attMView;
   let h='<div class="att-m-seg">'+[['roll','點名'],['ot','加班'],['list','明細']].map(([k,l])=>'<button type="button" class="'+(k===v?'on':'')+'" onclick="attMSetView(\''+k+'\')">'+l+'</button>').join('')+'</div>';
   const groups=ATT_M_GROUPS.map(g=>({g,list:people.filter(x=>x.group===g)})).filter(x=>x.list.length);
   const chip=(x,cls,sub)=>'<button type="button" class="att-m-chip '+cls+'" data-name="'+attEsc(x.name)+'" onclick="attMTap(this.dataset.name)"><span class="nm">'+attEsc(x.name)+'</span><span class="sub">'+(sub||'&nbsp;')+'</span></button>';
   const ghead=(g,right)=>'<div class="att-m-ghead"><span>'+ATT_M_GROUP_LABEL[g]+'</span><span>'+right+'</span></div>';
   if(v==='roll'){
-    h+='<div class="att-m-stats"><span class="in">出工<b>'+cnt.in+'</b></span><span class="leave">請假<b>'+cnt.leave+'</b></span><span class="none'+(cnt.none?' has':'')+'">未點<b>'+cnt.none+'</b></span></div>';
-    h+='<div class="att-m-hint">點人名＝今日出工（上班 1 工），再點一次取消；請假的人點了可以修改。</div>';
-    if(cnt.none) h+='<button type="button" class="att-m-allin" onclick="attMAllIn()">全部出工（'+cnt.none+' 人）</button>';
+    h+='<div class="att-m-stats"><span class="in">出工<b>'+cnt.in+'</b></span><span class="leave">請假<b>'+cnt.leave+'</b></span><span class="none">休息<b>'+cnt.off+'</b></span></div>';
+    h+='<div class="att-m-hint">'+(attMPre?attMPreHint(date):'點人名＝今日出工（上班 1 工），再點一次改成休息；請假的人點了可以修改。')+'</div>';
+    h+='<div class="att-m-allrow"><button type="button" class="att-m-allin" onclick="attMAllSet(true)">全部到齊</button>'
+      +'<button type="button" class="att-m-allin off" onclick="attMAllSet(false)">全部休息</button></div>';
     groups.forEach(({g,list})=>{
-      h+='<div class="att-m-group">'+ghead(g,list.filter(x=>x.state==='in').length+' / '+list.length)+'<div class="att-m-chips">'
+      h+='<div class="att-m-group">'+ghead(g,list.filter(x=>attMState(x,date)==='in').length+' / '+list.length)+'<div class="att-m-chips">'
         +list.map(x=>{
-          if(x.state==='in'){
+          const st=attMState(x,date);
+          if(st==='in'){
             const s=[];
             if(x.work>0&&x.work<8) s.push(attN(x.work)+'h');
             if(x.leave_type) s.push(x.leave_type+attN(x.leave_hours)+'h');
             if(x.ot>0) s.push('加'+attN(x.ot)+'h');
-            return chip(x,'is-in',attEsc(s.join('・')));
+            // 還沒寫入的「預設到齊」用虛線框表示
+            return chip(x,'is-in'+(x.state==='none'?' is-pre':''),attEsc(s.join('・')));
           }
-          if(x.state==='leave') return chip(x,'is-leave',attEsc(x.leave_type+' '+attMHours(x.leave_hours)));
-          return chip(x,'','');
+          if(st==='leave') return chip(x,'is-leave',attEsc(x.leave_type+' '+attMHours(x.leave_hours)));
+          return chip(x,'',x.boss?'未登記':'休息');
         }).join('')+'</div></div>';
     });
   } else if(v==='ot'){
@@ -31857,7 +31915,7 @@ function attMRender(){
       +[2,3,4].map(n=>'<button type="button" class="att-m-opt'+(attMOtHours===n?' on':'')+'" onclick="attMSetOtHours('+n+')">'+n+'h</button>').join('')
       +'<input type="number" inputmode="decimal" step="0.5" min="0.5" value="'+attN(attMOtHours)+'" onchange="attMSetOtHours(this.value)" aria-label="自訂加班時數"><span class="unit">小時</span></div></div>';
     h+='<div class="att-m-hint">點人名＝加班，再點一次取消。只列今天有出工的人。</div>';
-    if(!ins.length&&!otN.length) h+='<div class="att-m-empty">還沒有人出工，先到「點名」點人。</div>';
+    if(!ins.length&&!otN.length) h+='<div class="att-m-empty">'+(attMPre?'這天還沒點名，先到「點名」按「完成點名」。':'還沒有人出工，先到「點名」點人。')+'</div>';
     groups.forEach(({g,list})=>{
       const l=list.filter(x=>x.state==='in'||x.ot>0); if(!l.length) return;
       h+='<div class="att-m-group">'+ghead(g,l.filter(x=>x.ot>0).length+' / '+l.length)+'<div class="att-m-chips">'
@@ -31865,10 +31923,10 @@ function attMRender(){
     });
   } else {
     const wh=people.reduce((a,x)=>a+x.work,0), oh=people.reduce((a,x)=>a+x.ot,0);
-    h+='<div class="att-m-stats"><span class="in">出工<b>'+cnt.in+'</b></span><span class="leave">請假<b>'+cnt.leave+'</b></span>'
-      +(cnt.none?'<span class="none has">未點<b>'+cnt.none+'</b></span>':'')
+    h+='<div class="att-m-stats"><span class="in">出工<b>'+real.in+'</b></span><span class="leave">請假<b>'+real.leave+'</b></span>'
+      +(real.off?'<span class="none">休息<b>'+real.off+'</b></span>':'')
       +'<span>上班<b>'+attN(wh/8)+'</b>工</span><span>加班<b>'+attN(oh)+'</b>h</span></div>';
-    h+='<div class="att-m-hint">點一列可以修改上班、加班、請假、便當與備註。</div>';
+    h+='<div class="att-m-hint">'+(attMPre?'這天還沒點名，下面是目前登記到的資料。':'點一列可以修改上班、加班、請假、便當與備註。')+'</div>';
     groups.forEach(({g,list})=>{
       h+='<div class="att-m-group">'+ghead(g,list.length+' 人')+'<div class="att-m-list">'
         +list.map(x=>{
@@ -31876,7 +31934,7 @@ function attMRender(){
           if(x.work>0) t.push('<span class="att-m-tag in">上班 '+attMGong(x.work)+'</span>');
           if(x.ot>0) t.push('<span class="att-m-tag ot">加班 '+attN(x.ot)+'h</span>');
           if(x.leave_type) t.push('<span class="att-m-tag lv">'+attEsc(x.leave_type)+' '+attMHours(x.leave_hours)+'</span>');
-          if(x.state==='none') t.push(x.boss?'<span class="att-m-tag">未登記</span>':'<span class="att-m-tag none">未點名</span>');
+          if(x.state==='none') t.push(x.boss?'<span class="att-m-tag">未登記</span>':'<span class="att-m-tag">休息</span>');
           if(String(x.note||'').trim()) t.push('<span class="att-m-tag">📝</span>');
           return '<button type="button" class="att-m-row" data-name="'+attEsc(x.name)+'" onclick="attMOpenEdit(this.dataset.name)">'
             +'<span class="att-m-row-name">'+attEsc(x.name)+(x.team?'<small>'+attEsc(x.team)+'</small>':'')+'</span>'
@@ -31886,7 +31944,7 @@ function attMRender(){
   }
   if(people.some(x=>x.work>0||x.ot>0||x.leave_type||x.leave_hours>0||x.bento>0||String(x.note||'').trim()))
     h+='<button type="button" class="att-m-clear" onclick="attMClearDay()">🗑 清除這天全部出勤</button>';
-  h+='<div class="att-m-bar">'+(v==='roll'&&cnt.none?'<button type="button" class="att-m-done" onclick="attMOpenFinish()">完成點名</button>':'')
+  h+='<div class="att-m-bar">'+(v==='roll'?'<button type="button" class="att-m-done" onclick="attMOpenFinish()">完成點名</button>':'')
     +'<button type="button" class="att-m-line" onclick="attMOpenLine()">💬 LINE 回報</button>'
     +'<button type="button" class="att-m-bento-btn" onclick="attMOpenBento(attMView===\'ot\'?\'night\':\'noon\')">🍱 訂便當</button></div>';
   wrap.innerHTML=h;
@@ -31915,6 +31973,7 @@ async function attMClearDay(){
   });
   keep.forEach(l=>{ const tr=attMRow(l.staff_name); if(tr) attMSetLeave(tr,l.leave_type,Number(l.hours)||8); });
   attUpdateDayFoot(); attSaveNow();
+  attMSetRolled(date,false);        // 清乾淨了 → 下次打開回到「預設到齊」
   attMView='roll'; attMRender();
 }
 function attMSetView(k){ attMView=k; attMRender(); }
@@ -31925,15 +31984,34 @@ function attMSetOtHours(v){
   attMRender();
 }
 function attMTap(name){
+  if(attMPre) attMPreCommit();   // 還在預設狀態：先把「到齊」寫進去，這一下再套用到本人
   const tr=attMRow(name), x=attMPeople().find(q=>q.name===name); if(!tr||!x) return;
   if(attMView==='ot') attMSetOt(tr,x.ot>0?0:attMOtHours);
   else if(x.state==='leave'){ attMOpenEdit(name); return; }
-  else if(x.state==='in'){ attMSetWork(tr,0); if(x.ot>0) attMSetOt(tr,0); }
+  else if(x.state==='in'){ attMSetWork(tr,0); if(x.ot>0) attMSetOt(tr,0); }   // 再點一次＝改成休息
   else attMSetWork(tr,8);
   attMRender();
 }
-function attMAllIn(){
-  attMPeople().filter(x=>x.state==='none'&&!x.boss).forEach(x=>{ const tr=attMRow(x.name); if(tr) attMSetWork(tr,8); });
+// 全部到齊／全部休息：休息＝把上班、加班歸零(請假與備註保留)，資料庫不留紀錄
+async function attMAllSet(on){
+  const date=(document.getElementById('att-date')||{}).value||'';
+  if(on){
+    attMPre='';
+    attMPeople().forEach(x=>{ if(x.state!=='none'||x.boss) return; const tr=attMRow(x.name); if(tr) attMSetWork(tr,8); });
+    attSaveNow();
+  } else {
+    const people=attMPeople(), has=people.filter(x=>x.work>0||x.ot>0);
+    if(has.length && !await uiConfirm('要把這天 '+has.length+' 人的上班與加班全部清掉、改成休息嗎？\n（請假與備註會保留）',{danger:true})) return;
+    people.forEach(x=>{
+      const tr=attMRow(x.name); if(!tr) return;
+      if(x.work>0) attMSetWork(tr,0);
+      if(x.ot>0) attMSetOt(tr,0);
+      const b=tr.querySelector('input[data-f="bento"]');
+      if(b && b.getAttribute('data-bento')==='auto' && (parseFloat(b.value)||0)>0){ b.value='0'; attMFire(b,'change'); }
+    });
+    attMPre=''; attMSetRolled(date,true);
+    if(has.length) attSaveNow();
+  }
   attMRender();
 }
 
@@ -31961,6 +32039,7 @@ function attMSheet(kind,label,title,sub,body,foot,refresh){
 function attMOpt(on,label,js){ return '<button type="button" class="att-m-opt'+(on?' on':'')+'" onclick="'+js+'">'+label+'</button>'; }
 
 function attMOpenEdit(name,refresh){
+  if(!refresh && attMPre) attMPreCommit();
   const x=attMPeople().find(q=>q.name===name);
   if(!x){ if(refresh) attMCloseSheet(); return; }
   attMEditName=name;
@@ -32004,41 +32083,54 @@ function attMEdit(f,v){
   attMRender();
 }
 
-// 完成點名：沒點到的人一定要選假別（或改成有來）才能確認
+// 完成點名：確認今天的出工／請假／休息。沒上班的人「不必」選假別——
+// 週六值班之類的情況只有 1~2 人上班，其他人本來就沒有假別，直接留在「休息」即可（資料庫不留紀錄）。
 function attMOpenFinish(refresh){
-  const none=attMPeople().filter(x=>x.state==='none'&&!x.boss);   // 老闆不強制選出勤或假別
-  if(!none.length){ if(refresh) attMCloseSheet(); return; }
-  if(!refresh) attMLeaveDraft={};
-  attMFinishNames=none.map(x=>x.name);
+  const date=(document.getElementById('att-date')||{}).value||''; if(!date) return;
+  if(!refresh){ attMPreCommit(); attMLeaveDraft={}; }
+  const people=attMPeople();
+  const ins=people.filter(x=>x.state==='in'), lvs=people.filter(x=>x.state==='leave');
+  const off=people.filter(x=>x.state==='none'&&!x.boss);
+  attMFinishNames=off.map(x=>x.name);
   const o=attMOpt, others=ATT_LEAVE.filter(t=>t&&ATT_M_LEAVE_TOP.indexOf(t)<0);
-  let done=0;
-  let b='<div class="att-m-hint">沒點到的人請選假別，上班工數會設為 0。其實有來的點「✓ 有來」。</div>'
-    +'<div class="att-m-sec"><div class="lbl">全部設為</div><div class="att-m-opts">'+ATT_M_LEAVE_TOP.map(t=>o(false,t,"attMDraftAll('"+t+"')")).join('')+'</div></div>';
-  b+=none.map((x,i)=>{
-    const d=attMLeaveDraft[x.name]||null; if(d) done++;
-    const other=!!(d&&d.type&&others.indexOf(d.type)>=0);
-    return '<div class="att-m-fin'+(d?' ok':'')+'"><div class="att-m-fin-head"><b>'+attEsc(x.name)+'</b><small>'+attEsc(x.team||x.cat||'')+'</small></div>'
-      +'<div class="att-m-opts">'+o(!!(d&&d.in),'✓ 有來',"attMDraft("+i+",'in')")
-        +ATT_M_LEAVE_TOP.map(t=>o(!!(d&&d.type===t),t,"attMDraft("+i+",'"+t+"')")).join('')
-        +'<select class="'+(other?'on':'')+'" onchange="attMDraft('+i+',this.value)"><option value="">其他…</option>'+others.map(t=>'<option'+(d&&d.type===t?' selected':'')+'>'+t+'</option>').join('')+'</select></div>'
-      +(d&&d.type?'<div class="att-m-opts att-m-fin-h">'+o(d.hours>=8,'全天 8h',"attMDraftH("+i+",8)")+o(d.hours===4,'半天 4h',"attMDraftH("+i+",4)")
-        +'<input type="number" inputmode="decimal" step="0.5" min="0.5" max="8" value="'+attN(d.hours)+'" onchange="attMDraftH('+i+',this.value)"><span class="unit">小時</span></div>':'')
-      +'</div>';
-  }).join('');
-  const left=none.length-done;
+  let b='<div class="att-m-stats"><span class="in">出工<b>'+ins.length+'</b></span><span class="leave">請假<b>'+lvs.length+'</b></span>'
+    +'<span class="none">休息<b>'+off.length+'</b></span></div>';
+  if(!off.length){
+    b+='<div class="att-m-hint">今天每個人都有出工或請假了，直接確認完成。</div>';
+  } else {
+    b+='<div class="att-m-hint">下面 '+off.length+' 人今天沒上班。要記假別的直接選，<b>不選就是休息</b>（不會寫進出勤紀錄，也不影響薪資與特休）。</div>'
+      +'<div class="att-m-sec"><div class="lbl">全部設為</div><div class="att-m-opts">'
+      +o(false,'休息',"attMDraftAll('')")+ATT_M_LEAVE_TOP.map(t=>o(false,t,"attMDraftAll('"+t+"')")).join('')+'</div></div>';
+    b+=off.map((x,i)=>{
+      const d=attMLeaveDraft[x.name]||null;
+      const other=!!(d&&d.type&&others.indexOf(d.type)>=0);
+      return '<div class="att-m-fin'+(d?' ok':'')+'"><div class="att-m-fin-head"><b>'+attEsc(x.name)+'</b><small>'+attEsc(x.team||x.cat||'')+'</small></div>'
+        +'<div class="att-m-opts">'+o(!!(d&&d.in),'✓ 有來',"attMDraft("+i+",'in')")+o(!d,'休息',"attMDraft("+i+",'')")
+          +ATT_M_LEAVE_TOP.map(t=>o(!!(d&&d.type===t),t,"attMDraft("+i+",'"+t+"')")).join('')
+          +'<select class="'+(other?'on':'')+'" onchange="attMDraft('+i+',this.value)"><option value="">其他…</option>'+others.map(t=>'<option'+(d&&d.type===t?' selected':'')+'>'+t+'</option>').join('')+'</select></div>'
+        +(d&&d.type?'<div class="att-m-opts att-m-fin-h">'+o(d.hours>=8,'全天 8h',"attMDraftH("+i+",8)")+o(d.hours===4,'半天 4h',"attMDraftH("+i+",4)")
+          +'<input type="number" inputmode="decimal" step="0.5" min="0.5" max="8" value="'+attN(d.hours)+'" onchange="attMDraftH('+i+',this.value)"><span class="unit">小時</span></div>':'')
+        +'</div>';
+    }).join('');
+  }
   const foot='<button type="button" class="cpr-m-ghost" onclick="attMCloseSheet()">先不要</button>'
-    +'<button type="button" class="cpr-m-save" '+(left?'disabled':'')+' onclick="attMFinish()">'+(left?'還有 '+left+' 人沒選':'確認完成')+'</button>';
-  attMSheet('finish','完成點名','完成點名',none.length+' 人沒點到',b,foot,refresh);
+    +'<button type="button" class="cpr-m-save" onclick="attMFinish()">確認完成</button>';
+  attMSheet('finish','完成點名','完成點名',attLineMD(date)+'（'+attWeekdayShort(new Date(date+'T00:00:00'))+'）・出工 '+ins.length+' 人',b,foot,refresh);
 }
 function attMDraft(i,v){
   const n=attMFinishNames[i]; if(n==null) return;
-  if(!v) delete attMLeaveDraft[n];
+  if(!v) delete attMLeaveDraft[n];                       // 不選＝休息
   else if(v==='in') attMLeaveDraft[n]={in:true};
   else attMLeaveDraft[n]={type:v,hours:(attMLeaveDraft[n]&&attMLeaveDraft[n].hours)||8};
   attMOpenFinish(true);
 }
 function attMDraftAll(t){
-  attMFinishNames.forEach(n=>{ const d=attMLeaveDraft[n]; if(!(d&&d.in)) attMLeaveDraft[n]={type:t,hours:(d&&d.hours)||8}; });
+  attMFinishNames.forEach(n=>{
+    const d=attMLeaveDraft[n];
+    if(d&&d.in) return;                                  // 已標「有來」的不動
+    if(!t) delete attMLeaveDraft[n];
+    else attMLeaveDraft[n]={type:t,hours:(d&&d.hours)||8};
+  });
   attMOpenFinish(true);
 }
 function attMDraftH(i,v){
@@ -32047,14 +32139,15 @@ function attMDraftH(i,v){
   d.hours=Math.min(8,v); attMOpenFinish(true);
 }
 function attMFinish(){
-  const names=attMFinishNames.slice();
-  if(names.some(n=>!attMLeaveDraft[n])) return;
-  names.forEach(n=>{
+  const date=(document.getElementById('att-date')||{}).value||'';
+  attMFinishNames.slice().forEach(n=>{
     const tr=attMRow(n), d=attMLeaveDraft[n]; if(!tr||!d) return;
     if(d.in) attMSetWork(tr,8);
     else { attMSetLeave(tr,d.type,d.hours); if(attMNum(tr,'work')>0) attMSetWork(tr,0); }
   });
-  attMLeaveDraft={}; attMCloseSheet(); attSaveNow();
+  attMLeaveDraft={}; attMCloseSheet();
+  attMSetRolled(date,true);      // 全部休息的日子資料庫是空的，本機記一下已點名
+  attSaveNow();
   attMView='list'; attMRender();
   attMOpenLine();
 }
@@ -32066,6 +32159,7 @@ function attMLineRecsOf(iso){
   return attLineRecsOf(iso);
 }
 async function attMOpenLine(){
+  if(attMPre) attMPreCommit();
   const date=(document.getElementById('att-date')||{}).value||''; if(!date) return;
   const b='<div class="att-m-seg">'+[['work','出勤'],['ot','加班'],['ot_next','加班＋隔天預計']].map(([k,l])=>
       '<button type="button" class="'+(k===attLineMode?'on':'')+'" onclick="attLineSetMode(\''+k+'\');attMOpenLine()">'+l+'</button>').join('')+'</div>'
@@ -32103,6 +32197,7 @@ function attMBentoAuto(mode){
 function attMBentoText(n,mode){ return '您好 \n\n鎮山今日'+(mode==='night'?'晚上':'中午')+'需要'+n+'個便當\n\n謝謝您'; }
 function attMBentoKey(){ return ((document.getElementById('att-date')||{}).value||'')+'|'+attMBentoMode; }
 function attMOpenBento(mode,refresh){
+  if(!refresh && attMPre) attMPreCommit();
   if(mode) attMBentoMode=mode;
   const date=(document.getElementById('att-date')||{}).value||''; if(!date) return;
   const m=attMBentoMode, auto=attMBentoAuto(m), key=attMBentoKey();
