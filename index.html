@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.19.4"/>
+<meta name="sc-version" content="2026.09.19.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1964,6 +1964,22 @@ body.lc-dragging *{cursor:grabbing!important}
 .ship-hist-tbl th{position:sticky;top:0;background:var(--bg2)}
 .ship-hist-tbl td.txt{text-align:left}
 .ship-hist-tbl tr.late td{color:var(--danger,#e0555b)}
+/* 「修改」欄黏在最右邊:表格橫向捲動時,補記車到／編輯／刪除永遠按得到 */
+.ship-hist-tbl td.ops{white-space:nowrap;padding:2px 6px;position:sticky;right:0;background:var(--bg2);box-shadow:-6px 0 6px -6px rgba(0,0,0,.45)}
+.ship-hist-tbl th:last-child{right:0;z-index:2;box-shadow:-6px 0 6px -6px rgba(0,0,0,.45)}
+.ship-hist-op{border:1px solid var(--border);background:var(--bg3);color:var(--text2);border-radius:6px;padding:2px 7px;font-size:12px;cursor:pointer;margin-left:3px}
+.ship-hist-op:hover{border-color:var(--accent2);color:var(--accent2)}
+.ship-hist-op.del:hover{border-color:var(--danger,#e0555b);color:var(--danger,#e0555b)}
+.ship-hist-op.warn{border-color:var(--yellow,#f5b83d);color:var(--yellow,#f5b83d)}
+.ship-hist-bar label{display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap}
+.ship-hist-edit{display:flex;flex-direction:column;gap:10px;font-size:13px}
+.ship-hist-edit label{display:flex;flex-direction:column;gap:3px;color:var(--text2);min-width:0}
+.ship-hist-edit input,.ship-hist-edit textarea{box-sizing:border-box;width:100%;padding:6px 8px;font-size:15px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text);font-family:inherit}
+.ship-hist-edit textarea{min-height:52px;resize:vertical;font-family:var(--mono);font-size:13px}
+.ship-hist-edit .row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.ship-hist-edit .row>label{flex:1 1 170px}
+.ship-hist-edit .row>label.narrow{flex:0 1 120px}
+.ship-wait-t.late{color:var(--danger,#e0555b);font-weight:700}
 .ship-wait-box{border:1px solid var(--yellow,#f5b83d);background:rgba(245,184,61,.08);border-radius:10px;padding:8px 12px}
 .ship-wait-h{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;margin-bottom:4px}
 .ship-wait-h .btn-sm{margin-left:auto;font-weight:600}
@@ -28997,7 +29013,7 @@ function shipDashRender(){
   const list=shipDashSummary(), cnt=document.getElementById('dash-ship-count');
   const bedN=new Set(list.filter(g=>g.bed!=='未排柱位').map(g=>g.bed)).size;
   if(cnt) cnt.textContent=bedN?('· '+bedN):'';
-  const waitHtml=shipDispatches.length?('<div class="ship-dash-wait" onclick="openShipBoard()" title="點開看板按「車到了」">等車中 '+shipDispatches.length+' 趟 · 最久 <span class="ship-wait-t" data-short="1" data-at="'+esc(shipDispatches[0].dispatched_at)+'">已等 '+shipWaitTxt(shipDispatches[0].dispatched_at)+'</span></div>'):'';
+  const waitHtml=shipDispatches.length?('<div class="ship-dash-wait" onclick="openShipBoard()" title="點開看板按「車到了」">等車中 '+shipDispatches.length+' 趟 · 最久 <span class="ship-wait-t'+(shipIsLate(shipDispatches[0])?' late':'')+'" data-short="1" data-at="'+esc(shipDispatches[0].dispatched_at)+'">已等 '+shipWaitTxt(shipDispatches[0].dispatched_at)+'</span></div>'):'';
   if(!list.length){ box.innerHTML=waitHtml+'<span style="color:var(--text3);font-size:13px">目前沒有已報驗、待出貨的構件</span>'; return; }
   box.innerHTML=waitHtml+list.map(g=>'<div class="ship-dash-item" data-key="'+esc(g.key)+'" onclick="openShipBoard(false,this.dataset.key)" title="點一下開啟待出貨看板">'
       +'<span class="ship-dash-bed">'+esc(g.bed)+'</span>'+(shipBedDispatch(g.bed).length?'<span class="ship-dash-disp">已派</span>':'')
@@ -29161,7 +29177,7 @@ function shipWaitRowHtml(d){
   return '<div class="ship-wait-row">'
     +(shipIsIn(d)?'<span class="ship-tag-in">進料</span>':'')
     +'<span class="ship-wait-msg">'+esc(shipDispatchLabel(d))+'</span>'
-    +'<span class="ship-wait-t" data-at="'+esc(d.dispatched_at)+'">派車 '+shipHm(d.dispatched_at)+' · 已等 '+shipWaitTxt(d.dispatched_at)+'</span>'
+    +'<span class="ship-wait-t'+(shipIsLate(d)?' late':'')+'" data-at="'+esc(d.dispatched_at)+'">派車 '+shipHm(d.dispatched_at)+' · 已等 '+shipWaitTxt(d.dispatched_at)+'</span>'
     +'<button class="btn-sm btn-export" onclick="'+(shipIsIn(d)?'shipArriveIn':'shipArriveOpen')+'('+Number(d.id)+')">車到了</button>'
     +'<button class="ship-wait-x" title="派錯了,刪除這筆派車紀錄" onclick="shipDispatchDelete('+Number(d.id)+')">✕</button>'
     +'</div>';
@@ -29487,6 +29503,7 @@ window.shipArriveOpen=async function(id){
 function shipArriveRender(d){
   const m=shipArriveModalEl();
   const ids=new Set((d.layout_ids||[]).map(String));
+  const pre=ids.size>0;   // 派車時就勾好了這車要載哪幾支 → 這裡預設全部帶進來,沒載到的再取消(舊紀錄沒記才要自己勾)
   // shipBoardRows 本身就是「已報驗(每日產量有、非預報)且未出貨」的待出貨構件;
   // 派車時勾了哪幾支就只列那幾支,舊紀錄沒記(ids 空)才退回依樑/柱整個柱位列。
   const pieces=shipBoardRows.filter(r=>(d.beds||[]).includes(r.bed)
@@ -29494,21 +29511,22 @@ function shipArriveRender(d){
   const byBed=new Map(); pieces.forEach(r=>{ if(!byBed.has(r.bed)) byBed.set(r.bed,[]); byBed.get(r.bed).push(r); });
   m.innerHTML='<div class="modal ship-modal" style="max-width:560px"><div class="modal-title">車到了 — '+esc(shipDispatchLabel(d))+'</div>'
     +'<div class="ship-arrive-time">派車 '+shipHm(d.dispatched_at)+' → 到達 '+shipHm(new Date().toISOString())+' · 等了 '+shipWaitTxt(d.dispatched_at)+'</div>'
-    +'<div class="ship-arrive-h"><span>這車實際載走的構件(要順便標記已出貨才勾)</span>'
-      +(pieces.length?'<label><input type="checkbox" onchange="shipArriveAll(this.checked)"> 全選</label>':'')+'</div>'
+    +'<div class="ship-arrive-h"><span>'+(pre?'派車時勾的 '+pieces.reduce((a,r)=>a+r.qty,0)+' 支已經全部帶進來,<b>沒載到的再取消</b>':'這車實際載走的構件(要順便標記已出貨才勾)')+'</span>'
+      +(pieces.length?'<label><input type="checkbox"'+(pre?' checked':'')+' onchange="shipArriveAll(this.checked)"> 全選</label>':'')+'</div>'
     +'<div class="ship-body" style="max-height:46vh">'+(pieces.length?[...byBed.keys()].sort(shipBedOrder).map(bed=>'<div class="ship-bed"><div class="ship-bed-h"><b>'+esc(bed)+'</b></div><div class="ship-parts ship-cols">'
-        +byBed.get(bed).map(r=>'<label><input type="checkbox" class="ship-arr-chk" value="'+esc(r.id)+'" data-qty="'+r.qty+'" onchange="shipArriveCount()">'+(r.col?'柱 ':'')+esc(r.proj)+' '+esc(r.part)+(r.qty>1?' ×'+r.qty:'')+'</label>').join('')
+        +byBed.get(bed).map(r=>'<label><input type="checkbox" class="ship-arr-chk"'+(pre?' checked':'')+' value="'+esc(r.id)+'" data-qty="'+r.qty+'" onchange="shipArriveCount()">'+(r.col?'柱 ':'')+esc(r.proj)+' '+esc(r.part)+(r.qty>1?' ×'+r.qty:'')+'</label>').join('')
         +'</div></div>').join(''):'<div class="empty-state">這些柱位目前沒有待出貨的構件(可能已標記出貨)</div>')+'</div>'
     +'<div class="modal-actions"><button class="btn-modal-cancel" onclick="closeModal(\'ship-arrive-modal\')">取消</button>'
-    +'<button class="btn-modal-cancel" onclick="shipArriveSave(false)">只記車到時間</button>'
-    +'<button class="btn-modal-ok" id="ship-arr-ship" onclick="shipArriveSave(true)" disabled>記時間並標記勾選的為已出貨</button></div></div>';
+    +'<button class="btn-modal-cancel" onclick="shipArriveSave(false)">只記車到,不標記出貨</button>'
+    +'<button class="btn-modal-ok" id="ship-arr-ship" onclick="shipArriveSave(true)" disabled>車到了,標記已出貨</button></div></div>';
+  shipArriveCount();   // 預設就勾好了,按鈕直接是可按的狀態
 }
 window.shipArriveAll=function(on){ document.querySelectorAll('#ship-arrive-modal .ship-arr-chk').forEach(c=>{ c.checked=!!on; }); shipArriveCount(); };
 window.shipArriveCount=function(){
   const chk=[...document.querySelectorAll('#ship-arrive-modal .ship-arr-chk:checked')];
   const n=chk.reduce((a,c)=>a+(parseInt(c.dataset.qty)||1),0);
   const b=document.getElementById('ship-arr-ship');
-  if(b){ b.disabled=!chk.length; b.textContent='記時間並標記勾選的為已出貨'+(n?'（'+n+' 支）':''); }
+  if(b){ b.disabled=!chk.length; b.textContent='車到了,標記已出貨'+(n?'（'+n+' 支）':''); }
 };
 window.shipArriveSave=async function(withShip){
   const d=shipDispatches.find(x=>Number(x.id)===Number(shipArriveId)); if(!d) return;
@@ -29532,10 +29550,14 @@ window.shipArriveSave=async function(withShip){
   shipRender(); shipDashRender();
 };
 // ── 派車紀錄分頁:依月份列出每一趟(派車、到達、等了多久),上方是當月統計,可匯出 Excel ──
-const SHIP_LATE_MIN=120;   // 等超過 2 小時標紅
-let shipHistRows=[], shipHistDir='all';   // 出貨/進料篩選:all | out | in
+const SHIP_LATE_MIN=30;   // 等車允許 30 分鐘,超過就標紅(等車中清單、派車紀錄同一把尺)
+// 篩選:dir=出貨/進料(all|out|in)、stat=到達狀態(all|open=還沒記車到|done)、late=只看等超過門檻的紅字、day=只看某一天(空=整個月)
+let shipHistRows=[], shipHistDir='all', shipHistStat='all', shipHistLate=false, shipHistDay='';
 function shipYmOf(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function shipMinBetween(a,b){ return Math.round((new Date(b)-new Date(a))/60000); }
+// 等了多久(還沒記車到就算到現在);超過 SHIP_LATE_MIN 就是「等太久」,紅字與篩選共用同一個判斷
+function shipLateMin(d){ return (d&&d.dispatched_at)?shipMinBetween(d.dispatched_at,d.arrived_at||new Date().toISOString()):0; }
+function shipIsLate(d){ return shipLateMin(d)>SHIP_LATE_MIN; }
 function shipDurTxt(min){
   if(min==null||!(min>=0)) return '—';
   if(min<60) return min+' 分';
@@ -29545,10 +29567,13 @@ function shipDurTxt(min){
 async function shipHistLoad(){
   const box=document.getElementById('ship-hist'); if(!box) return;
   let ym=(document.getElementById('ship-hist-ym')||{}).value||shipYmOf(new Date());
-  box.innerHTML='<div class="ship-hist-bar"><input type="month" id="ship-hist-ym" value="'+esc(ym)+'" onchange="shipHistLoad()">'
-    +'<select id="ship-hist-dir" onchange="shipHistSetDir(this.value)">'
-      +['all','out','in'].map(v=>'<option value="'+v+'"'+(shipHistDir===v?' selected':'')+'>'+(v==='all'?'全部':v==='out'?'出貨':'進料')+'</option>').join('')
-    +'</select><span id="ship-hist-stat"></span>'
+  const opt=(v,t,cur)=>'<option value="'+v+'"'+(cur===v?' selected':'')+'>'+t+'</option>';
+  box.innerHTML='<div class="ship-hist-bar"><input type="month" id="ship-hist-ym" value="'+esc(ym)+'" onchange="shipHistSetYm(this.value)">'
+    +'<input type="date" id="ship-hist-day" value="'+esc(shipHistDay)+'" title="只看這一天(清空就看整個月)" onchange="shipHistSetDay(this.value)">'
+    +'<select id="ship-hist-dir" onchange="shipHistSetDir(this.value)">'+opt('all','全部',shipHistDir)+opt('out','出貨',shipHistDir)+opt('in','進料',shipHistDir)+'</select>'
+    +'<select id="ship-hist-stat" onchange="shipHistSetStat(this.value)">'+opt('all','到達不拘',shipHistStat)+opt('open','還沒記車到',shipHistStat)+opt('done','已記車到',shipHistStat)+'</select>'
+    +'<label title="等車超過 '+SHIP_LATE_MIN+' 分鐘的,也就是表上紅字那幾趟"><input type="checkbox"'+(shipHistLate?' checked':'')+' onchange="shipHistSetLate(this.checked)"> 只看超過 '+SHIP_LATE_MIN+' 分</label>'
+    +'<button class="btn-sm" onclick="shipHistClearFilter()">清除篩選</button><span id="ship-hist-stat-txt"></span>'
     +'<button class="btn-sm btn-export" style="margin-left:auto" onclick="shipHistExport()">⬇ 匯出 Excel</button></div><div id="ship-hist-list"><div class="empty-state">載入中...</div></div>';
   const y=+ym.slice(0,4), mo=+ym.slice(5,7);
   const from=new Date(y,mo-1,1).toISOString(), to=new Date(y,mo,1).toISOString();
@@ -29559,28 +29584,124 @@ async function shipHistLoad(){
   shipHistRender();
 }
 window.shipHistSetDir=function(v){ shipHistDir=v; shipHistRender(); };
-function shipHistFiltered(){ return shipHistRows.filter(d=>shipHistDir==='all'||(shipIsIn(d)?'in':'out')===shipHistDir); }
+window.shipHistSetStat=function(v){ shipHistStat=v; shipHistRender(); };
+window.shipHistSetLate=function(v){ shipHistLate=!!v; shipHistRender(); };
+window.shipHistSetYm=function(v){ if(shipHistDay&&shipHistDay.slice(0,7)!==v) shipHistDay='';   // 換月份就把「只看某一天」放掉
+  shipHistLoad(); };
+// 挑到別的月份的日子:先把月份切過去,再整個月重抓
+window.shipHistSetDay=function(v){
+  shipHistDay=String(v||'');
+  const ymEl=document.getElementById('ship-hist-ym');
+  if(shipHistDay&&ymEl&&shipHistDay.slice(0,7)!==ymEl.value){ ymEl.value=shipHistDay.slice(0,7); shipHistLoad(); return; }
+  shipHistRender();
+};
+window.shipHistClearFilter=function(){ shipHistDir='all'; shipHistStat='all'; shipHistLate=false; shipHistDay=''; shipHistLoad(); };
+function shipDayOf(iso){ const d=new Date(iso), p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+function shipHistFiltered(){
+  return shipHistRows.filter(d=>{
+    if(shipHistDir!=='all'&&(shipIsIn(d)?'in':'out')!==shipHistDir) return false;
+    if(shipHistStat==='open'&&d.arrived_at) return false;
+    if(shipHistStat==='done'&&!d.arrived_at) return false;
+    if(shipHistLate&&!shipIsLate(d)) return false;
+    if(shipHistDay&&shipDayOf(d.dispatched_at)!==shipHistDay) return false;
+    return true;
+  });
+}
 function shipHistRender(){
   const list=document.getElementById('ship-hist-list'); if(!list) return;
   const rows=shipHistFiltered();
   const done=rows.filter(d=>d.arrived_at), waits=done.map(d=>shipMinBetween(d.dispatched_at,d.arrived_at));
-  const avg=waits.length?Math.round(waits.reduce((a,b)=>a+b,0)/waits.length):null, late=waits.filter(m=>m>SHIP_LATE_MIN).length, open=rows.length-done.length;
-  const stat=document.getElementById('ship-hist-stat');
-  if(stat) stat.innerHTML='本月 <b>'+rows.length+'</b> 趟 · 平均等 <b>'+shipDurTxt(avg)+'</b> · 超過 2 小時 <b'+(late?' style="color:var(--danger)"':'')+'>'+late+'</b> 趟'+(open?' · 未到 <b>'+open+'</b> 趟':'');
-  if(!rows.length){ list.innerHTML='<div class="empty-state">這個月沒有'+(shipHistDir==='in'?'進料':shipHistDir==='out'?'出貨':'')+'派車紀錄</div>'; return; }
-  list.innerHTML='<div class="ship-hist-wrap"><table class="ship-hist-tbl"><thead><tr><th>日期</th><th>派車</th><th>到達</th><th>等了</th><th>類別</th><th>內容</th><th>派車人</th><th>記錄車到</th><th>標記出貨</th></tr></thead><tbody>'
+  const avg=waits.length?Math.round(waits.reduce((a,b)=>a+b,0)/waits.length):null, late=rows.filter(shipIsLate).length, open=rows.length-done.length;
+  const stat=document.getElementById('ship-hist-stat-txt');
+  if(stat) stat.innerHTML=(shipHistDay?esc(shipHistDay.slice(5).replace('-','/'))+' ':'本月 ')+'<b>'+rows.length+'</b> 趟 · 平均等 <b>'+shipDurTxt(avg)+'</b> · 超過 '+SHIP_LATE_MIN+' 分 <b'+(late?' style="color:var(--danger)"':'')+'>'+late+'</b> 趟'+(open?' · 還沒記車到 <b>'+open+'</b> 趟':'');
+  if(!rows.length){ list.innerHTML='<div class="empty-state">沒有符合篩選條件的派車紀錄</div>'; return; }
+  list.innerHTML='<div class="ship-hist-wrap"><table class="ship-hist-tbl"><thead><tr><th>日期</th><th>派車</th><th>到達</th><th>等了</th><th>類別</th><th>內容</th><th>派車人</th><th>記錄車到</th><th>標記出貨</th><th>修改</th></tr></thead><tbody>'
     +rows.map(d=>{
       const dd=new Date(d.dispatched_at), min=d.arrived_at?shipMinBetween(d.dispatched_at,d.arrived_at):null;
-      const lateCls=(min!=null&&min>SHIP_LATE_MIN)||(!d.arrived_at&&shipMinBetween(d.dispatched_at,new Date().toISOString())>SHIP_LATE_MIN)?' class="late"':'';
+      const lateCls=shipIsLate(d)?' class="late"':'';
       return '<tr'+lateCls+'><td>'+String(dd.getMonth()+1).padStart(2,'0')+'/'+String(dd.getDate()).padStart(2,'0')+'</td>'
         +'<td>'+shipHm(d.dispatched_at)+'</td><td>'+(d.arrived_at?shipHm(d.arrived_at):'(未到)')+'</td>'
         +'<td class="num">'+(d.arrived_at?shipDurTxt(min):'等 '+shipWaitTxt(d.dispatched_at))+'</td>'
         +'<td>'+(shipIsIn(d)?'進料':'出貨')+'</td>'
         +'<td class="txt">'+esc(shipDispatchLabel(d))+'</td><td>'+esc(d.created_by_name||'')+'</td><td>'+esc(d.arrived_by_name||'')+'</td>'
-        +'<td class="num">'+((d.shipped_ids||[]).length?(d.shipped_ids.length+' 項'):'—')+'</td></tr>';
+        +'<td class="num">'+((d.shipped_ids||[]).length?(d.shipped_ids.length+' 項'):'—')+'</td>'
+        +'<td class="ops">'+(d.arrived_at?'':'<button class="ship-hist-op warn" title="忘了按車到了?在這裡補記到達時間" onclick="shipHistEdit('+Number(d.id)+',1)">補記車到</button>')
+          +'<button class="ship-hist-op" title="編輯這筆" onclick="shipHistEdit('+Number(d.id)+')">✏</button>'
+          +'<button class="ship-hist-op del" title="刪除這筆" onclick="shipHistDel('+Number(d.id)+')">✕</button></td></tr>';
     }).join('')+'</tbody></table></div>';
 }
 window.shipHistLoad=shipHistLoad;
+// ── 派車紀錄的編輯／刪除:忘了按「車到了」、時間打錯、派錯車,都在這裡補救 ──
+// 只改這筆紀錄本身,不會去動構件的出貨狀態(那要到線上進度表改)。
+let shipHistEditId=null;
+function shipDtLocal(iso){
+  if(!iso) return '';
+  const d=new Date(iso); if(isNaN(d)) return '';
+  const p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());
+}
+function shipDtIso(v){ if(!v) return null; const d=new Date(v); return isNaN(d)?null:d.toISOString(); }
+window.shipHistEdit=function(id,fillNow){
+  const d=shipHistRows.find(x=>Number(x.id)===Number(id)); if(!d) return;
+  shipHistEditId=Number(id);
+  let m=document.getElementById('ship-hist-edit-modal');
+  if(!m){
+    m=document.createElement('div'); m.className='modal-overlay'; m.id='ship-hist-edit-modal';
+    m.onclick=e=>{ if(e.target===m) closeModal('ship-hist-edit-modal'); };
+    document.body.appendChild(m);
+  }
+  const mat=shipIsIn(d), col=d.kind==='col';
+  const qtyLabel=col?'柱子支數':'車數', qtyVal=col?d.col_qty:d.cars;
+  m.innerHTML='<div class="modal" style="max-width:520px"><div class="modal-title">編輯派車紀錄 — '+esc(mat?'進料':'出貨')+'</div>'
+    +'<div class="ship-hist-edit">'
+      +'<div class="row"><label><span>派車時間</span><input type="datetime-local" id="she-disp" value="'+esc(shipDtLocal(d.dispatched_at))+'"></label>'
+        +'<label><span>到達時間（留空＝還在等車）</span><input type="datetime-local" id="she-arr" value="'+esc(shipDtLocal(fillNow?new Date().toISOString():d.arrived_at))+'"></label></div>'
+      +'<div class="row"><button type="button" class="btn-sm" onclick="shipHistFillNow()">到達填現在</button>'
+        +'<button type="button" class="btn-sm" onclick="shipHistClearArr()">改回還在等車</button></div>'
+      +'<div class="row"><label><span>柱位（多個用 . 分隔）</span><input id="she-beds" value="'+esc((d.beds||[]).join('.'))+'"></label>'
+        +(mat?'<label><span>進料內容</span><input id="she-note" value="'+esc(d.note||'')+'"></label>'
+             :'<label class="narrow"><span>'+qtyLabel+'</span><input type="number" min="0" step="1" id="she-n" value="'+esc(qtyVal==null?'':qtyVal)+'"></label>')+'</div>'
+      +'<div class="row"><label><span>派車人</span><input id="she-by" value="'+esc(d.created_by_name||'')+'"></label>'
+        +'<label><span>記錄車到</span><input id="she-arrby" value="'+esc(d.arrived_by_name||'')+'"></label></div>'
+      +'<label><span>派車訊息</span><textarea id="she-msg">'+esc(d.message||'')+'</textarea></label>'
+      +'<div class="ship-mat-hint" id="she-hint"></div>'
+    +'</div>'
+    +'<div class="modal-actions"><button class="btn-modal-cancel" onclick="closeModal(\'ship-hist-edit-modal\')">取消</button>'
+      +'<button class="btn-modal-ok" onclick="shipHistSave()">儲存</button></div></div>';
+  openModal('ship-hist-edit-modal');
+};
+window.shipHistFillNow=function(){ const el=document.getElementById('she-arr'); if(el) el.value=shipDtLocal(new Date().toISOString()); };
+window.shipHistClearArr=function(){ const el=document.getElementById('she-arr'); if(el) el.value=''; };
+window.shipHistSave=async function(){
+  const d=shipHistRows.find(x=>Number(x.id)===Number(shipHistEditId)); if(!d) return;
+  const v=id=>{ const el=document.getElementById(id); return el?String(el.value||'').trim():''; };
+  const hint=t=>{ const h=document.getElementById('she-hint'); if(h) h.textContent=t; };
+  const dis=shipDtIso(v('she-disp')); if(!dis){ hint('請填派車時間'); return; }
+  const arr=shipDtIso(v('she-arr'));
+  if(arr&&new Date(arr)<new Date(dis)){ hint('到達時間比派車時間還早,請再確認'); return; }
+  const beds=v('she-beds').split(/[.、,，\s]+/).map(x=>shipBedLabel(x)).filter(x=>x&&x!=='未排柱位');
+  if(!beds.length){ hint('請填柱位'); return; }
+  const patch={dispatched_at:dis, arrived_at:arr, beds:beds, message:v('she-msg')||null,
+    created_by_name:v('she-by'), arrived_by_name:arr?(v('she-arrby')||(currentUser&&currentUser.name)||''):''};
+  if(shipIsIn(d)) patch.note=v('she-note')||null;
+  else if(d.kind==='col') patch.col_qty=Math.max(0,parseInt(v('she-n'))||0);
+  else patch.cars=Math.max(0,parseInt(v('she-n'))||0);
+  const r=await sbFetch('/rest/v1/ship_dispatches?id=eq.'+Number(d.id),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(patch)});
+  if(!r.ok){ hint('儲存失敗('+r.status+')'); return; }
+  closeModal('ship-hist-edit-modal');
+  Object.assign(d,patch);
+  try{ await shipLoadDispatches(); }catch(e){}   // 到達時間改了 → 等車中清單跟著加回來或拿掉
+  shipRender(); shipDashRender(); shipHistRender();
+};
+window.shipHistDel=async function(id){
+  const d=shipHistRows.find(x=>Number(x.id)===Number(id)); if(!d) return;
+  if(!await uiConfirm('刪除這筆派車紀錄?\n'+shipDispatchLabel(d)+'（派車 '+shipHm(d.dispatched_at)+'）\n只是不留這筆紀錄,已經標記出貨的構件不會變回來',{danger:true})) return;
+  const r=await sbFetch('/rest/v1/ship_dispatches?id=eq.'+Number(id),{method:'DELETE',headers:{'Prefer':'return=minimal'}});
+  if(!r.ok){ alert('刪除失敗('+r.status+')'); return; }
+  shipHistRows=shipHistRows.filter(x=>Number(x.id)!==Number(id));
+  shipDispatches=shipDispatches.filter(x=>Number(x.id)!==Number(id));
+  shipRender(); shipDashRender(); shipHistRender();
+};
 window.shipHistExport=function(){
   const rows=shipHistFiltered();
   if(!rows.length){ alert('這個月沒有派車紀錄'); return; }
@@ -29596,6 +29717,7 @@ window.shipHistExport=function(){
 // 等車時間每分鐘自己跳
 setInterval(()=>{ document.querySelectorAll('.ship-wait-t[data-at]').forEach(el=>{
   const at=el.dataset.at; el.textContent=(el.dataset.short?'':'派車 '+shipHm(at)+' · ')+'已等 '+shipWaitTxt(at);
+  el.classList.toggle('late', shipMinBetween(at,new Date().toISOString())>SHIP_LATE_MIN);   // 等超過門檻就轉紅字
 }); },60000);
 
 // ── 每日產量 (#5) ──
