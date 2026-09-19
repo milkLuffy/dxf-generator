@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.19.6"/>
+<meta name="sc-version" content="2026.09.19.7"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -29644,6 +29644,13 @@ function shipHistFiltered(){
     return true;
   });
 }
+// 標記出貨的項目裡,哪些是車到了現場才補勾的(shipped_ids 有、派車時的 layout_ids 沒有)。
+// 舊紀錄沒記 layout_ids 的不算,不然整批都會被當成補勾。
+function shipExtraShipped(d){
+  const disp=(d.layout_ids||[]).map(String);
+  if(!disp.length) return 0;
+  return (d.shipped_ids||[]).map(String).filter(x=>!disp.includes(x)).length;
+}
 function shipHistRender(){
   const list=document.getElementById('ship-hist-list'); if(!list) return;
   const rows=shipHistFiltered();
@@ -29661,7 +29668,8 @@ function shipHistRender(){
         +'<td class="num">'+(d.arrived_at?shipDurTxt(min):'等 '+shipWaitTxt(d.dispatched_at))+'</td>'
         +'<td>'+(shipIsIn(d)?'進料':'出貨')+'</td>'
         +'<td class="txt">'+esc(shipDispatchLabel(d))+'</td><td>'+esc(d.created_by_name||'')+'</td><td>'+esc(d.arrived_by_name||'')+'</td>'
-        +'<td class="num">'+((d.shipped_ids||[]).length?(d.shipped_ids.length+' 項'):'—')+'</td>'
+        +'<td class="num"'+(shipExtraShipped(d)?' title="其中 '+shipExtraShipped(d)+' 項是車到了才補勾的"':'')+'>'
+          +((d.shipped_ids||[]).length?(d.shipped_ids.length+' 項'+(shipExtraShipped(d)?'（補勾 '+shipExtraShipped(d)+'）':'')):'—')+'</td>'
         +'<td class="ops">'+(d.arrived_at?'':'<button class="ship-hist-op warn" title="忘了按車到了?在這裡補記到達時間" onclick="shipHistEdit('+Number(d.id)+',1)">補記車到</button>')
           +'<button class="ship-hist-op" title="編輯這筆" onclick="shipHistEdit('+Number(d.id)+')">✏</button>'
           +'<button class="ship-hist-op del" title="刪除這筆" onclick="shipHistDel('+Number(d.id)+')">✕</button></td></tr>';
@@ -29743,10 +29751,10 @@ window.shipHistExport=function(){
   const rows=shipHistFiltered();
   if(!rows.length){ alert('這個月沒有派車紀錄'); return; }
   const fmt=iso=>{ if(!iso) return ''; const d=new Date(iso); return d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+' '+shipHm(iso); };
-  const aoa=[['派車時間','到達時間','等車(分鐘)','類別','柱位','種類','進料內容','車數','柱子支數','派車人','記錄車到','標記出貨項數']]
+  const aoa=[['派車時間','到達時間','等車(分鐘)','類別','柱位','種類','進料內容','車數','柱子支數','派車人','記錄車到','標記出貨項數','其中車到補勾']]
     .concat(rows.slice().reverse().map(d=>[fmt(d.dispatched_at),fmt(d.arrived_at),d.arrived_at?shipMinBetween(d.dispatched_at,d.arrived_at):'',
       shipIsIn(d)?'進料':'出貨','C棟'+(d.beds||[]).join('.'),shipIsIn(d)?'材料':(d.kind==='col'?'柱':'樑'),shipIsIn(d)?(d.note||''):'',
-      d.cars||'',d.col_qty||'',d.created_by_name||'',d.arrived_by_name||'',(d.shipped_ids||[]).length||'']));
+      d.cars||'',d.col_qty||'',d.created_by_name||'',d.arrived_by_name||'',(d.shipped_ids||[]).length||'',shipExtraShipped(d)||'']));
   const ws=XLSX.utils.aoa_to_sheet(aoa), wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'派車紀錄');
   XLSX.writeFile(wb,'派車紀錄_'+((document.getElementById('ship-hist-ym')||{}).value||'')+'.xlsx');
