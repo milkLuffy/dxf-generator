@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.20.8"/>
+<meta name="sc-version" content="2026.09.20.9"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2356,6 +2356,36 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
 .sw-cfg .sw-val input:focus{border-color:var(--accent2)}
 .sw-cfg.off .sw-sec{opacity:.4;pointer-events:none}
 @media(max-width:700px){ .sw-cfg .sw-val input{font-size:16px} }   /* iOS 聚焦時不要自動放大整頁 */
+/* ── 使用時段限制(帳號管理頁上方)────────────────────────────── */
+.ah-card{padding:14px 16px;margin-bottom:12px}
+.ah-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:2px}
+.ah-title{font-size:14px;font-weight:700;color:var(--text)}
+.ah-state{font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 10px}
+.ah-state.on{background:#dcfce7;color:#15803d}
+.ah-state.off{background:var(--bg3);color:var(--text3)}
+.ah-state.grant{background:#fef3c7;color:#b45309}
+.ah-head .ah-sp{flex:1}
+.ah-sub{font-size:12px;color:var(--text3);line-height:1.6}
+.ah-body{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;margin-top:12px}
+.ah-fld{display:flex;flex-direction:column;gap:5px}
+.ah-fld>label{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--text3)}
+.ah-fld input[type=time]{background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:13.5px;padding:7px 9px;outline:none}
+.ah-fld input[type=time]:focus{border-color:var(--accent2)}
+.ah-days{display:flex;gap:5px;flex-wrap:wrap}
+.ah-day{cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text3);border-radius:8px;width:34px;height:34px;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.ah-day.on{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.ah-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.ah-ex{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.ah-ex-t{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--text3);margin-bottom:8px}
+.ah-ex-list{display:flex;flex-wrap:wrap;gap:6px}
+.ah-ex-item{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--bg3);border-radius:999px;padding:5px 11px;font-size:12.5px;color:var(--text2);cursor:pointer}
+.ah-ex-item.on{border-color:var(--accent2);color:var(--text)}
+.ah-ex-item input{width:14px;height:14px;margin:0;accent-color:var(--accent2);cursor:pointer}
+.ah-ex-item.fixed{opacity:.55;cursor:default}
+.ah-warn{margin-top:12px;font-size:12px;line-height:1.6;color:var(--text3);background:var(--bg3);border-radius:9px;padding:9px 11px}
+/* 到點前的提醒條 */
+#ah-banner{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:10002;background:var(--bg2);border:1px solid var(--red);border-left-width:3px;border-radius:12px;padding:11px 16px;box-shadow:0 12px 36px rgba(0,0,0,.45);font-size:13px;color:var(--text);display:flex;align-items:center;gap:12px;max-width:calc(100vw - 24px)}
+#ah-banner b{font-family:var(--mono)}
 </style>
 </head>
 <body>
@@ -6315,6 +6345,7 @@ window.normalizeFullWidth=function(value){
         <div class="page-title" style="margin-bottom:0">帳號管理</div>
         <button class="btn-add-new" id="accounts-save-btn" onclick="saveAllAccounts()">💾 儲存全部</button>
       </div>
+      <div class="card ah-card" id="acc-hours-card"></div>
       <div class="search-bar" style="gap:8px;flex-wrap:wrap">
         <input class="search-input" id="accounts-search" placeholder="搜尋帳號、顯示名稱..." oninput="filterAccounts()" style="flex:1;min-width:180px"/>
         <div id="accounts-status-tabs" style="display:flex;gap:6px">
@@ -13157,7 +13188,7 @@ function confirmGuest(){
 async function loadProfile() {
   if(!currentSession) return;
   const uid=currentSession.user?.id; if(!uid) return;
-  const r=await sbFetch(`/rest/v1/profiles?id=eq.${uid}&select=name,account,is_admin,staff_id,perms,disabled,status`);
+  const r=await sbFetch(`/rest/v1/profiles?id=eq.${uid}&select=*`);   // 同上:select=* 避免新欄位未建立時登入整個壞掉
   let name=r.data?.[0]?.name||'', account=r.data?.[0]?.account||currentSession.user?.email||'';
   let isAdmin=r.data?.[0]?.is_admin||false;
   const perms=r.data?.[0]?.perms||null, disabled=!!r.data?.[0]?.disabled;
@@ -13185,7 +13216,8 @@ async function loadProfile() {
   const googleIdentity=(currentSession.user?.identities||[]).find(x=>x.provider==='google');
   const identityMeta=googleIdentity?.identity_data||{};
   const avatarUrl=meta.avatar_url||meta.picture||identityMeta.avatar_url||identityMeta.picture||'';
-  currentUser={id:uid,name,account,isAdmin,perms,disabled,avatarUrl,status,staffId,staffRole,staffDept};
+  currentUser={id:uid,name,account,isAdmin,perms,disabled,avatarUrl,status,staffId,staffRole,staffDept,hoursExempt:!!r.data?.[0]?.hours_exempt};
+  if(typeof ahLoadCfg==='function'){ try{ await ahLoadCfg(); }catch(e){} }   // 使用時段設定;讀不到就維持「未啟用」
 }
 // 呼叫 Edge Function 通知管理員有新帳號待審核(見 supabase/functions/notify-new-account)
 async function notifyAdminNewAccount(name,account){
@@ -13204,6 +13236,7 @@ async function logout() {
     presenceStop();
     await sbFetch('/auth/v1/logout',{method:'POST'});
   }
+  if(typeof ahStopWatch==='function') ahStopWatch();
   clearSavedSession();
   currentSession=null; currentUser=null; isGuest=false;
   document.getElementById('app-screen').style.display='none';
@@ -13245,6 +13278,7 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
     alert('此帳號已被停用,請聯絡管理員。');
     logout(); return;
   }
+  if(!isGuest && typeof ahGateOnEnter==='function' && ahGateOnEnter()) return;   // 非開放時段:請出去
   _notifPopped=false;   // 每次登入都可重新彈通知
   window.errlogFlushSoon();   // 登入前(啟動時)收集到的錯誤,登入後補送
   document.getElementById('pending-screen').style.display='none';
@@ -13275,6 +13309,7 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
   // 操作紀錄:只有「真的登入」才記一筆;restore=true 是重新整理,記了只會洗版
   if(!restore) auditWrite({action:'login', ok:true});
   presenceStart();   // 開始回報/抓取線上狀態(右上角頭像)
+  if(typeof ahStartWatch==='function') ahStartWatch();   // 使用中盯著時段,到點前提醒、到點登出
   // 只預載輕量的公司名冊(各頁下拉會用到)與通知紀錄。
   // 主頁統計、BOM 等「重資料」改由 navTo 進到該頁時才載,避免登入瞬間併發抓一堆大表,
   // 拖慢緊接著要開的頁面(例如帳號管理)。
@@ -21187,7 +21222,8 @@ async function loadAccounts(silent) {
   // silent=true(背景輪詢刷新):不清空表格、不顯示「載入中」,避免每個輪詢週期畫面就閃一次。
   if(!silent) body.innerHTML='<tr><td colspan="9" class="empty-state">載入中...</td></tr>';
   const [pRes,sRes]=await Promise.all([
-    sbFetchAll('/rest/v1/profiles?select=id,name,account,is_admin,staff_id,perms,disabled,status,applied_at&order=account'),
+    // select=* 才不會因為新欄位(例如 hours_exempt)還沒建立就整頁回 400
+    sbFetchAll('/rest/v1/profiles?select=*&order=account'),
     sbFetchAll('/rest/v1/staff?select=id,name,department,resign_date&order=name')
   ]);
   allAccounts=Array.isArray(pRes.data)?pRes.data:[];
@@ -21200,6 +21236,7 @@ async function loadAccounts(silent) {
   if(flSecEl) flSecEl.textContent=Math.round(PRESENCE_PING_MS/1000);
   updateAccountsStatusTabsUI();
   filterAccounts();
+  if(!silent && typeof ahRenderCard==='function') ahRenderCard();   // 使用時段設定卡(輪詢時不重畫,免得蓋掉正在改的欄位)
 }
 function setAccountsStatusFilter(st){ accStatusFilter=st; updateAccountsStatusTabsUI(); filterAccounts(); }
 function updateAccountsStatusTabsUI(){
@@ -21931,6 +21968,191 @@ function secWatchBoot(){
     secWatchRender();
     if(typeof updateNotifBadge==='function') updateNotifBadge();
   }).catch(()=>{}).then(()=>{ secWatchBooting=false; });
+}
+
+// ══════════ 使用時段限制(幾點到幾點才能用系統)══════════
+// 設定存 app_config.access_hours(全公司一份);個別帳號的豁免存 profiles.hours_exempt。
+// 需先執行 access_hours_migration.sql。
+//
+// ⚠ 這一層是**前端擋**:登入時檢查、使用中每分鐘檢查、到點自動登出。
+//   懂技術的人繞過前端直接打 API 還是進得去 —— 要擋死得在 RLS 加時間條件。
+//   所以它的定位是「作息規範」,不是「資安邊界」。真正的偵測靠異常操作警示。
+const ACCESS_HOURS_KEY='access_hours';
+const ACCESS_HOURS_DEFAULT={on:false, from:'07:00', to:'20:00', days:[1,2,3,4,5,6], grantUntil:null, msg:''};
+const AH_DAY_NAME=['日','一','二','三','四','五','六'];
+let accessHoursCfg=Object.assign({},ACCESS_HOURS_DEFAULT), accessHoursTimer=null, accessHoursWarned='';
+
+// 一律用台灣時間判斷,電腦時區設錯也不會歪(本機時鐘被改就沒辦法,那是前端擋的先天限制)
+function ahNowTw(){
+  const d=new Date(Date.now()+8*3600000);
+  return {dow:d.getUTCDay(), min:d.getUTCHours()*60+d.getUTCMinutes(),
+          txt:String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0')};
+}
+function ahMin(hhmm){ const m=/^(\d{1,2}):(\d{2})$/.exec(String(hhmm||'')); return m?(+m[1]*60 + +m[2]):0; }
+function ahFmt(min){ return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0'); }
+async function ahLoadCfg(){
+  const r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+encodeURIComponent(ACCESS_HOURS_KEY));
+  if(r.ok && Array.isArray(r.data) && r.data[0]){
+    try{ accessHoursCfg=Object.assign({},ACCESS_HOURS_DEFAULT,JSON.parse(r.data[0].value||'{}')); }catch(e){}
+  }
+  return accessHoursCfg;
+}
+async function ahSaveCfg(){
+  return sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',
+    headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify({key:ACCESS_HOURS_KEY, value:JSON.stringify(accessHoursCfg)})});
+}
+// 現在能不能用?{ok, why, endsAt, exempt, granted}
+function ahState(){
+  const c=accessHoursCfg;
+  if(!c.on) return {ok:true, why:'off'};
+  if(isGuest) return {ok:true, why:'guest'};                       // 訪客本來就幾乎沒權限,不另外擋
+  if(currentUser && (currentUser.isAdmin || currentUser.hoursExempt)) return {ok:true, why:'exempt', exempt:true};
+  if(c.grantUntil && Date.now() < Date.parse(c.grantUntil)) return {ok:true, why:'grant', granted:true, until:c.grantUntil};
+  const n=ahNowTw();
+  if(!(c.days||[]).includes(n.dow)) return {ok:false, why:'day', now:n};
+  const from=ahMin(c.from), to=ahMin(c.to);
+  const inRange = from<=to ? (n.min>=from && n.min<to) : (n.min>=from || n.min<to);   // 跨午夜也支援
+  return inRange ? {ok:true, why:'in', endsAt:to, now:n} : {ok:false, why:'time', now:n};
+}
+function ahBlockedMsg(st){
+  const c=accessHoursCfg;
+  const days=(c.days||[]).map(d=>AH_DAY_NAME[d]).join('、');
+  return (c.msg && String(c.msg).trim())
+    ? String(c.msg).trim()
+    : '目前為系統關閉時段。開放時間:星期'+days+' '+c.from+'～'+c.to+'。需要加班請聯絡管理員。';
+}
+// 登入時檢查(enterApp 用):擋下來回傳 true
+function ahGateOnEnter(){
+  const st=ahState();
+  if(st.ok) return false;
+  alert(ahBlockedMsg(st));
+  setTimeout(()=>logout(), 1200);
+  return true;
+}
+// 使用中每分鐘檢查:快到點先提醒,到點登出
+function ahStartWatch(){
+  if(accessHoursTimer) clearInterval(accessHoursTimer);
+  accessHoursTimer=setInterval(ahTick, 60000);
+  ahTick();
+}
+function ahStopWatch(){ if(accessHoursTimer){ clearInterval(accessHoursTimer); accessHoursTimer=null; } ahHideBanner(); }
+function ahTick(){
+  if(!currentUser || isGuest){ ahHideBanner(); return; }
+  const st=ahState();
+  if(!st.ok){
+    ahHideBanner();
+    alert(ahBlockedMsg(st)+'(系統將自動登出)');
+    setTimeout(()=>logout(), 2500);
+    return;
+  }
+  if(st.why!=='in' || st.endsAt==null){ ahHideBanner(); return; }
+  const left=st.endsAt-st.now.min;
+  if(left>0 && left<=15){
+    const key=ahFmt(st.endsAt)+':'+left;
+    if(accessHoursWarned!==key){ accessHoursWarned=key; ahShowBanner(left, ahFmt(st.endsAt)); }
+  } else ahHideBanner();
+}
+function ahShowBanner(left, endTxt){
+  ahHideBanner();
+  const b=document.createElement('div'); b.id='ah-banner';
+  b.innerHTML='⏰ 系統 <b>'+esc(endTxt)+'</b> 關閉,還有 <b>'+left+'</b> 分鐘,請先存檔。';
+  const x=document.createElement('button'); x.className='btn'; x.textContent='知道了';
+  x.style.cssText='padding:4px 12px;font-size:12px;cursor:pointer';
+  x.onclick=ahHideBanner; b.appendChild(x);
+  document.body.appendChild(b);
+}
+function ahHideBanner(){ const b=document.getElementById('ah-banner'); if(b) b.remove(); }
+
+// ── 帳號管理頁上方的設定卡 ──────────────────────────────────
+async function ahRenderCard(){
+  const box=document.getElementById('acc-hours-card'); if(!box) return;
+  if(!currentUser || !currentUser.isAdmin){ box.style.display='none'; return; }
+  box.style.display='';
+  await ahLoadCfg();
+  const c=accessHoursCfg;
+  const granted=c.grantUntil && Date.now()<Date.parse(c.grantUntil);
+  const state=!c.on ? '<span class="ah-state off">未啟用</span>'
+    : (granted ? '<span class="ah-state grant">臨時放行中</span>' : '<span class="ah-state on">已啟用</span>');
+  const grantTxt=granted ? ('放行到 '+new Date(Date.parse(c.grantUntil)+8*3600000).toISOString().slice(11,16)) : '';
+  box.innerHTML=
+    '<div class="ah-head"><span class="ah-title">🕐 使用時段限制</span>'+state
+      +(grantTxt?'<span class="ah-sub">'+esc(grantTxt)+'</span>':'')+'<span class="ah-sp"></span>'
+      +'<label class="ah-ex-item'+(c.on?' on':'')+'"><input type="checkbox" id="ah-on"'+(c.on?' checked':'')+'>啟用</label></div>'
+    +'<div class="ah-sub">設定之後,非開放時段的帳號一登入就會被請出去;使用中到點會先提醒 15 分鐘再自動登出。管理員不受限制。</div>'
+    +'<div class="ah-body">'
+      +'<div class="ah-fld"><label>開放時間</label><div style="display:flex;align-items:center;gap:7px">'
+        +'<input type="time" id="ah-from" value="'+esc(c.from)+'"><span style="color:var(--text3)">～</span><input type="time" id="ah-to" value="'+esc(c.to)+'"></div></div>'
+      +'<div class="ah-fld"><label>開放星期</label><div class="ah-days">'
+        +AH_DAY_NAME.map((nm,i)=>'<button type="button" class="ah-day'+((c.days||[]).includes(i)?' on':'')+'" data-d="'+i+'" onclick="ahToggleDay('+i+')">'+nm+'</button>').join('')
+      +'</div></div>'
+      +'<div class="ah-fld" style="flex:1;min-width:220px"><label>關閉時要顯示的訊息(留白用預設)</label>'
+        +'<input class="search-input" id="ah-msg" value="'+esc(c.msg||'')+'" placeholder="例:非上班時間,如需加班請找廠長開通"></div>'
+    +'</div>'
+    +'<div class="ah-btns">'
+      +'<button class="btn" onclick="ahSaveFromCard()">💾 儲存設定</button>'
+      +'<button class="btn" onclick="ahGrant(2)">⏳ 臨時放行 2 小時</button>'
+      +'<button class="btn" onclick="ahGrant(0)">✕ 取消臨時放行</button>'
+    +'</div>'
+    +'<div class="ah-ex"><div class="ah-ex-t">不受時段限制的帳號(管理員一律不受限,不必勾)</div>'
+      +'<div class="ah-ex-list" id="ah-ex-list">載入中…</div></div>'
+    +'<div class="ah-warn">⚠️ 這一層擋的是「正常使用」——它會把人請出畫面,但<b>不是資安邊界</b>:懂技術的人繞過畫面直接打資料庫介面仍然進得去,把電腦時鐘調掉也可能繞過。要擋死必須在資料庫的權限政策加時間條件,那一步需要先看過現有政策(見 access_hours_migration.sql 最後兩個查詢)。</div>';
+  document.getElementById('ah-on').onchange=function(){
+    accessHoursCfg.on=this.checked;
+    ahSaveCfg().then(r=>{ if(!r.ok) alert('儲存失敗('+(r.status||'?')+')'); ahRenderCard(); });
+  };
+  ahRenderExempt();
+}
+function ahToggleDay(d){
+  const days=new Set(accessHoursCfg.days||[]);
+  if(days.has(d)) days.delete(d); else days.add(d);
+  accessHoursCfg.days=[...days].sort();
+  document.querySelectorAll('#acc-hours-card .ah-day').forEach(b=>b.classList.toggle('on', accessHoursCfg.days.includes(+b.dataset.d)));
+}
+async function ahSaveFromCard(){
+  const g=id=>document.getElementById(id);
+  accessHoursCfg.from=g('ah-from').value||'07:00';
+  accessHoursCfg.to=g('ah-to').value||'20:00';
+  accessHoursCfg.msg=(g('ah-msg').value||'').trim();
+  accessHoursCfg.on=g('ah-on').checked;
+  const r=await ahSaveCfg();
+  if(!r.ok){ alert('儲存失敗('+(r.status||'?')+')'); return; }
+  alert('使用時段已儲存');
+  ahRenderCard();
+}
+// 臨時放行:hours=0 取消
+async function ahGrant(hours){
+  accessHoursCfg.grantUntil = hours>0 ? new Date(Date.now()+hours*3600000).toISOString() : null;
+  const r=await ahSaveCfg();
+  if(!r.ok){ alert('儲存失敗('+(r.status||'?')+')'); return; }
+  alert(hours>0?('已臨時放行 '+hours+' 小時'):'已取消臨時放行');
+  ahRenderCard();
+}
+// 豁免名單:沿用帳號管理頁已載入的 allAccounts
+function ahRenderExempt(){
+  const box=document.getElementById('ah-ex-list'); if(!box) return;
+  const list=(allAccounts||[]).filter(a=>(a.status||'approved')==='approved' && !a.disabled);
+  if(!list.length){ box.textContent='沒有可設定的帳號'; return; }
+  box.innerHTML=list.map(a=>{
+    const on=!!a.hours_exempt, admin=!!a.is_admin, nm=esc(a.name||a.account||'');
+    return admin
+      ? '<span class="ah-ex-item fixed" title="管理員一律不受時段限制"><input type="checkbox" checked disabled>'+nm+'（管理員）</span>'
+      : '<label class="ah-ex-item'+(on?' on':'')+'"><input type="checkbox"'+(on?' checked':'')
+        +' onchange="ahSetExempt(\''+esc(String(a.id))+'\',this.checked,this)">'+nm+'</label>';
+  }).join('');
+}
+async function ahSetExempt(uid, on, el){
+  const r=await sbFetch('/rest/v1/profiles?id=eq.'+encodeURIComponent(uid),
+    {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({hours_exempt:!!on})});
+  if(!r.ok){
+    if(el){ el.checked=!on; }
+    alert(r.status===400||r.status===404
+      ? '這個欄位還沒建立,請先執行 access_hours_migration.sql'
+      : ('儲存失敗('+(r.status||'?')+')'));
+    return;
+  }
+  const a=(allAccounts||[]).find(x=>String(x.id)===String(uid)); if(a) a.hours_exempt=!!on;
+  if(el&&el.parentElement) el.parentElement.classList.toggle('on', !!on);
 }
 
 // ── 系統健康頁 (管理員):錯誤紀錄 + 健康檢查 ────────────────────
