@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.20.9"/>
+<meta name="sc-version" content="2026.09.20.10"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2386,6 +2386,17 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
 /* 到點前的提醒條 */
 #ah-banner{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:10002;background:var(--bg2);border:1px solid var(--red);border-left-width:3px;border-radius:12px;padding:11px 16px;box-shadow:0 12px 36px rgba(0,0,0,.45);font-size:13px;color:var(--text);display:flex;align-items:center;gap:12px;max-width:calc(100vw - 24px)}
 #ah-banner b{font-family:var(--mono)}
+/* 裝置綁定清單 */
+.dv-list{display:flex;flex-direction:column;gap:6px}
+.dv-item{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:8px 11px}
+.dv-item.pending{border-color:#fcd34d}
+.dv-main{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:230px}
+.dv-who{font-size:13px;font-weight:700;color:var(--text)}
+.dv-key{font-family:var(--mono);font-size:11.5px;color:var(--text3);background:var(--bg2);border-radius:5px;padding:1px 6px}
+.dv-ua{font-size:12px;color:var(--text2)}
+.dv-meta{font-family:var(--mono);font-size:11px;color:var(--text3);margin-left:auto}
+.dv-btns{display:flex;gap:6px;flex-wrap:wrap}
+.dv-btns .btn{padding:3px 9px;font-size:11.5px}
 </style>
 </head>
 <body>
@@ -6346,6 +6357,7 @@ window.normalizeFullWidth=function(value){
         <button class="btn-add-new" id="accounts-save-btn" onclick="saveAllAccounts()">💾 儲存全部</button>
       </div>
       <div class="card ah-card" id="acc-hours-card"></div>
+      <div class="card ah-card" id="acc-device-card"></div>
       <div class="search-bar" style="gap:8px;flex-wrap:wrap">
         <input class="search-input" id="accounts-search" placeholder="搜尋帳號、顯示名稱..." oninput="filterAccounts()" style="flex:1;min-width:180px"/>
         <div id="accounts-status-tabs" style="display:flex;gap:6px">
@@ -12712,7 +12724,7 @@ async function sbFetch(path, opts={}, _retried) {
 // 時間/IP/裝置由 DB 觸發器蓋章,前端送什麼都會被覆寫。
 const AUDIT_ACTION_LABEL={login:'登入',logout:'登出',insert:'新增',update:'修改',delete:'刪除',download:'下載'};
 const AUDIT_METHOD_ACTION={POST:'insert',PATCH:'update',PUT:'update',DELETE:'delete'};
-const AUDIT_SKIP_TABLES=new Set(['audit_log','user_presence']);   // 記錄自己會無限循環
+const AUDIT_SKIP_TABLES=new Set(['audit_log','user_presence','rpc']);   // 記錄自己會無限循環;rpc=裝置檢查之類的呼叫,每次登入都來一筆只會洗版
 // 網址查詢字串裡這些是「查法」不是「對象」,列出來只會洗版
 const AUDIT_SKIP_PARAMS=new Set(['select','order','limit','offset','on_conflict','columns']);
 // 資料表 → 中文名(查紀錄時看得懂;沒列到的就直接顯示表名)
@@ -12897,7 +12909,7 @@ function auditSetPage(page){
 // 送不出去(未登入/表還沒建)就先留在本機 localStorage,系統健康頁可以看到這台裝置的紀錄。
 const ERRLOG_LOCAL_KEY='errlog_local_v1';
 // 程式刻意「試探表在不在、不在就改用本機」的資料表:回 404 是正常流程,不算錯誤
-const ERRLOG_OPTIONAL_TABLES=/^\/rest\/v1\/(calendar_events|error_log|ship_dispatches|audit_activity)\b/;
+const ERRLOG_OPTIONAL_TABLES=/^\/rest\/v1\/(calendar_events|error_log|ship_dispatches|audit_activity|user_devices|rpc\/sc_device_check)\b/;
 // 讀寫失敗(表格空白、存不進去的常見原因)自動記進錯誤紀錄;401 是登入過期,另有重新登入流程處理
 function errlogHttp(status, method, path, data){
   if(status===401||!window.errlogPush) return;
@@ -13279,6 +13291,7 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
     logout(); return;
   }
   if(!isGuest && typeof ahGateOnEnter==='function' && ahGateOnEnter()) return;   // 非開放時段:請出去
+  if(!isGuest && typeof deviceGate==='function') deviceGate();                    // 沒核准過的裝置:登記後請出去
   _notifPopped=false;   // 每次登入都可重新彈通知
   window.errlogFlushSoon();   // 登入前(啟動時)收集到的錯誤,登入後補送
   document.getElementById('pending-screen').style.display='none';
@@ -20470,7 +20483,8 @@ function manualNotificationItemsBasic(){return manualNotifications.filter(n=>n.r
 function announcementNotificationItems(){return (allAnnouncements||[]).filter(a=>a.notify_in_app!==false&&announcementIsActive(a)).map(a=>notifItem('announcement:'+(a.id||a.created_at||a.title),(a.priority==='緊急'?'🚨 ':a.priority==='重要'?'❗ ':'📢 ')+(a.title||'公司公告')));}
 function notifItems(){return staffBirthdaysToday().concat(staffAnnivSoon(),saturdayDutyNotifications,manualNotificationItems(),announcementNotificationItems(),todoNotificationItems(),leaveNotificationItems(),
   (typeof readinessNotificationItems==='function'?readinessNotificationItems():[]),
-  (typeof securityNotificationItems==='function'?securityNotificationItems():[]));}   // 上線準備紅燈、異常操作警示(模組在後面)
+  (typeof securityNotificationItems==='function'?securityNotificationItems():[]),
+  (typeof deviceNotificationItems==='function'?deviceNotificationItems():[]));}   // 上線準備紅燈、異常操作警示、待核准裝置(模組在後面)
 // ── 手機推播(PWA Web Push):每天在各裝置自訂的時間(預設 08:00)由伺服器推送待辦／交管料日／上線準備提醒 ──
 // 時間存在 push_subscriptions.remind_time(需執行 push_remind_time_migration.sql);伺服器每 30 分鐘檢查一次,所以選單是 30 分鐘一格。
 // iPhone 必須先用 Safari「分享 → 加入主畫面」,從主畫面圖示打開後才能開啟推播(iOS 16.4 以上)。
@@ -21237,6 +21251,7 @@ async function loadAccounts(silent) {
   updateAccountsStatusTabsUI();
   filterAccounts();
   if(!silent && typeof ahRenderCard==='function') ahRenderCard();   // 使用時段設定卡(輪詢時不重畫,免得蓋掉正在改的欄位)
+  if(!silent && typeof deviceRenderCard==='function') deviceRenderCard();   // 裝置綁定卡
 }
 function setAccountsStatusFilter(st){ accStatusFilter=st; updateAccountsStatusTabsUI(); filterAccounts(); }
 function updateAccountsStatusTabsUI(){
@@ -22153,6 +22168,166 @@ async function ahSetExempt(uid, on, el){
   }
   const a=(allAccounts||[]).find(x=>String(x.id)===String(uid)); if(a) a.hours_exempt=!!on;
   if(el&&el.parentElement) el.parentElement.classList.toggle('on', !!on);
+}
+
+// ══════════ 裝置綁定(只有核准過的電腦／手機能登入)══════════
+// 浮動 IP 的替代方案:綁「哪一台機器」而不是「從哪個網路來」。
+// 員工回家用自己的筆電 = 一台沒核准過的新裝置 → 擋下來並通知管理員。
+// 裝置碼存在該瀏覽器的 localStorage;登記與比對一律走 sc_device_check 函式
+// (一般帳號沒有 user_devices 的寫入權限,不可能自己核准自己)。
+// 需先執行 device_lock_migration.sql。
+const DEVICE_KEY_LS='sc_device_key';
+const DEVICE_LOCK_CFG_KEY='device_lock';
+let deviceLockCfg={on:false}, deviceMine=null, deviceList=[], deviceErr='';
+
+// 這台的裝置碼:沒有就產生一組,之後一直沿用(清掉瀏覽器資料就要重新核准)
+function deviceKey(){
+  let k='';
+  try{ k=localStorage.getItem(DEVICE_KEY_LS)||''; }catch(e){}
+  if(!k){
+    k=(window.crypto&&crypto.randomUUID) ? crypto.randomUUID()
+      : (Date.now().toString(36)+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2));
+    try{ localStorage.setItem(DEVICE_KEY_LS,k); }catch(e){}
+  }
+  return k;
+}
+function deviceShortKey(k){ return String(k||'').slice(0,8).toUpperCase(); }
+// 瀏覽器/系統的簡短描述,給管理員辨認是哪一台
+function deviceLabel(ua){
+  const s=String(ua||navigator.userAgent||'');
+  const os=/Windows/.test(s)?'Windows':/Android/.test(s)?'Android':/iPhone|iPad|iPod/.test(s)?'iPhone/iPad':/Mac/.test(s)?'Mac':/Linux/.test(s)?'Linux':'其他';
+  const br=/Edg\//.test(s)?'Edge':/OPR\//.test(s)?'Opera':/Chrome\//.test(s)?'Chrome':/Firefox\//.test(s)?'Firefox':/Safari\//.test(s)?'Safari':'瀏覽器';
+  return os+' · '+br;
+}
+async function deviceLoadCfg(){
+  const r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+encodeURIComponent(DEVICE_LOCK_CFG_KEY));
+  if(r.ok && Array.isArray(r.data) && r.data[0]){
+    try{ deviceLockCfg=Object.assign({on:false},JSON.parse(r.data[0].value||'{}')); }catch(e){}
+  }
+  return deviceLockCfg;
+}
+async function deviceSaveCfg(){
+  return sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',
+    headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify({key:DEVICE_LOCK_CFG_KEY, value:JSON.stringify(deviceLockCfg)})});
+}
+// 登記這台並問「核准了沒」。回 {ok, isNew, off, err}
+// 失敗一律 fail-open(ok:true):寧可放行,也不要因為一個欄位沒建好就把全公司鎖在門外。
+async function deviceCheck(){
+  deviceErr='';
+  if(isGuest || !currentSession) return {ok:true, off:true};
+  await deviceLoadCfg().catch(()=>{});
+  const r=await sbFetch('/rest/v1/rpc/sc_device_check',{method:'POST',
+    body:JSON.stringify({p_key:deviceKey(), p_ua:String(navigator.userAgent||'').slice(0,300)})});
+  if(!r.ok){
+    deviceErr=(r.status===404) ? '尚未啟用(請先執行 device_lock_migration.sql)' : ('裝置檢查失敗('+(r.status||'?')+')');
+    return {ok:true, err:deviceErr};
+  }
+  const row=Array.isArray(r.data)?r.data[0]:r.data;
+  deviceMine={approved:!!(row&&row.approved), isNew:!!(row&&row.is_new), name:(row&&row.device_name)||''};
+  if(!deviceLockCfg.on) return {ok:true, off:true, isNew:deviceMine.isNew};       // 沒啟用:只登記,不擋
+  if(currentUser && currentUser.isAdmin) return {ok:true, admin:true};             // 管理員不擋,否則沒人能去核准
+  return {ok:deviceMine.approved, isNew:deviceMine.isNew};
+}
+// enterApp 用:擋下來回傳 true。非同步,所以擋的動作在 callback 裡做
+function deviceGate(){
+  deviceCheck().then(res=>{
+    if(res.ok) return;
+    alert('這台裝置還沒有被核准,無法使用系統。\n裝置代碼:'+deviceShortKey(deviceKey())+'\n已通知管理員,請聯絡管理員核准後再登入。');
+    setTimeout(()=>logout(), 3000);
+  }).catch(()=>{});
+}
+
+// ── 帳號管理頁的裝置卡 ──────────────────────────────────────
+async function deviceRenderCard(){
+  const box=document.getElementById('acc-device-card'); if(!box) return;
+  if(!currentUser || !currentUser.isAdmin){ box.style.display='none'; return; }
+  box.style.display='';
+  await deviceLoadCfg().catch(()=>{});
+  const r=await sbFetch('/rest/v1/user_devices?select=*&order=first_seen.desc&limit=200');
+  if(!r.ok){
+    box.innerHTML='<div class="ah-head"><span class="ah-title">💻 裝置綁定</span>'
+      +'<span class="ah-state off">'+(r.status===404?'尚未啟用':'讀取失敗 '+(r.status||'?'))+'</span></div>'
+      +'<div class="ah-sub">'+(r.status===404?'請先在 Supabase SQL Editor 執行 device_lock_migration.sql。':'請確認此帳號為管理員。')+'</div>';
+    return;
+  }
+  deviceList=Array.isArray(r.data)?r.data:[];
+  const nameOf=uid=>{ const a=(allAccounts||[]).find(x=>String(x.id)===String(uid)); return a?(a.name||a.account||'—'):'(未知帳號)'; };
+  const pending=deviceList.filter(d=>!d.approved), approved=deviceList.filter(d=>d.approved);
+  const on=!!deviceLockCfg.on;
+  const item=(d,isPending)=>{
+    const jid=esc(String(d.id));
+    return '<div class="dv-item'+(isPending?' pending':'')+'">'
+      +'<div class="dv-main"><span class="dv-who">'+esc(nameOf(d.user_id))+'</span>'
+        +'<span class="dv-key">'+esc(deviceShortKey(d.device_key))+'</span>'
+        +'<span class="dv-ua">'+esc(d.name||deviceLabel(d.ua))+'</span></div>'
+      +'<div class="dv-meta">'+(isPending?'申請於 ':'最後使用 ')
+        +esc(String(isPending?d.first_seen:d.last_seen||'').slice(0,16).replace('T',' '))+'</div>'
+      +'<div class="dv-btns">'
+        +(isPending
+          ? '<button class="btn" onclick="deviceApprove(\''+jid+'\',true)">✔ 核准</button>'
+          : '<button class="btn" onclick="deviceApprove(\''+jid+'\',false)">↺ 撤銷</button>')
+        +'<button class="btn" onclick="deviceRename(\''+jid+'\')">✎ 命名</button>'
+        +'<button class="btn" onclick="deviceRemove(\''+jid+'\')">✕ 刪除</button>'
+      +'</div></div>';
+  };
+  box.innerHTML=
+    '<div class="ah-head"><span class="ah-title">💻 裝置綁定</span>'
+      +(on?'<span class="ah-state on">已啟用</span>':'<span class="ah-state off">未啟用（只記錄,不擋）</span>')
+      +(pending.length?'<span class="ah-state grant">'+pending.length+' 台待核准</span>':'')
+      +'<span class="ah-sp"></span>'
+      +'<label class="ah-ex-item'+(on?' on':'')+'"><input type="checkbox" id="dv-on"'+(on?' checked':'')+'>啟用</label></div>'
+    +'<div class="ah-sub">只有核准過的電腦／手機能登入。管理員不受限(否則沒人能進來核准)。員工清掉瀏覽器資料、換電腦或換手機,都要重新核准一次。</div>'
+    +(pending.length?('<div class="ah-ex"><div class="ah-ex-t">待核准（'+pending.length+'）</div><div class="dv-list">'+pending.map(d=>item(d,true)).join('')+'</div></div>'):'')
+    +'<div class="ah-ex"><div class="ah-ex-t">已核准（'+approved.length+'）</div>'
+      +(approved.length?('<div class="dv-list">'+approved.map(d=>item(d,false)).join('')+'</div>'):'<div class="ah-sub">還沒有核准過任何裝置。先讓大家各登入一次,這裡就會出現待核准清單。</div>')+'</div>'
+    +'<div class="ah-warn">⚠️ 啟用前<b>請先把現有的電腦都核准好</b>,否則一按啟用,所有人(管理員除外)下次登入就全被擋在外面。建議流程:先讓大家照常用一天 → 待核准清單就會收齊 → 核准你認得的那幾台 → 再啟用。</div>';
+  const cb=document.getElementById('dv-on');
+  if(cb) cb.onchange=async function(){
+    if(this.checked && !approved.length){
+      this.checked=false;
+      alert('還沒核准任何裝置就啟用,所有人都會被擋在外面。請先核准再啟用。');
+      return;
+    }
+    deviceLockCfg.on=this.checked;
+    const s=await deviceSaveCfg();
+    if(!s.ok){ alert('儲存失敗('+(s.status||'?')+')'); this.checked=!this.checked; return; }
+    deviceRenderCard();
+  };
+}
+async function deviceApprove(id, on){
+  const body=on
+    ? {approved:true, approved_by:currentUser&&currentUser.id||null, approved_at:new Date().toISOString()}
+    : {approved:false, approved_by:null, approved_at:null};
+  const r=await sbFetch('/rest/v1/user_devices?id=eq.'+encodeURIComponent(id),
+    {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(body)});
+  if(!r.ok){ alert((on?'核准':'撤銷')+'失敗('+(r.status||'?')+')'); return; }
+  alert(on?'已核准這台裝置':'已撤銷,這台下次登入會被擋下');
+  deviceRenderCard();
+}
+async function deviceRename(id){
+  const d=deviceList.find(x=>String(x.id)===String(id)); if(!d) return;
+  const nm=prompt('給這台裝置取個名字(例:廠長辦公室電腦、工務課筆電)', d.name||deviceLabel(d.ua));
+  if(nm==null) return;
+  const r=await sbFetch('/rest/v1/user_devices?id=eq.'+encodeURIComponent(id),
+    {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({name:nm.trim()||null})});
+  if(!r.ok){ alert('改名失敗('+(r.status||'?')+')'); return; }
+  deviceRenderCard();
+}
+async function deviceRemove(id){
+  if(!(await uiConfirm('刪除這筆裝置紀錄?\n對方下次登入會被當成新裝置,要重新核准。'))) return;
+  const r=await sbFetch('/rest/v1/user_devices?id=eq.'+encodeURIComponent(id),{method:'DELETE'});
+  if(!r.ok){ alert('刪除失敗('+(r.status||'?')+')'); return; }
+  deviceRenderCard();
+}
+// 併入右上角 🔔:有裝置等著核准(管理員才看得到)
+function deviceNotificationItems(){
+  if(!currentUser || !currentUser.isAdmin || isGuest) return [];
+  const pending=(deviceList||[]).filter(d=>!d.approved);
+  if(!pending.length) return [];
+  const today=(typeof dashTodayStr==='function')?dashTodayStr():'';
+  return [notifItem('devpending:'+pending.length+':'+today,
+    '💻 有 '+pending.length+' 台新裝置等待核准（帳號管理頁）')];
 }
 
 // ── 系統健康頁 (管理員):錯誤紀錄 + 健康檢查 ────────────────────
