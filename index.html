@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.20.5"/>
+<meta name="sc-version" content="2026.09.20.6"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -51760,6 +51760,7 @@ function ldRowOf(z, plan){
     erect:String(z.erect_date||'').slice(0,10),
     auto:ldHandoverIsAuto(z),
     left:ldWorkdaysLeft(handover),
+    zdone: String(z.status||'').trim()==='已完成',   // 工程區已完成 → 不再算逾期
     bomT, doneAllT, remainT, doneMonT,
     planT, target,
     pct: target>0 ? Math.min(999, Math.round(doneMonT/target*100)) : (doneMonT>0?100:0),
@@ -51771,6 +51772,7 @@ function ldRowOf(z, plan){
 function ldSPpct(r){ return (r.sp&&r.sp.total>0)?Math.round(r.sp.done/r.sp.total*100):null; }
 // 燈號:紅=已經來不及或料還沒齊、黃=快到了、綠=如期、灰=還沒設吊裝期
 function ldLight(r){
+  if(r.zdone) return {cls:'green', txt:'已完成'};      // 工程區狀態已完成 → 不再判逾期／備料未齊／未收圖
   if(!r.handover) return {cls:'gray', txt:'未設吊裝期'};
   const finished = r.target>0 ? (r.doneMonT>=r.target-0.001) : false;
   if(r.left!=null && r.left<0 && !finished) return {cls:'red', txt:'逾期 '+Math.abs(r.left)+' 天'};
@@ -51807,7 +51809,7 @@ function ldMobileChromeInit(){
 function ldMobileCardsHtml(rows){
   return '<div class="sp-l-list">'+rows.map(r=>{
     const lt=ldLight(r), sp=ldSPpct(r), zid=r.z.id, pid=r.plan?r.plan.id:'', open='ldOpenMobileSheet(\''+zid+'\',\''+pid+'\')';
-    const left=r.left==null?'':(r.left<0?'<b class="ld-over">逾期 '+Math.abs(r.left)+' 天</b>':('剩 '+r.left+' 天'));
+    const left=(r.zdone||r.left==null)?'':(r.left<0?'<b class="ld-over">逾期 '+Math.abs(r.left)+' 天</b>':('剩 '+r.left+' 天'));
     const note=r.plan&&String(r.plan.note||'').trim(), issue=r.plan&&String(r.plan.issue||'').trim();
     return '<div class="sp-l-card ld-m-card" role="button" tabindex="0" onclick="'+open+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+open+'}">'
       +'<div class="sp-l-top"><span class="sp-l-cp">'+ldEsc(r.proj)+'-'+ldEsc(r.z.zone_code||'')+'</span><span class="ld-light ld-l-'+lt.cls+'">'+ldEsc(lt.txt)+'</span></div>'
@@ -51875,7 +51877,7 @@ function ldRender(){
       +'<td><input type="date" class="ld-date'+(r.auto?' ld-auto':'')+'" value="'+ldEsc(r.handover)+'" onchange="ldSetDate('+zid+',\'handover_date\',this.value)">'
         +'<span class="ld-wk">'+(r.handover?('（'+ldWk(r.handover)+'）'):'')+'</span>'
         +(r.auto?'<span class="ld-tag">自動</span>':'<button class="ld-mini" title="改回自動(吊裝期往前 '+LD_BACK_WORKDAYS+' 個工作天)" onclick="ldResetHandover('+zid+')">↺</button>')+'</td>'
-      +'<td class="num">'+(r.left==null?'—':(r.left<0?('<b class="ld-over">逾期 '+Math.abs(r.left)+'</b>'):(r.left+' 天')))+'</td>'
+      +'<td class="num">'+(r.zdone?'<span class="ld-no">—</span>':(r.left==null?'—':(r.left<0?('<b class="ld-over">逾期 '+Math.abs(r.left)+'</b>'):(r.left+' 天'))))+'</td>'
       +'<td class="num"><input type="number" step="0.01" min="0" class="ld-tons" value="'+(r.planT==null?'':ldFix(r.planT))+'" placeholder="'+ldFix(r.bomT)+'" title="留白＝以整區 BOM 重量 '+ldFix(r.bomT)+' t 計" onchange="ldSetPlan(\''+pid+'\',this.value)"></td>'
       +'<td class="num">'+ldFix(r.doneMonT)+'</td>'
       +'<td class="ld-pct"><div class="ld-bar-wrap"><i style="width:'+Math.min(100,r.pct)+'%"></i></div><span>'+r.pct+'%</span></td>'
