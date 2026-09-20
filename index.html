@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.20.10"/>
+<meta name="sc-version" content="2026.09.20.11"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -22048,12 +22048,30 @@ function ahGateOnEnter(){
 // 使用中每分鐘檢查:快到點先提醒,到點登出
 function ahStartWatch(){
   if(accessHoursTimer) clearInterval(accessHoursTimer);
+  ahTickN=1;   // 登入時 enterApp 已經查過設定與裝置,第一次 tick 不用重查(第 5 分鐘才會)
   accessHoursTimer=setInterval(ahTick, 60000);
   ahTick();
 }
 function ahStopWatch(){ if(accessHoursTimer){ clearInterval(accessHoursTimer); accessHoursTimer=null; } ahHideBanner(); }
-function ahTick(){
+let ahTickN=0;
+async function ahTick(){
   if(!currentUser || isGuest){ ahHideBanner(); return; }
+  // 每 5 分鐘把設定重讀一次:管理員改了時段/開關,不必等對方重新整理就會生效。
+  // 順便重查裝置(撤銷核准也是 5 分鐘內生效),並更新 last_seen。
+  if((ahTickN++ % 5)===0){
+    try{ await ahLoadCfg(); }catch(e){}
+    if(typeof deviceCheck==='function'){
+      try{
+        const dv=await deviceCheck();
+        if(!dv.ok){
+          ahHideBanner();
+          alert('這台裝置的使用權限已被取消,系統將自動登出。');
+          setTimeout(()=>logout(), 2500);
+          return;
+        }
+      }catch(e){}
+    }
+  }
   const st=ahState();
   if(!st.ok){
     ahHideBanner();
