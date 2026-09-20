@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.20.6"/>
+<meta name="sc-version" content="2026.09.20.7"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2321,6 +2321,23 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
 .confirm-box .cf-ok.danger{background:var(--red)}
 @keyframes cfmFade{from{opacity:0}to{opacity:1}}
 @keyframes cfmPop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+/* ── 異常操作警示(操作紀錄頁上方)──────────────────────────── */
+.sec-watch{padding:12px 14px;margin-bottom:10px;border-left:3px solid var(--red)}
+.sec-watch.calm{border-left-color:var(--green,#16a34a)}
+.sec-watch-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13.5px;font-weight:700;color:var(--text)}
+.sec-watch-head .sw-sub{font-weight:400;font-size:12px;color:var(--text3)}
+.sec-watch-head .sw-btn{margin-left:auto;cursor:pointer;border:1px solid var(--border-hi);background:var(--bg3);color:var(--text2);border-radius:7px;padding:4px 10px;font-size:12px}
+.sec-watch-head .sw-btn:hover{filter:brightness(1.1)}
+.sw-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.sw-hit{display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:7px 10px;font-size:12.5px}
+.sw-hit:hover{border-color:var(--red)}
+.sw-hit .sw-who{font-weight:700;color:var(--text);min-width:92px}
+.sw-hit .sw-when{font-family:var(--mono);font-size:11.5px;color:var(--text3)}
+.sw-hit .sw-what{color:var(--text2)}
+.sw-hit .sw-n{margin-left:auto;font-family:var(--mono);font-weight:700;color:var(--red)}
+.sw-tag{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:#fee2e2;color:#b91c1c}
+.sw-tag.night{background:#e0e7ff;color:#4338ca}
+.sw-tag.dl{background:#fef3c7;color:#b45309}
 </style>
 </head>
 <body>
@@ -6319,6 +6336,7 @@ window.normalizeFullWidth=function(value){
         <div class="page-title" style="margin-bottom:0">操作紀錄</div>
         <button class="btn-add-new" onclick="auditLoad(0)">🔄 重新整理</button>
       </div>
+      <div class="card sec-watch" id="audit-watch" style="display:none"></div>
       <div class="toolbar" id="audit-toolbar">
         <select class="filter-select" id="audit-f-user" onchange="auditLoad(0)"><option value="">全部帳號</option></select>
         <select class="filter-select" id="audit-f-action" onchange="auditLoad(0)">
@@ -12830,7 +12848,7 @@ function auditSetPage(page){
 // 送不出去(未登入/表還沒建)就先留在本機 localStorage,系統健康頁可以看到這台裝置的紀錄。
 const ERRLOG_LOCAL_KEY='errlog_local_v1';
 // 程式刻意「試探表在不在、不在就改用本機」的資料表:回 404 是正常流程,不算錯誤
-const ERRLOG_OPTIONAL_TABLES=/^\/rest\/v1\/(calendar_events|error_log|ship_dispatches)\b/;
+const ERRLOG_OPTIONAL_TABLES=/^\/rest\/v1\/(calendar_events|error_log|ship_dispatches|audit_activity)\b/;
 // 讀寫失敗(表格空白、存不進去的常見原因)自動記進錯誤紀錄;401 是登入過期,另有重新登入流程處理
 function errlogHttp(status, method, path, data){
   if(status===401||!window.errlogPush) return;
@@ -12909,6 +12927,7 @@ async function presencePoll(){
     if(list){ _presList=Array.isArray(list)?list:[]; renderPresence(); }
   }
   if(currentUser&&currentUser.isAdmin) adminPendingPoll();   // 待審核數量/清單即時反應,跟線上狀態共用同一個輪詢週期
+  if(typeof secWatchBoot==='function') secWatchBoot();   // 異常操作警示只在第一輪掃一次(secWatchBoot 內部自己擋重複)
 }
 // 依 user_id 給一個固定的顏色,同一個人每次都同色
 function _presColor(id){
@@ -20397,7 +20416,8 @@ function manualNotificationItems(){
 function manualNotificationItemsBasic(){return manualNotifications.filter(n=>n.recurrence_unit!=='lunar').map(n=>({n,occ:manualNotificationOccurrence(n)})).filter(x=>x.occ!==null).map(x=>notifItem('manual:'+(x.n.id||x.n.created_at||x.n.title)+':'+x.occ,(x.n.priority==='緊急'?'🚨 ':x.n.priority==='重要'?'❗ ':'🔔 ')+(x.n.title||'通知')+(x.n.message?' — '+x.n.message:'')));}
 function announcementNotificationItems(){return (allAnnouncements||[]).filter(a=>a.notify_in_app!==false&&announcementIsActive(a)).map(a=>notifItem('announcement:'+(a.id||a.created_at||a.title),(a.priority==='緊急'?'🚨 ':a.priority==='重要'?'❗ ':'📢 ')+(a.title||'公司公告')));}
 function notifItems(){return staffBirthdaysToday().concat(staffAnnivSoon(),saturdayDutyNotifications,manualNotificationItems(),announcementNotificationItems(),todoNotificationItems(),leaveNotificationItems(),
-  (typeof readinessNotificationItems==='function'?readinessNotificationItems():[]));}   // 上線準備紅燈(模組在檔案最末)
+  (typeof readinessNotificationItems==='function'?readinessNotificationItems():[]),
+  (typeof securityNotificationItems==='function'?securityNotificationItems():[]));}   // 上線準備紅燈、異常操作警示(模組在後面)
 // ── 手機推播(PWA Web Push):每天在各裝置自訂的時間(預設 08:00)由伺服器推送待辦／交管料日／上線準備提醒 ──
 // 時間存在 push_subscriptions.remind_time(需執行 push_remind_time_migration.sql);伺服器每 30 分鐘檢查一次,所以選單是 30 分鐘一格。
 // iPhone 必須先用 Safari「分享 → 加入主畫面」,從主畫面圖示打開後才能開啟推播(iOS 16.4 以上)。
@@ -21590,6 +21610,8 @@ function auditInit(){
     auditFillUserOptions();
   }
   auditLoad(0);
+  secWatchRender();                                           // 先用上次掃的結果秒開
+  secWatchLoad().then(()=>{ secWatchRender(); if(typeof updateNotifBadge==='function') updateNotifBadge(); });
 }
 // 帳號下拉:用帳號管理已載入的清單;沒載過就直接抓一次
 async function auditFillUserOptions(){
@@ -21714,6 +21736,170 @@ function auditRender(){
       <td style="font-size:11px;color:var(--text3);white-space:nowrap" title="${esc(r.ua||'')}">${esc(auditFmtUA(r.ua))}</td>
     </tr>`;
   }).join('');
+}
+
+// ══════════ 異常操作警示(管理員)══════════
+// 目的不是抓外人,是抓「自己人短時間大量刪除／大量下載／半夜大量異動」——
+// 離職前搬資料、報復性刪除,都是用正常帳號在正常時間做的,只有量會不一樣。
+// 資料來源:audit_activity 檢視表(audit_log 依 帳號×小時×動作 的計數),
+// security_invoker → 吃 audit_log 原本的 RLS,一般帳號讀回空。需先執行 audit_watch_migration.sql。
+// 門檻存 app_config.security_watch_cfg(全公司一份,管理員可改)。
+const SEC_WATCH_KEY='security_watch_cfg';
+const SEC_WATCH_DEFAULT={on:true, days:3, del:20, dl:10, night:15, nightFrom:22, nightTo:6};
+let secWatchCfg=Object.assign({},SEC_WATCH_DEFAULT), secWatchHits=[], secWatchErr='', secWatchLoaded=false;
+
+function secWatchIsAdmin(){ return !!(currentUser && currentUser.isAdmin && !isGuest); }
+// Date → 台灣時間的 'YYYY-MM-DDTHH:00:00'(view 的 hr 就是這個格式,沒有時區尾巴)
+function secWatchTwHour(d){ return new Date(d.getTime()+8*3600000).toISOString().slice(0,13)+':00:00'; }
+function secWatchHourOf(hr){ return +String(hr||'').slice(11,13); }
+function secWatchWhen(hr){
+  const s=String(hr||''); if(s.length<13) return s;
+  const h=s.slice(11,13);
+  return dateSlash(s.slice(0,10))+' '+h+':00–'+String((+h+1)%24).padStart(2,'0')+':00';
+}
+function secWatchIsNight(h){
+  const a=+secWatchCfg.nightFrom, b=+secWatchCfg.nightTo;
+  return a>b ? (h>=a||h<b) : (h>=a&&h<b);     // 跨午夜(22→6)與不跨午夜都適用
+}
+async function secWatchLoadCfg(){
+  const r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+encodeURIComponent(SEC_WATCH_KEY));
+  if(r.ok && Array.isArray(r.data) && r.data[0]){
+    try{ Object.assign(secWatchCfg, JSON.parse(r.data[0].value||'{}')); }catch(e){}
+  }
+}
+async function secWatchSaveCfg(){
+  return sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',
+    headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify({key:SEC_WATCH_KEY, value:JSON.stringify(secWatchCfg)})});
+}
+// 掃出警示。不丟例外,壞掉就是沒警示(secWatchErr 會寫原因)
+async function secWatchLoad(){
+  secWatchErr=''; secWatchHits=[];
+  if(!secWatchIsAdmin()){ secWatchLoaded=true; return; }
+  await secWatchLoadCfg();
+  if(!secWatchCfg.on){ secWatchLoaded=true; return; }
+  const days=Math.max(1, Math.min(30, +secWatchCfg.days||3));
+  const since=secWatchTwHour(new Date(Date.now()-days*86400000));
+  const r=await sbFetch('/rest/v1/audit_activity?select=*&hr=gte.'+encodeURIComponent(since)+'&order=hr.desc&limit=5000');
+  if(!r.ok){
+    secWatchErr=(r.status===404||r.status===400)
+      ? '尚未啟用(請先在 Supabase SQL Editor 執行 audit_watch_migration.sql)'
+      : '讀取失敗('+(r.status||'?')+')';
+    secWatchLoaded=true; return;
+  }
+  const rows=Array.isArray(r.data)?r.data:[];
+  const hits=[], nightBucket={};
+  rows.forEach(x=>{
+    const n=+x.n||0, uid=String(x.user_id||''), hr=String(x.hr||'').slice(0,19);
+    if(!uid||!hr) return;
+    if(x.action==='delete' && n>=+secWatchCfg.del)
+      hits.push({uid, who:x.who, hr, kind:'del', n, label:'大量刪除', cls:''});
+    if(x.action==='download' && n>=+secWatchCfg.dl)
+      hits.push({uid, who:x.who, hr, kind:'dl', n, label:'大量下載', cls:'dl'});
+    if(secWatchIsNight(secWatchHourOf(hr)) && (x.action==='insert'||x.action==='update'||x.action==='delete')){
+      const k=uid+'|'+hr;
+      (nightBucket[k]=nightBucket[k]||{uid, who:x.who, hr, n:0}).n+=n;
+    }
+  });
+  Object.values(nightBucket).forEach(b=>{
+    if(b.n>=+secWatchCfg.night)
+      hits.push({uid:b.uid, who:b.who, hr:b.hr, kind:'night', n:b.n, label:'非上班時段大量異動', cls:'night'});
+  });
+  secWatchHits=hits.sort((a,b)=> b.hr.localeCompare(a.hr) || b.n-a.n);
+  secWatchLoaded=true;
+}
+function secWatchRender(){
+  const box=document.getElementById('audit-watch'); if(!box) return;
+  if(!secWatchIsAdmin()){ box.style.display='none'; return; }
+  box.style.display='';
+  const cfgBtn='<button type="button" class="sw-btn" onclick="secWatchOpenCfg()">⚙ 門檻設定</button>';
+  if(secWatchErr){
+    box.className='card sec-watch calm';
+    box.innerHTML='<div class="sec-watch-head">🛡️ 異常操作警示<span class="sw-sub">'+esc(secWatchErr)+'</span>'+cfgBtn+'</div>';
+    return;
+  }
+  if(!secWatchCfg.on){
+    box.className='card sec-watch calm';
+    box.innerHTML='<div class="sec-watch-head">🛡️ 異常操作警示<span class="sw-sub">已關閉</span>'+cfgBtn+'</div>';
+    return;
+  }
+  const days=Math.max(1,+secWatchCfg.days||3);
+  if(!secWatchHits.length){
+    box.className='card sec-watch calm';
+    box.innerHTML='<div class="sec-watch-head">🛡️ 異常操作警示<span class="sw-sub">最近 '+days+' 天沒有異常(門檻:1 小時內刪除 '
+      +esc(secWatchCfg.del)+' 筆／下載 '+esc(secWatchCfg.dl)+' 個檔／'+esc(secWatchCfg.nightFrom)+'–'+esc(secWatchCfg.nightTo)+' 點異動 '+esc(secWatchCfg.night)+' 筆)</span>'+cfgBtn+'</div>';
+    return;
+  }
+  box.className='card sec-watch';
+  box.innerHTML='<div class="sec-watch-head">🚨 異常操作警示<span class="sw-sub">最近 '+days+' 天有 '+secWatchHits.length+' 筆超過門檻,點一下看明細</span>'+cfgBtn+'</div>'
+    +'<div class="sw-list">'+secWatchHits.slice(0,20).map(h=>
+      '<div class="sw-hit" onclick="secWatchDrill(\''+esc(h.uid)+'\',\''+esc(h.hr)+'\')" title="套用篩選:這個帳號在這一天的紀錄">'
+      +'<span class="sw-who">'+esc(h.who||'—')+'</span>'
+      +'<span class="sw-tag '+h.cls+'">'+esc(h.label)+'</span>'
+      +'<span class="sw-when">'+esc(secWatchWhen(h.hr))+'</span>'
+      +'<span class="sw-n">'+h.n+' 筆</span></div>').join('')
+    +(secWatchHits.length>20?'<div class="sw-sub" style="padding-left:2px">另有 '+(secWatchHits.length-20)+' 筆…</div>':'')
+    +'</div>';
+}
+// 點警示 → 把下方表格篩成「這個帳號 × 那一天」
+function secWatchDrill(uid, hr){
+  const day=String(hr||'').slice(0,10); if(!day) return;
+  const u=document.getElementById('audit-f-user'); if(u) u.value=uid;
+  const a=document.getElementById('audit-f-action'); if(a) a.value='';
+  ['audit-f-from','audit-f-to'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=day; });
+  refreshDateWk(document.getElementById('page-audit'));
+  auditLoad(0);
+}
+function secWatchOpenCfg(){
+  const c=secWatchCfg;
+  const overlay=document.createElement('div'); overlay.className='input-modal-overlay';
+  overlay.innerHTML='<div class="input-modal" style="width:460px">'
+    +'<div class="input-modal-title">異常操作警示 — 門檻設定</div>'
+    +'<div style="font-size:12.5px;color:var(--text3);line-height:1.7;margin-bottom:12px">超過門檻只會通知管理員,不會擋住任何人的操作。門檻設太低會一直吵,建議先觀察一週再調。</div>'
+    +'<label><input type="checkbox" id="sw-on"'+(c.on?' checked':'')+'> 啟用警示</label>'
+    +'<label>看最近幾天</label><input type="number" id="sw-days" min="1" max="30" value="'+esc(c.days)+'">'
+    +'<label>1 小時內刪除幾筆算異常</label><input type="number" id="sw-del" min="1" value="'+esc(c.del)+'">'
+    +'<label>1 小時內下載幾個檔算異常</label><input type="number" id="sw-dl" min="1" value="'+esc(c.dl)+'">'
+    +'<label>非上班時段:幾點到幾點</label>'
+    +'<div style="display:flex;gap:8px;align-items:center"><input type="number" id="sw-nf" min="0" max="23" value="'+esc(c.nightFrom)+'" style="width:80px"><span style="color:var(--text3)">點 ～</span><input type="number" id="sw-nt" min="0" max="23" value="'+esc(c.nightTo)+'" style="width:80px"><span style="color:var(--text3)">點</span></div>'
+    +'<label>非上班時段 1 小時內異動幾筆算異常</label><input type="number" id="sw-night" min="1" value="'+esc(c.night)+'">'
+    +'<div class="input-modal-actions"><button class="input-modal-btn cancel">取消</button><button class="input-modal-btn ok">儲存</button></div></div>';
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  overlay.querySelector('.cancel').onclick=close;
+  overlay.onclick=e=>{ if(e.target===overlay) close(); };
+  overlay.querySelector('.ok').onclick=async()=>{
+    const num=(id,def,min,max)=>{ const v=+document.getElementById(id).value; return (isFinite(v)&&v>=min&&v<=max)?v:def; };
+    secWatchCfg={
+      on: document.getElementById('sw-on').checked,
+      days: num('sw-days',3,1,30), del: num('sw-del',20,1,99999), dl: num('sw-dl',10,1,99999),
+      night: num('sw-night',15,1,99999), nightFrom: num('sw-nf',22,0,23), nightTo: num('sw-nt',6,0,23)
+    };
+    const r=await secWatchSaveCfg();
+    if(!r.ok){ alert('門檻儲存失敗('+(r.status||'?')+')'); return; }
+    close();
+    await secWatchLoad(); secWatchRender();
+    if(typeof updateNotifBadge==='function') updateNotifBadge();
+  };
+}
+// 併入右上角 🔔(只有管理員會拿到);key 帶當天日期 → 每天重提醒一次
+function securityNotificationItems(){
+  if(!secWatchIsAdmin() || !secWatchHits.length) return [];
+  const today=dashTodayStr();
+  return secWatchHits.slice(0,5).map(h=>notifItem(
+    'secwatch:'+h.uid+':'+h.hr+':'+h.kind+':'+today,
+    '🚨 '+(h.who||'某帳號')+' 在 '+secWatchWhen(h.hr)+' '+h.label+' '+h.n+' 筆'));
+}
+// 管理員登入後在背景掃一次(不擋畫面);操作紀錄頁每次進去會再掃。
+// 由線上狀態的輪詢(30 秒一次)呼叫,所以這裡自己擋掉重複:掃過或正在掃就不再送。
+let secWatchBooting=false;
+function secWatchBoot(){
+  if(!secWatchIsAdmin() || secWatchLoaded || secWatchBooting) return;
+  secWatchBooting=true;
+  secWatchLoad().then(()=>{
+    secWatchRender();
+    if(typeof updateNotifBadge==='function') updateNotifBadge();
+  }).catch(()=>{}).then(()=>{ secWatchBooting=false; });
 }
 
 // ── 系統健康頁 (管理員):錯誤紀錄 + 健康檢查 ────────────────────
