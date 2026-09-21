@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.20.11"/>
+<meta name="sc-version" content="2026.09.21.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2356,6 +2356,17 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
 .sw-cfg .sw-val input:focus{border-color:var(--accent2)}
 .sw-cfg.off .sw-sec{opacity:.4;pointer-events:none}
 @media(max-width:700px){ .sw-cfg .sw-val input{font-size:16px} }   /* iOS 聚焦時不要自動放大整頁 */
+/* 操作紀錄:整列可點,開明細彈窗(一行一個欄位,不用在一長串逗號裡找) */
+#audit-body tr{cursor:pointer}
+#audit-body tr:hover{background:var(--bg3)}
+.audit-detail{width:min(560px,calc(100vw - 24px))}
+.audit-detail .ad-body{max-height:min(62vh,560px);overflow:auto;margin-top:2px}
+.audit-detail .ad-row{display:grid;grid-template-columns:104px 1fr;gap:10px;align-items:start;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.audit-detail .ad-k{font-size:12px;color:var(--text3);line-height:1.5}
+.audit-detail .ad-v{color:var(--text);line-height:1.5;word-break:break-word}
+.audit-detail .ad-dim{font-size:11.5px;color:var(--text3)}
+.audit-detail .ad-sec{margin:14px 0 2px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3)}
+.audit-detail .ad-raw{margin-top:4px;padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--text3);white-space:pre-wrap;word-break:break-all}
 /* ── 使用時段限制(帳號管理頁上方)────────────────────────────── */
 .ah-card{padding:14px 16px;margin-bottom:12px}
 .ah-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:2px}
@@ -6407,7 +6418,7 @@ window.normalizeFullWidth=function(value){
           <option value="download">下載</option>
           <option value="_write">只看異動(新增/修改/刪除)</option>
         </select>
-        <select class="filter-select" id="audit-f-tbl" onchange="auditLoad(0)"><option value="">全部資料表</option></select>
+        <select class="filter-select" id="audit-f-tbl" onchange="auditLoad(0)"><option value="">全部資料</option></select>
         <span style="display:inline-flex;align-items:center;gap:4px">
           <input type="date" id="audit-f-from" class="search-input date-wk" data-wk="audit-from-show" style="width:150px" onchange="auditLoad(0)" title="起始日"/>
           <span class="date-wk-show" id="audit-from-show">—</span>
@@ -6417,7 +6428,7 @@ window.normalizeFullWidth=function(value){
           <input type="date" id="audit-f-to" class="search-input date-wk" data-wk="audit-to-show" style="width:150px" onchange="auditLoad(0)" title="結束日"/>
           <span class="date-wk-show" id="audit-to-show">—</span>
         </span>
-        <input class="search-input" id="audit-f-q" placeholder="搜尋內容/對象..." style="width:180px" oninput="auditRender()"/>
+        <input class="search-input" id="audit-f-q" placeholder="搜尋做了什麼、哪一筆..." style="width:200px" oninput="auditRender()"/>
         <button class="btn" onclick="auditClearFilters()">清除篩選</button>
         <span style="flex:1"></span>
         <span id="audit-count" style="font-family:var(--mono);font-size:12px;color:var(--text3)"></span>
@@ -6427,7 +6438,7 @@ window.normalizeFullWidth=function(value){
           <table class="data-table">
             <thead><tr>
               <th style="white-space:nowrap">時間</th><th>帳號</th><th>動作</th><th>頁面</th>
-              <th>資料表</th><th>對象</th><th>內容</th><th>IP</th><th>裝置</th>
+              <th>動到哪份資料</th><th>哪一筆</th><th>做了什麼</th><th>IP</th><th>裝置</th>
             </tr></thead>
             <tbody id="audit-body"><tr><td colspan="9" class="empty-state">載入中...</td></tr></tbody>
           </table>
@@ -6439,8 +6450,10 @@ window.normalizeFullWidth=function(value){
         <button class="btn" id="audit-next" onclick="auditPage(1)">下一頁 ›</button>
       </div>
       <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:10px;line-height:1.7">
-        ※ 全站的<b>新增/修改/刪除</b>都會自動留痕,含<b>時間、帳號、IP、所在頁面、資料表、送出內容</b>;登入/登出另外記。<br>
-        ※ <b>下載/匯出檔案</b>(報表、CSV、Word、Excel、DXF)也會留痕,檔名顯示在「內容」欄。<br>
+        ※ <b>點任何一列</b>可以看這筆紀錄的完整內容(表格裡被「…」蓋掉的都在裡面)。<br>
+        ※ 全站的<b>新增/修改/刪除</b>都會自動留痕,含<b>時間、帳號、IP、所在頁面、動到哪份資料、送出內容</b>;登入/登出另外記。<br>
+        ※ <b>下載/匯出檔案</b>(報表、CSV、Word、Excel、DXF)也會留痕,檔名顯示在「做了什麼」欄。<br>
+        ※ <b>刪除</b>只留得下「刪了哪一筆」,原本的內容不會留下 —— 這是資料庫本來就刪掉了,不是紀錄漏記。<br>
         ※ 時間、IP、裝置由<b>資料庫端</b>蓋章,前端偽造不了;紀錄<b>只能新增不能改也不能刪</b>(連管理員從網頁也刪不掉)。<br>
         ※ 只有<b>管理員</b>看得到本頁;一般帳號連讀取都會被資料庫拒絕。<br>
         ※ 預設保留 <b>180 天</b>。需要先跑 <b>audit_log_migration.sql</b> 本頁才有資料。
@@ -12736,12 +12749,22 @@ const AUDIT_TBL_LABEL={
   app_notifications:'發佈通知', notification_settings:'通知規則', notification_reads:'通知已讀',
   billing_records:'請款紀錄', billing_archive:'請款封存', labor_orders:'點工單',
   deduction_details:'扣款明細', modified_components:'修改構件',
-  cp_receipts:'CP收圖登記', sp_production:'SP狀態追蹤表', sp_online:'SP線上', sp_reserved:'保留料', sp_finished:'成品材',
+  cp_receipts:'CP收圖登記', sp_track:'SP狀態追蹤表', sp_progress:'SP進度彙總', sp_online:'SP線上',
+  reserved_material:'保留料', product_material:'成品材', manual_order:'人工給單',
   hw_items:'五金品項', hw_purchases:'五金進貨', hw_usage:'五金領用', hw_vendors:'五金廠商',
   hw_stocktake:'五金盤點', hw_equipment:'五金設備',
   employee_pay:'員工薪資設定', payroll_run:'薪資計算', payslip:'薪資明細',
   leave_ledger:'請假・特休', payroll_config:'費率設定', output_price:'產值單價',
-  drawing_files:'圖面檔案', drawing_page_members:'舊版圖面構件索引', drawing_page_drawings:'圖面頁碼標記', drawing_cleanup_queue:'圖面自動清理'
+  drawing_files:'圖面檔案', drawing_page_members:'舊版圖面構件索引', drawing_page_drawings:'圖面頁碼標記', drawing_cleanup_queue:'圖面自動清理',
+  loading_plan:'月產量排程', zone_custom_cols:'工程區自訂欄位', beam_parts:'樑構件明細',
+  multilevel_analyses:'多階分析紀錄', multilevel_analysis_items:'多階分析明細',
+  a201_records:'A201登記', a202_records:'A202登記', inspection_reports:'報驗表封存', inspection_ut_parts:'UT部位選項',
+  attendance:'人臉打卡', labor_rates:'點工費率',
+  pricing_sheets:'計價單', pricing_items:'計價項目', pricing_zone_items:'工程區計價', pricing_import_suggestions:'計價匯入建議',
+  todo_users:'待辦指派名單', leave_board:'請假總表',
+  user_prefs:'個人設定', user_devices:'登入裝置', user_presence:'線上狀態',
+  push_subscriptions:'手機推播訂閱', push_ready_snapshot:'推播資料快取',
+  audit_log:'操作紀錄', audit_activity:'操作統計'
 };
 function auditTblLabel(t){ return AUDIT_TBL_LABEL[t]||t||'—'; }
 // 欄位名 → 中文(顯示「對象/內容」時翻譯用;沒列到的顯示原欄名)
@@ -12788,39 +12811,89 @@ const AUDIT_FIELD_LABEL={
   // 帳號 / 薪資
   is_admin:'管理員', perms:'頁面權限', disabled:'停用', avatar_url:'頭像', password:'密碼',
   work_days:'出勤天數', base_salary:'底薪', period:'期別', hours:'工數', rate:'費率', amount:'金額',
-  fname:'檔案名稱', user_name:'人員', frames:'尺寸'
+  fname:'檔案名稱', user_name:'人員', frames:'尺寸',
+  // 上面新補的資料表用到的欄位
+  cp_receipt_id:'收圖單', ym:'年月', completed:'已完成', common_no:'共用編號', drawing_no:'圖號', extra:'附加欄位',
+  table_type:'表格種類', col_name:'欄位名稱', done_time:'完成時間', photo:'照片', done:'完成', confidence:'辨識相似度',
+  file_name:'檔案名稱', storage_path:'儲存路徑', report_date:'報驗日期', sort:'排序', cat:'分類', type:'類型',
+  approved:'核准', approved_by:'核准人', approved_at:'核准時間', first_seen:'第一次出現', last_seen:'最後出現',
+  device_name:'裝置名稱', prefs:'個人設定', key:'設定名稱', value:'設定值', resolved_at:'處理時間', resolved_by:'處理人',
+  hours_exempt:'時段豁免', mother_no:'母材編號', component_count:'構件數', project_no:'工程編號'
 };
 function auditFieldLabel(k){ return AUDIT_FIELD_LABEL[k]||k; }
-// 對象條件文字化:'part_no=eq.B12 & id=in.(1,2,3,4)' → '構件編號=B12;ID 為:1、2、3 …共4筆'
-const AUDIT_OP_TXT={eq:'',neq:'≠',gt:'>',gte:'≥',lt:'<',lte:'≤',like:'≈',ilike:'≈'};
+// ── 把資料庫的原文翻成白話(只影響「顯示」,存進去的原文不動,原文才是證據)──
+// 紀錄存的是送給資料庫的條件與內容('part_no=eq.B12'、'qty=2, voided=false'),
+// 管理員看不懂,下面幾個函式負責把它唸成人話。
+const AUDIT_OP_TXT={eq:'',neq:'不是',gt:'大於',gte:'不小於',lt:'小於',lte:'不大於',like:'包含',ilike:'包含'};
+// 值文字化:是非、空值、日期時間、整包資料
+function auditFmtVal(v){
+  const s=String(v==null?'':v).trim();
+  if(s===''||s==='(空)'||s==='null') return '空白';
+  if(s==='true') return '是';
+  if(s==='false') return '否';
+  if(s==='{…}') return '(一組資料)';
+  const m=/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(s);
+  if(m) return m[1]+'/'+m[2]+'/'+m[3]+(m[4]?' '+m[4]+':'+m[5]:'');
+  return s;
+}
+// 顯示時把這些欄位排前面:一眼看出「哪個工程、哪一區、哪支構件」
+const AUDIT_KEY_ORDER=['proj_num','proj_no','project_no','proj_name','zone_code','zone','zone_text','part_no','comp_no','dwg_no','cp_no','order_no','serial_no','doc_no','staff_name','name','title','item','date','work_date','record_date','status'];
+function auditSortPairs(pairs){
+  const rank=k=>{ const i=AUDIT_KEY_ORDER.indexOf(k); return i<0?99:i; };
+  return pairs.map((p,i)=>[p,i]).sort((a,b)=>(rank(a[0][0])-rank(b[0][0]))||(a[1]-b[1])).map(x=>x[0]);
+}
+// 內容摘要拆成欄位:'8 筆:part_no=B12, qty=2 …' → {n:8, pairs:[['part_no','B12'],['qty','2']], more:true}
+function auditParseSummary(s){
+  s=String(s||''); let n=1, more=false;
+  const m=/^(\d+) 筆:/.exec(s);
+  if(m){ n=+m[1]; s=s.slice(m[0].length); }
+  if(/…\s*$/.test(s)){ more=true; s=s.replace(/\s*…\s*$/,''); }
+  const pairs=[];
+  // 值本身也可能有逗號,所以用「逗號後面接 欄位名=」當分界,不是見逗號就切
+  s.split(/,\s+(?=[A-Za-z_][A-Za-z0-9_]*=)/).forEach(part=>{
+    const i=part.indexOf('=');
+    if(i>0) pairs.push([part.slice(0,i), part.slice(i+1)]);
+    else if(part.trim()) pairs.push(['', part.trim()]);
+  });
+  return {n, pairs:auditSortPairs(pairs), more};
+}
+function auditPairTxt(k,v){ return k ? auditFieldLabel(k)+' '+auditFmtVal(v) : auditFmtVal(v); }
+// 哪一筆:'id=eq.605' → '第 605 筆';'part_no=eq.B12 & id=in.(1,2,3,4)' → '構件編號 B12、第 1、2、3 筆(共 4 筆)'
 function auditFmtTarget(t){
   if(!t) return '';
   return String(t).split(' & ').map(part=>{
     const i=part.indexOf('='); if(i<0) return part;
-    const label=auditFieldLabel(part.slice(0,i)), val=part.slice(i+1);
+    const key=part.slice(0,i), label=auditFieldLabel(key), isId=(key==='id'), val=part.slice(i+1);
     let m;
-    if((m=/^(not\.)?is\.(.*)$/.exec(val))){
-      const v=m[2]==='null'?'空':(m[2]==='true'?'「是」':(m[2]==='false'?'「否」':m[2]));
-      return label+(m[1]?' 不為':' 為')+v;
-    }
+    if((m=/^(not\.)?is\.(.*)$/.exec(val)))
+      return label+(m[1]?' 不是 ':' ')+auditFmtVal(m[2]);
     if((m=/^(not\.)?in\.\((.*)\)$/.exec(val))){
-      const items=m[2].split(',').map(s=>s.replace(/^"|"$/g,''));
-      return label+(m[1]?' 不在:':' 為:')+items.slice(0,3).join('、')+(items.length>3?' …共'+items.length+'筆':'');
+      const items=m[2].split(',').map(x=>x.replace(/^"|"$/g,''));
+      const head=items.slice(0,3).join('、');
+      const tail=items.length>3?'…共 '+items.length+' 筆':'';
+      return isId ? (m[1]?'第 '+head+' 筆以外':'第 '+head+' 筆')+tail
+                  : label+(m[1]?' 不是 ':' 是 ')+head+tail;
     }
     if((m=/^([a-z]+)\.(.*)$/.exec(val)) && AUDIT_OP_TXT.hasOwnProperty(m[1])){
       const op=AUDIT_OP_TXT[m[1]];
-      return op ? label+' '+op+' '+m[2] : label+'='+m[2];
+      if(isId && !op) return '第 '+m[2]+' 筆';
+      return label+' '+(op?op+' ':'')+auditFmtVal(m[2]);
     }
-    return label+'='+val;
-  }).join('；');
+    return isId ? '第 '+val+' 筆' : label+' '+auditFmtVal(val);
+  }).join('、');
 }
-// 內容摘要文字化:'part_no=B12, qty=2, voided=false' → '構件編號=B12, 數量=2, 作廢=否'
-function auditFmtSummary(r){
-  let s=(r&&r.summary)||'';
-  if(!s) return '';
-  if(r.action==='download') return s;                       // 下載存的是檔名,原樣顯示
-  s=s.replace(/(^|, |:)([A-Za-z_][A-Za-z0-9_]*)=/g,(all,pre,k)=>pre+auditFieldLabel(k)+'=');
-  s=s.replace(/=true(?=(, |…|$))/g,'=是').replace(/=false(?=(, |…|$))/g,'=否');
+// 做了什麼:'part_no=B12, qty=2, voided=false' → '構件編號 B12、數量 2、作廢 否'
+// 表格裡只留前 3 項(太長沒人看),點那一列會開明細彈窗顯示全部(full=true)
+function auditFmtSummary(r, full){
+  const raw=(r&&r.summary)||'';
+  if(!raw) return '';
+  if(r.action==='download') return '檔名:'+raw;               // 下載存的是檔名,不是欄位
+  const d=auditParseSummary(raw);
+  const show=full?d.pairs:d.pairs.slice(0,3);
+  let s=show.map(x=>auditPairTxt(x[0],x[1])).join('、');
+  if(!full && d.pairs.length>show.length) s+='…等 '+d.pairs.length+' 項';
+  if(d.n>1) s='共 '+d.n+' 筆,第一筆:'+s;
+  else if(r.action==='update') s='改成 '+s;
   return s;
 }
 // 下載留痕:各匯出/產生檔案的地方呼叫一次,把檔名記進「內容」欄
@@ -21748,7 +21821,7 @@ function auditFillTblOptions(){
   const set=new Set(auditRows.map(r=>r.tbl).filter(Boolean));
   if(cur) set.add(cur);
   const opts=[...set].sort((a,b)=>auditTblLabel(a).localeCompare(auditTblLabel(b),'zh-Hant'));
-  sel.innerHTML='<option value="">全部資料表</option>'+opts.map(t=>
+  sel.innerHTML='<option value="">全部資料</option>'+opts.map(t=>
     `<option value="${esc(t)}"${t===cur?' selected':''}>${esc(auditTblLabel(t))}</option>`).join('');
 }
 function auditFmtTime(s){
@@ -21789,23 +21862,64 @@ function auditRender(){
   document.getElementById('audit-pageinfo').textContent='第 '+(Math.floor(auditOffset/AUDIT_PAGE_SIZE)+1)+' 頁';
   document.getElementById('audit-prev').disabled=auditOffset<=0;
   document.getElementById('audit-next').disabled=!auditHasMore;
+  auditRender._list=list;                                   // 點某一列看明細時用
   if(!list.length){ body.innerHTML='<tr><td colspan="9" class="empty-state">這段期間沒有符合的紀錄</td></tr>'; return; }
-  body.innerHTML=list.map(r=>{
+  body.innerHTML=list.map((r,i)=>{
     const act=r.action||'';
     const badge=`<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;${AUDIT_ACTION_STYLE[act]||'background:var(--bg3);color:var(--text3)'}">${esc(AUDIT_ACTION_LABEL[act]||act)}</span>`;
     const failed=(r.ok===false)?'<span title="這次請求失敗(可能被權限擋下)" style="margin-left:4px;color:var(--text3)">✗</span>':'';
-    return `<tr${r.ok===false?' style="opacity:.6"':''}>
+    // 刪除不會留下原本的內容(資料已經不在了),只留「刪了哪一筆」
+    const what=esc(auditFmtSummary(r)) || (r.action==='delete'?'<span style="color:var(--text3)">刪掉了,原本的內容不會留下</span>':'—');
+    return `<tr onclick="auditDetail(${i})" title="點一下看完整明細"${r.ok===false?' style="opacity:.6"':''}>
       <td style="font-family:var(--mono);font-size:11px;white-space:nowrap">${auditFmtTime(r.at)}</td>
       <td style="font-size:12px">${esc(r.name||r.account||'—')}<div style="font-family:var(--mono);font-size:10px;color:var(--text3)">${esc(r.account||'')}</div></td>
       <td style="white-space:nowrap">${badge}${failed}</td>
       <td style="font-size:12px">${esc(r.page_label||'—')}</td>
       <td style="font-size:12px">${esc(auditTblLabel(r.tbl))}</td>
-      <td style="font-size:12px;color:var(--text3);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.target||'')}">${esc(auditFmtTarget(r.target)||'—')}</td>
-      <td style="font-size:12px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.summary||'')}">${esc(auditFmtSummary(r)||'—')}</td>
+      <td style="font-size:12px;color:var(--text3);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(auditFmtTarget(r.target)||'')}">${esc(auditFmtTarget(r.target)||'—')}</td>
+      <td style="font-size:12px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(auditFmtSummary(r,true)||'')}">${what}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap">${esc(auditFmtIP(r.ip))}</td>
       <td style="font-size:11px;color:var(--text3);white-space:nowrap" title="${esc(r.ua||'')}">${esc(auditFmtUA(r.ua))}</td>
     </tr>`;
   }).join('');
+}
+
+// 點某一列 → 開明細彈窗。表格一列塞不下(省略號後面看不到)的東西都在這裡,
+// 而且是一行一個欄位,不用在一長串逗號裡找。
+function auditDetail(i){
+  const r=(auditRender._list||[])[i]; if(!r) return;
+  const line=(k,v)=>'<div class="ad-row"><span class="ad-k">'+k+'</span><span class="ad-v">'+v+'</span></div>';
+  const d=(r.summary&&r.action!=='download')?auditParseSummary(r.summary):null;
+  let html=line('什麼時候', esc(auditFmtTime(r.at)))
+    +line('誰做的', esc(r.name||r.account||'—')+(r.account&&r.name?' <span class="ad-dim">('+esc(r.account)+')</span>':''))
+    +line('做了什麼', esc(AUDIT_ACTION_LABEL[r.action]||r.action||'—')
+        +(r.ok===false?' <span class="ad-dim">— 這次沒成功(多半是被權限擋下)</span>':''))
+    +line('在哪一頁', esc(r.page_label||'—'))
+    +line('動到哪份資料', esc(auditTblLabel(r.tbl)))
+    +line('哪一筆', esc(auditFmtTarget(r.target)||'—'))
+    +line('從哪裡連', esc(auditFmtIP(r.ip))+' <span class="ad-dim">'+esc(auditFmtUA(r.ua))+'</span>');
+  if(r.action==='download') html+=line('下載的檔案', esc(r.summary||'—'));
+  else if(d&&d.pairs.length){
+    html+='<div class="ad-sec">'+(r.action==='update'?'改成這些內容':'送出的內容')
+      +(d.n>1?' <span class="ad-dim">(一次 '+d.n+' 筆,以下是第一筆)</span>':'')+'</div>'
+      +d.pairs.map(x=>line(esc(x[0]?auditFieldLabel(x[0]):'內容'), esc(auditFmtVal(x[1])))).join('')
+      +(d.more?'<div class="ad-dim" style="padding:6px 2px">…內容太長,只留下前面這些</div>':'');
+  } else if(r.action==='delete'){
+    html+='<div class="ad-sec">內容</div>'
+      +'<div class="ad-dim" style="padding:6px 2px">刪除只留「刪了哪一筆」,原本的內容不會留下。</div>';
+  }
+  html+='<div class="ad-sec">原始紀錄(要對帳或問工程師時用)</div>'
+    +'<div class="ad-raw">資料表:'+esc(r.tbl||'—')
+      +(r.target?'\n條件:'+esc(r.target):'')
+      +(r.summary?'\n內容:'+esc(r.summary):'')+'</div>';
+  const overlay=document.createElement('div'); overlay.className='input-modal-overlay';
+  overlay.innerHTML='<div class="input-modal audit-detail"><div class="input-modal-title">這筆紀錄的完整內容</div>'
+    +'<div class="ad-body">'+html+'</div>'
+    +'<div class="input-modal-actions"><button class="input-modal-btn ok">關閉</button></div></div>';
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  overlay.querySelector('.ok').onclick=close;
+  overlay.onclick=e=>{ if(e.target===overlay) close(); };
 }
 
 // ══════════ 異常操作警示(管理員)══════════
