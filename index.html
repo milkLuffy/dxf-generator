@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.21.2"/>
+<meta name="sc-version" content="2026.09.21.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -109,7 +109,7 @@
 body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:300;min-height:100vh;display:flex;flex-direction:column}
 
 /* ── Login ── */
-#login-screen,#pending-screen,#rejected-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+#login-screen,#pending-screen,#rejected-screen,#blocked-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
 .login-wrap{width:100%;max-width:400px}
 .login-brand{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.15em;color:var(--accent);margin-bottom:4px}
 .login-brand-sub{font-family:var(--mono);font-size:10px;letter-spacing:.25em;color:var(--text3);text-transform:uppercase;margin-bottom:32px}
@@ -2367,6 +2367,34 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
 .audit-detail .ad-dim{font-size:11.5px;color:var(--text3)}
 .audit-detail .ad-sec{margin:14px 0 2px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3)}
 .audit-detail .ad-raw{margin-top:4px;padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--text3);white-space:pre-wrap;word-break:break-all}
+/* ── 待審核提醒與審核彈窗(手機也要能審核)───────────────────── */
+.apv-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:690;display:flex;align-items:center;gap:10px;
+  background:var(--bg2);border:1px solid var(--accent2);border-radius:999px;box-shadow:0 6px 24px rgba(0,0,0,.4);
+  padding:7px 8px 7px 16px;font-size:13px;color:var(--text);max-width:calc(100vw - 24px)}
+.apv-bar .btn{padding:5px 12px;font-size:12px;white-space:nowrap}
+.apv-toast{position:fixed;top:64px;right:24px;z-index:700;width:min(320px,calc(100vw - 32px));
+  background:var(--bg2);border:1px solid var(--accent2);border-radius:var(--rad-lg);box-shadow:0 8px 30px rgba(0,0,0,.45);padding:13px 15px}
+.apv-toast-t{font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:6px}
+.apv-toast-b{font-size:12.5px;line-height:1.75;color:var(--text2)}
+.apv-toast-btns{display:flex;justify-content:flex-end;gap:7px;margin-top:11px}
+.apv-toast-btns .btn,.apv-toast-btns .btn-primary{padding:5px 12px;font-size:12px}
+.apv-modal{width:min(520px,calc(100vw - 24px))}
+.apv-modal .apv-body{max-height:min(64vh,520px);overflow:auto;margin-top:2px}
+.apv-sec{margin:14px 0 6px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3)}
+.apv-sec:first-child{margin-top:4px}
+.apv-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--border)}
+.apv-info{display:flex;flex-direction:column;gap:2px;flex:1;min-width:150px}
+.apv-info b{font-size:13.5px;color:var(--text)}
+.apv-info span{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.apv-btns{display:flex;gap:7px;margin-left:auto}
+.apv-btns .btn,.apv-btns .btn-primary{padding:6px 14px;font-size:12.5px}
+.apv-empty{padding:10px 2px;font-size:12.5px;color:var(--text3)}
+@media(max-width:700px){
+  .apv-toast{top:auto;bottom:62px;right:12px;left:12px;width:auto}
+  .apv-bar{bottom:10px;font-size:12.5px;padding:6px 7px 6px 13px}
+  .apv-btns{margin-left:0;width:100%;gap:8px}
+  .apv-btns .btn,.apv-btns .btn-primary{flex:1 1 0;min-width:0;white-space:nowrap;padding:10px 8px;font-size:13px}
+}
 /* ── 使用時段限制(帳號管理頁上方)────────────────────────────── */
 .ah-card{padding:14px 16px;margin-bottom:12px}
 .ah-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:2px}
@@ -2463,6 +2491,25 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
         此帳號未被授權使用本系統，<br/>請聯絡管理員。
       </div>
       <button class="btn-primary" style="margin-top:6px" onclick="logout()">登出</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 門禁擋下來(非開放時段／裝置未核准／請假中)── -->
+<div id="blocked-screen" style="display:none">
+  <div class="login-wrap">
+    <div class="login-logo" role="img" aria-label="鎮山工程"></div>
+    <div class="login-brand">鎮山工程</div>
+    <div class="login-brand-sub">Management System</div>
+    <div class="login-card" style="align-items:center;text-align:center;gap:14px">
+      <div style="font-size:32px" id="blocked-icon">⛔</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text)" id="blocked-title">目前無法使用系統</div>
+      <div style="font-family:var(--mono);font-size:13px;line-height:1.9;color:var(--text2);white-space:pre-wrap" id="blocked-msg"></div>
+      <div id="blocked-code" style="display:none;font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.12em;color:var(--text);background:var(--bg3);border:1px solid var(--border-hi);border-radius:10px;padding:8px 14px"></div>
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;justify-content:center">
+        <button class="btn-primary" onclick="blockedRecheck(this)">重新檢查</button>
+        <button class="btn" onclick="logout()">登出</button>
+      </div>
     </div>
   </div>
 </div>
@@ -13165,9 +13212,136 @@ function presenceStop(){
   document.removeEventListener('visibilitychange', _presVis);
   const box=document.getElementById('presence-bar'); if(box){ box.innerHTML=''; box.style.display='none'; }
 }
-// ── 待審核帳號:數量角標即時反應(只有單一管理員使用,不需要即時同步整張清單)──
+// ── 管理員待審核:帳號／裝置即時提醒 ────────────────────────
+// 以前帳號的數字雖然每 6 秒更新,但只是側邊一顆小紅點,不看不會發現;
+// 裝置更是只有打開帳號管理頁才會查,所以「要按重新整理才跑出來」。
+// 現在兩種都在背景盯著,一出現新的就跳一張不會自動消失的提示,可以直接審核。
+let adminPendingAccounts=[], adminPendingDevices=[];
+let _apvSeen=new Set(), _apvTick=0, _apvBooted=false;
 async function adminPendingPoll(){
   await refreshPendingBadge();
+  if((_apvTick++ % 5)!==0) return;           // 帳號數字 6 秒一次;整包比對 30 秒一次就夠
+  const [ar, dr]=await Promise.all([
+    sbFetch('/rest/v1/profiles?select=id,name,account,created_at&status=eq.pending&order=created_at'),
+    sbFetch('/rest/v1/user_devices?select=id,user_id,device_key,ua,name,first_seen,approved&approved=is.false&order=first_seen.desc&limit=50')
+  ]);
+  if(ar.ok && Array.isArray(ar.data)) adminPendingAccounts=ar.data;
+  if(dr.ok && Array.isArray(dr.data)) adminPendingDevices=dr.data;   // 表還沒建就維持原樣,不清空
+  const items=[].concat(
+    adminPendingAccounts.map(a=>({k:'acc:'+a.id, t:'👤 新帳號待審核:'+(a.name||a.account||'')})),
+    adminPendingDevices.map(d=>({k:'dev:'+d.id, t:'💻 新裝置待核准:'+deviceShortKey(d.device_key)}))
+  );
+  updateNotifBadge(true);
+  const fresh=items.filter(x=>!_apvSeen.has(x.k));
+  items.forEach(x=>_apvSeen.add(x.k));
+  // 登入後第一輪不跳提示:那是既有的待辦,不是「剛剛發生的事」,一進系統就被彈窗打斷很煩
+  if(!_apvBooted){ _apvBooted=true; if(items.length) apvBar(items.length); return; }
+  if(fresh.length){ apvToast(fresh); apvBar(items.length); }
+  else if(!items.length) apvBarHide();
+}
+// 常駐細長橫條:有待審核就一直在,提醒不會被關掉就忘記
+function apvBar(n){
+  if(!n){ apvBarHide(); return; }
+  let b=document.getElementById('apv-bar');
+  if(!b){
+    b=document.createElement('div'); b.id='apv-bar'; b.className='apv-bar';
+    document.body.appendChild(b);
+  }
+  b.innerHTML='<span>🔔 有 <b>'+n+'</b> 件待審核</span>'
+    +'<button class="btn" onclick="openApprovalModal()">前往審核</button>';
+}
+function apvBarHide(){ const b=document.getElementById('apv-bar'); if(b) b.remove(); }
+// 新的一件進來時跳一張,不會自動消失(自動消失就等於沒通知到)
+function apvToast(list){
+  let t=document.getElementById('apv-toast');
+  if(!t){ t=document.createElement('div'); t.id='apv-toast'; t.className='apv-toast'; document.body.appendChild(t); }
+  t.innerHTML='<div class="apv-toast-t">🔔 有新的待審核</div>'
+    +'<div class="apv-toast-b">'+list.slice(0,4).map(x=>esc(x.t)).join('<br>')
+      +(list.length>4?'<br>…另外還有 '+(list.length-4)+' 件':'')+'</div>'
+    +'<div class="apv-toast-btns">'
+      +'<button class="btn" onclick="apvToastClose()">稍後</button>'
+      +'<button class="btn-primary" onclick="apvToastClose();openApprovalModal()">立即審核</button></div>';
+  try{
+    if(typeof Notification!=='undefined' && Notification.permission==='granted')
+      new Notification('鎮山工程 — 有新的待審核',{body:list.map(x=>x.t).join('\n').slice(0,200), tag:'sc-approval'});
+  }catch(e){}
+}
+function apvToastClose(){ const t=document.getElementById('apv-toast'); if(t) t.remove(); }
+
+// ── 審核彈窗(電腦、手機都能用)────────────────────────────────
+async function openApprovalModal(){
+  if(!currentUser||!currentUser.isAdmin||isGuest){ alert('只有管理員可以審核。'); return; }
+  let ov=document.getElementById('apv-modal');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='apv-modal'; ov.className='input-modal-overlay';
+    ov.innerHTML='<div class="input-modal apv-modal"><div class="input-modal-title">待審核</div>'
+      +'<div class="apv-body" id="apv-body">載入中…</div>'
+      +'<div class="input-modal-actions"><button class="input-modal-btn ok" onclick="apvClose()">關閉</button></div></div>';
+    document.body.appendChild(ov);
+    ov.onclick=e=>{ if(e.target===ov) apvClose(); };
+  }
+  await apvRender();
+}
+function apvClose(){ const o=document.getElementById('apv-modal'); if(o) o.remove(); }
+async function apvRender(){
+  const box=document.getElementById('apv-body'); if(!box) return;
+  const [ar, dr]=await Promise.all([
+    sbFetch('/rest/v1/profiles?select=id,name,account,created_at&status=eq.pending&order=created_at'),
+    sbFetch('/rest/v1/user_devices?select=id,user_id,device_key,ua,name,first_seen&approved=is.false&order=first_seen.desc&limit=50')
+  ]);
+  adminPendingAccounts=(ar.ok&&Array.isArray(ar.data))?ar.data:[];
+  adminPendingDevices =(dr.ok&&Array.isArray(dr.data))?dr.data:adminPendingDevices;
+  const nameOf=uid=>{ const a=(allAccounts||[]).find(x=>String(x.id)===String(uid)); return a?(a.name||a.account||'—'):'(帳號 '+String(uid||'').slice(0,8)+'…)'; };
+  let html='';
+  html+='<div class="apv-sec">新帳號('+adminPendingAccounts.length+')</div>';
+  html+= adminPendingAccounts.length ? adminPendingAccounts.map(a=>
+      '<div class="apv-row"><div class="apv-info"><b>'+esc(a.name||'(沒有名字)')+'</b>'
+        +'<span>'+esc(a.account||'')+'</span>'
+        +'<span>'+esc(String(a.created_at||'').slice(0,16).replace('T',' '))+' 申請</span></div>'
+      +'<div class="apv-btns"><button class="btn-primary" onclick="apvAccount(\''+esc(a.id)+'\',\'approved\')">通過</button>'
+        +'<button class="btn" onclick="apvAccount(\''+esc(a.id)+'\',\'rejected\')">拒絕</button></div></div>'
+    ).join('') : '<div class="apv-empty">沒有待審核的帳號</div>';
+  html+='<div class="apv-sec">新裝置('+adminPendingDevices.length+')</div>';
+  html+= adminPendingDevices.length ? adminPendingDevices.map(d=>
+      '<div class="apv-row"><div class="apv-info"><b>'+esc(nameOf(d.user_id))+'</b>'
+        +'<span>裝置代碼 '+esc(deviceShortKey(d.device_key))+'　'+esc(d.name||deviceLabel(d.ua))+'</span>'
+        +'<span>'+esc(String(d.first_seen||'').slice(0,16).replace('T',' '))+' 申請</span></div>'
+      +'<div class="apv-btns"><button class="btn-primary" onclick="apvDevice(\''+esc(d.id)+'\',true)">核准</button>'
+        +'<button class="btn" onclick="apvDevice(\''+esc(d.id)+'\',false)">刪除</button></div></div>'
+    ).join('') : '<div class="apv-empty">沒有待核准的裝置</div>';
+  if(!dr.ok) html+='<div class="apv-empty">裝置清單讀不到'+(dr.status===404?'(尚未執行 device_lock_migration.sql)':'('+(dr.status||'?')+')')+'</div>';
+  box.innerHTML=html;
+}
+async function apvAccount(id, status){
+  if(currentUser && String(currentUser.id)===String(id)){ alert('不能審核自己的帳號。'); return; }
+  if(!await uiConfirm('確定要「'+(status==='approved'?'通過':'拒絕')+'」這個帳號?')) return;
+  const r=await sbFetch('/rest/v1/profiles?id=eq.'+encodeURIComponent(id),{method:'PATCH',
+    headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify({status, reviewed_at:new Date().toISOString(), reviewed_by:currentUser?.account||currentUser?.name||'admin'})});
+  if(!r.ok){ alert('更新失敗('+r.status+')'); return; }
+  const a=(allAccounts||[]).find(x=>String(x.id)===String(id)); if(a) a.status=status;
+  await apvAfterAction();
+}
+async function apvDevice(id, ok){
+  if(!ok && !await uiConfirm('確定刪除這台裝置的申請?\n對方下次登入會再登記一次。')) return;
+  const r=ok
+    ? await sbFetch('/rest/v1/user_devices?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Prefer':'return=minimal'},
+        body:JSON.stringify({approved:true, approved_by:currentUser&&currentUser.id||null, approved_at:new Date().toISOString()})})
+    : await sbFetch('/rest/v1/user_devices?id=eq.'+encodeURIComponent(id),{method:'DELETE'});
+  if(!r.ok){ alert((ok?'核准':'刪除')+'失敗('+(r.status||'?')+')'); return; }
+  await apvAfterAction();
+}
+async function apvAfterAction(){
+  await apvRender();
+  await refreshPendingBadge();
+  const n=adminPendingAccounts.length+adminPendingDevices.length;
+  apvBar(n);
+  updateNotifBadge(true);
+  // 帳號管理頁開著的話一起更新,免得兩邊數字對不上
+  if(document.getElementById('page-accounts')?.classList.contains('active')){
+    if(typeof loadAccounts==='function') loadAccounts(true);
+    if(typeof deviceRenderCard==='function') deviceRenderCard();
+  }
 }
 // 註:關分頁時不主動刪自己那一列 —— sendBeacon 送不出 DELETE 也帶不了授權標頭。
 // 改由「超過 25 秒沒回報就視為離線」處理,效果一樣,少一段永遠失敗的程式碼。
@@ -13381,11 +13555,15 @@ async function logout() {
     await sbFetch('/auth/v1/logout',{method:'POST'});
   }
   if(typeof ahStopWatch==='function') ahStopWatch();
+  // 待審核提醒是跟著「這次登入的這個管理員」的,換人登入要重新算,不然會沿用上一個人看過的清單
+  if(typeof apvBarHide==='function'){ apvBarHide(); apvToastClose(); apvClose(); }
+  if(typeof _apvSeen!=='undefined'){ _apvSeen=new Set(); _apvBooted=false; _apvTick=0; adminPendingAccounts=[]; adminPendingDevices=[]; }
   clearSavedSession();
   currentSession=null; currentUser=null; isGuest=false;
   document.getElementById('app-screen').style.display='none';
   document.getElementById('pending-screen').style.display='none';
   document.getElementById('rejected-screen').style.display='none';
+  document.getElementById('blocked-screen').style.display='none';
   document.getElementById('login-screen').style.display='flex';
 }
 async function checkOAuthCallback() {
@@ -13402,7 +13580,7 @@ async function checkOAuthCallback() {
   saveSession();
   await loadProfile(); enterApp();
 }
-function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整理);登入/登出後重新登入一律進主頁
+async function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整理);登入/登出後重新登入一律進主頁
   if(!isGuest && currentUser && currentUser.status==='pending'){   // 新帳號審核中:顯示等待畫面,不放行
     document.getElementById('login-screen').style.display='none';
     document.getElementById('rejected-screen').style.display='none';
@@ -13422,9 +13600,12 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
     alert('此帳號已被停用,請聯絡管理員。');
     logout(); return;
   }
-  if(!isGuest && typeof ahGateOnEnter==='function' && ahGateOnEnter()) return;   // 非開放時段:請出去
-  if(!isGuest && typeof deviceGate==='function') deviceGate();                    // 沒核准過的裝置:登記後請出去
-  if(!isGuest && typeof lbGate==='function') lbGate();                            // 今天登記了全天假:請出去
+  // 門禁(時段／裝置／請假):以前是先進主頁再把人踢出來,畫面會閃一下,
+  // 載到一半的資料也白跑;現在全部檢查完才顯示主畫面,擋下來的就停在這一頁。
+  if(!isGuest){
+    const blocked=await appGateCheck();
+    if(blocked){ showBlockedScreen(blocked); return; }
+  }
   _notifPopped=false;   // 每次登入都可重新彈通知
   window.errlogFlushSoon();   // 登入前(啟動時)收集到的錯誤,登入後補送
   document.getElementById('pending-screen').style.display='none';
@@ -20895,7 +21076,10 @@ async function toggleNotifPanel(){
   if(!Array.isArray(allStaff) || !allStaff.length){ try{ await loadStaff(); }catch(e){} }
   if(request!==notifPanelRequest)return;
   const items=notifItems();
-  let html='<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between"><span>🔔 通知</span><span>'+(typeof Notification!=='undefined'&&Notification.permission==='default'?'<button onclick="enableDesktopNotifications()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer;margin-right:5px">啟用桌面通知</button>':'')+(!isGuest?'<button onclick="openPushSettings()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer;margin-right:5px">📱 推播設定</button>':'')+(!isGuest&&pagePerm('notify')!=='hide'?'<button onclick="openNotificationSettings()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer">⚙ 通知管理</button>':'')+'</span></div>';
+  const apvN=(currentUser&&currentUser.isAdmin&&!isGuest)
+    ? ((adminPendingAccounts||[]).length+(adminPendingDevices||[]).length) : 0;
+  let html='<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between"><span>🔔 通知</span><span>'
+    +(apvN?'<button onclick="closeNotificationPopup();openApprovalModal()" style="background:var(--accent2);border:none;border-radius:6px;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;cursor:pointer;margin-right:5px">待審核 '+apvN+'</button>':'')+(typeof Notification!=='undefined'&&Notification.permission==='default'?'<button onclick="enableDesktopNotifications()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer;margin-right:5px">啟用桌面通知</button>':'')+(!isGuest?'<button onclick="openPushSettings()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer;margin-right:5px">📱 推播設定</button>':'')+(!isGuest&&pagePerm('notify')!=='hide'?'<button onclick="openNotificationSettings()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:3px 7px;cursor:pointer">⚙ 通知管理</button>':'')+'</span></div>';
   html+= items.length
     ? items.map(t=>'<div style="padding:11px 12px;font-size:13px;color:var(--text);border-bottom:1px solid var(--border)'+(t.zone?';cursor:pointer':'')+'"'
         +(t.zone?' data-proj="'+notifEsc(t.proj)+'" data-zone="'+notifEsc(t.zone)+'" title="點一下開工程區詳情" onclick="closeNotificationPopup();dashGoSP(this.dataset.proj,this.dataset.zone)"':'')   // 上線準備紅燈可直接點進去
@@ -22248,14 +22432,6 @@ function ahBlockedMsg(st){
     ? String(c.msg).trim()
     : '目前為系統關閉時段。開放時間:星期'+days+' '+c.from+'～'+c.to+'。需要加班請聯絡管理員。';
 }
-// 登入時檢查(enterApp 用):擋下來回傳 true
-function ahGateOnEnter(){
-  const st=ahState();
-  if(st.ok) return false;
-  alert(ahBlockedMsg(st));
-  setTimeout(()=>logout(), 1200);
-  return true;
-}
 // 使用中每分鐘檢查:快到點先提醒,到點登出
 function ahStartWatch(){
   if(accessHoursTimer) clearInterval(accessHoursTimer);
@@ -22412,6 +22588,52 @@ async function ahSetExempt(uid, on, el){
   if(el&&el.parentElement) el.parentElement.classList.toggle('on', !!on);
 }
 
+// ══════════ 進主頁前的門禁 ══════════
+// 時段、裝置、請假三道一起在這裡查完。擋下來就停在登入頁後面的「被擋下」畫面,
+// 不進主頁 —— 使用者不會看到主畫面閃一下,系統也不會白載一堆資料。
+// 三道都是 fail-open:查不到設定或讀取失敗一律放行,寧可漏擋也不要把人鎖在門外。
+async function appGateCheck(){
+  try{
+    if(typeof ahLoadCfg==='function') await ahLoadCfg();
+    const st=(typeof ahState==='function')?ahState():{ok:true};
+    if(!st.ok) return {icon:'🕐', title:'現在不是系統開放時間', msg:ahBlockedMsg(st)};
+  }catch(e){}
+  try{
+    if(typeof deviceCheck==='function'){
+      const dv=await deviceCheck();
+      if(!dv.ok) return {icon:'💻', title:'這台裝置還沒有被核准',
+        msg:'已經幫你向管理員登記這台裝置了。\n請把下面的裝置代碼告訴管理員,\n核准之後按「重新檢查」就可以進去,不必重新登入。',
+        code:deviceShortKey(deviceKey())};
+    }
+  }catch(e){}
+  try{
+    if(typeof lbCheck==='function'){
+      await lbLoadCfg();
+      const lv=await lbCheck();
+      if(lv) return {icon:'🌴', title:'請假期間不開放使用', msg:lbMsg(lv)};
+    }
+  }catch(e){}
+  return null;
+}
+function showBlockedScreen(b){
+  ['login-screen','pending-screen','rejected-screen','app-screen'].forEach(id=>{
+    const e=document.getElementById(id); if(e) e.style.display='none';
+  });
+  const s=document.getElementById('blocked-screen'); if(!s) return;
+  document.getElementById('blocked-icon').textContent=b.icon||'⛔';
+  document.getElementById('blocked-title').textContent=b.title||'目前無法使用系統';
+  document.getElementById('blocked-msg').textContent=b.msg||'';
+  const c=document.getElementById('blocked-code');
+  if(b.code){ c.textContent='裝置代碼  '+b.code; c.style.display=''; } else c.style.display='none';
+  s.style.display='flex';
+}
+// 管理員核准之後按這顆就進得去,不必重新登入
+async function blockedRecheck(btn){
+  if(btn){ btn.disabled=true; btn.textContent='檢查中…'; }
+  try{ await enterApp(false); }catch(e){}
+  if(btn){ btn.disabled=false; btn.textContent='重新檢查'; }
+}
+
 // ══════════ 請假中不能使用系統 ══════════
 // 設定存 app_config.leave_block(全公司一份),不必另外跑 SQL:
 //   {on, msg, exempt:[帳號id,…]}
@@ -22461,17 +22683,6 @@ function lbMsg(lv){
   if(custom) return custom;
   const t=(lv&&lv.leave_type)?('「'+lv.leave_type+'」'):'假';
   return '你今天登記了'+t+',請假期間不開放使用系統。\n\n如果要臨時處理事情,請聯絡管理員。';
-}
-// 登入時檢查(enterApp 用)。要查資料庫,所以是非同步的 —— 跟裝置檢查一樣先放進畫面再請出去
-async function lbGate(){
-  try{
-    await lbLoadCfg();
-    const lv=await lbCheck();
-    if(!lv) return false;
-    alert(lbMsg(lv));
-    setTimeout(()=>logout(), 2000);
-    return true;
-  }catch(e){ return false; }
 }
 
 // ── 帳號管理頁上方的設定卡 ──────────────────────────────────
@@ -22611,14 +22822,6 @@ async function deviceCheck(){
   if(currentUser && currentUser.isAdmin) return {ok:true, admin:true};             // 管理員不擋,否則沒人能去核准
   return {ok:deviceMine.approved, isNew:deviceMine.isNew};
 }
-// enterApp 用:擋下來回傳 true。非同步,所以擋的動作在 callback 裡做
-function deviceGate(){
-  deviceCheck().then(res=>{
-    if(res.ok) return;
-    alert('這台裝置還沒有被核准,無法使用系統。\n裝置代碼:'+deviceShortKey(deviceKey())+'\n已通知管理員,請聯絡管理員核准後再登入。');
-    setTimeout(()=>logout(), 3000);
-  }).catch(()=>{});
-}
 
 // ── 帳號管理頁的裝置卡 ──────────────────────────────────────
 async function deviceRenderCard(){
@@ -22634,6 +22837,7 @@ async function deviceRenderCard(){
     return;
   }
   deviceList=Array.isArray(r.data)?r.data:[];
+  adminPendingDevices=deviceList.filter(d=>!d.approved);   // 與背景提醒共用同一份,數字才不會打架
   const nameOf=uid=>{ const a=(allAccounts||[]).find(x=>String(x.id)===String(uid)); return a?(a.name||a.account||'—'):'(未知帳號)'; };
   const pending=deviceList.filter(d=>!d.approved), approved=deviceList.filter(d=>d.approved);
   const on=!!deviceLockCfg.on;
@@ -22703,13 +22907,19 @@ async function deviceRemove(id){
   deviceRenderCard();
 }
 // 併入右上角 🔔:有裝置等著核准(管理員才看得到)
+// 背景輪詢已經把待審核撈回來了,所以不必先打開帳號管理頁,鈴鐺就看得到
 function deviceNotificationItems(){
   if(!currentUser || !currentUser.isAdmin || isGuest) return [];
-  const pending=(deviceList||[]).filter(d=>!d.approved);
-  if(!pending.length) return [];
   const today=(typeof dashTodayStr==='function')?dashTodayStr():'';
-  return [notifItem('devpending:'+pending.length+':'+today,
-    '💻 有 '+pending.length+' 台新裝置等待核准（帳號管理頁）')];
+  const out=[];
+  const devs=(typeof adminPendingDevices!=='undefined' && adminPendingDevices.length)
+    ? adminPendingDevices : (deviceList||[]).filter(d=>!d.approved);
+  if(devs.length) out.push(notifItem('devpending:'+devs.length+':'+today,
+    '💻 有 '+devs.length+' 台新裝置等待核准 — 點右上角🔔的「待審核」'));
+  const accs=(typeof adminPendingAccounts!=='undefined')?adminPendingAccounts:[];
+  if(accs.length) out.push(notifItem('accpending:'+accs.length+':'+today,
+    '👤 有 '+accs.length+' 個新帳號等待審核 — 點右上角🔔的「待審核」'));
+  return out;
 }
 
 // ── 系統健康頁 (管理員):錯誤紀錄 + 健康檢查 ────────────────────
