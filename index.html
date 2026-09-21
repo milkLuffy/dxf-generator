@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.21.5"/>
+<meta name="sc-version" content="2026.09.21.6"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -6516,6 +6516,7 @@ window.normalizeFullWidth=function(value){
       <div class="layout-tabs">
         <button class="layout-tab active" id="hl-tab-errors" onclick="healthTab('errors')">錯誤紀錄</button>
         <button class="layout-tab" id="hl-tab-check" onclick="healthTab('check')">健康檢查</button>
+        <button class="layout-tab" id="hl-tab-backup" onclick="healthTab('backup')">資料備份</button>
       </div>
 
       <div id="hl-pane-errors">
@@ -6578,6 +6579,21 @@ window.normalizeFullWidth=function(value){
         </div>
         <div id="hl-check-summary" class="hl-summary"></div>
         <div id="hl-check-result"><div class="card empty-state">按「開始檢查」:確認外部程式庫、資料表與欄位(SQL 有沒有跑過)、以及每個頁面打開時有沒有錯誤。<br>檢查只會讀取資料,不會新增或修改任何東西。</div></div>
+      </div>
+
+      <div id="hl-pane-backup" style="display:none">
+        <div class="card" style="padding:16px">
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">📦 整份資料備份</div>
+          <div id="bk-intro" style="font-size:13px;line-height:1.85;color:var(--text2)"></div>
+          <div class="toolbar" style="padding-left:0;padding-right:0;margin-top:12px">
+            <button class="btn-add-new" id="bk-run" onclick="bkRun()">📦 開始備份並下載</button>
+            <span id="bk-status" style="font-family:var(--mono);font-size:12px;color:var(--text3)"></span>
+          </div>
+          <div id="bk-bar" style="display:none;height:6px;border-radius:99px;background:var(--bg3);overflow:hidden;margin:4px 0 10px">
+            <div id="bk-bar-in" style="height:100%;width:0;background:var(--accent2);transition:width .2s"></div>
+          </div>
+          <div id="bk-log" style="display:none;max-height:260px;overflow:auto;font-family:var(--mono);font-size:11.5px;line-height:1.75;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:9px 11px"></div>
+        </div>
       </div>
     </div>
 
@@ -22970,12 +22986,13 @@ let healthErrRows=[], healthErrGroups=[], healthErrSource='db', healthOpenKey=nu
 function healthInit(){ healthTab(healthCurTab); if(healthCurTab==='errors') healthErrLoad(); }
 function healthTab(t){
   healthCurTab=t;
-  ['errors','check'].forEach(k=>{
+  ['errors','check','backup'].forEach(k=>{
     document.getElementById('hl-tab-'+k).classList.toggle('active',k===t);
     document.getElementById('hl-pane-'+k).style.display=k===t?'':'none';
   });
   if(t==='errors' && !healthErrRows.length) healthErrLoad();
   if(t==='check' && typeof healthVerLoad==='function') healthVerLoad();
+  if(t==='backup' && typeof bkRender==='function') bkRender();
 }
 async function healthErrLoad(){
   const body=document.getElementById('hl-err-body'), banner=document.getElementById('hl-err-banner');
@@ -23075,6 +23092,172 @@ async function healthErrResolve(i){
   }
   g.rows.forEach(x=>{ if(!x.resolved_at){ x.resolved_at=now; } });
   healthErrGroup(); healthErrRender();
+}
+
+// ══════════ 整份資料備份(管理員)══════════
+// 目的:Supabase 帳號出事、誤刪整張表、或哪天要搬家時,手上有一份自己的東西。
+// 做法全部在瀏覽器裡跑,不必架伺服器:
+//   1. 資料表清單不寫死 —— 跟 PostgREST 要 OpenAPI,有什麼表就備份什麼表,
+//      日後加新表不必回來改這裡(寫死的清單遲早會漏,漏掉的那張通常就是最重要的)。
+//   2. 每張表用 sbFetchAll 分批抓完(它自己會處理超過 1000 筆的分頁)。
+//   3. 結構與權限(欄位、RLS 政策、觸發器、檢視表)走 sc_schema_dump()。
+//      沒跑 backup_migration.sql 就只有資料,會在備份裡與畫面上寫明。
+//   4. 用 PizZip 打包成一個 .zip 下載(Word 產生器本來就載了這個程式庫)。
+// 讀到的都是「這個帳號本來就看得到的資料」——RLS 照樣生效,所以一定要用管理員跑。
+let bkBusy=false;
+function bkLog(s, cls){
+  const el=document.getElementById('bk-log'); if(!el) return;
+  el.style.display='';
+  el.innerHTML+='<div'+(cls?' style="color:'+cls+'"':'')+'>'+esc(s)+'</div>';
+  el.scrollTop=el.scrollHeight;
+}
+function bkStatus(s){ const el=document.getElementById('bk-status'); if(el) el.textContent=s||''; }
+function bkProgress(done,total){
+  const bar=document.getElementById('bk-bar'), inn=document.getElementById('bk-bar-in');
+  if(!bar||!inn) return;
+  bar.style.display= total?'':'none';
+  inn.style.width= total?Math.round(done/total*100)+'%':'0';
+}
+function bkSize(n){
+  return n<1024 ? n+' B' : n<1048576 ? (n/1024).toFixed(1)+' KB' : (n/1048576).toFixed(1)+' MB';
+}
+function bkRender(){
+  const el=document.getElementById('bk-intro'); if(!el) return;
+  const admin=!!(currentUser&&currentUser.isAdmin&&!isGuest);
+  document.getElementById('bk-run').disabled=!admin||bkBusy;
+  el.innerHTML= admin
+    ? '把<b>所有資料表的內容</b>與<b>資料庫結構、權限設定</b>抓下來,打包成一個 zip 存到這台電腦。<br>'
+      +'內容:每張表一個 JSON 檔、<b>schema.json</b>(欄位定義、RLS 權限政策、觸發器、檢視表)、'
+      +'<b>manifest.json</b>(備份時間、每張表幾筆)、還原說明。<br>'
+      +'<span style="color:var(--text3)">※ <b>不含上傳的圖面與檔案</b>(那些在 Storage,不在資料庫裡)。'
+      +'※ 抓回來的是「這個帳號看得到的資料」,所以一定要用管理員帳號跑。'
+      +'※ 只讀不寫,不會改到任何東西;下載動作會記進操作紀錄。</span>'
+    : '<b>只有管理員可以備份。</b>備份會把全公司的資料抓下來,一般帳號抓到的也只是自己看得到的部分,那樣的備份沒有意義。';
+}
+// 資料表清單從哪來:本來想跟 PostgREST 要 OpenAPI(/rest/v1/),
+// 但 Supabase 只讓 service_role 讀那個端點,瀏覽器拿不到 —— 所以改成問 sc_schema_dump()。
+// 沒跑 backup_migration.sql 時退回程式裡維護的清單(健康檢查那兩份),
+// 那份可能漏掉新加的表,所以畫面上會明講「請去跑 SQL」。
+function bkFallbackTables(){
+  const s=new Set();
+  (typeof HEALTH_SCHEMA!=='undefined'?HEALTH_SCHEMA:[]).forEach(x=>s.add(x[0]));
+  (typeof HEALTH_TABLES!=='undefined'?HEALTH_TABLES:[]).forEach(t=>s.add(t));
+  Object.keys(typeof AUDIT_TBL_LABEL!=='undefined'?AUDIT_TBL_LABEL:{}).forEach(t=>s.add(t));
+  ['profiles','audit_log','error_log','user_prefs','user_devices','push_subscriptions','app_config'].forEach(t=>s.add(t));
+  return [...s].filter(Boolean).sort();
+}
+async function bkRun(){
+  if(bkBusy) return;
+  if(!(currentUser&&currentUser.isAdmin&&!isGuest)){ alert('只有管理員可以備份。'); return; }
+  if(typeof PizZip==='undefined'){ alert('打包程式庫沒載到(離線或被擋),請連上網路重新整理後再試。'); return; }
+  bkBusy=true;
+  const btn=document.getElementById('bk-run'); btn.disabled=true;
+  const log=document.getElementById('bk-log'); if(log){ log.innerHTML=''; log.style.display=''; }
+  const t0=Date.now();
+  try{
+    // 先拿結構:表清單也從這裡來,直接問資料庫才不會漏
+    bkStatus('讀取結構與權限…');
+    let schema=null, schemaErr='';
+    try{
+      const sr=await sbFetch('/rest/v1/rpc/sc_schema_dump',{method:'POST',body:JSON.stringify({})});
+      if(sr.ok && sr.data) schema=sr.data;
+      else schemaErr='HTTP '+(sr.status||'?');
+    }catch(e){ schemaErr=String(e&&e.message||e); }
+
+    let tables=[], viewSet=new Set();
+    if(schema && Array.isArray(schema.tables) && schema.tables.length){
+      bkLog('✔ 結構與權限:'+(schema.policies||[]).length+' 條權限政策、'
+        +(schema.columns||[]).length+' 個欄位、'+(schema.triggers||[]).length+' 個觸發器、'
+        +(schema.functions||[]).length+' 個函式');
+      tables=schema.tables.map(t=>t.table_name).sort();
+      // 檢視表是算出來的,不必也不能灌回去 → 只備份真正的資料表
+      viewSet=new Set(schema.tables.filter(t=>t.table_type!=='BASE TABLE').map(t=>t.table_name));
+    } else {
+      bkLog('⚠ 讀不到結構與權限('+(schemaErr||'回傳空值')+')', 'var(--warn,#d97706)');
+      bkLog('　 請先在 Supabase SQL Editor 執行 backup_migration.sql。這次只備份資料,而且表清單用程式內建的那份,新加的表可能會漏。', 'var(--warn,#d97706)');
+      tables=bkFallbackTables();
+    }
+    if(!tables.length) throw new Error('拿不到任何資料表清單');
+    bkLog('要備份 '+tables.length+' 張表');
+
+    const zip=new PizZip();
+    const manifest={
+      備份時間:new Date().toISOString(), 台灣時間:auditFmtTime(new Date().toISOString()),
+      備份的人:(currentUser.name||'')+'('+(currentUser.account||'')+')',
+      系統版本:(document.querySelector('meta[name=sc-version]')||{}).content||'',
+      資料庫:SUPA_URL, 含結構與權限:!!schema, 不含:'Storage 上傳的圖面與檔案',
+      資料表:[]
+    };
+    let done=0, rows=0, bytes=0;
+    for(const t of tables){
+      done++;
+      bkProgress(done, tables.length);
+      if(viewSet.has(t)){ bkLog('－ '+t+'(檢視表,略過)'); manifest.資料表.push({表:t,種類:'檢視表',筆數:null}); continue; }
+      bkStatus('備份中 '+done+'/'+tables.length+':'+t);
+      const r=await sbFetchAll('/rest/v1/'+encodeURIComponent(t)+'?select=*');
+      if(!r.ok||!Array.isArray(r.data)){
+        bkLog('✘ '+t+' 讀取失敗(HTTP '+(r.status||'?')+')', 'var(--danger,#e0555b)');
+        manifest.資料表.push({表:t, 筆數:null, 失敗:'HTTP '+(r.status||'?')});
+        continue;
+      }
+      const txt=JSON.stringify(r.data, null, 1);
+      zip.file('data/'+t+'.json', txt);
+      rows+=r.data.length; bytes+=txt.length;
+      manifest.資料表.push({表:t, 筆數:r.data.length});
+      bkLog('✔ '+t+'　'+r.data.length+' 筆');
+    }
+    if(schema) zip.file('schema.json', JSON.stringify(schema, null, 1));
+    manifest.總筆數=rows;
+    zip.file('manifest.json', JSON.stringify(manifest, null, 1));
+    zip.file('如何還原.txt', bkReadme(manifest, !!schema));
+
+    bkStatus('壓縮中…(資料量大時會花幾十秒)');
+    bkProgress(1,1);
+    const blob=zip.generate({type:'blob', compression:'DEFLATE', compressionOptions:{level:6}});
+    const fname='鎮山備份_'+lbTodayTw().replace(/-/g,'')+'_'+String(Date.now()).slice(-6)+'.zip';
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download=fname;   // 帶 download 屬性 → 全站下載留痕會自動記一筆
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    const secs=Math.round((Date.now()-t0)/1000);
+    bkLog('── 完成:'+rows+' 筆資料,壓縮前 '+bkSize(bytes)+',檔案 '+bkSize(blob.size)+',耗時 '+secs+' 秒', 'var(--success,#3ecf8e)');
+    bkStatus('已下載 '+fname);
+  }catch(e){
+    bkLog('✘ 備份中斷:'+(e&&e.message||e), 'var(--danger,#e0555b)');
+    bkStatus('失敗');
+  }finally{
+    bkBusy=false; bkProgress(0,0);
+    const b=document.getElementById('bk-run'); if(b) b.disabled=false;
+  }
+}
+function bkReadme(m, hasSchema){
+  return ['這是什麼',
+    '  鎮山工程管理系統的整份資料備份,由系統健康頁的「資料備份」產生。',
+    '  備份時間:'+(m.台灣時間||m.備份時間),
+    '  備份的人:'+m.備份的人,
+    '  系統版本:'+m.系統版本,
+    '',
+    '裡面有什麼',
+    '  data/<資料表>.json   每張表的全部內容(JSON 陣列,欄位名與資料庫一致)',
+    hasSchema
+      ? '  schema.json          欄位定義、RLS 權限政策、觸發器、檢視表、函式'
+      : '  (這次沒有 schema.json —— 產生備份時還沒執行 backup_migration.sql)',
+    '  manifest.json        每張表幾筆,對帳用',
+    '',
+    '沒有什麼',
+    '  ・上傳的圖面、報驗單 Word、附件等實體檔案(那些在 Supabase Storage,不在資料庫)',
+    '  ・登入帳號密碼(在 Supabase 的 auth schema,由 Supabase 自己保管)',
+    '',
+    '怎麼還原',
+    '  1. 先建結構:照 schema.json 的 columns / constraints / indexes 建表,',
+    '     再把 policies 一條條建回去(RLS 沒還原的話,資料會全公司都看得到)。',
+    '  2. 再灌資料:每個 data/<表>.json 用 Supabase 的匯入或 PostgREST 逐表寫回。',
+    '     有外鍵的表要照順序(先 projects 再 zones 再 components,以此類推)。',
+    '  3. 檢視表(manifest 裡標「檢視表」的)不必灌資料,照 schema.json 的 views 重建即可。',
+    '',
+    '提醒',
+    '  這份檔案含全公司的人事、薪資與客戶資料,請放在自己的電腦或加密的隨身碟,',
+    '  不要丟到公開的雲端資料夾。'].join('\n');
 }
 
 // ── 健康檢查 ──
