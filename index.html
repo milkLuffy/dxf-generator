@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.21.1"/>
+<meta name="sc-version" content="2026.09.21.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -6369,6 +6369,7 @@ window.normalizeFullWidth=function(value){
       </div>
       <div class="card ah-card" id="acc-hours-card"></div>
       <div class="card ah-card" id="acc-device-card"></div>
+      <div class="card ah-card" id="acc-leave-card"></div>
       <div class="search-bar" style="gap:8px;flex-wrap:wrap">
         <input class="search-input" id="accounts-search" placeholder="搜尋帳號、顯示名稱..." oninput="filterAccounts()" style="flex:1;min-width:180px"/>
         <div id="accounts-status-tabs" style="display:flex;gap:6px">
@@ -13423,6 +13424,7 @@ function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整�
   }
   if(!isGuest && typeof ahGateOnEnter==='function' && ahGateOnEnter()) return;   // 非開放時段:請出去
   if(!isGuest && typeof deviceGate==='function') deviceGate();                    // 沒核准過的裝置:登記後請出去
+  if(!isGuest && typeof lbGate==='function') lbGate();                            // 今天登記了全天假:請出去
   _notifPopped=false;   // 每次登入都可重新彈通知
   window.errlogFlushSoon();   // 登入前(啟動時)收集到的錯誤,登入後補送
   document.getElementById('pending-screen').style.display='none';
@@ -21382,6 +21384,7 @@ async function loadAccounts(silent) {
   updateAccountsStatusTabsUI();
   filterAccounts();
   if(!silent && typeof ahRenderCard==='function') ahRenderCard();   // 使用時段設定卡(輪詢時不重畫,免得蓋掉正在改的欄位)
+  if(!silent && typeof lbRenderCard==='function') lbRenderCard();   // 請假中不能使用系統(同上)
   if(!silent && typeof deviceRenderCard==='function') deviceRenderCard();   // 裝置綁定卡
 }
 function setAccountsStatusFilter(st){ accStatusFilter=st; updateAccountsStatusTabsUI(); filterAccounts(); }
@@ -22279,6 +22282,19 @@ async function ahTick(){
         }
       }catch(e){}
     }
+    // 請假中不能使用:管理員剛幫人登記了今天的全天假,不必等對方重新登入就會生效
+    if(typeof lbCheck==='function'){
+      try{
+        await lbLoadCfg();
+        const lv=await lbCheck();
+        if(lv){
+          ahHideBanner();
+          alert(lbMsg(lv)+'\n\n(系統將自動登出)');
+          setTimeout(()=>logout(), 2500);
+          return;
+        }
+      }catch(e){}
+    }
   }
   const st=ahState();
   if(!st.ok){
@@ -22394,6 +22410,146 @@ async function ahSetExempt(uid, on, el){
   }
   const a=(allAccounts||[]).find(x=>String(x.id)===String(uid)); if(a) a.hours_exempt=!!on;
   if(el&&el.parentElement) el.parentElement.classList.toggle('on', !!on);
+}
+
+// ══════════ 請假中不能使用系統 ══════════
+// 設定存 app_config.leave_block(全公司一份),不必另外跑 SQL:
+//   {on, msg, exempt:[帳號id,…]}
+// 判斷方式:profiles.staff_id ←→ leave_board.staff_id(同一份公司名冊),
+// 所以只有「帳號有綁名冊」的人擋得到;沒綁的人系統不知道他是誰,一律放行。
+//
+// 刻意的取捨:
+//  1. 只擋 day_part='full'(全天假)。半天假、自訂時數的照常使用 ——
+//     擋半天會在中午前後把人踢出畫面,正在打的東西就沒了。
+//  2. 讀不到請假資料(表還沒建、網路壞掉)一律放行。
+//     寧可漏擋,也不要因為讀取失敗把人鎖在系統外面。
+//  3. 跟使用時段限制一樣是**前端擋**,定位是作息規範,不是資安邊界。
+const LEAVE_BLOCK_KEY='leave_block';
+const LEAVE_BLOCK_DEFAULT={on:false, msg:'', exempt:[]};
+let leaveBlockCfg=Object.assign({},LEAVE_BLOCK_DEFAULT);
+
+function lbTodayTw(){ return new Date(Date.now()+8*3600000).toISOString().slice(0,10); }
+async function lbLoadCfg(){
+  const r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+encodeURIComponent(LEAVE_BLOCK_KEY));
+  if(r.ok && Array.isArray(r.data) && r.data[0]){
+    try{ leaveBlockCfg=Object.assign({},LEAVE_BLOCK_DEFAULT,JSON.parse(r.data[0].value||'{}')); }catch(e){}
+  }
+  if(!Array.isArray(leaveBlockCfg.exempt)) leaveBlockCfg.exempt=[];
+  return leaveBlockCfg;
+}
+async function lbSaveCfg(){
+  return sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',
+    headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify({key:LEAVE_BLOCK_KEY, value:JSON.stringify(leaveBlockCfg)})});
+}
+function lbExempted(uid){ return (leaveBlockCfg.exempt||[]).map(String).includes(String(uid)); }
+// 今天這個人有沒有登記全天假?有 → 回傳那筆假;沒有(或無從判斷)→ null
+async function lbCheck(){
+  if(!leaveBlockCfg.on || isGuest || !currentUser) return null;
+  if(currentUser.isAdmin || lbExempted(currentUser.id)) return null;
+  const sid=currentUser.staffId;
+  if(sid==null||sid==='') return null;                     // 帳號沒綁公司名冊:不知道他是誰,不擋
+  const d=lbTodayTw();
+  const r=await sbFetch('/rest/v1/leave_board?select=staff_name,leave_type,start_date,end_date,day_part'
+    +'&staff_id=eq.'+encodeURIComponent(sid)+'&day_part=eq.full'
+    +'&start_date=lte.'+d+'&end_date=gte.'+d+'&limit=1');
+  if(!r.ok||!Array.isArray(r.data)||!r.data[0]) return null;   // 讀不到就放行,不要把人鎖在外面
+  return r.data[0];
+}
+function lbMsg(lv){
+  const custom=String(leaveBlockCfg.msg||'').trim();
+  if(custom) return custom;
+  const t=(lv&&lv.leave_type)?('「'+lv.leave_type+'」'):'假';
+  return '你今天登記了'+t+',請假期間不開放使用系統。\n\n如果要臨時處理事情,請聯絡管理員。';
+}
+// 登入時檢查(enterApp 用)。要查資料庫,所以是非同步的 —— 跟裝置檢查一樣先放進畫面再請出去
+async function lbGate(){
+  try{
+    await lbLoadCfg();
+    const lv=await lbCheck();
+    if(!lv) return false;
+    alert(lbMsg(lv));
+    setTimeout(()=>logout(), 2000);
+    return true;
+  }catch(e){ return false; }
+}
+
+// ── 帳號管理頁上方的設定卡 ──────────────────────────────────
+async function lbRenderCard(){
+  const box=document.getElementById('acc-leave-card'); if(!box) return;
+  if(!currentUser || !currentUser.isAdmin){ box.style.display='none'; return; }
+  box.style.display='';
+  await lbLoadCfg();
+  const c=leaveBlockCfg;
+  box.innerHTML=
+    '<div class="ah-head"><span class="ah-title">🌴 請假中不能使用系統</span>'
+      +(c.on?'<span class="ah-state on">已啟用</span>':'<span class="ah-state off">未啟用</span>')
+      +'<span class="ah-sp"></span>'
+      +'<label class="ah-ex-item'+(c.on?' on':'')+'"><input type="checkbox" id="lb-on"'+(c.on?' checked':'')+'>啟用</label></div>'
+    +'<div class="ah-sub">登記了<b>全天假</b>的人,當天一登入就會被請出去;已經在線上的,5 分鐘內會自動登出。'
+      +'半天假(上午／下午)與自訂時數<b>不受影響</b>,照常使用。管理員不受限制。</div>'
+    +'<div class="ah-body">'
+      +'<div class="ah-fld" style="flex:1;min-width:240px"><label>擋下來時要顯示的訊息(留白用預設)</label>'
+        +'<input class="search-input" id="lb-msg" value="'+esc(c.msg||'')+'" placeholder="例:請假期間請安心休息,有急事請打電話給廠長"></div>'
+    +'</div>'
+    +'<div class="ah-btns"><button class="btn" onclick="lbSaveFromCard()">💾 儲存設定</button></div>'
+    +'<div class="ah-ex"><div class="ah-ex-t">請假也照樣可以使用的帳號(管理員一律不受限,不必勾)</div>'
+      +'<div class="ah-ex-list" id="lb-ex-list">載入中…</div></div>'
+    +'<div class="ah-sub" id="lb-today">今天請全天假的人:查詢中…</div>'
+    +'<div class="ah-warn">⚠️ 判斷靠的是<b>帳號有沒有綁公司名冊</b>(帳號管理表格裡的「對應人員」)。沒綁的帳號系統不知道他是誰,<b>擋不到</b>。'
+      +'另外這一層跟使用時段限制一樣是前端擋,是作息規範不是資安邊界;也只認「請假登記」頁登記的假,出勤回報事後補填的不算。</div>';
+  document.getElementById('lb-on').onchange=function(){
+    leaveBlockCfg.on=this.checked;
+    lbSaveCfg().then(r=>{ if(!r.ok) alert('儲存失敗('+(r.status||'?')+')'); lbRenderCard(); });
+  };
+  lbRenderExempt();
+  lbRenderToday();
+}
+async function lbSaveFromCard(){
+  leaveBlockCfg.msg=(document.getElementById('lb-msg').value||'').trim();
+  leaveBlockCfg.on=document.getElementById('lb-on').checked;
+  const r=await lbSaveCfg();
+  if(!r.ok){ alert('儲存失敗('+(r.status||'?')+')'); return; }
+  alert('已儲存');
+  lbRenderCard();
+}
+function lbRenderExempt(){
+  const box=document.getElementById('lb-ex-list'); if(!box) return;
+  const list=(allAccounts||[]).filter(a=>(a.status||'approved')==='approved' && !a.disabled);
+  if(!list.length){ box.textContent='沒有可設定的帳號'; return; }
+  box.innerHTML=list.map(a=>{
+    const nm=esc(a.name||a.account||'');
+    if(a.is_admin) return '<span class="ah-ex-item fixed" title="管理員一律不受限制"><input type="checkbox" checked disabled>'+nm+'(管理員)</span>';
+    const on=lbExempted(a.id);
+    return '<label class="ah-ex-item'+(on?' on':'')+'"><input type="checkbox"'+(on?' checked':'')
+      +' onchange="lbSetExempt(\''+esc(String(a.id))+'\',this.checked,this)">'+nm+'</label>';
+  }).join('');
+}
+async function lbSetExempt(uid, on, el){
+  const set=new Set((leaveBlockCfg.exempt||[]).map(String));
+  if(on) set.add(String(uid)); else set.delete(String(uid));
+  leaveBlockCfg.exempt=[...set];
+  const r=await lbSaveCfg();
+  if(!r.ok){
+    if(el) el.checked=!on;
+    set.has(String(uid)) ? set.delete(String(uid)) : set.add(String(uid));
+    leaveBlockCfg.exempt=[...set];
+    alert('儲存失敗('+(r.status||'?')+')');
+    return;
+  }
+  if(el&&el.parentElement) el.parentElement.classList.toggle('on', !!on);
+}
+// 讓管理員一眼看到「現在這個設定會擋到誰」
+async function lbRenderToday(){
+  const el=document.getElementById('lb-today'); if(!el) return;
+  const d=lbTodayTw();
+  const r=await sbFetch('/rest/v1/leave_board?select=staff_name,leave_type&day_part=eq.full'
+    +'&start_date=lte.'+d+'&end_date=gte.'+d+'&limit=50');
+  if(!r.ok){ el.textContent='今天請全天假的人:讀不到(請確認已執行 leave_requests_migration.sql)'; return; }
+  const rows=Array.isArray(r.data)?r.data:[];
+  el.innerHTML=rows.length
+    ? '今天請全天假的人:<b>'+rows.map(x=>esc(x.staff_name||'')+'('+esc(x.leave_type||'')+')').join('、')+'</b>'
+    : '今天沒有人請全天假。';
 }
 
 // ══════════ 裝置綁定(只有核准過的電腦／手機能登入)══════════
