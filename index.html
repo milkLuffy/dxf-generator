@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.21.4"/>
+<meta name="sc-version" content="2026.09.21.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -13513,13 +13513,14 @@ async function loadProfile() {
   const staffId=r.data?.[0]?.staff_id||null;
   let status=r.data?.[0]?.status||'approved';   // 舊資料/資料庫尚未加欄位時,預設視為已核准,避免既有帳號被擋
   // 兩者結合: 顯示名稱留空時,改用綁定的公司名冊姓名
-  let staffRole='', staffDept='';
+  let staffRole='', staffDept='', staffName='';
   if(staffId){
     const sr=await sbFetch(`/rest/v1/staff?id=eq.${staffId}&select=name,role,department`);
     const me=sr.data?.[0];
     if(me){
       if(!name && me.name) name=me.name;      // 顯示名稱留空時改用名冊姓名
       staffRole=me.role||''; staffDept=me.department||'';   // 薪資機密欄位的「老闆/主管」例外要用
+      staffName=me.name||'';                  // 出勤回報是用「姓名」對的,沒有 staff_id,所以要記起來
     }
   }
   if(!name) name=account;
@@ -13535,7 +13536,7 @@ async function loadProfile() {
   const googleIdentity=(currentSession.user?.identities||[]).find(x=>x.provider==='google');
   const identityMeta=googleIdentity?.identity_data||{};
   const avatarUrl=meta.avatar_url||meta.picture||identityMeta.avatar_url||identityMeta.picture||'';
-  currentUser={id:uid,name,account,isAdmin,perms,disabled,avatarUrl,status,staffId,staffRole,staffDept,hoursExempt:!!r.data?.[0]?.hours_exempt};
+  currentUser={id:uid,name,account,isAdmin,perms,disabled,avatarUrl,status,staffId,staffName,staffRole,staffDept,hoursExempt:!!r.data?.[0]?.hours_exempt};
   if(typeof ahLoadCfg==='function'){ try{ await ahLoadCfg(); }catch(e){} }   // 使用時段設定;讀不到就維持「未啟用」
 }
 // 呼叫 Edge Function 通知管理員有新帳號待審核(見 supabase/functions/notify-new-account)
@@ -22656,11 +22657,15 @@ async function blockedRecheck(btn){
 // 所以只有「帳號有綁名冊」的人擋得到;沒綁的人系統不知道他是誰,一律放行。
 //
 // 刻意的取捨:
-//  1. 只擋 day_part='full'(全天假)。半天假、自訂時數的照常使用 ——
+//  1. 只擋整天的假。請假登記頁看 day_part='full';出勤回報那邊沒有 day_part,
+//     改看請假時數 >= 8 小時。半天假、自訂時數的照常使用 ——
 //     擋半天會在中午前後把人踢出畫面,正在打的東西就沒了。
-//  2. 讀不到請假資料(表還沒建、網路壞掉)一律放行。
+//  2. 兩個來源都要查:公司實際上很多假是直接填在「出勤回報」,沒有到
+//     「請假登記」頁登記過。只看其中一邊就會漏擋。
+//     出勤回報是用「姓名」對的(沒有 staff_id),所以要 currentUser.staffName。
+//  3. 讀不到請假資料(表還沒建、網路壞掉)一律放行。
 //     寧可漏擋,也不要因為讀取失敗把人鎖在系統外面。
-//  3. 跟使用時段限制一樣是**前端擋**,定位是作息規範,不是資安邊界。
+//  4. 跟使用時段限制一樣是**前端擋**,定位是作息規範,不是資安邊界。
 const LEAVE_BLOCK_KEY='leave_block';
 const LEAVE_BLOCK_DEFAULT={on:false, msg:'', exempt:[]};
 let leaveBlockCfg=Object.assign({},LEAVE_BLOCK_DEFAULT);
@@ -22687,11 +22692,19 @@ async function lbCheck(){
   const sid=currentUser.staffId;
   if(sid==null||sid==='') return null;                     // 帳號沒綁公司名冊:不知道他是誰,不擋
   const d=lbTodayTw();
-  const r=await sbFetch('/rest/v1/leave_board?select=staff_name,leave_type,start_date,end_date,day_part'
-    +'&staff_id=eq.'+encodeURIComponent(sid)+'&day_part=eq.full'
-    +'&start_date=lte.'+d+'&end_date=gte.'+d+'&limit=1');
-  if(!r.ok||!Array.isArray(r.data)||!r.data[0]) return null;   // 讀不到就放行,不要把人鎖在外面
-  return r.data[0];
+  const nm=currentUser.staffName||'';
+  const [lr, ar]=await Promise.all([
+    sbFetch('/rest/v1/leave_board?select=staff_name,leave_type,start_date,end_date,day_part'
+      +'&staff_id=eq.'+encodeURIComponent(sid)+'&day_part=eq.full'
+      +'&start_date=lte.'+d+'&end_date=gte.'+d+'&limit=1'),
+    nm ? sbFetch('/rest/v1/att_report?select=staff_name,leave_type,leave_hours,work_date'
+      +'&staff_name=eq.'+encodeURIComponent(nm)+'&work_date=eq.'+d
+      +'&leave_type=not.is.null&leave_hours=gte.8&limit=1') : Promise.resolve({ok:false})
+  ]);
+  if(lr.ok && Array.isArray(lr.data) && lr.data[0]) return lr.data[0];
+  if(ar.ok && Array.isArray(ar.data) && ar.data[0])
+    return {...ar.data[0], start_date:ar.data[0].work_date, end_date:ar.data[0].work_date, day_part:'full', source:'att'};
+  return null;                                              // 讀不到也走這裡:放行,不要把人鎖在外面
 }
 function lbMsg(lv){
   const custom=String(leaveBlockCfg.msg||'').trim();
@@ -22712,8 +22725,9 @@ async function lbRenderCard(){
       +(c.on?'<span class="ah-state on">已啟用</span>':'<span class="ah-state off">未啟用</span>')
       +'<span class="ah-sp"></span>'
       +'<label class="ah-ex-item'+(c.on?' on':'')+'"><input type="checkbox" id="lb-on"'+(c.on?' checked':'')+'>啟用</label></div>'
-    +'<div class="ah-sub">登記了<b>全天假</b>的人,當天一登入就會被請出去;已經在線上的,5 分鐘內會自動登出。'
-      +'半天假(上午／下午)與自訂時數<b>不受影響</b>,照常使用。管理員不受限制。</div>'
+    +'<div class="ah-sub">請<b>整天假</b>的人,當天一登入就會被請出去;已經在線上的,5 分鐘內會自動登出。'
+      +'半天假(上午／下午)與未滿 8 小時的假<b>不受影響</b>,照常使用。管理員不受限制。<br>'
+      +'「請假登記」頁登記的、以及直接填在「出勤回報」的假<b>兩邊都算</b>。</div>'
     +'<div class="ah-body">'
       +'<div class="ah-fld" style="flex:1;min-width:240px"><label>擋下來時要顯示的訊息(留白用預設)</label>'
         +'<input class="search-input" id="lb-msg" value="'+esc(c.msg||'')+'" placeholder="例:請假期間請安心休息,有急事請打電話給廠長"></div>'
@@ -22723,7 +22737,7 @@ async function lbRenderCard(){
       +'<div class="ah-ex-list" id="lb-ex-list">載入中…</div></div>'
     +'<div class="ah-sub" id="lb-today">今天請全天假的人:查詢中…</div>'
     +'<div class="ah-warn">⚠️ 判斷靠的是<b>帳號有沒有綁公司名冊</b>(帳號管理表格裡的「對應人員」)。沒綁的帳號系統不知道他是誰,<b>擋不到</b>。'
-      +'另外這一層跟使用時段限制一樣是前端擋,是作息規範不是資安邊界;也只認「請假登記」頁登記的假,出勤回報事後補填的不算。</div>';
+      +'另外這一層跟使用時段限制一樣是前端擋,是作息規範不是資安邊界。</div>';
   document.getElementById('lb-on').onchange=function(){
     leaveBlockCfg.on=this.checked;
     lbSaveCfg().then(r=>{ if(!r.ok) alert('儲存失敗('+(r.status||'?')+')'); lbRenderCard(); });
@@ -22769,13 +22783,19 @@ async function lbSetExempt(uid, on, el){
 async function lbRenderToday(){
   const el=document.getElementById('lb-today'); if(!el) return;
   const d=lbTodayTw();
-  const r=await sbFetch('/rest/v1/leave_board?select=staff_name,leave_type&day_part=eq.full'
-    +'&start_date=lte.'+d+'&end_date=gte.'+d+'&limit=50');
-  if(!r.ok){ el.textContent='今天請全天假的人:讀不到(請確認已執行 leave_requests_migration.sql)'; return; }
-  const rows=Array.isArray(r.data)?r.data:[];
+  const [lr, ar]=await Promise.all([
+    sbFetch('/rest/v1/leave_board?select=staff_name,leave_type&day_part=eq.full'
+      +'&start_date=lte.'+d+'&end_date=gte.'+d+'&limit=50'),
+    sbFetch('/rest/v1/att_report?select=staff_name,leave_type&work_date=eq.'+d
+      +'&leave_type=not.is.null&leave_hours=gte.8&limit=100')
+  ]);
+  if(!lr.ok && !ar.ok){ el.textContent='今天請整天假的人:讀不到(請確認已執行 leave_requests_migration.sql)'; return; }
+  const seen=new Set(), rows=[];
+  [].concat(lr.ok&&Array.isArray(lr.data)?lr.data:[], ar.ok&&Array.isArray(ar.data)?ar.data:[])
+    .forEach(x=>{ const k=(x.staff_name||'')+'|'+(x.leave_type||''); if(!seen.has(k)){ seen.add(k); rows.push(x); } });
   el.innerHTML=rows.length
-    ? '今天請全天假的人:<b>'+rows.map(x=>esc(x.staff_name||'')+'('+esc(x.leave_type||'')+')').join('、')+'</b>'
-    : '今天沒有人請全天假。';
+    ? '今天請整天假的人:<b>'+rows.map(x=>esc(x.staff_name||'')+'('+esc(x.leave_type||'')+')').join('、')+'</b>'
+    : '今天沒有人請整天假。';
 }
 
 // ══════════ 裝置綁定(只有核准過的電腦／手機能登入)══════════
