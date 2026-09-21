@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.21.6"/>
+<meta name="sc-version" content="2026.09.22.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -23180,6 +23180,16 @@ async function bkRun(){
     if(!tables.length) throw new Error('拿不到任何資料表清單');
     bkLog('要備份 '+tables.length+' 張表');
 
+    // 對帳用的「實際筆數」。抓資料會受 RLS 限制(例如 notification_reads 只看得到自己的),
+    // 少掉的部分本來不會有任何提示 —— 備份最怕這種「以為有、其實沒有」。
+    // 這支函式只回數字不回內容,所以不會繞過 RLS 洩漏別人的資料。
+    let realCount=null;
+    try{
+      const cr=await sbFetch('/rest/v1/rpc/sc_table_counts',{method:'POST',body:JSON.stringify({})});
+      if(cr.ok && cr.data && typeof cr.data==='object') realCount=cr.data;
+    }catch(e){}
+    if(!realCount) bkLog('⚠ 沒有對帳用的實際筆數(請執行 backup_migration.sql 的後半段),這次不檢查有沒有漏', 'var(--warn,#d97706)');
+
     const zip=new PizZip();
     const manifest={
       備份時間:new Date().toISOString(), 台灣時間:auditFmtTime(new Date().toISOString()),
@@ -23189,6 +23199,7 @@ async function bkRun(){
       資料表:[]
     };
     let done=0, rows=0, bytes=0;
+    const short=[];      // 拿到的比資料庫實際少的表
     for(const t of tables){
       done++;
       bkProgress(done, tables.length);
@@ -23203,11 +23214,23 @@ async function bkRun(){
       const txt=JSON.stringify(r.data, null, 1);
       zip.file('data/'+t+'.json', txt);
       rows+=r.data.length; bytes+=txt.length;
-      manifest.資料表.push({表:t, 筆數:r.data.length});
-      bkLog('✔ '+t+'　'+r.data.length+' 筆');
+      const real=(realCount && realCount[t]!=null)?Number(realCount[t]):null;
+      const rec={表:t, 筆數:r.data.length};
+      if(real!=null) rec.資料庫實際筆數=real;
+      if(real!=null && real!==r.data.length){
+        rec.少了=real-r.data.length;
+        short.push({表:t, 實際:real, 拿到:r.data.length});
+        bkLog('⚠ '+t+'　'+r.data.length+' 筆(資料庫有 '+real+' 筆,少 '+(real-r.data.length)+')', 'var(--warn,#d97706)');
+      } else bkLog('✔ '+t+'　'+r.data.length+' 筆');
+      manifest.資料表.push(rec);
     }
     if(schema) zip.file('schema.json', JSON.stringify(schema, null, 1));
     manifest.總筆數=rows;
+    manifest.對帳=realCount ? (short.length
+      ? {結果:'有 '+short.length+' 張表沒拿完', 明細:short,
+         說明:'多半是 RLS:那些表的政策只讓每個人看到自己的資料,備份帳號拿不到別人的。備份期間有人在用系統也會差幾筆。'}
+      : {結果:'每張表都與資料庫筆數相符'})
+      : {結果:'未檢查(資料庫沒有 sc_table_counts 函式)'};
     zip.file('manifest.json', JSON.stringify(manifest, null, 1));
     zip.file('如何還原.txt', bkReadme(manifest, !!schema));
 
@@ -23221,6 +23244,12 @@ async function bkRun(){
     setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 4000);
     const secs=Math.round((Date.now()-t0)/1000);
     bkLog('── 完成:'+rows+' 筆資料,壓縮前 '+bkSize(bytes)+',檔案 '+bkSize(blob.size)+',耗時 '+secs+' 秒', 'var(--success,#3ecf8e)');
+    if(realCount){
+      bkLog(short.length
+        ? '── 對帳:有 '+short.length+' 張表沒拿完('+short.map(x=>x.表+' 少 '+(x.實際-x.拿到)).join('、')+')。詳見 manifest.json 的「對帳」'
+        : '── 對帳:每張表都與資料庫筆數相符 ✔',
+        short.length?'var(--warn,#d97706)':'var(--success,#3ecf8e)');
+    }
     bkStatus('已下載 '+fname);
   }catch(e){
     bkLog('✘ 備份中斷:'+(e&&e.message||e), 'var(--danger,#e0555b)');
@@ -23243,6 +23272,11 @@ function bkReadme(m, hasSchema){
       ? '  schema.json          欄位定義、RLS 權限政策、觸發器、檢視表、函式'
       : '  (這次沒有 schema.json —— 產生備份時還沒執行 backup_migration.sql)',
     '  manifest.json        每張表幾筆,對帳用',
+    '',
+    '對帳結果',
+    '  '+((m.對帳&&m.對帳.結果)||'未檢查'),
+    ...(m.對帳&&m.對帳.明細 ? m.對帳.明細.map(x=>'  ・'+x.表+':資料庫 '+x.實際+' 筆,備份只有 '+x.拿到+' 筆')
+        .concat(['  '+(m.對帳.說明||'')]) : []),
     '',
     '沒有什麼',
     '  ・上傳的圖面、報驗單 Word、附件等實體檔案(那些在 Supabase Storage,不在資料庫)',
