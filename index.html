@@ -12825,7 +12825,15 @@ function auditFieldLabel(k){ return AUDIT_FIELD_LABEL[k]||k; }
 // 紀錄存的是送給資料庫的條件與內容('part_no=eq.B12'、'qty=2, voided=false'),
 // 管理員看不懂,下面幾個函式負責把它唸成人話。
 const AUDIT_OP_TXT={eq:'',neq:'不是',gt:'大於',gte:'不小於',lt:'小於',lte:'不大於',like:'包含',ilike:'包含'};
-// 值文字化:是非、空值、日期時間、整包資料
+// 有些資料表的 id 是一長串亂碼(UUID),整串貼出來沒人看得懂,只留前 8 碼當代號
+// (要整串的話,明細彈窗最下面的「原始紀錄」有)
+const AUDIT_UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function auditIsUuid(s){ return AUDIT_UUID_RE.test(String(s||'')); }
+function auditShortId(s){ return String(s).slice(0,8)+'…'; }
+// 這些欄位存的是帳號的 UUID,查得到姓名就直接顯示姓名
+const AUDIT_USER_FIELDS=new Set(['user_id','owner_id','created_by','done_by','reviewed_by','approved_by','resolved_by','updated_by','ordered_by','arrived_by','assignee_id']);
+let auditUserName={};    // UUID → 姓名(載入帳號下拉時順便記起來)
+// 值文字化:是非、空值、日期時間、整包資料、亂碼 id
 function auditFmtVal(v){
   const s=String(v==null?'':v).trim();
   if(s===''||s==='(空)'||s==='null') return '空白';
@@ -12834,7 +12842,22 @@ function auditFmtVal(v){
   if(s==='{…}') return '(一組資料)';
   const m=/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(s);
   if(m) return m[1]+'/'+m[2]+'/'+m[3]+(m[4]?' '+m[4]+':'+m[5]:'');
+  if(auditIsUuid(s)) return auditUserName[s] || auditShortId(s);
   return s;
+}
+// 帶欄位名的值:是帳號欄位就翻成姓名(查不到才退回代號)
+function auditValTxt(k,v){
+  const s=String(v==null?'':v).trim().replace(/^"|"$/g,'');
+  if(AUDIT_USER_FIELDS.has(k) && auditUserName[s]) return auditUserName[s];
+  return auditFmtVal(s);
+}
+// id 清單文字化:數字 → '第 601、602 筆';UUID → '編號 ba4c363b…'
+function auditIdsTxt(items){
+  if(auditIsUuid(items[0])){
+    const head=items.slice(0,2).map(auditShortId).join('、');
+    return items.length>1 ? '共 '+items.length+' 筆(編號 '+head+' 等)' : '編號 '+head;
+  }
+  return '第 '+items.slice(0,3).join('、')+' 筆'+(items.length>3?'…共 '+items.length+' 筆':'');
 }
 // 顯示時把這些欄位排前面:一眼看出「哪個工程、哪一區、哪支構件」
 const AUDIT_KEY_ORDER=['proj_num','proj_no','project_no','proj_name','zone_code','zone','zone_text','part_no','comp_no','dwg_no','cp_no','order_no','serial_no','doc_no','staff_name','name','title','item','date','work_date','record_date','status'];
@@ -12857,7 +12880,7 @@ function auditParseSummary(s){
   });
   return {n, pairs:auditSortPairs(pairs), more};
 }
-function auditPairTxt(k,v){ return k ? auditFieldLabel(k)+' '+auditFmtVal(v) : auditFmtVal(v); }
+function auditPairTxt(k,v){ return k ? auditFieldLabel(k)+' '+auditValTxt(k,v) : auditFmtVal(v); }
 // 哪一筆:'id=eq.605' → '第 605 筆';'part_no=eq.B12 & id=in.(1,2,3,4)' → '構件編號 B12、第 1、2、3 筆(共 4 筆)'
 function auditFmtTarget(t){
   if(!t) return '';
@@ -12869,17 +12892,16 @@ function auditFmtTarget(t){
       return label+(m[1]?' 不是 ':' ')+auditFmtVal(m[2]);
     if((m=/^(not\.)?in\.\((.*)\)$/.exec(val))){
       const items=m[2].split(',').map(x=>x.replace(/^"|"$/g,''));
-      const head=items.slice(0,3).join('、');
-      const tail=items.length>3?'…共 '+items.length+' 筆':'';
-      return isId ? (m[1]?'第 '+head+' 筆以外':'第 '+head+' 筆')+tail
-                  : label+(m[1]?' 不是 ':' 是 ')+head+tail;
+      if(isId) return auditIdsTxt(items)+(m[1]?' 以外':'');
+      const head=items.slice(0,3).map(x=>auditValTxt(key,x)).join('、');
+      return label+(m[1]?' 不是 ':' 是 ')+head+(items.length>3?'…共 '+items.length+' 筆':'');
     }
     if((m=/^([a-z]+)\.(.*)$/.exec(val)) && AUDIT_OP_TXT.hasOwnProperty(m[1])){
       const op=AUDIT_OP_TXT[m[1]];
-      if(isId && !op) return '第 '+m[2]+' 筆';
-      return label+' '+(op?op+' ':'')+auditFmtVal(m[2]);
+      if(isId && !op) return auditIdsTxt([m[2]]);
+      return label+' '+(op?op+' ':'')+auditValTxt(key,m[2]);
     }
-    return isId ? '第 '+val+' 筆' : label+' '+auditFmtVal(val);
+    return isId ? auditIdsTxt([val]) : label+' '+auditValTxt(key,val);
   }).join('、');
 }
 // 做了什麼:'part_no=B12, qty=2, voided=false' → '構件編號 B12、數量 2、作廢 否'
@@ -21763,6 +21785,8 @@ async function auditFillUserOptions(){
     const r=await sbFetchAll('/rest/v1/profiles?select=id,name,account&order=account');
     list=Array.isArray(r.data)?r.data:[];
   }
+  auditUserName={};
+  list.forEach(a=>{ if(a&&a.id) auditUserName[a.id]=a.name||a.account||''; });
   const sel=document.getElementById('audit-f-user'); if(!sel) return;
   sel.innerHTML='<option value="">全部帳號</option>'+list.map(a=>
     `<option value="${esc(a.id)}">${esc(a.name||a.account||a.id)}</option>`).join('');
@@ -21902,7 +21926,7 @@ function auditDetail(i){
   else if(d&&d.pairs.length){
     html+='<div class="ad-sec">'+(r.action==='update'?'改成這些內容':'送出的內容')
       +(d.n>1?' <span class="ad-dim">(一次 '+d.n+' 筆,以下是第一筆)</span>':'')+'</div>'
-      +d.pairs.map(x=>line(esc(x[0]?auditFieldLabel(x[0]):'內容'), esc(auditFmtVal(x[1])))).join('')
+      +d.pairs.map(x=>line(esc(x[0]?auditFieldLabel(x[0]):'內容'), esc(auditValTxt(x[0],x[1])))).join('')
       +(d.more?'<div class="ad-dim" style="padding:6px 2px">…內容太長,只留下前面這些</div>':'');
   } else if(r.action==='delete'){
     html+='<div class="ad-sec">內容</div>'
