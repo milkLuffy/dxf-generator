@@ -12778,7 +12778,7 @@ const AUDIT_FIELD_LABEL={
   staff_name:'姓名', leave_type:'假別', start_date:'開始日期', end_date:'結束日期', day_part:'時段', hours:'時數', reason:'事由',
   done_at:'完成時間', done_by:'完成人', done_by_name:'完成人姓名',
   // 構件 / 進度 / 產量
-  proj_num:'工程編號', proj_no:'工程編號', proj_name:'工程名稱', zone_id:'工程區ID', zone_code:'工程區', zone:'工程區',
+  proj_num:'工程編號', proj_no:'工程編號', proj_name:'工程名稱', zone_id:'工程區', zone_code:'工程區', zone:'工程區',
   part_no:'構件編號', comp_no:'構件編號', net_weight:'淨重', weight:'重量', length:'長度',
   work_date:'施作日期', ship_date:'出貨日期', bed:'床位', serial_no:'單據編號', doc_no:'單據編號',
   dispatched_at:'派車時間', arrived_at:'車到時間', beds:'柱位', cars:'車數', col_qty:'柱子支數', layout_ids:'派車構件', shipped_ids:'標記出貨構件', arrived_by_name:'記錄車到者', message:'派車訊息',
@@ -12850,15 +12850,50 @@ function auditFmtVal(v){
 function auditValTxt(k,v){
   const s=String(v==null?'':v).trim().replace(/^"|"$/g,'');
   if(AUDIT_USER_FIELDS.has(k) && auditUserName[s]) return auditUserName[s];
+  const fk=AUDIT_FK_TABLE[k] && auditNameOf(AUDIT_FK_TABLE[k], s);
+  if(fk) return fk;
   return auditFmtVal(s);
 }
-// id 清單文字化:數字 → '第 601、602 筆';UUID → '編號 ba4c363b…'
-function auditIdsTxt(items){
+// ── 由 id 換成看得懂的名字 ──────────────────────────────────
+// 紀錄只存 id(那是證據,不能動),名字得回去原表查。查得到就顯示名字,
+// 查不到(多半是已經被刪掉了)就退回代號。查回來的結果存著,翻頁不重查。
+const AUDIT_NAME_CACHE={};               // 'tbl|id' → 名字;查過但沒這筆 = ''
+const AUDIT_NAME_BADTBL=new Set();       // 查了會報錯的表(沒有 id 欄之類),不再浪費一次請求
+// 從一筆資料裡挑出最像「名字」的幾個欄位
+const AUDIT_NAME_PICK=['title','name','staff_name','proj_num','proj_no','project_no','zone_code','zone','part_no','comp_no','dwg_no','cp_no','order_no','serial_no','doc_no','item','leave_type','fname','file_name','account','message','date','work_date','start_date'];
+function auditRowName(row){
+  const out=[];
+  for(let i=0;i<AUDIT_NAME_PICK.length && out.length<3;i++){
+    const v=row[AUDIT_NAME_PICK[i]];
+    if(v==null||v===''||typeof v==='object') continue;
+    out.push(auditFmtVal(String(v).slice(0,24)));
+  }
+  return out.join(' / ');
+}
+function auditNameOf(tbl,id){ return (tbl&&id!=null&&AUDIT_NAME_CACHE[tbl+'|'+id])||''; }
+// 這些欄位存的是別張表的 id,一併換成名字
+const AUDIT_FK_TABLE={zone_id:'zones', project_id:'projects', proj_id:'projects', cp_receipt_id:'cp_receipts', staff_id:'staff', receipt_id:'cp_receipts'};
+// id 清單文字化:查得到名字就用名字;不然數字 → '第 601、602 筆'、UUID → '編號 ba4c363b…'
+function auditIdsTxt(items, tbl){
+  const named=items.map(x=>auditNameOf(tbl,x)).filter(Boolean);
+  if(named.length) return named.slice(0,2).join('、')+(items.length>2?'…共 '+items.length+' 筆':'');
   if(auditIsUuid(items[0])){
     const head=items.slice(0,2).map(auditShortId).join('、');
     return items.length>1 ? '共 '+items.length+' 筆(編號 '+head+' 等)' : '編號 '+head;
   }
   return '第 '+items.slice(0,3).join('、')+' 筆'+(items.length>3?'…共 '+items.length+' 筆':'');
+}
+// 從「哪一筆」的條件裡挑出 id(只認 id 欄位)
+function auditTargetIds(t){
+  const out=[];
+  String(t||'').split(' & ').forEach(part=>{
+    if(part.indexOf('id=')!==0) return;
+    const val=part.slice(3);
+    let m;
+    if((m=/^in\.\((.*)\)$/.exec(val))) m[1].split(',').forEach(x=>out.push(x.replace(/^"|"$/g,'')));
+    else if((m=/^eq\.(.*)$/.exec(val))) out.push(m[1]);
+  });
+  return out;
 }
 // 顯示時把這些欄位排前面:一眼看出「哪個工程、哪一區、哪支構件」
 const AUDIT_KEY_ORDER=['proj_num','proj_no','project_no','proj_name','zone_code','zone','zone_text','part_no','comp_no','dwg_no','cp_no','order_no','serial_no','doc_no','staff_name','name','title','item','date','work_date','record_date','status'];
@@ -12883,7 +12918,7 @@ function auditParseSummary(s){
 }
 function auditPairTxt(k,v){ return k ? auditFieldLabel(k)+' '+auditValTxt(k,v) : auditFmtVal(v); }
 // 哪一筆:'id=eq.605' → '第 605 筆';'part_no=eq.B12 & id=in.(1,2,3,4)' → '構件編號 B12、第 1、2、3 筆(共 4 筆)'
-function auditFmtTarget(t){
+function auditFmtTarget(t, tbl){
   if(!t) return '';
   return String(t).split(' & ').map(part=>{
     const i=part.indexOf('='); if(i<0) return part;
@@ -12893,16 +12928,16 @@ function auditFmtTarget(t){
       return label+(m[1]?' 不是 ':' ')+auditFmtVal(m[2]);
     if((m=/^(not\.)?in\.\((.*)\)$/.exec(val))){
       const items=m[2].split(',').map(x=>x.replace(/^"|"$/g,''));
-      if(isId) return auditIdsTxt(items)+(m[1]?' 以外':'');
+      if(isId) return auditIdsTxt(items, tbl)+(m[1]?' 以外':'');
       const head=items.slice(0,3).map(x=>auditValTxt(key,x)).join('、');
       return label+(m[1]?' 不是 ':' 是 ')+head+(items.length>3?'…共 '+items.length+' 筆':'');
     }
     if((m=/^([a-z]+)\.(.*)$/.exec(val)) && AUDIT_OP_TXT.hasOwnProperty(m[1])){
       const op=AUDIT_OP_TXT[m[1]];
-      if(isId && !op) return auditIdsTxt([m[2]]);
+      if(isId && !op) return auditIdsTxt([m[2]], tbl);
       return label+' '+(op?op+' ':'')+auditValTxt(key,m[2]);
     }
-    return isId ? auditIdsTxt([val]) : label+' '+auditValTxt(key,val);
+    return isId ? auditIdsTxt([val], tbl) : label+' '+auditValTxt(key,val);
   }).join('、');
 }
 // 做了什麼:'part_no=B12, qty=2, voided=false' → '構件編號 B12、數量 2、作廢 否'
@@ -21837,7 +21872,38 @@ async function auditLoad(offset){
   auditHasMore=rows.length>AUDIT_PAGE_SIZE;
   auditRows=rows.slice(0,AUDIT_PAGE_SIZE);
   auditFillTblOptions();
-  auditRender();
+  auditRender();                       // 先把看得到的畫出來,名字慢一步補上
+  const seq=++auditNameSeq;
+  auditResolveNames().then(()=>{ if(seq===auditNameSeq) auditRender(); }).catch(()=>{});
+}
+// 把這一頁出現過的 id 拿回原表換成名字:依資料表分組,一張表一次查完(不是一筆查一次)。
+// 查不到很正常 —— 資料已經被刪掉了,這時就維持顯示代號。
+let auditNameSeq=0;
+async function auditResolveNames(){
+  const need={};
+  const add=(tbl,id)=>{
+    if(!tbl||id==null||id===''||AUDIT_SKIP_TABLES.has(tbl)||AUDIT_NAME_BADTBL.has(tbl)) return;
+    if(AUDIT_NAME_CACHE.hasOwnProperty(tbl+'|'+id)) return;
+    (need[tbl]=need[tbl]||new Set()).add(String(id));
+  };
+  auditRows.forEach(r=>{
+    auditTargetIds(r.target).forEach(id=>add(r.tbl,id));
+    if(r.summary && r.action!=='download')
+      auditParseSummary(r.summary).pairs.forEach(x=>{ if(AUDIT_FK_TABLE[x[0]]) add(AUDIT_FK_TABLE[x[0]], String(x[1]).replace(/^"|"$/g,'')); });
+  });
+  const tbls=Object.keys(need).slice(0,12);          // 一頁最多查 12 張表,免得一次打太多請求
+  await Promise.all(tbls.map(async tbl=>{
+    const ids=[...need[tbl]].slice(0,300);
+    for(let i=0;i<ids.length;i+=100){
+      const chunk=ids.slice(i,i+100);
+      chunk.forEach(id=>{ AUDIT_NAME_CACHE[tbl+'|'+id]=''; });     // 先記成「查過了」,查到再蓋掉
+      const r=await sbFetch('/rest/v1/'+encodeURIComponent(tbl)+'?select=*&id=in.('+chunk.map(encodeURIComponent).join(',')+')&limit=100');
+      if(!r.ok){ AUDIT_NAME_BADTBL.add(tbl); return; }              // 沒有 id 欄或讀不到:這張表以後別再試
+      (Array.isArray(r.data)?r.data:[]).forEach(row=>{
+        if(row&&row.id!=null) AUDIT_NAME_CACHE[tbl+'|'+row.id]=auditRowName(row);
+      });
+    }
+  }));
 }
 // 資料表下拉:用目前這批紀錄出現過的表名(不必另外查),保留使用者已選的值
 function auditFillTblOptions(){
@@ -21880,7 +21946,7 @@ function auditRender(){
   const q=(document.getElementById('audit-f-q').value||'').toLowerCase();
   const list=q?auditRows.filter(r=>
     (r.summary||'').toLowerCase().includes(q)||(r.target||'').toLowerCase().includes(q)||
-    auditFmtSummary(r).toLowerCase().includes(q)||auditFmtTarget(r.target).toLowerCase().includes(q)||
+    auditFmtSummary(r).toLowerCase().includes(q)||auditFmtTarget(r.target,r.tbl).toLowerCase().includes(q)||
     (r.page_label||'').toLowerCase().includes(q)||auditTblLabel(r.tbl).toLowerCase().includes(q)
   ):auditRows;
   document.getElementById('audit-count').textContent=list.length+' 筆'+(q?'(已篩選)':'');
@@ -21901,7 +21967,7 @@ function auditRender(){
       <td style="white-space:nowrap">${badge}${failed}</td>
       <td style="font-size:12px">${esc(r.page_label||'—')}</td>
       <td style="font-size:12px">${esc(auditTblLabel(r.tbl))}</td>
-      <td style="font-size:12px;color:var(--text3);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(auditFmtTarget(r.target)||'')}">${esc(auditFmtTarget(r.target)||'—')}</td>
+      <td style="font-size:12px;color:var(--text3);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(auditFmtTarget(r.target,r.tbl)||'')}">${esc(auditFmtTarget(r.target,r.tbl)||'—')}</td>
       <td style="font-size:12px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(auditFmtSummary(r,true)||'')}">${what}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap">${esc(auditFmtIP(r.ip))}</td>
       <td style="font-size:11px;color:var(--text3);white-space:nowrap" title="${esc(r.ua||'')}">${esc(auditFmtUA(r.ua))}</td>
@@ -21915,13 +21981,16 @@ function auditDetail(i){
   const r=(auditRender._list||[])[i]; if(!r) return;
   const line=(k,v)=>'<div class="ad-row"><span class="ad-k">'+k+'</span><span class="ad-v">'+v+'</span></div>';
   const d=(r.summary&&r.action!=='download')?auditParseSummary(r.summary):null;
+  const tids=auditTargetIds(r.target);
+  const gone=tids.length && tids.every(id=>!auditNameOf(r.tbl,id));   // 一筆都查不到 = 資料已經不在了
   let html=line('什麼時候', esc(auditFmtTime(r.at)))
     +line('誰做的', esc(r.name||r.account||'—')+(r.account&&r.name?' <span class="ad-dim">('+esc(r.account)+')</span>':''))
     +line('做了什麼', esc(AUDIT_ACTION_LABEL[r.action]||r.action||'—')
         +(r.ok===false?' <span class="ad-dim">— 這次沒成功(多半是被權限擋下)</span>':''))
     +line('在哪一頁', esc(r.page_label||'—'))
     +line('動到哪份資料', esc(auditTblLabel(r.tbl)))
-    +line('哪一筆', esc(auditFmtTarget(r.target)||'—'))
+    +line('哪一筆', esc(auditFmtTarget(r.target,r.tbl)||'—')
+        +(gone?' <span class="ad-dim">(現在查不到這筆了,多半已經被刪掉)</span>':''))
     +line('從哪裡連', esc(auditFmtIP(r.ip))+' <span class="ad-dim">'+esc(auditFmtUA(r.ua))+'</span>');
   if(r.action==='download') html+=line('下載的檔案', esc(r.summary||'—'));
   else if(d&&d.pairs.length){
