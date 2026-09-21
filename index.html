@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.21.3"/>
+<meta name="sc-version" content="2026.09.21.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -13529,6 +13529,7 @@ async function loadProfile() {
     await sbFetch('/rest/v1/profiles',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:uid,name:gname,account,status:'pending'})});
     name=gname; status='pending';
     notifyAdminNewAccount(gname,account).catch(()=>{});   // 不阻塞登入流程,失敗不影響使用者體驗(管理員仍可在後台看到待審核清單)
+    pushNotifyApproval('account');                        // 同上,另外推到管理員手機
   }
   const meta=currentSession.user?.user_metadata||{};
   const googleIdentity=(currentSession.user?.identities||[]).find(x=>x.provider==='google');
@@ -13538,6 +13539,17 @@ async function loadProfile() {
   if(typeof ahLoadCfg==='function'){ try{ await ahLoadCfg(); }catch(e){} }   // 使用時段設定;讀不到就維持「未啟用」
 }
 // 呼叫 Edge Function 通知管理員有新帳號待審核(見 supabase/functions/notify-new-account)
+// 待審核即時推播:請伺服器推給所有管理員的手機(網頁關著、手機鎖著也收得到)。
+// 伺服器會再查一次「真的有這一筆待審核」才送,所以這裡不必也不能自己決定要推什麼。
+// 需要把 supabase/functions/push-reminders 重新部署一次才會生效;沒部署就是靜靜失敗,不影響登入。
+async function pushNotifyApproval(kind){
+  try{
+    if(!currentSession||isGuest) return;
+    await fetch(SUPA_URL+'/functions/v1/push-reminders',{method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+currentSession.access_token},
+      body:JSON.stringify({mode:'approval', kind})});
+  }catch(e){}
+}
 async function notifyAdminNewAccount(name,account){
   try{
     await fetch(SUPA_URL+'/functions/v1/notify-new-account',{
@@ -20872,6 +20884,9 @@ async function pushRenderSettings(msg){
     +(denied?'<div style="margin-top:6px;color:var(--text3);font-size:12px">請到手機「設定 → 通知」或瀏覽器網站設定裡,允許本系統的通知後再回來開啟。</div>':'')
     +'<label style="display:flex;align-items:center;gap:8px;margin:12px 0 2px;color:var(--text)">每天推送時間'
       +'<select id="push-time" class="filter-select" style="padding:5px 8px">'+pushTimeOptions(remind)+'</select></label>'
+    +((currentUser&&currentUser.isAdmin&&!isGuest)
+      ?'<div style="margin:8px 0 2px;padding:7px 9px;border-radius:8px;background:var(--bg3);color:var(--text2);font-size:12px">🔔 你是管理員:<b>新帳號待審核、新裝置待核准</b>會即時推到這台,不受下面的選項與時間影響(審核是職責,不是可選的提醒)。</div>'
+      :'')
     +'<div style="margin:4px 0 4px;color:var(--text3);font-size:12px">要收哪些提醒(「報驗完成」固定 13:00、08:00 推送,不受上面時間影響):</div>'
     +visible.map(t=>'<label style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--border);cursor:pointer">'
       +'<input type="checkbox" class="push-topic" value="'+t.k+'"'+(topics.includes(t.k)?' checked':'')+' style="margin-top:4px;width:16px;height:16px">'
@@ -22818,6 +22833,11 @@ async function deviceCheck(){
   }
   const row=Array.isArray(r.data)?r.data[0]:r.data;
   deviceMine={approved:!!(row&&row.approved), isNew:!!(row&&row.is_new), name:(row&&row.device_name)||''};
+  // 第一次登記這台、而且裝置綁定是開著的 → 即時推給管理員的手機。
+  // 只在「新登記」推:同一台每次登入都推會變騷擾,還沒核准的常駐提醒系統裡本來就有。
+  if(deviceLockCfg.on && deviceMine.isNew && !deviceMine.approved
+     && !(currentUser && currentUser.isAdmin) && typeof pushNotifyApproval==='function')
+    pushNotifyApproval('device');
   if(!deviceLockCfg.on) return {ok:true, off:true, isNew:deviceMine.isNew};       // 沒啟用:只登記,不擋
   if(currentUser && currentUser.isAdmin) return {ok:true, admin:true};             // 管理員不擋,否則沒人能去核准
   return {ok:deviceMine.approved, isNew:deviceMine.isNew};

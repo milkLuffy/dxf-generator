@@ -6,7 +6,11 @@
 //  ・報驗完成(待出貨):台灣時間 13:00 推今天上午報驗、08:00 推前一天下午報驗,依柱位整理 → 訂閱「ship」的人
 //    (也可帶 {mode:'ship', half:'am'|'pm', date:'YYYY-MM-DD'} 手動觸發)
 //  ・每日提醒時間:push_subscriptions.remind_time(HH:MM,30 分鐘一格,空=08:00);daily_sent_on 記錄今天送過,排程重跑也不重複
-// 另外支援 {mode:'test'}:登入者自己按「傳送測試通知」。
+// 另外支援:
+//  ・{mode:'test'}    登入者自己按「傳送測試通知」
+//  ・{mode:'approval', kind:'account'|'device'}
+//    新帳號註冊、新裝置登記的當事人自己呼叫,即時推給所有管理員(手機關著也收得到)。
+//    伺服器會再確認真的有那一筆待審核才送,所以不能拿來洗管理員的手機。
 import { sendWebPush } from './webpush.js';
 import { lunarOccurrences, loadTwCalendar } from './lunar.js';
 
@@ -262,6 +266,37 @@ Deno.serve(async req => {
     if (!subs.length) return json({ error: '這個帳號還沒有開啟推播的裝置' }, 404);
     await deliver(subs, { title: '✅ 推播測試成功', body: '之後的待辦、交管料日與上線準備提醒會用這種方式通知您。', tag: 'test', url: APP_URL }, stats);
     return json({ ok: true, devices: subs.length, ...stats });
+  }
+
+  // 待審核即時推播:新帳號/新裝置的「當事人自己」呼叫,帶自己的 token。
+  // 伺服器會再查一次「真的有這一筆待審核」才推 —— 不然任何登入者都能拿它洗管理員的手機。
+  // 管理員一律收得到,不看訂閱主題:審核是職責,不是可選的提醒。
+  if (body.mode === 'approval') {
+    const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+    const ur = await fetch(SUPA_URL + '/auth/v1/user', { headers: { apikey: SERVICE_KEY, Authorization: 'Bearer ' + token } });
+    if (!ur.ok) return json({ error: '請先登入' }, 401);
+    const user = await ur.json();
+    const me = (await rest('profiles?id=eq.' + user.id + '&select=id,name,account,status') as any[])[0] || null;
+    const who = (me && (me.name || me.account)) || '某帳號';
+    const kind = body.kind === 'device' ? 'device' : 'account';
+    let msg: Msg | null = null;
+    if (kind === 'account') {
+      if (!me || me.status !== 'pending') return json({ ok: true, skipped: 'no pending account' });
+      msg = { title: '👤 有新帳號等待審核', body: who + '(' + (me.account || '') + ')申請使用系統', tag: 'approval-account', url: APP_URL };
+    } else {
+      const devs = await rest('user_devices?user_id=eq.' + user.id + '&approved=is.false&select=device_key,ua,first_seen&order=first_seen.desc&limit=1')
+        .catch(() => []) as any[];
+      if (!devs.length) return json({ ok: true, skipped: 'no pending device' });
+      const code = String(devs[0].device_key || '').slice(0, 8).toUpperCase();
+      msg = { title: '💻 有新裝置等待核准', body: who + ' 的新裝置  裝置代碼 ' + code, tag: 'approval-device', url: APP_URL };
+    }
+    const admins = (await rest('profiles?is_admin=is.true&select=id,disabled') as any[]).filter(a => !a.disabled);
+    if (!admins.length) return json({ ok: true, admins: 0 });
+    const adminSubs = await rest('push_subscriptions?user_id=in.(' + admins.map(a => a.id).join(',') + ')&select=*') as Sub[];
+    // 自己就是管理員的話不推給自己(例如管理員換一台電腦登入)
+    const targets = adminSubs.filter(s => s.user_id !== user.id);
+    if (targets.length) await deliver(targets, msg, stats);
+    return json({ ok: true, kind, admins: admins.length, devices: targets.length, ...stats });
   }
 
   if (!CRON_SECRET || req.headers.get('x-cron-secret') !== CRON_SECRET) return json({ error: 'forbidden' }, 403);
