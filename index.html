@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.22.3"/>
+<meta name="sc-version" content="2026.09.22.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -22683,14 +22683,21 @@ async function blockedRecheck(btn){
 //  3. 讀不到請假資料(表還沒建、網路壞掉)一律放行。
 //     寧可漏擋,也不要因為讀取失敗把人鎖在系統外面。
 //  4. 跟使用時段限制一樣是**前端擋**,定位是作息規範,不是資安邊界。
-// 這幾種不是「個人請假」,是全公司的非工作日。拿來擋人的話,國定假日那天
-// 整間公司都會被鎖在系統外面 —— 有人想在假日進來看一下排程是很正常的事。
-const LB_NOT_LEAVE=['休假','國定假日','過年','颱風'];
+// 哪些假別「不擋」由管理員自己勾(存在設定裡)。預設只放過全公司的非工作日:
+// 國定假日那天如果擋人,整間公司都會被鎖在系統外面。
+// 休假預設是擋的 —— 休假就是那個人今天不上班。
+const LB_SKIP_DEFAULT=['國定假日','過年','颱風'];
+function lbSkipList(){
+  const s=leaveBlockCfg&&leaveBlockCfg.skip;
+  return Array.isArray(s)?s.filter(Boolean):LB_SKIP_DEFAULT.slice();
+}
 function lbNotLeaveFilter(field){
-  return '&'+field+'=not.in.('+LB_NOT_LEAVE.map(encodeURIComponent).join(',')+')';
+  const skip=lbSkipList();
+  if(!skip.length) return '';                      // 全部假別都擋:不必加條件
+  return '&'+field+'=not.in.('+skip.map(encodeURIComponent).join(',')+')';
 }
 const LEAVE_BLOCK_KEY='leave_block';
-const LEAVE_BLOCK_DEFAULT={on:false, msg:'', exempt:[]};
+const LEAVE_BLOCK_DEFAULT={on:false, msg:'', exempt:[], skip:LB_SKIP_DEFAULT.slice()};
 let leaveBlockCfg=Object.assign({},LEAVE_BLOCK_DEFAULT);
 
 function lbTodayTw(){ return new Date(Date.now()+8*3600000).toISOString().slice(0,10); }
@@ -22700,6 +22707,7 @@ async function lbLoadCfg(){
     try{ leaveBlockCfg=Object.assign({},LEAVE_BLOCK_DEFAULT,JSON.parse(r.data[0].value||'{}')); }catch(e){}
   }
   if(!Array.isArray(leaveBlockCfg.exempt)) leaveBlockCfg.exempt=[];
+  if(!Array.isArray(leaveBlockCfg.skip)) leaveBlockCfg.skip=LB_SKIP_DEFAULT.slice();
   return leaveBlockCfg;
 }
 async function lbSaveCfg(){
@@ -22750,13 +22758,15 @@ async function lbRenderCard(){
       +'<label class="ah-ex-item'+(c.on?' on':'')+'"><input type="checkbox" id="lb-on"'+(c.on?' checked':'')+'>啟用</label></div>'
     +'<div class="ah-sub">請<b>整天假</b>的人,當天一登入就會被請出去;已經在線上的,5 分鐘內會自動登出。'
       +'半天假(上午／下午)與未滿 8 小時的假<b>不受影響</b>,照常使用。管理員不受限制。<br>'
-      +'<b>休假、國定假日、過年、颱風不算</b> —— 那是全公司的非工作日,擋下去會把整間公司鎖在外面。<br>'
+      +'<b>哪些假別要擋在下面勾</b> —— 預設放過國定假日、過年、颱風(那是全公司的非工作日,擋下去會把整間公司鎖在外面)。<br>'
       +'「請假登記」頁登記的、以及直接填在「出勤回報」的假<b>兩邊都算</b>。</div>'
     +'<div class="ah-body">'
       +'<div class="ah-fld" style="flex:1;min-width:240px"><label>擋下來時要顯示的訊息(留白用預設)</label>'
         +'<input class="search-input" id="lb-msg" value="'+esc(c.msg||'')+'" placeholder="例:請假期間請安心休息,有急事請打電話給廠長"></div>'
     +'</div>'
     +'<div class="ah-btns"><button class="btn" onclick="lbSaveFromCard()">💾 儲存設定</button></div>'
+    +'<div class="ah-ex"><div class="ah-ex-t">哪些假別要擋(勾起來的才擋;沒勾的當作照常上班)</div>'
+      +'<div class="ah-ex-list" id="lb-type-list">載入中…</div></div>'
     +'<div class="ah-ex"><div class="ah-ex-t">請假也照樣可以使用的帳號(管理員一律不受限,不必勾)</div>'
       +'<div class="ah-ex-list" id="lb-ex-list">載入中…</div></div>'
     +'<div class="ah-sub" id="lb-today">今天請全天假的人:查詢中…</div>'
@@ -22766,8 +22776,37 @@ async function lbRenderCard(){
     leaveBlockCfg.on=this.checked;
     lbSaveCfg().then(r=>{ if(!r.ok) alert('儲存失敗('+(r.status||'?')+')'); lbRenderCard(); });
   };
+  lbRenderTypes();
   lbRenderExempt();
   lbRenderToday();
+}
+// 假別勾選:勾起來=要擋。清單用出勤回報那份(含自己加的自訂假別)
+async function lbRenderTypes(){
+  const box=document.getElementById('lb-type-list'); if(!box) return;
+  if(typeof attLeaveTypesLoad==='function' && !attLeaveCustom.length){ try{ await attLeaveTypesLoad(); }catch(e){} }
+  const list=(typeof ATT_LEAVE!=='undefined'?ATT_LEAVE:[]).filter(t=>t && t!=='曠職');
+  if(!list.length){ box.textContent='沒有假別可設定'; return; }
+  const skip=lbSkipList();
+  box.innerHTML=list.map(t=>{
+    const on=!skip.includes(t);                    // 沒被放過 = 要擋
+    return '<label class="ah-ex-item'+(on?' on':'')+'"><input type="checkbox"'+(on?' checked':'')
+      +' onchange="lbSetType('+JSON.stringify(t).replace(/"/g,'&quot;')+',this.checked,this)">'+esc(t)+'</label>';
+  }).join('');
+}
+async function lbSetType(type, block, el){
+  const skip=new Set(lbSkipList());
+  if(block) skip.delete(type); else skip.add(type);
+  leaveBlockCfg.skip=[...skip];
+  const r=await lbSaveCfg();
+  if(!r.ok){
+    if(el) el.checked=!block;
+    block ? skip.add(type) : skip.delete(type);
+    leaveBlockCfg.skip=[...skip];
+    alert('儲存失敗('+(r.status||'?')+')');
+    return;
+  }
+  if(el&&el.parentElement) el.parentElement.classList.toggle('on', !!block);
+  lbRenderToday();                                 // 「今天請整天假的人」會跟著變
 }
 async function lbSaveFromCard(){
   leaveBlockCfg.msg=(document.getElementById('lb-msg').value||'').trim();
