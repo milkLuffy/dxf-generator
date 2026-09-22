@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.22.8"/>
+<meta name="sc-version" content="2026.09.22.9"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1295,6 +1295,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .layout-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap}
 .layout-hint{font-family:var(--mono);font-size:11px;color:var(--text3)}
 /* ── 五金庫存 ── */
+.hw-sug{position:absolute;z-index:2147483000;display:none;background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.hw-sug>div{padding:11px 12px;font-size:16px;color:var(--text);border-bottom:1px solid var(--border);cursor:pointer}
+.hw-sug>div:last-child{border-bottom:0}
+.hw-sug>div:active{background:var(--bg3)}
 .hw-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:12px}
 .hw-form .search-input{width:auto}
 .hw-check{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:var(--text2);cursor:pointer;white-space:nowrap}
@@ -14202,8 +14206,49 @@ function hwRefreshItemList(pfx){
   hwSetHtml(dl, hwItemNamesForCat(catEl?catEl.value:'').map(n=>`<option value="${esc(n)}">`).join(''));
 }
 // 表格內的輸入框不直接掛 list(一頁 100 張卡 × 2 個 = 200 個欄位綁同一份清單,手機會撐不住),點進去才綁、離開就拿掉
-function hwListOn(el){ if(el.dataset.list) el.setAttribute('list',el.dataset.list); }
+function hwListOn(el){ if(!el.dataset.list) return; if(HW_TOUCH){ hwSugBind(el); hwSugShow(el); return; } el.setAttribute('list',el.dataset.list); }
 function hwListOff(el){ el.removeAttribute('list'); }
+// 手機/平板完全不用原生 datalist(在品名欄一打字就會讓瀏覽器崩潰重載),改用自己畫的建議清單;電腦維持原生
+const HW_TOUCH = !!(window.matchMedia && matchMedia('(pointer:coarse)').matches);
+let hwSugBox=null, hwSugInput=null;
+function hwSugHide(){ if(hwSugBox) hwSugBox.style.display='none'; hwSugInput=null; }
+function hwSugShow(input){
+  const dl=document.getElementById(input.dataset.list||''); if(!dl){ hwSugHide(); return; }
+  const cur=String(input.value||''), q=cur.trim().toLowerCase();
+  const all=[...dl.options].map(o=>o.value).filter(Boolean);
+  const hit=q? all.filter(v=>v.toLowerCase().includes(q)) : all;
+  if(q) hit.sort((x,y)=>(x.toLowerCase().startsWith(q)?0:1)-(y.toLowerCase().startsWith(q)?0:1));
+  const list=hit.filter(v=>v!==cur).slice(0,40);
+  if(!list.length){ hwSugHide(); return; }
+  if(!hwSugBox){
+    hwSugBox=document.createElement('div'); hwSugBox.className='hw-sug'; document.body.appendChild(hwSugBox);
+    hwSugBox.addEventListener('mousedown',e=>e.preventDefault());   // 點選項時不讓輸入框失焦
+    hwSugBox.addEventListener('click',e=>{
+      const b=e.target.closest('[data-v]'), inp=hwSugInput; if(!b||!inp) return;
+      inp.value=b.dataset.v; hwSugHide();
+      inp.dispatchEvent(new Event('input',{bubbles:true})); inp.dispatchEvent(new Event('change',{bubbles:true}));
+      hwSugHide();
+    });
+  }
+  hwSugInput=input;
+  hwSugBox.innerHTML=list.map(v=>'<div data-v="'+esc(v)+'">'+esc(v)+'</div>').join('');
+  const r=input.getBoundingClientRect(), vv=window.visualViewport;
+  const viewBottom=vv? vv.offsetTop+vv.height : window.innerHeight;
+  const below=viewBottom-r.bottom-8, above=r.top-(vv?vv.offsetTop:0)-8;
+  const up=below<160 && above>below, h=Math.max(120,Math.min(260,up?above:below));
+  Object.assign(hwSugBox.style,{display:'block',left:(r.left+window.scrollX)+'px',width:Math.max(r.width,180)+'px',maxHeight:h+'px'});
+  hwSugBox.style.top=(up? r.top+window.scrollY-Math.min(h,hwSugBox.scrollHeight)-4 : r.bottom+window.scrollY+4)+'px';
+}
+function hwSugBind(el){
+  if(el._hwSug) return; el._hwSug=1;
+  el.addEventListener('input',()=>hwSugShow(el));
+  el.addEventListener('focus',()=>hwSugShow(el));
+  el.addEventListener('blur',()=>setTimeout(()=>{ if(hwSugInput===el) hwSugHide(); },250));
+}
+function hwSugSetup(){
+  if(!HW_TOUCH) return;
+  document.querySelectorAll('#page-hardware input[list]').forEach(el=>{ el.dataset.list=el.getAttribute('list'); el.removeAttribute('list'); hwSugBind(el); });
+}
 
 async function hwInit(){
   if(hwBusy) return; hwBusy=true;
@@ -14232,6 +14277,7 @@ async function hwInit(){
 }
 
 function hwPopulateSelects(){
+  hwSugSetup();
   const sc=document.getElementById('hw-stock-cat'); if(sc){ const v=sc.value; sc.innerHTML=hwOpt(HW_CATS,true); sc.value=v; }
   ['hw-ni-cat','hw-pu-cat','hw-us-cat'].forEach(id=>{ const el=document.getElementById(id); if(el){ const v=el.value; el.innerHTML=hwOpt(HW_CATS,false); if(v)el.value=v; } });
   ['hw-pu-cat','hw-us-cat','hw-ct-cat'].forEach(id=>{ const pfx=id.slice(3,5); hwRefreshItemList(pfx); });
