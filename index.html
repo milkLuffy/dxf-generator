@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.22.5"/>
+<meta name="sc-version" content="2026.09.22.6"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -6377,6 +6377,12 @@ window.normalizeFullWidth=function(value){
           <div class="pcfg-f"><label>曠職</label><input type="number" id="pcfg-lr-absent" step="0.1"/></div>
           <div class="pcfg-f"><label>過年</label><input type="number" id="pcfg-lr-newyear" step="0.1"/></div>
           <div class="pcfg-f"><label>颱風</label><input type="number" id="pcfg-lr-typhoon" step="0.1"/></div>
+          <div class="pcfg-f"><label>休假</label><input type="number" id="pcfg-lr-dayoff" step="0.1"/></div>
+          <div class="pcfg-f"><label>國定假日</label><input type="number" id="pcfg-lr-national" step="0.1"/></div>
+        </div>
+        <div id="pcfg-lr-custom-wrap" style="display:none">
+          <div style="font-size:12px;color:var(--warn,#d97706);margin:10px 0 6px">⚠ 自己新增的假別(出勤回報「＋ 新增假別…」加的)。<b>沒有設定比例的一律以「全額扣」計算</b>,請確認後儲存。</div>
+          <div class="pcfg-grid" id="pcfg-lr-custom"></div>
         </div>
       </div>
 
@@ -8581,6 +8587,7 @@ window.normalizeFullWidth=function(value){
             <span style="flex:1"></span>
             <span id="att-save-hint" style="font-family:var(--mono);font-size:11px;color:var(--text3)"></span>
           </div>
+          <div class="att-leave-bar" id="att-hol-bar" style="display:none"></div>
           <div class="att-leave-bar" id="att-leave-bar" style="display:none"></div>
           <div class="att-dup-panel" id="att-dup-panel" style="display:none"></div>
           <div class="att-line-panel" id="att-line-panel" style="display:none">
@@ -33364,6 +33371,8 @@ async function attLeaveAddPrompt(){
   }
   if(!attLeaveCustom.includes(v)) attLeaveCustom.push(v);
   attLeaveRebuild();
+  // 沒設扣薪比例的假別,算薪時一律當「全額扣」——加完就提醒,免得月底才發現扣錯錢
+  alert('已新增假別「'+v+'」。\n\n提醒:新假別在薪資計算裡預設是「全額扣薪」,\n請到「費率設定 → 請假扣薪比例」把它的比例設好再儲存。');
   return v;
 }
 const ATT_LEAVE_ADD_OPT='<option value="__add__">＋ 新增假別…</option>';
@@ -33503,6 +33512,92 @@ function attBuildRoster(rangeFirst){
 
 function attRecFor(date,name){ return attMonthData.find(r=>r.work_date===date && r.staff_name===name); }
 
+// ── 國定假日自動帶入 ──────────────────────────────────────
+// 資料來源跟薪資那邊同一份(TaiwanCalendar 開放資料),差別是那邊只留日期、
+// 這裡連名稱(description)一起留下來 —— 「中秋節」「開國紀念日」就是從這裡來的。
+// 只帶進畫面,不會自己存檔;按下「儲存」才寫進資料庫。
+const attHolName={};                 // 'YYYY-MM-DD' → '中秋節'
+const attHolYears={};
+async function attHolEnsure(year){
+  if(attHolYears[year]) return;
+  const ck='tw_holname_v1_'+year;
+  let data=null;
+  try{ const c=JSON.parse(localStorage.getItem(ck)||'null'); if(c && Date.now()-c.at<30*86400000) data=c.days; }catch(e){}
+  if(!data){
+    try{
+      const r=await fetch('https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/'+year+'.json');
+      if(r.ok){
+        data={};
+        (await r.json()).forEach(d=>{
+          const name=String(d.description||'').trim();
+          if(!d.isHoliday || !name) return;          // 只留「有名字的假日」:週末沒有名字,不算國定假日
+          const s=String(d.date);
+          data[s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)]=name;
+        });
+        try{ localStorage.setItem(ck, JSON.stringify({at:Date.now(), days:data})); }catch(e){}
+      }
+    }catch(e){}                                      // 抓不到就當作沒有假日,不影響填表
+  }
+  if(data){ Object.assign(attHolName, data); attHolYears[year]=true; }
+}
+function attHolOf(date){ return attHolName[date]||''; }
+// 直接改畫面上的欄位(存檔本來就是讀畫面 attReadDayRows,不是讀記憶體),
+// 所以帶入之後不能重畫整張表,不然剛填的又被洗掉。
+function attHolRowState(tr){
+  const q=s=>tr.querySelector(s);
+  const val=el=>el?String(el.value||'').trim():'';
+  const num=el=>{ const n=parseFloat(val(el)); return isNaN(n)?0:n; };
+  const lt=q('select[data-f="leave_type"]');
+  return {
+    lt, lh:q('[data-f="leave_hours"]'), lhU:q('[data-role="u"][data-pair="leave_hours"]'),
+    note:q('[data-f="note"]'),
+    busy: num(q('[data-f="work"]'))>0 || num(q('[data-f="ot"]'))>0
+        || !!val(lt) || !!val(q('[data-f="note"]')),
+    isHol: val(lt)==='國定假日'
+  };
+}
+function attHolRows(){
+  const body=document.getElementById('att-daily-body');
+  return body?[...body.querySelectorAll('tr[data-name]')]:[];
+}
+// 把「還沒填的人」帶入國定假日;已經填了上班或請假的人一律不動。回傳帶入幾個人
+function attHolApply(name){
+  let n=0;
+  attHolRows().forEach(tr=>{
+    const s=attHolRowState(tr);
+    if(!s.lt || s.busy) return;
+    s.lt.value='國定假日';
+    if(s.lh) s.lh.value=8;
+    if(s.lhU) s.lhU.value=1;                       // 左邊那格是「工數」,8 小時＝1 工
+    if(s.note) s.note.value=name;
+    n++;
+  });
+  return n;
+}
+function attHolRenderBar(date){
+  const bar=document.getElementById('att-hol-bar'); if(!bar) return;
+  const nm=attHolOf(date);
+  if(!nm){ bar.style.display='none'; bar.innerHTML=''; return; }
+  const rows=attHolRows();
+  const filled=rows.filter(tr=>attHolRowState(tr).isHol).length;
+  const blank=rows.filter(tr=>!attHolRowState(tr).busy).length;
+  bar.style.display='';
+  bar.innerHTML='🎏 這天是<b>'+esc(nm)+'</b>(國定假日)。'
+    +(filled?'已有 '+filled+' 人標為國定假日。':'')
+    +(blank?'還有 <b>'+blank+'</b> 人沒填。'
+        +'<button class="dash-nav-btn" style="margin-left:6px" onclick="attHolFill()">全部帶入「國定假日／'+esc(nm)+'」</button>'
+        +'<span style="margin-left:8px;color:var(--text3);font-size:11px">帶入後要按「儲存」才會存檔</span>'
+      :'每個人都填好了。');
+}
+function attHolFill(){
+  const date=document.getElementById('att-date').value; if(!date) return;
+  const nm=attHolOf(date); if(!nm) return;
+  const n=attHolApply(nm);
+  attHolRenderBar(date);                            // 只重畫提示列,不重畫表格
+  const hint=document.getElementById('att-save-hint');
+  if(hint) hint.textContent=n?('已帶入 '+n+' 人,記得按「儲存」'):'沒有需要帶入的人';
+}
+
 // 在「前一天／後一天／今日」按鈕旁標示該日期是星期幾
 function attWeekdayShort(d){ return '週'+['日','一','二','三','四','五','六'][d.getDay()]; }
 function attUpdateNavLabels(){
@@ -33522,6 +33617,12 @@ function attRenderDailyGrid(){
   attUpdateNavLabels();
   refreshDateWk();   // 更新「日期（星期）」顯示
   const date=document.getElementById('att-date').value;
+  // 國定假日提示列:資料抓回來(或本機已有快取)才畫,不擋住表格顯示
+  if(date){
+    const y=+date.slice(0,4);
+    if(attHolYears[y]) attHolRenderBar(date);
+    else attHolEnsure(y).then(()=>{ if(document.getElementById('att-date').value===date) attHolRenderBar(date); });
+  }
   const body=document.getElementById('att-daily-body');
   if(!date){ body.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:16px">請選擇日期</td></tr>'; document.getElementById('att-daily-foot').innerHTML=''; attMRender(); return; }
   if(!attRoster.length){ body.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:16px">尚無人員，請至「公司名冊」新增</td></tr>'; document.getElementById('att-daily-foot').innerHTML=''; attMRender(); return; }
@@ -41244,7 +41345,13 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       occ:{rate:P?P.occ.rate:val('occ_ins',.00555)},
       foreignOcc:{rate:P?P.foreignOcc.rate:val('foreign_occ_ins',.00553)},
       meal:meta('meal',{subsidy:75}),
-      leaveRate:(()=>{const r=meta('leave_rate',{'特休':0,'公假':0,'婚假':0,'喪假':0,'病假':.5,'事假':1,'產假':0,'補休':0,'曠職':1,'生理假':.5,'過年':0,'颱風':0});return {...r,'病假':.5,'生理假':.5};})(),
+      // 註:沒列到的假別在下面算薪時一律當「全額扣」,所以新增假別務必到費率設定補上比例。
+      // 這裡要「合併」而不是取代:資料庫存過的設定是舊的 12 種,少了休假/國定假日,
+      // 直接用它會讓這兩種變成全額扣薪。以預設打底、存過的蓋上去,才不會漏。
+      leaveRate:(()=>{
+        const D={'特休':0,'公假':0,'婚假':0,'喪假':0,'病假':.5,'事假':1,'產假':0,'補休':0,'曠職':1,'生理假':.5,'過年':0,'颱風':0,'休假':0,'國定假日':0};
+        return {...D, ...meta('leave_rate',D), '病假':.5, '生理假':.5};
+      })(),
       grades:P?P.grades.slice():((meta('ins_grades',{grades:[]}).grades)||[])
     };
   }
@@ -44136,7 +44243,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   var PCFG_LR=[['annual','特休',0],['official','公假',0],['marriage','婚假',0],['funeral','喪假',0],
                ['sick','病假',0.5],['personal','事假',1],['menstrual','生理假',0.5],
                ['maternity','產假',0],['comp','補休',0],['absent','曠職',1],
-               ['newyear','過年',0],['typhoon','颱風',0]];
+               ['newyear','過年',0],['typhoon','颱風',0],
+               ['dayoff','休假',0],['national','國定假日',0]];   // 非工作日,預設不扣薪
 
   // ── 年度政策預設表 ───────────────────────────────────────────────
   // 【未來維護】政策每年調整時,只要「複製最新一年物件、改數字」新增一個年度即可,
@@ -44189,8 +44297,26 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     });
     // 病假及生理假依法定半薪計算，不受舊版自訂費率影響。
     setv('pcfg-lr-sick',0.5); setv('pcfg-lr-menstrual',0.5);
+    pcfgRenderCustomLeave(lr);
     pcfgGrades=P.grades.slice();
     pcfgRenderGrades();
+  }
+
+  // 出勤回報裡自己新增的假別:也要能設扣薪比例,否則算薪時會被當成「全額扣」
+  var pcfgCustomLeave=[];
+  async function pcfgRenderCustomLeave(lr){
+    var wrap=document.getElementById('pcfg-lr-custom-wrap'), box=document.getElementById('pcfg-lr-custom');
+    if(!wrap||!box) return;
+    if(typeof attLeaveTypesLoad==='function'){ try{ await attLeaveTypesLoad(); }catch(e){} }
+    var known=PCFG_LR.map(function(p){ return p[1]; });
+    pcfgCustomLeave=(typeof attLeaveCustom!=='undefined'?attLeaveCustom:[]).filter(function(t){ return t && known.indexOf(t)<0; });
+    if(!pcfgCustomLeave.length){ wrap.style.display='none'; box.innerHTML=''; return; }
+    wrap.style.display='';
+    box.innerHTML=pcfgCustomLeave.map(function(t,i){
+      var v=(lr&&lr[t]!=null)?lr[t]:1;                 // 沒設過就顯示 1,與算薪的行為一致
+      return '<div class="pcfg-f"><label>'+esc(t)+'</label>'
+        +'<input type="number" id="pcfg-lr-c'+i+'" step="0.1" value="'+esc(v)+'"/></div>';
+    }).join('');
   }
 
   function pcfgRenderGrades(){
@@ -44251,7 +44377,12 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       {eff_date:eff, key:'foreign_occ_ins', value:n('pcfg-foreign-occ-rate'), meta:{employer:n('pcfg-foreign-occ-rate')}},
       {eff_date:eff, key:'min_wage_month', value:n('pcfg-minm'), meta:null},
       {eff_date:eff, key:'min_wage_hour', value:n('pcfg-minh'), meta:null},
-      {eff_date:eff, key:'leave_rate', value:null, meta:(function(){ var o={}; PCFG_LR.forEach(function(p){ o[p[1]]=n('pcfg-lr-'+p[0]); }); return o; })()},
+      {eff_date:eff, key:'leave_rate', value:null, meta:(function(){
+        var o={};
+        PCFG_LR.forEach(function(p){ o[p[1]]=n('pcfg-lr-'+p[0]); });
+        (pcfgCustomLeave||[]).forEach(function(t,i){ var el=document.getElementById('pcfg-lr-c'+i); if(el) o[t]=n('pcfg-lr-c'+i); });
+        return o;
+      })()},
       {eff_date:eff, key:'ins_grades', value:null, meta:{grades:grades}}
     ];
     var res=await sbFetch('/rest/v1/payroll_config?on_conflict=eff_date,key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(rows)});
