@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.22.9"/>
+<meta name="sc-version" content="2026.09.22.10"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1295,6 +1295,20 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .layout-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap}
 .layout-hint{font-family:var(--mono);font-size:11px;color:var(--text3)}
 /* ── 五金庫存 ── */
+/* 五金手機卡片(純文字、無輸入格;點卡片開編輯視窗) */
+.hw-cards{display:none}
+.hw-card{position:relative;padding:12px 14px 11px;margin-bottom:8px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hw-card:active{background:var(--bg3)}
+.hw-card-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding-right:34px}
+.hw-card-title{font:600 16px/1.35 var(--sans);color:var(--text);min-width:0;overflow-wrap:anywhere}
+.hw-card-num{flex:none;font:600 16px var(--mono);color:var(--text);white-space:nowrap}
+.hw-card-num small{font-size:12px;font-weight:400;color:var(--text3);margin-left:3px}
+.hw-card-meta{margin-top:4px;font-size:13px;color:var(--text2);line-height:1.5;overflow-wrap:anywhere}
+.hw-card-meta .sep{color:var(--text3);margin:0 6px}
+.hw-card-sub{margin-top:3px;font-size:12px;color:var(--text3);font-family:var(--mono)}
+.hw-card-del{position:absolute;top:8px;right:8px;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:var(--text3);font-size:16px;line-height:30px;padding:0;cursor:pointer}
+.hw-card-del:active{background:rgba(224,82,82,.15);color:var(--red)}
+.hw-card-empty{padding:28px 12px;text-align:center;color:var(--text3);font-size:14px}
 .hw-sug{position:absolute;z-index:2147483000;display:none;background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .hw-sug>div{padding:11px 12px;font-size:16px;color:var(--text);border-bottom:1px solid var(--border);cursor:pointer}
 .hw-sug>div:last-child{border-bottom:0}
@@ -7971,6 +7985,10 @@ window.normalizeFullWidth=function(value){
       #page-hardware .layout-toolbar :is(select,input){flex:1 1 140px;width:auto!important;min-height:40px;font-size:16px}
       #page-hardware .layout-toolbar :is(button[onclick*="Export"],button[onclick^="hwClearFilters"],button[onclick^="hwPpeOpenNames"]){display:none}
       #page-hardware .layout-toolbar button[onclick^="hwToggleAddItem"]{flex:1 1 100%;min-height:42px}
+      #page-hardware .layout-table-wrap{display:none!important}
+      #page-hardware .hw-cards{display:block}
+      #page-hardware .hw-tblbox{border:0;background:transparent;padding:0}
+      #page-hardware .hw-form :is(#hw-us-name,#hw-pu-name,#hw-rp-name,#hw-ne-name,#hw-ne-note){grid-column:1/-1}
       #page-hardware .layout-table-wrap{overflow:visible;border:0;background:transparent}
       #page-hardware .layout-table{display:block;width:100%!important;min-width:0!important}
       #page-hardware .layout-table thead{display:none}
@@ -14295,6 +14313,7 @@ function hwPopulateSelects(){
 
 function hwSwitchTab(tab){
   hwCloseFilter();
+  if(hwMobile()) hwCardsClear();
   hwTab=tab;
   ['stock','purchase','repair','usage','party','equip'].forEach(t=>{
     document.getElementById('hwtab-'+t).classList.toggle('active', t===tab);
@@ -14323,6 +14342,39 @@ function hwRenderStats(){
     .map(([l,n])=>`<div class="lstat"><span class="lstat-num">${n}</span><span class="lstat-label">${l}</span></div>`).join('');
 }
 
+// ── 手機卡片:純文字不放輸入格(整頁上千個輸入格會讓 iPhone 打字時當掉),點卡片開既有的編輯視窗 ──
+function hwMobile(){ return !!(window.matchMedia && matchMedia('(max-width:768px),(pointer:coarse) and (max-width:1100px)').matches); }
+function hwCardBox(tab){
+  const tbl=document.getElementById(HW_TABLES[tab]); if(!tbl) return null;
+  const wrap=tbl.closest('.layout-table-wrap')||tbl;
+  let box=document.getElementById('hw-'+tab+'-cards');
+  if(!box){ box=document.createElement('div'); box.className='hw-cards'; box.id='hw-'+tab+'-cards'; wrap.parentNode.insertBefore(box,wrap.nextSibling); }
+  return box;
+}
+function hwCardsClear(){
+  document.querySelectorAll('#page-hardware .hw-cards').forEach(b=>{ b.innerHTML=''; });
+  Object.values(HW_TABLES).forEach(id=>{ const t=document.getElementById(id); if(t&&t.tBodies[0]) t.tBodies[0].innerHTML=''; });
+}
+// o:{edit,del,title,num,unit,meta:[...],sub(html)}
+function hwCard(o){
+  const meta=(o.meta||[]).filter(x=>x!=null&&String(x).trim()!=='').map(esc).join('<span class="sep">·</span>');
+  return '<div class="hw-card" onclick="'+o.edit+'">'
+    +(o.del?'<button class="hw-card-del" aria-label="刪除" onclick="event.stopPropagation();'+o.del+'">✕</button>':'')
+    +'<div class="hw-card-top"><span class="hw-card-title">'+esc(o.title||'')+'</span>'
+    +(o.num!=null&&o.num!==''?'<span class="hw-card-num">'+esc(o.num)+(o.unit?'<small>'+esc(o.unit)+'</small>':'')+'</span>':'')+'</div>'
+    +(meta?'<div class="hw-card-meta">'+meta+'</div>':'')
+    +(o.sub?'<div class="hw-card-sub">'+o.sub+'</div>':'')+'</div>';
+}
+function hwCardsRender(tab,rows,toCard,pager){
+  const tbl=document.getElementById(HW_TABLES[tab]), tb=tbl&&tbl.tBodies[0]; if(tb) tb.innerHTML='';
+  const box=hwCardBox(tab); if(!box) return;
+  box.innerHTML = rows.length ? rows.map(toCard).join('')+(pager||'') : '<div class="hw-card-empty">無資料</div>';
+}
+function hwPagerDiv(page,pages,fn){
+  if(pages<=1) return '';
+  const go=n=>fn+'('+n+');document.getElementById(\'hw-body\').scrollIntoView()';
+  return '<div class="hw-pager"><button '+(page<=1?'disabled':'')+' onclick="'+go(page-1)+'">‹ 上一頁</button><span>第 '+page+' / '+pages+' 頁</span><button '+(page>=pages?'disabled':'')+' onclick="'+go(page+1)+'">下一頁 ›</button></div>';
+}
 function hwPagerRow(page,pages,colspan,fn){
   if(pages<=1) return '';
   return `<tr class="total-row"><td colspan="${colspan}"><div class="hw-pager">
@@ -14455,6 +14507,8 @@ function hwRenderStock(){
   }));
   const badge={ok:'<span class="hw-badge ok">正常</span>',low:'<span class="hw-badge low">低庫存</span>',out:'<span class="hw-badge out">缺貨</span>'};
   const tb=document.getElementById('hw-stock-body');
+  if(hwMobile()){ hwCardsRender('stock',rows,i=>hwCard({edit:'hwEditItem('+i.id+')',del:'hwDeleteItem('+i.id+')',title:i.name,num:hwFmt(hwNum(i.stock)),unit:i.unit,
+    meta:[i.category,'安全庫存 '+hwFmt(hwNum(i.safety))],sub:badge[hwStatus(i)]})); return; }
   if(!rows.length){ tb.innerHTML=`<tr><td colspan="7"><div class="empty-state">無資料</div></td></tr>`; return; }
   tb.innerHTML=rows.map(i=>`<tr>
     <td><input type="text" readonly value="${esc(i.category)}"></td>
@@ -14569,6 +14623,8 @@ function hwRenderPurchase(){
   hwPage.purchase=Math.min(pages,Math.max(1,hwPage.purchase));
   const slice=all.slice((hwPage.purchase-1)*HW_PAGE_SIZE,hwPage.purchase*HW_PAGE_SIZE);
   const tb=document.getElementById('hw-purchase-body');
+  if(hwMobile()){ hwCardsRender('purchase',slice,p=>hwCard({edit:'hwEditPurchase('+p.id+')',del:'hwDeletePurchase('+p.id+')',title:p.name,num:p.total==null?'':'$'+hwMoney(p.total),
+    meta:[p.tx_date||p.date_label||'',p.category,p.vendor],sub:esc(hwFmt(p.qty)+' '+(p.unit||''))+(p.price==null?'':' × $'+hwMoney(p.price))}),hwPagerDiv(hwPage.purchase,pages,'hwPurchasePage')); return; }
   if(!all.length){ tb.innerHTML=`<tr><td colspan="9"><div class="empty-state">無資料</div></td></tr>`; return; }
   const rtd=(v,style)=>'<td><input type="text" readonly value="'+esc(v==null?'':v)+'"'+(style?' style="'+style+'"':'')+'></td>';
   tb.innerHTML=slice.map(p=>`<tr>${
@@ -14682,6 +14738,8 @@ function hwRenderRepair(){
   if(!tb)return;
   hwPage.repair=Math.min(pages,Math.max(1,hwPage.repair));
   const slice=all.slice((hwPage.repair-1)*HW_PAGE_SIZE,hwPage.repair*HW_PAGE_SIZE);
+  if(hwMobile()){ hwCardsRender('repair',slice,p=>hwCard({edit:'hwEditPurchase('+p.id+')',del:'hwDeletePurchase('+p.id+')',title:p.name,num:p.total==null?'':'$'+hwMoney(p.total),
+    meta:[p.tx_date||'',p.vendor],sub:esc(hwFmt(p.qty)+' '+(p.unit||''))+(p.price==null?'':' × $'+hwMoney(p.price))}),hwPagerDiv(hwPage.repair,pages,'hwRepairPage')); return; }
   if(!all.length){tb.innerHTML='<tr><td colspan="9"><div class="empty-state">目前沒有維修紀錄，可由上方新增第一筆資料</div></td></tr>';const tbl=document.getElementById('hw-repair-table');if(tbl)tblInitSelection(tbl);return;}
   const rtd=(v,style)=>'<td><input type="text" readonly value="'+esc(v==null?'':v)+'"'+(style?' style="'+style+'"':'')+'></td>';
   tb.innerHTML=slice.map(p=>'<tr>'+rtd(p.tx_date||'')+rtd('修理品')+rtd(p.name||'')+rtd(hwFmt(p.qty),'text-align:right')+rtd(p.unit||'')+rtd(p.price==null?'':hwMoney(p.price),'text-align:right')+rtd(p.total==null?'':hwMoney(p.total),'text-align:right')+rtd(p.vendor||'')+'<td style="text-align:center"><button class="hw-act" onclick="hwEditPurchase('+p.id+')">編輯</button> <button class="hw-act del" onclick="hwDeletePurchase('+p.id+')">刪除</button></td></tr>').join('')+hwPagerRow(hwPage.repair,pages,9,'hwRepairPage');
@@ -14702,6 +14760,8 @@ function hwRenderUsage(){
   hwPage.usage=Math.min(pages,Math.max(1,hwPage.usage));
   const slice=all.slice((hwPage.usage-1)*HW_PAGE_SIZE,hwPage.usage*HW_PAGE_SIZE);
   const tb=document.getElementById('hw-usage-body');
+  if(hwMobile()){ hwCardsRender('usage',slice,u=>hwCard({edit:'hwEditUsage('+u.id+')',del:'hwDeleteUsage('+u.id+')',title:u.name,num:hwFmt(u.qty),unit:u.unit,
+    meta:[u.tx_date||'',u.category,u.person],sub:u.remaining==null?'':'剩餘 '+esc(hwFmt(u.remaining))}),hwPagerDiv(hwPage.usage,pages,'hwUsagePage')); return; }
   if(!all.length){ tb.innerHTML=`<tr><td colspan="8"><div class="empty-state">無資料</div></td></tr>`; return; }
   const edit=(u,k,v,style,list)=>'<td><input type="text" value="'+esc(v==null?'':v)+'" data-old="'+esc(v==null?'':v)+'" '+(list?'data-list="'+list+'" onfocus="hwListOn(this)" onblur="hwListOff(this)" ':'')+'oninput="hwUsageLocal('+u.id+',\''+k+'\',this.value)" onchange="hwUsageCellSave('+u.id+',\''+k+'\',this)"'+(style?' style="'+style+'"':'')+'></td>';
   const rtd=(v,style)=>'<td><input type="text" readonly value="'+esc(v==null?'':v)+'"'+(style?' style="'+style+'"':'')+'></td>';
@@ -14921,6 +14981,7 @@ function hwEditCount(id){
 function hwRenderParty(){
   const q=hwSearch();
   const vs=hwApplyColFilters('party',hwVendors.filter(v=>!q||String(v.name).toLowerCase().includes(q)));
+  if(hwMobile()){ hwCardsRender('party',vs,v=>hwCard({edit:'hwEditVendor('+v.id+')',del:'hwDeleteVendor('+v.id+')',title:v.name})); return; }
   document.getElementById('hw-vendor-body').innerHTML = vs.length
     ? vs.map(v=>`<tr><td><input type="text" readonly value="${esc(v.name)}"></td><td style="text-align:center"><button class="hw-act" onclick="hwEditVendor(${v.id})">編輯</button> <button class="hw-act del" onclick="hwDeleteVendor(${v.id})">刪除</button></td></tr>`).join('')
     : `<tr><td colspan="2"><div class="empty-state">無資料</div></td></tr>`;
@@ -14977,6 +15038,8 @@ function hwRenderEquip(){
   const q=hwSearch();
   const rows=hwApplyColFilters('equip',hwEquip.filter(e=>!q|| String(e.name||'').toLowerCase().includes(q)||String(e.owner||'').toLowerCase().includes(q)||String(e.note||'').toLowerCase().includes(q)));
   const tb=document.getElementById('hw-equip-body');
+  if(hwMobile()){ hwCardsRender('equip',rows,e=>hwCard({edit:'hwEditEquip('+e.id+')',del:'hwDeleteEquip('+e.id+')',title:e.name,num:e.amount==null?'':'$'+hwMoney(e.amount),
+    meta:[e.owner,e.seq==null?'':'項次 '+hwFmt(e.seq),hwFmt(e.qty)+' '+(e.unit||''),e.note]})); return; }
   if(!rows.length){ tb.innerHTML=`<tr><td colspan="8"><div class="empty-state">無資料</div></td></tr>`; return; }
   const rtd=(v,style)=>'<td><input type="text" readonly value="'+esc(v==null?'':v)+'"'+(style?' style="'+style+'"':'')+'></td>';
   tb.innerHTML=rows.map(e=>`<tr>${
