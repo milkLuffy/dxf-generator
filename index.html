@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.22.1"/>
+<meta name="sc-version" content="2026.09.22.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -6630,7 +6630,8 @@ window.normalizeFullWidth=function(value){
         </div>
       </div>
       <div class="todo-foot-note">
-        ※ <b>個人待辦</b>只有自己看得到(資料庫層鎖定,管理員也看不到);<b>團體待辦</b>全公司都看得到,<b>任何一個人勾完成就整條結案</b>。<br>
+        ※ <b>個人待辦</b>只有自己看得到(資料庫層鎖定,管理員在系統裡也看不到);<b>團體待辦</b>全公司都看得到,<b>任何一個人勾完成就整條結案</b>。<br>
+        ※ 但<b>整份資料備份會包含個人待辦</b>(系統健康頁,只有管理員能做) —— 備份要是漏掉,還原時這些待辦就真的消失了。<br>
         ※ 勾完成<b>不會刪除資料</b>,只是從「進行中」移到「已完成」,完成時間與完成人都留在這裡;需要時可按「重開」放回進行中。<br>
         ※ <b>重複待辦</b>(例如每週五要做的事)在「🔁 重複規則」分頁管理:時間一到會<b>自動長出當天那一筆</b>,勾完成不影響下一次。改規則只影響之後長出來的,已經長出來的不會被改到。<br>
         ※ 誰改過期限、誰重開過 —— 到<b>操作紀錄</b>頁查(資料表選「待辦事項」)。
@@ -23130,7 +23131,9 @@ function bkRender(){
       +'內容:每張表一個 JSON 檔、<b>schema.json</b>(欄位定義、RLS 權限政策、觸發器、檢視表)、'
       +'<b>manifest.json</b>(備份時間、每張表幾筆)、還原說明。<br>'
       +'<span style="color:var(--text3)">※ <b>不含上傳的圖面與檔案</b>(那些在 Storage,不在資料庫裡)。'
-      +'※ 抓回來的是「這個帳號看得到的資料」,所以一定要用管理員帳號跑。'
+      +'※ 備份會<b>逐表跟資料庫對帳</b>,少了就補齊並寫進 manifest;'
+      +'平常連管理員都看不到的資料(例如別人的個人待辦)<b>備份檔裡會有</b> —— 漏掉的話還原時那個人的東西就真的沒了。'
+      +'所以這個檔案請當成機密保管。'
       +'※ 只讀不寫,不會改到任何東西;下載動作會記進操作紀錄。</span>'
     : '<b>只有管理員可以備份。</b>備份會把全公司的資料抓下來,一般帳號抓到的也只是自己看得到的部分,那樣的備份沒有意義。';
 }
@@ -23211,24 +23214,35 @@ async function bkRun(){
         manifest.資料表.push({表:t, 筆數:null, 失敗:'HTTP '+(r.status||'?')});
         continue;
       }
-      const txt=JSON.stringify(r.data, null, 1);
-      zip.file('data/'+t+'.json', txt);
-      rows+=r.data.length; bytes+=txt.length;
+      let data=r.data, filled=0;
       const real=(realCount && realCount[t]!=null)?Number(realCount[t]):null;
-      const rec={表:t, 筆數:r.data.length};
+      // 一般讀取只拿得到「這個帳號看得到的」:個人待辦、別人的已讀標記與偏好都會少。
+      // 備份漏一筆,還原時那個人建的東西就真的沒了 —— 所以少了就用備份專用函式補齊。
+      // 只在對帳發現短少時才用它,平常一律走一般權限。
+      if(real!=null && real>data.length){
+        const fx=await sbFetch('/rest/v1/rpc/sc_backup_rows',{method:'POST',body:JSON.stringify({p_table:t})});
+        if(fx.ok && Array.isArray(fx.data) && fx.data.length>data.length){ filled=fx.data.length-data.length; data=fx.data; }
+      }
+      const txt=JSON.stringify(data, null, 1);
+      zip.file('data/'+t+'.json', txt);
+      rows+=data.length; bytes+=txt.length;
+      const rec={表:t, 筆數:data.length};
       if(real!=null) rec.資料庫實際筆數=real;
-      if(real!=null && real!==r.data.length){
-        rec.少了=real-r.data.length;
-        short.push({表:t, 實際:real, 拿到:r.data.length});
-        bkLog('⚠ '+t+'　'+r.data.length+' 筆(資料庫有 '+real+' 筆,少 '+(real-r.data.length)+')', 'var(--warn,#d97706)');
-      } else bkLog('✔ '+t+'　'+r.data.length+' 筆');
+      if(real!=null && real!==data.length){
+        rec.少了=real-data.length;
+        short.push({表:t, 實際:real, 拿到:data.length});
+        bkLog('⚠ '+t+'　'+data.length+' 筆(資料庫有 '+real+' 筆,少 '+(real-data.length)+')', 'var(--warn,#d97706)');
+      } else if(filled){
+        rec.一般權限看不到而補齊=filled;
+        bkLog('✔ '+t+'　'+data.length+' 筆(其中 '+filled+' 筆一般權限看不到,已補齊)');
+      } else bkLog('✔ '+t+'　'+data.length+' 筆');
       manifest.資料表.push(rec);
     }
     if(schema) zip.file('schema.json', JSON.stringify(schema, null, 1));
     manifest.總筆數=rows;
     manifest.對帳=realCount ? (short.length
       ? {結果:'有 '+short.length+' 張表沒拿完', 明細:short,
-         說明:'多半是 RLS:那些表的政策只讓每個人看到自己的資料,備份帳號拿不到別人的。備份期間有人在用系統也會差幾筆。'}
+         說明:'備份期間有人在用系統會差個一兩筆(正常)。差很多的話,可能是資料庫還沒執行 backup_migration.sql 裡的 sc_backup_rows(),RLS 擋住的資料補不回來。'}
       : {結果:'每張表都與資料庫筆數相符'})
       : {結果:'未檢查(資料庫沒有 sc_table_counts 函式)'};
     zip.file('manifest.json', JSON.stringify(manifest, null, 1));
@@ -23280,6 +23294,11 @@ function bkReadme(m, hasSchema){
     '',
     '沒有什麼',
     '  ・上傳的圖面、報驗單 Word、附件等實體檔案(那些在 Supabase Storage,不在資料庫)',
+    '',
+    '機密提醒',
+    '  這份備份是「完整的」,包含平常連管理員在系統畫面上都看不到的資料',
+    '  (例如每個人的個人待辦)。備份不能漏,漏了還原時那個人的東西就真的沒了,',
+    '  所以取捨是:畫面上的隱私照舊,備份檔完整 —— 但這個檔案要當機密保管。',
     '  ・登入帳號密碼(在 Supabase 的 auth schema,由 Supabase 自己保管)',
     '',
     '怎麼還原',
