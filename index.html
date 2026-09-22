@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.22.7"/>
+<meta name="sc-version" content="2026.09.22.8"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -8838,7 +8838,7 @@ window.normalizeFullWidth=function(value){
           <div class="hw-form">
             <input id="hw-pu-date" type="date" class="search-input" style="width:150px"/>
             <select id="hw-pu-cat" class="search-input" style="width:130px" onchange="hwSyncUnit('pu')"></select>
-            <input id="hw-pu-name" class="search-input" list="hw-item-list-pu" placeholder="品名" style="width:180px" oninput="hwSyncUnit('pu')"/>
+            <input id="hw-pu-name" class="search-input" list="hw-item-list-pu" placeholder="品名" style="width:180px" oninput="hwSyncUnit('pu',1)"/>
             <input id="hw-pu-qty" type="number" class="search-input" placeholder="數量" style="width:90px"/>
             <input id="hw-pu-unit" class="search-input" placeholder="單位" style="width:70px"/>
             <input id="hw-pu-price" type="number" class="search-input" placeholder="單價" style="width:90px"/>
@@ -8891,7 +8891,7 @@ window.normalizeFullWidth=function(value){
           <div class="hw-form">
             <input id="hw-us-date" type="date" class="search-input" style="width:150px"/>
             <select id="hw-us-cat" class="search-input" style="width:130px" onchange="hwSyncUnit('us')"></select>
-            <input id="hw-us-name" class="search-input" list="hw-item-list-us" placeholder="品名" style="width:180px" oninput="hwSyncUnit('us')"/>
+            <input id="hw-us-name" class="search-input" list="hw-item-list-us" placeholder="品名" style="width:180px" oninput="hwSyncUnit('us',1)"/>
             <input id="hw-us-qty" type="number" class="search-input" placeholder="數量" style="width:90px"/>
             <input id="hw-us-unit" class="search-input" placeholder="單位" style="width:70px"/>
             <select id="hw-us-person" class="search-input" style="width:150px"></select>
@@ -14194,11 +14194,16 @@ function hwItemNamesForCat(cat){
   const list = cat ? hwItems.filter(i=>i.category===cat) : hwItems;
   return [...new Set(list.map(i=>i.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
 }
+// 手機閃退防護:內容沒變就不重寫 datalist/select。iOS/Android 在建議清單或選單開著時被改 DOM 會讓整個分頁當掉重載。
+function hwSetHtml(el,html){ if(!el || el._hwHtml===html) return; el._hwHtml=html; el.innerHTML=html; }
 function hwRefreshItemList(pfx){
   const dl=document.getElementById('hw-item-list-'+pfx); if(!dl) return;
   const catEl=document.getElementById('hw-'+pfx+'-cat');
-  dl.innerHTML = hwItemNamesForCat(catEl?catEl.value:'').map(n=>`<option value="${esc(n)}">`).join('');
+  hwSetHtml(dl, hwItemNamesForCat(catEl?catEl.value:'').map(n=>`<option value="${esc(n)}">`).join(''));
 }
+// 表格內的輸入框不直接掛 list(一頁 100 張卡 × 2 個 = 200 個欄位綁同一份清單,手機會撐不住),點進去才綁、離開就拿掉
+function hwListOn(el){ if(el.dataset.list) el.setAttribute('list',el.dataset.list); }
+function hwListOff(el){ el.removeAttribute('list'); }
 
 async function hwInit(){
   if(hwBusy) return; hwBusy=true;
@@ -14230,10 +14235,10 @@ function hwPopulateSelects(){
   const sc=document.getElementById('hw-stock-cat'); if(sc){ const v=sc.value; sc.innerHTML=hwOpt(HW_CATS,true); sc.value=v; }
   ['hw-ni-cat','hw-pu-cat','hw-us-cat'].forEach(id=>{ const el=document.getElementById(id); if(el){ const v=el.value; el.innerHTML=hwOpt(HW_CATS,false); if(v)el.value=v; } });
   ['hw-pu-cat','hw-us-cat','hw-ct-cat'].forEach(id=>{ const pfx=id.slice(3,5); hwRefreshItemList(pfx); });
-  document.getElementById('hw-vendor-list').innerHTML = hwVendors.map(v=>`<option value="${esc(v.name)}">`).join('');
-  document.getElementById('hw-person-list').innerHTML = hwPersonNames().map(n=>`<option value="${esc(n)}">`).join('');
+  hwSetHtml(document.getElementById('hw-vendor-list'), hwVendors.map(v=>`<option value="${esc(v.name)}">`).join(''));
+  hwSetHtml(document.getElementById('hw-person-list'), hwPersonNames().map(n=>`<option value="${esc(n)}">`).join(''));
   const usPersonEl=document.getElementById('hw-us-person');
-  if(usPersonEl){ const v=usPersonEl.value; usPersonEl.innerHTML=hwPersonSelectOptions(v); }
+  if(usPersonEl){ const v=usPersonEl.value; hwSetHtml(usPersonEl, hwPersonSelectOptions('')); usPersonEl.value=v; }
   const t=egToday();
   const pd=document.getElementById('hw-pu-date'); if(pd&&!pd.value)pd.value=t;
   const ud=document.getElementById('hw-us-date'); if(ud&&!ud.value)ud.value=t;
@@ -14501,8 +14506,8 @@ async function hwAdjustStock(item, delta){
   if(r.ok) item.stock=ns;
   return r.ok;
 }
-function hwSyncUnit(pfx){
-  hwRefreshItemList(pfx);
+function hwSyncUnit(pfx, typing){
+  if(!typing) hwRefreshItemList(pfx);   // 打字中不重寫品名清單(只有換種類才需要)
   const cat=document.getElementById('hw-'+pfx+'-cat').value, name=document.getElementById('hw-'+pfx+'-name').value.trim();
   if(!name) return;
   const it=hwItems.find(i=>i.name===name && (!cat || i.category===cat));
@@ -14652,7 +14657,7 @@ function hwRenderUsage(){
   const slice=all.slice((hwPage.usage-1)*HW_PAGE_SIZE,hwPage.usage*HW_PAGE_SIZE);
   const tb=document.getElementById('hw-usage-body');
   if(!all.length){ tb.innerHTML=`<tr><td colspan="8"><div class="empty-state">無資料</div></td></tr>`; return; }
-  const edit=(u,k,v,style,list)=>'<td><input type="text" value="'+esc(v==null?'':v)+'" data-old="'+esc(v==null?'':v)+'" '+(list?'list="'+list+'" ':'')+'oninput="hwUsageLocal('+u.id+',\''+k+'\',this.value)" onchange="hwUsageCellSave('+u.id+',\''+k+'\',this)"'+(style?' style="'+style+'"':'')+'></td>';
+  const edit=(u,k,v,style,list)=>'<td><input type="text" value="'+esc(v==null?'':v)+'" data-old="'+esc(v==null?'':v)+'" '+(list?'data-list="'+list+'" onfocus="hwListOn(this)" onblur="hwListOff(this)" ':'')+'oninput="hwUsageLocal('+u.id+',\''+k+'\',this.value)" onchange="hwUsageCellSave('+u.id+',\''+k+'\',this)"'+(style?' style="'+style+'"':'')+'></td>';
   const rtd=(v,style)=>'<td><input type="text" readonly value="'+esc(v==null?'':v)+'"'+(style?' style="'+style+'"':'')+'></td>';
   tb.innerHTML=slice.map(u=>`<tr data-hw-usage-id="${u.id}">${
     edit(u,'tx_date',u.tx_date||'')}${edit(u,'category',u.category||'')}${edit(u,'name',u.name,'','hw-item-list-us')
