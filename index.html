@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.22.15"/>
+<meta name="sc-version" content="2026.09.22.16"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -14741,6 +14741,7 @@ async function hwAddItem(){
   const unit=document.getElementById('hw-ni-unit').value.trim();
   const stock=hwNum(document.getElementById('hw-ni-stock').value), safety=hwNum(document.getElementById('hw-ni-safety').value);
   if(!cat||!name){ alert('請選擇種類並輸入品名'); return; }
+  if(hwHasNeg([['庫存量',stock],['安全庫存',safety]])) return;
   if(hwItems.some(i=>i.category===cat && i.name===name)){ alert('此種類已有相同品名'); return; }
   const r=await sbFetch('/rest/v1/hw_items',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({category:cat,name,unit,stock,safety})});
   if(!r.ok||!r.data){ alert('新增失敗'); return; }
@@ -14751,6 +14752,7 @@ async function hwAddItem(){
 async function hwUpdateItem(id,field,val){
   const it=hwItems.find(x=>x.id===id); if(!it) return;
   const body={}; body[field]=(field==='unit')?val:hwNum(val);
+  if(field!=='unit' && hwHasNeg([[field==='stock'?'庫存量':'安全庫存',body[field]]])){ hwRenderStock(); return; }
   const r=await sbFetch('/rest/v1/hw_items?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(body)});
   if(!r.ok){ alert('更新失敗'); hwRenderStock(); return; }
   it[field]=body[field]; hwRenderStats(); hwRenderStock();
@@ -14796,6 +14798,7 @@ function hwEditItem(id){
     const cat=catEl.value, name=nameEl.value.trim();
     const unit=unitEl.value.trim(), stock=hwNum(stockEl.value), safety=hwNum(safetyEl.value);
     if(!cat||!name){ alert('請選擇種類並輸入品名'); return; }
+    if(hwHasNeg([['庫存量',stock],['安全庫存',safety]])) return;
     if(hwItems.some(x=>x.id!==id && x.category===cat && x.name===name)){ alert('此種類已有相同品名'); return; }
     const r=await sbFetch('/rest/v1/hw_items?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({category:cat,name,unit,stock,safety})});
     if(!r.ok){ alert('更新失敗'); return; }
@@ -14809,8 +14812,27 @@ function hwEditItem(id){
   nameEl.onkeydown=(e)=>{ if(e.key==='Enter'){ e.preventDefault(); doSave(); } else if(e.key==='Escape') close(); };
   overlay.onclick=(e)=>{ if(e.target===overlay) close(); };
 }
+// 五金所有數字(庫存、安全庫存、數量、單價、金額)一律不可為負數
+function hwHasNeg(pairs){
+  const bad=pairs.filter(([label,v])=>v!=null && v!=='' && Number(v)<0).map(([label])=>label);
+  if(bad.length){ alert(bad.join('、')+'不能是負數'); return true; }
+  return false;
+}
+function hwStockShort(it, need, have){
+  alert('「'+it.name+'」庫存只剩 '+hwFmt(have)+(it.unit?' '+it.unit:'')+',不能'+need+'。\n庫存不能是負數,請先登記進貨,或到庫存總表修正庫存量。');
+}
+// 輸入時就擋:五金頁與五金編輯視窗裡的數字欄打出負號會被清掉
+(function(){
+  function isHw(t){ return t && t.tagName==='INPUT' && t.type==='number' && (t.closest('#page-hardware') || /^hwe?-/.test(t.id||'')); }
+  document.addEventListener('focusin',e=>{ if(isHw(e.target) && !e.target.hasAttribute('min')) e.target.setAttribute('min','0'); },true);
+  document.addEventListener('input',e=>{
+    const t=e.target; if(!isHw(t)) return;
+    if(String(t.value).trim().startsWith('-') || Number(t.value)<0){ t.value=''; if(window.showToast) showToast('數量不能是負數','warn'); }
+  },true);
+})();
 async function hwAdjustStock(item, delta){
   const ns=hwNum(item.stock)+delta;
+  if(ns<0){ hwStockShort(item,'再扣 '+hwFmt(-delta),hwNum(item.stock)); return false; }
   const r=await sbFetch('/rest/v1/hw_items?id=eq.'+item.id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({stock:ns})});
   if(r.ok) item.stock=ns;
   return r.ok;
@@ -14855,6 +14877,7 @@ async function hwAddPurchase(){
   const priceRaw=document.getElementById('hw-pu-price').value, price=priceRaw===''?null:hwNum(priceRaw);
   const vendor=document.getElementById('hw-pu-vendor').value.trim();
   if(!cat||!name||!qty){ alert('請填寫種類、品名、數量'); return; }
+  if(hwHasNeg([['數量',qty],['單價',price]])) return;
   const total=(price!=null)?price*qty:null;
   let it=hwItems.find(i=>i.name===name && i.category===cat);
   if(!it){
@@ -14871,7 +14894,10 @@ async function hwAddPurchase(){
 }
 async function hwDeletePurchase(id){
   const p=hwPurchases.find(x=>x.id===id); if(!p) return;
-  const repair=p.category==='修理品';if(!await uiConfirm(repair?'確定刪除此筆維修紀錄？':'刪除此筆進貨會回扣對應庫存,確定?')) return;
+  const repair=p.category==='修理品';
+  const delIt=repair?null:hwItems.find(i=>i.name===p.name && i.category===p.category);
+  if(delIt && hwNum(delIt.stock)-hwNum(p.qty)<0){ hwStockShort(delIt,'刪除這筆 '+hwFmt(p.qty)+' 的進貨(已被領用)',hwNum(delIt.stock)); return; }
+  if(!await uiConfirm(repair?'確定刪除此筆維修紀錄？':'刪除此筆進貨會回扣對應庫存,確定?')) return;
   const r=await sbFetch('/rest/v1/hw_purchases?id=eq.'+id,{method:'DELETE'});
   if(!r.ok){ alert('刪除失敗'); return; }
   hwPurchases=hwPurchases.filter(x=>x.id!==id);
@@ -14919,17 +14945,28 @@ function hwEditPurchase(id){
     const price=priceRaw===''?null:hwNum(priceRaw);
     const vendor=overlay.querySelector('#hwe-pu-vendor').value.trim();
     if(!cat||!name||!qty){ alert('請填寫種類、品名、數量'); return; }
+    if(hwHasNeg([['數量',qty],['單價',price]])) return;
     const total=(price!=null)?price*qty:null;
+    // 先確認改完後舊品項庫存不會變負數(這批已被領走一部分時,不能把數量改得比已領的少)
+    if(!repair){
+      const chkOld=hwItems.find(i=>i.name===p.name && i.category===p.category);
+      if(chkOld){
+        const after=hwNum(chkOld.stock)-hwNum(p.qty)+((chkOld.name===name&&chkOld.category===cat)?qty:0);
+        if(after<0){ hwStockShort(chkOld,'把這筆進貨改成 '+hwFmt(qty)+'(這批已被領用)',hwNum(chkOld.stock)); return; }
+      }
+    }
     // 還原舊紀錄對庫存的影響,再套用新紀錄(品名/種類若變更,會自動建立新品項)
     const oldIt=repair?null:hwItems.find(i=>i.name===p.name && i.category===p.category);
-    if(oldIt) await hwAdjustStock(oldIt, -hwNum(p.qty));
     let newIt=hwItems.find(i=>i.name===name && i.category===cat);
+    const sameIt=!!oldIt && oldIt===newIt;
+    // 同一品項只調差額(先扣舊量再加新量,中途可能短暫變負數被擋)
+    if(oldIt && !sameIt) await hwAdjustStock(oldIt, -hwNum(p.qty));
     if(!repair&&!newIt){
       const ri=await sbFetch('/rest/v1/hw_items',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({category:cat,name,unit,stock:0,safety:0})});
       if(!ri.ok||!ri.data){ alert('自動建立品項失敗'); if(oldIt) await hwAdjustStock(oldIt, hwNum(p.qty)); return; }
       newIt=ri.data[0]; hwItems.push(newIt);
     }
-    if(!repair)await hwAdjustStock(newIt, qty);
+    if(!repair) await hwAdjustStock(newIt, sameIt? qty-hwNum(p.qty) : qty);
     const r=await sbFetch('/rest/v1/hw_purchases?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({tx_date:date,category:cat,name,qty,unit,price,total,vendor})});
     if(!r.ok){ alert('更新失敗'); return; }
     Object.assign(p,{tx_date:date,category:cat,name,qty,unit,price,total,vendor});
@@ -14957,7 +14994,7 @@ function hwRenderRepair(){
 function hwRepairPage(p){hwPage.repair=p;hwRenderRepair();}
 async function hwAddRepair(){
   const date=document.getElementById('hw-rp-date').value||null,name=document.getElementById('hw-rp-name').value.trim(),qty=hwNum(document.getElementById('hw-rp-qty').value),unit=document.getElementById('hw-rp-unit').value.trim(),priceRaw=document.getElementById('hw-rp-price').value,price=priceRaw===''?null:hwNum(priceRaw),vendor=document.getElementById('hw-rp-vendor').value.trim();
-  if(!name||!qty){alert('請填寫品名及數量');return;}const total=price==null?null:price*qty;
+  if(!name||!qty){alert('請填寫品名及數量');return;}if(hwHasNeg([['數量',qty],['單價',price]]))return;const total=price==null?null:price*qty;
   const res=await sbFetch('/rest/v1/hw_purchases',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({tx_date:date,category:'修理品',name,qty,unit,price,total,vendor})});if(!res.ok||!res.data){alert('新增維修紀錄失敗');return;}
   hwPurchases.unshift(res.data[0]);if(vendor&&!hwVendors.some(v=>v.name===vendor)){const rv=await sbFetch('/rest/v1/hw_vendors',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({name:vendor})});if(rv.ok&&rv.data)hwVendors.push(rv.data[0]);}
   ['name','qty','unit','price','vendor'].forEach(k=>document.getElementById('hw-rp-'+k).value='');hwPage.repair=1;hwPopulateSelects();hwRender();
@@ -14992,6 +15029,7 @@ async function hwUsageFlushEdit(id){
   if(!cat||!name||!qty||!person){Object.assign(u,old);delete hwUsageEditState[id];hwRenderUsage();alert('種類、品項、數量及領取人皆不能空白');return;}
   const oldIt=hwItems.find(i=>i.name===old.name&&i.category===old.category),newIt=hwItems.find(i=>i.name===name&&i.category===cat);
   const projected=newIt?hwNum(newIt.stock)+(oldIt===newIt?hwNum(old.qty):0)-qty:null;
+  if(qty<0||(projected!=null&&projected<0)){Object.assign(u,old);delete hwUsageEditState[id];hwRenderUsage();if(qty<0)alert('數量不能是負數');else hwStockShort(newIt,'領 '+hwFmt(qty),hwNum(newIt.stock)+(oldIt===newIt?hwNum(old.qty):0));return;}
   const payload={tx_date:u.tx_date||null,category:cat,name,qty,unit:String(u.unit||'').trim(),person,remaining:projected};
   const res=await sbFetch('/rest/v1/hw_usage?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(payload)});
   if(!res.ok){Object.assign(u,old);delete hwUsageEditState[id];hwRenderUsage();alert('領用紀錄儲存失敗，已恢復原資料');return;}
@@ -15004,8 +15042,9 @@ async function hwAddUsage(){
   const qty=hwNum(document.getElementById('hw-us-qty').value), unit=document.getElementById('hw-us-unit').value.trim();
   const person=document.getElementById('hw-us-person').value.trim();
   if(!cat||!name||!qty||!person){ alert('請填寫種類、品項、數量及領取人；領取人不能空白'); return; }
+  if(hwHasNeg([['數量',qty]])) return;
   const it=hwItems.find(i=>i.name===name && i.category===cat);
-  if(it && hwNum(it.stock)<qty){ if(!await uiConfirm('庫存不足(目前 '+hwNum(it.stock)+'),仍要領用?庫存將變為負數。')) return; }
+  if(it && hwNum(it.stock)<qty){ hwStockShort(it,'領 '+hwFmt(qty),hwNum(it.stock)); return; }
   const remaining = it? hwNum(it.stock)-qty : null;
   const r=await sbFetch('/rest/v1/hw_usage',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({tx_date:date,category:cat,name,qty,unit,person,remaining})});
   if(!r.ok||!r.data){ alert('新增領用失敗'); return; }
@@ -15059,13 +15098,15 @@ function hwEditUsage(id){
     const unit=overlay.querySelector('#hwe-us-unit').value.trim();
     const person=overlay.querySelector('#hwe-us-person').value.trim();
     if(!cat||!name||!qty){ alert('請填寫種類、品項、數量'); return; }
-    // 還原舊紀錄(領用會扣庫存,還原=加回),再套用新紀錄
+    if(hwHasNeg([['數量',qty]])) return;
     const oldIt=hwItems.find(i=>i.name===u.name && i.category===u.category);
-    if(oldIt) await hwAdjustStock(oldIt, hwNum(u.qty));
     const newIt=hwItems.find(i=>i.name===name && i.category===cat);
-    if(newIt && hwNum(newIt.stock)<qty){
-      if(!await uiConfirm('庫存不足(目前 '+hwNum(newIt.stock)+'),仍要領用?庫存將變為負數。')){ if(oldIt) await hwAdjustStock(oldIt, -hwNum(u.qty)); return; }
+    if(newIt){
+      const avail=hwNum(newIt.stock)+(oldIt===newIt?hwNum(u.qty):0);
+      if(avail<qty){ hwStockShort(newIt,'領 '+hwFmt(qty),avail); return; }
     }
+    // 還原舊紀錄(領用會扣庫存,還原=加回),再套用新紀錄
+    if(oldIt) await hwAdjustStock(oldIt, hwNum(u.qty));
     if(newIt) await hwAdjustStock(newIt, -qty);
     const remaining = newIt? hwNum(newIt.stock) : null;
     const r=await sbFetch('/rest/v1/hw_usage?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({tx_date:date,category:cat,name,qty,unit,person,remaining})});
@@ -15170,6 +15211,7 @@ function hwEditCount(id){
     const note=overlay.querySelector('#hwe-ct-note').value.trim();
     if(!cat||!name||countRaw===''){ alert('請填寫種類、品項、實際盤點數量'); return; }
     const before=beforeRaw===''?0:hwNum(beforeRaw), count=hwNum(countRaw), diff=count-before;
+    if(hwHasNeg([['盤點數量',count]])) return;
     const r=await sbFetch('/rest/v1/hw_stocktake?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({tx_date:date,category:cat,name,before_qty:before,count_qty:count,diff,person,note})});
     if(!r.ok){ alert('更新失敗'); return; }
     Object.assign(s,{tx_date:date,category:cat,name,before_qty:before,count_qty:count,diff,person,note});
@@ -15265,6 +15307,7 @@ async function hwAddEquip(){
   const amtRaw=document.getElementById('hw-ne-amount').value, amount=amtRaw===''?null:hwNum(amtRaw);
   const note=document.getElementById('hw-ne-note').value.trim();
   if(!name){ alert('請輸入設備品名'); return; }
+  if(hwHasNeg([['數量',qty],['金額',amount]])) return;
   const maxSeq=Math.max(0,...hwEquip.filter(e=>e.owner===owner).map(e=>hwNum(e.seq)));
   const r=await sbFetch('/rest/v1/hw_equipment',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({owner,seq:maxSeq+1,name,qty,unit,amount,note})});
   if(!r.ok||!r.data){ alert('新增失敗'); return; }
@@ -15316,6 +15359,7 @@ function hwEditEquip(id){
     const amtRaw=overlay.querySelector('#hwe-eq-amount').value, amount=amtRaw===''?null:hwNum(amtRaw);
     const note=overlay.querySelector('#hwe-eq-note').value.trim();
     if(!name){ alert('請輸入設備品名'); return; }
+    if(hwHasNeg([['項次',seq],['數量',qty],['金額',amount]])) return;
     const r=await sbFetch('/rest/v1/hw_equipment?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({owner,seq,name,qty,unit,amount,note})});
     if(!r.ok){ alert('更新失敗'); return; }
     Object.assign(e,{owner,seq,name,qty,unit,amount,note});
