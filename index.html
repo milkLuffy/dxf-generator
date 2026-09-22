@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.22.6"/>
+<meta name="sc-version" content="2026.09.22.7"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2367,6 +2367,13 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
 .audit-detail .ad-dim{font-size:11.5px;color:var(--text3)}
 .audit-detail .ad-sec{margin:14px 0 2px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text3)}
 .audit-detail .ad-raw{margin-top:4px;padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--text3);white-space:pre-wrap;word-break:break-all}
+/* 出勤回報手機版:國定假日提示、老闆便當快速登記(放最上面,不必拉到最下面) */
+.att-m-hol{border-left:3px solid var(--accent2);background:var(--bg3)}
+.att-m-hol b{color:var(--text)}
+.att-m-hol .att-m-opt{margin-left:8px;padding:4px 12px}
+.att-m-boss{border:1px solid var(--border-hi);border-radius:12px;padding:9px 11px;margin:8px 0;background:var(--bg3)}
+.att-m-boss .lbl{margin-bottom:7px}
+.att-m-boss input[type=number]{width:84px}
 /* ── 待審核提醒與審核彈窗(手機也要能審核)───────────────────── */
 .apv-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:690;display:flex;align-items:center;gap:10px;
   background:var(--bg2);border:1px solid var(--accent2);border-radius:999px;box-shadow:0 6px 24px rgba(0,0,0,.4);
@@ -33577,7 +33584,10 @@ function attHolApply(name){
 function attHolRenderBar(date){
   const bar=document.getElementById('att-hol-bar'); if(!bar) return;
   const nm=attHolOf(date);
-  if(!nm){ bar.style.display='none'; bar.innerHTML=''; return; }
+  // 手機版在 attMRender 裡有自己的提示列,這條隱藏起來免得同一件事講兩次
+  if(!nm || (typeof spTrackIsMobile==='function' && spTrackIsMobile())){
+    bar.style.display='none'; bar.innerHTML=''; return;
+  }
   const rows=attHolRows();
   const filled=rows.filter(tr=>attHolRowState(tr).isHol).length;
   const blank=rows.filter(tr=>!attHolRowState(tr).busy).length;
@@ -33586,16 +33596,20 @@ function attHolRenderBar(date){
     +(filled?'已有 '+filled+' 人標為國定假日。':'')
     +(blank?'還有 <b>'+blank+'</b> 人沒填。'
         +'<button class="dash-nav-btn" style="margin-left:6px" onclick="attHolFill()">全部帶入「國定假日／'+esc(nm)+'」</button>'
-        +'<span style="margin-left:8px;color:var(--text3);font-size:11px">帶入後要按「儲存」才會存檔</span>'
+        +'<span style="margin-left:8px;color:var(--text3);font-size:11px">已填過的人不會被蓋掉</span>'
       :'每個人都填好了。');
 }
 function attHolFill(){
   const date=document.getElementById('att-date').value; if(!date) return;
   const nm=attHolOf(date); if(!nm) return;
   const n=attHolApply(nm);
+  // 這一頁是「改完就存」(change 事件觸發),沒有儲存按鈕 ——
+  // 程式改欄位不會自己發事件,所以要主動存一次,不然填了等於沒填。
+  if(n) attSaveNow();
   attHolRenderBar(date);                            // 只重畫提示列,不重畫表格
+  attMRender();                                     // 手機版也跟著更新
   const hint=document.getElementById('att-save-hint');
-  if(hint) hint.textContent=n?('已帶入 '+n+' 人,記得按「儲存」'):'沒有需要帶入的人';
+  if(hint) hint.textContent=n?('已帶入 '+n+' 人並儲存'):'沒有需要帶入的人';
 }
 
 // 在「前一天／後一天／今日」按鈕旁標示該日期是星期幾
@@ -33617,11 +33631,12 @@ function attRenderDailyGrid(){
   attUpdateNavLabels();
   refreshDateWk();   // 更新「日期（星期）」顯示
   const date=document.getElementById('att-date').value;
-  // 國定假日提示列:資料抓回來(或本機已有快取)才畫,不擋住表格顯示
-  if(date){
-    const y=+date.slice(0,4);
-    if(attHolYears[y]) attHolRenderBar(date);
-    else attHolEnsure(y).then(()=>{ if(document.getElementById('att-date').value===date) attHolRenderBar(date); });
+  // 國定假日:先確保當年的資料在手上。提示列要等表格畫完才算得出「還有幾人沒填」,
+  // 所以畫的動作放在這個函式的最後面。
+  if(date && !attHolYears[+date.slice(0,4)]){
+    attHolEnsure(+date.slice(0,4)).then(()=>{
+      if(document.getElementById('att-date').value===date){ attHolRenderBar(date); attMRender(); }
+    });
   }
   const body=document.getElementById('att-daily-body');
   if(!date){ body.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:16px">請選擇日期</td></tr>'; document.getElementById('att-daily-foot').innerHTML=''; attMRender(); return; }
@@ -33662,6 +33677,7 @@ function attRenderDailyGrid(){
     </tr>`;
   });
   body.innerHTML=html;
+  attHolRenderBar(date);   // 表格畫好了才數得出「還有幾人沒填」
   body.oninput=attDayInput; body.onchange=attDayInput;
   tblInitSelection(document.getElementById('att-daily-grid'));   // Excel 式拖曳多選
   attInitLeaveSelect();   // 請假類別下拉可參與框選（多選複製／貼上）
@@ -34250,6 +34266,8 @@ function attMRender(){
   if(attMViewDate!==date||!attMView){ attMViewDate=date; attMView=rolled?'list':'roll'; }
   const v=attMView;
   let h='<div class="att-m-seg">'+[['roll','點名'],['ot','加班'],['list','明細']].map(([k,l])=>'<button type="button" class="'+(k===v?'on':'')+'" onclick="attMSetView(\''+k+'\')">'+l+'</button>').join('')+'</div>';
+  h+=attMHolBar(date);        // 國定假日提示
+  h+=attMBossStrip(date);     // 老闆便當:放最上面,不必再拉到最下面
   const groups=ATT_M_GROUPS.map(g=>({g,list:people.filter(x=>x.group===g)})).filter(x=>x.list.length);
   const chip=(x,cls,sub)=>'<button type="button" class="att-m-chip '+cls+'" data-name="'+attEsc(x.name)+'" onclick="attMTap(this.dataset.name)"><span class="nm">'+attEsc(x.name)+'</span><span class="sub">'+(sub||'&nbsp;')+'</span></button>';
   const ghead=(g,right)=>'<div class="att-m-ghead"><span>'+ATT_M_GROUP_LABEL[g]+'</span><span>'+right+'</span></div>';
@@ -34403,6 +34421,55 @@ function attMSheet(kind,label,title,sub,body,foot,refresh){
   return s;
 }
 function attMOpt(on,label,js){ return '<button type="button" class="att-m-opt'+(on?' on':'')+'" onclick="'+js+'">'+label+'</button>'; }
+
+// ── 手機版:國定假日提示列(跟電腦版共用同一份資料與帶入邏輯)──
+function attMHolBar(date){
+  if(!date) return '';
+  const nm=attHolOf(date); if(!nm) return '';
+  const blank=attHolRows().filter(tr=>!attHolRowState(tr).busy).length;
+  return '<div class="att-m-hint att-m-hol">🎏 這天是 <b>'+attEsc(nm)+'</b>(國定假日)。'
+    +(blank?'還有 '+blank+' 人沒填。<button type="button" class="att-m-opt" onclick="attHolFill()">全部帶入</button>'
+           :'每個人都填好了。')+'</div>';
+}
+
+// ── 手機版:老闆便當快速登記 ──────────────────────────────
+// 以前要「點老闆 → 編輯面板拉到最下面」才填得到,這裡直接放在最上面一排。
+function attBossPerson(){ return attRoster.find(p=>p.cat==='辦公人員'&&p.team==='老闆')||null; }
+// 常用金額:用這個月實際填過的前幾個,沒有資料才用內建的
+function attBossBentoQuick(){
+  const c={};
+  (Array.isArray(attMonthData)?attMonthData:[]).forEach(r=>{
+    const v=Number(r.bento)||0;
+    if(r.category==='辦公人員' && r.team==='老闆' && v>0) c[v]=(c[v]||0)+1;
+  });
+  const top=Object.keys(c).map(Number).sort((a,b)=>(c[b]-c[a])||(b-a)).slice(0,4);
+  [80,85,90,150].forEach(v=>{ if(top.length<4 && top.indexOf(v)<0) top.push(v); });
+  return top.slice(0,4).sort((a,b)=>a-b);
+}
+function attMBossStrip(date){
+  const boss=attBossPerson(); if(!boss||!date) return '';
+  const tr=attMRow(boss.name);
+  const el=tr?tr.querySelector('input[data-f="bento"]'):null;
+  const cur=el?(parseFloat(el.value)||0):0;
+  return '<div class="att-m-sec att-m-boss"><div class="lbl">🍱 '+attEsc(boss.name)+' 便當'
+      +(cur>0?' · <b style="color:var(--accent2)">'+attN(cur)+' 元</b>':' · 未登記')+'</div>'
+    +'<div class="att-m-opts">'
+      +attBossBentoQuick().map(v=>attMOpt(cur===v, v+'', 'attMBossBento('+v+')')).join('')
+      +'<input type="number" inputmode="numeric" step="1" min="0" value="'+(cur>0?attN(cur):'')
+        +'" placeholder="金額" onchange="attMBossBento(this.value)" aria-label="老闆便當金額"><span class="unit">元</span>'
+      +(cur>0?attMOpt(false,'清除','attMBossBento(0)'):'')
+    +'</div></div>';
+}
+function attMBossBento(v){
+  const boss=attBossPerson(); if(!boss) return;
+  const tr=attMRow(boss.name); if(!tr) return;
+  const b=tr.querySelector('input[data-f="bento"]'); if(!b) return;
+  const n=Math.max(0, parseFloat(v)||0);
+  b.value=n>0?attN(n):'';
+  b.setAttribute('data-touched','1');   // 標記手動改過,之後不被「便當自動」蓋掉
+  attMFire(b,'change');                 // 觸發自動儲存
+  attMRender();
+}
 
 function attMOpenEdit(name,refresh){
   if(!refresh && attMPre) attMPreCommit();
