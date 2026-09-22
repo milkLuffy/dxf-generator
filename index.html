@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.22.4"/>
+<meta name="sc-version" content="2026.09.22.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -22683,10 +22683,11 @@ async function blockedRecheck(btn){
 //  3. 讀不到請假資料(表還沒建、網路壞掉)一律放行。
 //     寧可漏擋,也不要因為讀取失敗把人鎖在系統外面。
 //  4. 跟使用時段限制一樣是**前端擋**,定位是作息規範,不是資安邊界。
-// 哪些假別「不擋」由管理員自己勾(存在設定裡)。預設只放過全公司的非工作日:
-// 國定假日那天如果擋人,整間公司都會被鎖在系統外面。
-// 休假預設是擋的 —— 休假就是那個人今天不上班。
-const LB_SKIP_DEFAULT=['國定假日','過年','颱風'];
+// 哪些假別「不擋」由管理員自己勾(存在設定裡)。
+// 預設一律擋 —— 只要那天不上班就不該用系統,國定假日、過年、颱風也一樣。
+// 後果要知道:國定假日那天如果全公司都填了 8 小時,除了管理員與豁免名單,
+// 所有人當天都進不來。要放過哪幾種,到設定卡把勾拿掉。
+const LB_SKIP_DEFAULT=[];
 function lbSkipList(){
   const s=leaveBlockCfg&&leaveBlockCfg.skip;
   return Array.isArray(s)?s.filter(Boolean):LB_SKIP_DEFAULT.slice();
@@ -22758,7 +22759,8 @@ async function lbRenderCard(){
       +'<label class="ah-ex-item'+(c.on?' on':'')+'"><input type="checkbox" id="lb-on"'+(c.on?' checked':'')+'>啟用</label></div>'
     +'<div class="ah-sub">請<b>整天假</b>的人,當天一登入就會被請出去;已經在線上的,5 分鐘內會自動登出。'
       +'半天假(上午／下午)與未滿 8 小時的假<b>不受影響</b>,照常使用。管理員不受限制。<br>'
-      +'<b>哪些假別要擋在下面勾</b> —— 預設放過國定假日、過年、颱風(那是全公司的非工作日,擋下去會把整間公司鎖在外面)。<br>'
+      +'<b>哪些假別要擋在下面勾,預設一律擋</b>(含國定假日、過年、颱風)。'
+      +'注意:國定假日那天如果全公司都填了整天,除了管理員與下面的豁免名單,<b>所有人當天都進不來</b>。<br>'
       +'「請假登記」頁登記的、以及直接填在「出勤回報」的假<b>兩邊都算</b>。</div>'
     +'<div class="ah-body">'
       +'<div class="ah-fld" style="flex:1;min-width:240px"><label>擋下來時要顯示的訊息(留白用預設)</label>'
