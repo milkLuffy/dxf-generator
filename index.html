@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.22.2"/>
+<meta name="sc-version" content="2026.09.22.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -16607,7 +16607,7 @@ const LEAVE_DAYPART_TXT={full:'全天',am:'上午',pm:'下午',hours:'自訂'};
 
 function leaveTypeList(){
   const base=(typeof ATT_LEAVE!=='undefined'&&Array.isArray(ATT_LEAVE))?ATT_LEAVE:[];
-  const out=base.filter(x=>x&&['曠職','過年','颱風'].indexOf(x)<0);
+  const out=base.filter(x=>x&&['曠職','過年','颱風','休假','國定假日'].indexOf(x)<0);
   return out.length?out:['特休','事假','病假','生理假','喪假','公假','婚假','產假','補休'];
 }
 function leaveCanModify(l){
@@ -22683,6 +22683,12 @@ async function blockedRecheck(btn){
 //  3. 讀不到請假資料(表還沒建、網路壞掉)一律放行。
 //     寧可漏擋,也不要因為讀取失敗把人鎖在系統外面。
 //  4. 跟使用時段限制一樣是**前端擋**,定位是作息規範,不是資安邊界。
+// 這幾種不是「個人請假」,是全公司的非工作日。拿來擋人的話,國定假日那天
+// 整間公司都會被鎖在系統外面 —— 有人想在假日進來看一下排程是很正常的事。
+const LB_NOT_LEAVE=['休假','國定假日','過年','颱風'];
+function lbNotLeaveFilter(field){
+  return '&'+field+'=not.in.('+LB_NOT_LEAVE.map(encodeURIComponent).join(',')+')';
+}
 const LEAVE_BLOCK_KEY='leave_block';
 const LEAVE_BLOCK_DEFAULT={on:false, msg:'', exempt:[]};
 let leaveBlockCfg=Object.assign({},LEAVE_BLOCK_DEFAULT);
@@ -22713,10 +22719,10 @@ async function lbCheck(){
   const [lr, ar]=await Promise.all([
     sbFetch('/rest/v1/leave_board?select=staff_name,leave_type,start_date,end_date,day_part'
       +'&staff_id=eq.'+encodeURIComponent(sid)+'&day_part=eq.full'
-      +'&start_date=lte.'+d+'&end_date=gte.'+d+'&limit=1'),
+      +'&start_date=lte.'+d+'&end_date=gte.'+d+lbNotLeaveFilter('leave_type')+'&limit=1'),
     nm ? sbFetch('/rest/v1/att_report?select=staff_name,leave_type,leave_hours,work_date'
       +'&staff_name=eq.'+encodeURIComponent(nm)+'&work_date=eq.'+d
-      +'&leave_type=not.is.null&leave_hours=gte.8&limit=1') : Promise.resolve({ok:false})
+      +'&leave_type=not.is.null&leave_hours=gte.8'+lbNotLeaveFilter('leave_type')+'&limit=1') : Promise.resolve({ok:false})
   ]);
   if(lr.ok && Array.isArray(lr.data) && lr.data[0]) return lr.data[0];
   if(ar.ok && Array.isArray(ar.data) && ar.data[0])
@@ -22744,6 +22750,7 @@ async function lbRenderCard(){
       +'<label class="ah-ex-item'+(c.on?' on':'')+'"><input type="checkbox" id="lb-on"'+(c.on?' checked':'')+'>啟用</label></div>'
     +'<div class="ah-sub">請<b>整天假</b>的人,當天一登入就會被請出去;已經在線上的,5 分鐘內會自動登出。'
       +'半天假(上午／下午)與未滿 8 小時的假<b>不受影響</b>,照常使用。管理員不受限制。<br>'
+      +'<b>休假、國定假日、過年、颱風不算</b> —— 那是全公司的非工作日,擋下去會把整間公司鎖在外面。<br>'
       +'「請假登記」頁登記的、以及直接填在「出勤回報」的假<b>兩邊都算</b>。</div>'
     +'<div class="ah-body">'
       +'<div class="ah-fld" style="flex:1;min-width:240px"><label>擋下來時要顯示的訊息(留白用預設)</label>'
@@ -22802,9 +22809,9 @@ async function lbRenderToday(){
   const d=lbTodayTw();
   const [lr, ar]=await Promise.all([
     sbFetch('/rest/v1/leave_board?select=staff_name,leave_type&day_part=eq.full'
-      +'&start_date=lte.'+d+'&end_date=gte.'+d+'&limit=50'),
+      +'&start_date=lte.'+d+'&end_date=gte.'+d+lbNotLeaveFilter('leave_type')+'&limit=50'),
     sbFetch('/rest/v1/att_report?select=staff_name,leave_type&work_date=eq.'+d
-      +'&leave_type=not.is.null&leave_hours=gte.8&limit=100')
+      +'&leave_type=not.is.null&leave_hours=gte.8'+lbNotLeaveFilter('leave_type')+'&limit=100')
   ]);
   if(!lr.ok && !ar.ok){ el.textContent='今天請整天假的人:讀不到(請確認已執行 leave_requests_migration.sql)'; return; }
   const seen=new Set(), rows=[];
@@ -33286,7 +33293,39 @@ function clearAll() {
    設計：以單一 attendance 資料表記錄「一天一人一筆」，
    不再每月新建工作表；日報/回報/ESG年資統計全部即時計算。
    ============================================================ */
-const ATT_LEAVE = ['','特休','事假','病假','生理假','喪假','公假','婚假','產假','曠職','補休','過年','颱風'];
+// 假別:內建這幾種寫在程式裡,就算資料表沒建或讀取失敗,下拉照樣有東西可選。
+// 自己加的存在 att_leave_types(需執行 att_leave_types_migration.sql),加了全公司都看得到、下次進來還在。
+const ATT_LEAVE_BUILTIN = ['','特休','事假','病假','生理假','喪假','公假','婚假','產假','曠職','補休','休假','國定假日','過年','颱風'];
+let attLeaveCustom = [];                 // 從資料庫讀回來的自訂假別
+let ATT_LEAVE = ATT_LEAVE_BUILTIN.slice();
+function attLeaveRebuild(){
+  ATT_LEAVE=[...new Set([...ATT_LEAVE_BUILTIN, ...attLeaveCustom])];
+}
+async function attLeaveTypesLoad(){
+  try{
+    const r=await sbFetch('/rest/v1/att_leave_types?select=name&order=name');
+    if(r&&r.ok&&Array.isArray(r.data))
+      attLeaveCustom=[...new Set(r.data.map(x=>String(x.name||'').trim()).filter(Boolean))];
+  }catch(e){}                            // 讀不到就只用內建的,不擋人做事
+  attLeaveRebuild();
+}
+// 下拉選到「＋新增假別…」時:問名稱 → 存進資料庫 → 回傳新名稱(失敗回空字串)
+async function attLeaveAddPrompt(){
+  const v=(prompt('請輸入新的假別名稱:')||'').trim();
+  if(!v) return '';
+  if(v==='__add__'||v.length>20){ alert('假別名稱最多 20 個字。'); return ''; }
+  if(ATT_LEAVE.includes(v)) return v;     // 已經有了,直接選它
+  const r=await sbFetch('/rest/v1/att_leave_types?on_conflict=name',{method:'POST',
+    headers:{'Prefer':'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify({name:v})});
+  if(!r||!r.ok){
+    alert('新增失敗'+(r&&r.status===404?':尚未建立資料表,請先執行 att_leave_types_migration.sql':'('+(r&&r.status||'?')+')')+'。\n這次的選擇維持原值。');
+    return '';
+  }
+  if(!attLeaveCustom.includes(v)) attLeaveCustom.push(v);
+  attLeaveRebuild();
+  return v;
+}
+const ATT_LEAVE_ADD_OPT='<option value="__add__">＋ 新增假別…</option>';
 const ATT_CATORD = {'辦公人員':0,'本工':1,'自有外勞':2,'長榮外勞':3};
 const ATT_WK = ['日','一','二','三','四','五','六'];
 let attRoster = [];
@@ -33317,7 +33356,14 @@ function attendanceInit(){
     attOverviewMonth = attLocalISO(now).slice(0,7);
     attInited=true;
   }
+  attLeaveTypesLoad().then(()=>{ if(typeof attRenderDailyGrid==='function' && attMonthData.length) attRenderDailyGrid(); });
   attendanceLoadMonth();
+}
+// 手機版「＋ 新增」假別
+async function attMLeaveAdd(){
+  const v=await attLeaveAddPrompt();
+  if(v) attMEdit('leave_type', v);
+  else if(typeof attMRender==='function') attMRender();
 }
 // 分頁切換
 function attTab(name){
@@ -33468,7 +33514,7 @@ function attRenderDailyGrid(){
       <td>${pair('work',rec.work_hours)}</td>
       <td>${pair('ot',rec.ot_hours)}</td>
       <td>${bentoCell}</td>
-      <td><select data-f="leave_type">${ATT_LEAVE.map(l=>`<option value="${l}" ${l===(rec.leave_type||'')?'selected':''}>${l||'—'}</option>`).join('')}</select></td>
+      <td><select data-f="leave_type">${ATT_LEAVE.map(l=>`<option value="${l}" ${l===(rec.leave_type||'')?'selected':''}>${l||'—'}</option>`).join('')}${(rec.leave_type&&!ATT_LEAVE.includes(rec.leave_type))?`<option value="${attEsc(rec.leave_type)}" selected>${attEsc(rec.leave_type)}</option>`:''}${ATT_LEAVE_ADD_OPT}</select></td>
       <td>${pair('leave_hours',rec.leave_hours)}</td>
       <td><input type="text" data-f="note" value="${attEsc(rec.note||'')}" style="width:90px;text-align:left"></td>
     </tr>`;
@@ -33534,6 +33580,19 @@ function attInitLeaveSelect(){
 // 工數/時數連動 + 本工便當自動 + 重算合計
 function attDayInput(e){
   const t=e.target, tr=t&&t.closest&&t.closest('tr[data-name]');
+  // 假別選到「＋新增假別…」:問名稱、存進資料庫,再把整張表重畫成含新假別的下拉
+  if(t&&t.tagName==='SELECT'&&t.getAttribute('data-f')==='leave_type'&&t.value==='__add__'){
+    const prev=t.getAttribute('data-prev')||'';
+    t.value=prev;
+    t.disabled=true;
+    attLeaveAddPrompt().then(v=>{
+      t.disabled=false;
+      if(v){ t.value=v; attDayInput({target:t}); }
+      attRenderDailyGrid();    // 重畫:其他列的下拉也要看得到新假別
+    });
+    return;
+  }
+  if(t&&t.tagName==='SELECT'&&t.getAttribute('data-f')==='leave_type') t.setAttribute('data-prev',t.value);
   if(tr){
     const role=t.getAttribute('data-role');
     if(role==='u'||role==='h'){
@@ -34215,7 +34274,8 @@ function attMOpenEdit(name,refresh){
     +'<div class="att-m-sec"><div class="lbl">加班</div><div class="att-m-opts">'
       +o(x.ot===0,'無',"attMEdit('ot',0)")+[2,3,4].map(n=>o(x.ot===n,n+'h',"attMEdit('ot',"+n+")")).join('')+num('ot',x.ot)+'</div></div>'
     +'<div class="att-m-sec"><div class="lbl">請假類別</div><div class="att-m-leave-grid">'
-      +ATT_LEAVE.map(t=>o(x.leave_type===t,t||'無',"attMEdit('leave_type','"+t+"')")).join('')+'</div></div>';
+      +ATT_LEAVE.map(t=>o(x.leave_type===t,t||'無',"attMEdit('leave_type','"+t+"')")).join('')
+      +o(false,'＋ 新增','attMLeaveAdd()')+'</div></div>';
   if(x.leave_type) b+='<div class="att-m-sec"><div class="lbl">請假時數'+(x.work>0?'（上班會自動扣掉）':'')+'</div><div class="att-m-opts">'
       +o(x.leave_hours>=8,'全天 8h',"attMEdit('leave_hours',8)")+o(x.leave_hours===4,'半天 4h',"attMEdit('leave_hours',4)")+num('leave_hours',x.leave_hours)+'</div></div>';
   b+='<div class="spx-m-form att-m-sec">'
