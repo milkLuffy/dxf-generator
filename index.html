@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.22.11"/>
+<meta name="sc-version" content="2026.09.22.12"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1295,6 +1295,53 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .layout-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap}
 .layout-hint{font-family:var(--mono);font-size:11px;color:var(--text3)}
 /* ── 五金庫存 ── */
+/* 五金分析 */
+.hwan-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.hwan-seg{display:inline-flex;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+.hwan-seg button{border:0;background:transparent;color:var(--text2);font:500 14px var(--sans);padding:6px 16px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.hwan-seg button.on{background:var(--accent2);color:#fff}
+.hwan-seg.sm button{font-size:12px;padding:4px 10px}
+.hwan-nav{display:flex;align-items:center;gap:6px}
+.hwan-navbtn{width:34px;height:34px;border:1px solid var(--border);background:var(--bg2);color:var(--text);border-radius:8px;font-size:18px;line-height:1;cursor:pointer}
+.hwan-navbtn:disabled{opacity:.35;cursor:default}
+.hwan-label{min-width:150px;text-align:center;font:600 15px var(--sans);color:var(--text)}
+.hwan-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.hwan-kpi{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.hwan-kpi .v{font:600 22px var(--mono);color:var(--text);white-space:nowrap}
+.hwan-kpi .l{font-size:12px;color:var(--text3);margin-top:2px}
+.hwan-kpi .d{font-size:11px;color:var(--text3);margin-top:2px}
+.hwan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;align-items:start}
+.hwan-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px}
+.hwan-card-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.hwan-card-t{font:600 16px var(--sans);color:var(--text)}
+.hwan-card-s{font-size:11px;color:var(--text3);margin-top:2px}
+.hwan-row{padding:9px 2px;border-top:1px solid var(--border)}
+.hwan-row.click{cursor:pointer}
+.hwan-row.click:active{background:var(--bg3)}
+.hwan-r1{display:flex;align-items:baseline;gap:8px}
+.hwan-rank{flex:none;width:22px;font:600 12px var(--mono);color:var(--text3)}
+.hwan-row:nth-child(-n+3) .hwan-rank{color:var(--accent)}
+.hwan-name{flex:1;min-width:0;font:600 15px var(--sans);color:var(--text);overflow-wrap:anywhere}
+.hwan-val{flex:none;font:600 15px var(--mono);color:var(--text);white-space:nowrap}
+.hwan-val small{font-size:11px;font-weight:400;color:var(--text3);margin-left:2px}
+.hwan-meta{margin:2px 0 0 30px;font-size:12px;color:var(--text2);line-height:1.5}
+.hwan-meta .sep{color:var(--text3);margin:0 5px}
+.hwan-bar{margin:6px 0 0 30px;height:5px;border-radius:3px;background:var(--bg3);overflow:hidden}
+.hwan-bar>i{display:block;height:100%;border-radius:3px;background:var(--accent2)}
+.hwan-detail{margin:8px 0 2px 30px;padding:8px 10px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--text2)}
+.hwan-detail div{display:flex;justify-content:space-between;gap:8px;padding:2px 0}
+.hwan-more{display:block;width:100%;margin-top:6px;padding:8px;border:0;border-top:1px solid var(--border);background:transparent;color:var(--accent2);font-size:13px;cursor:pointer}
+.hwan-empty{padding:20px 0;text-align:center;color:var(--text3);font-size:13px}
+@media(max-width:768px),(pointer:coarse) and (max-width:1100px){
+  .hwan-top{flex-direction:column;align-items:stretch}
+  .hwan-seg:not(.sm){display:flex}
+  .hwan-seg:not(.sm) button{flex:1;min-height:38px}
+  .hwan-nav{justify-content:space-between}
+  .hwan-label{flex:1;min-width:0}
+  .hwan-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hwan-kpi .v{font-size:19px}
+  .hwan-grid{grid-template-columns:minmax(0,1fr)}
+}
 /* 五金手機卡片(純文字、無輸入格;點卡片開編輯視窗) */
 .hw-cards{display:none}
 .hw-card{position:relative;padding:12px 14px 11px;margin-bottom:8px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -8826,6 +8873,7 @@ window.normalizeFullWidth=function(value){
           <button class="layout-tab"        id="hwtab-usage"    onclick="hwSwitchTab('usage')">領用紀錄</button>
           <button class="layout-tab"        id="hwtab-party"    onclick="hwSwitchTab('party')">廠商</button>
           <button class="layout-tab"        id="hwtab-equip"    onclick="hwSwitchTab('equip')">設備清單</button>
+          <button class="layout-tab"        id="hwtab-analysis" onclick="hwSwitchTab('analysis')">分析</button>
         </div>
 
         <!-- ① 庫存總表 -->
@@ -8987,6 +9035,43 @@ window.normalizeFullWidth=function(value){
             </table>
           </div>
           </div><!-- /hw-tblbox -->
+        </div>
+
+        <!-- ⑦ 分析:領取頻率 / 最常領取 / 花費最多 -->
+        <div id="hw-analysis-panel" style="display:none">
+          <div class="hwan-top">
+            <div class="hwan-seg" id="hwan-mode">
+              <button data-m="week" onclick="hwAnSetMode('week')">週</button>
+              <button data-m="month" onclick="hwAnSetMode('month')">月</button>
+              <button data-m="year" onclick="hwAnSetMode('year')">年</button>
+              <button data-m="all" onclick="hwAnSetMode('all')">全部</button>
+            </div>
+            <div class="hwan-nav">
+              <button class="hwan-navbtn" id="hwan-prev" onclick="hwAnShift(-1)" aria-label="上一期">‹</button>
+              <span class="hwan-label" id="hwan-label"></span>
+              <button class="hwan-navbtn" id="hwan-next" onclick="hwAnShift(1)" aria-label="下一期">›</button>
+              <button class="btn-sm" id="hwan-today" onclick="hwAnToday()">本期</button>
+            </div>
+          </div>
+          <div class="hwan-kpis" id="hwan-kpis"></div>
+          <div class="hwan-grid">
+            <div class="hwan-card">
+              <div class="hwan-card-h"><div><div class="hwan-card-t">領取人頻率</div><div class="hwan-card-s">每筆領用算一次;點一下看他領了什麼</div></div>
+                <div class="hwan-seg sm" id="hwan-p-sort"><button data-s="count" onclick="hwAnSort('p','count')">次數</button><button data-s="amount" onclick="hwAnSort('p','amount')">金額</button></div></div>
+              <div id="hwan-person"></div>
+            </div>
+            <div class="hwan-card">
+              <div class="hwan-card-h"><div><div class="hwan-card-t">最常被領取</div><div class="hwan-card-s">單價取該品項領用當天(含)以前最近一次進貨價</div></div>
+                <div class="hwan-seg sm" id="hwan-i-sort"><button data-s="count" onclick="hwAnSort('i','count')">次數</button><button data-s="qty" onclick="hwAnSort('i','qty')">數量</button><button data-s="amount" onclick="hwAnSort('i','amount')">金額</button></div></div>
+              <div id="hwan-item"></div>
+            </div>
+            <div class="hwan-card">
+              <div class="hwan-card-h"><div><div class="hwan-card-t">花費最多的五金</div><div class="hwan-card-s">依進貨/維修紀錄的實付總額</div></div>
+                <div class="hwan-seg sm" id="hwan-s-src"><button data-s="all" onclick="hwAnSort('s','all')">全部</button><button data-s="buy" onclick="hwAnSort('s','buy')">進貨</button><button data-s="repair" onclick="hwAnSort('s','repair')">維修</button></div></div>
+              <div id="hwan-spend"></div>
+            </div>
+          </div>
+          <div class="layout-hint" style="margin-top:10px">※ 領用金額是估算(領用數量 × 進貨單價),沒有進貨紀錄的品項不計金額;「清點」不算領取人。上方搜尋框可篩選品名/領取人。</div>
         </div>
       </div>
 
@@ -14319,7 +14404,7 @@ function hwSwitchTab(tab){
   hwCloseFilter();
   if(hwMobile()) hwCardsClear();
   hwTab=tab;
-  ['stock','purchase','repair','usage','party','equip'].forEach(t=>{
+  ['stock','purchase','repair','usage','party','equip','analysis'].forEach(t=>{
     document.getElementById('hwtab-'+t).classList.toggle('active', t===tab);
     document.getElementById('hw-'+t+'-panel').style.display = (t===tab)?'':'none';
   });
@@ -14335,6 +14420,7 @@ function hwRender(){
   else if(hwTab==='usage') hwRenderUsage();
   else if(hwTab==='party') hwRenderParty();
   else if(hwTab==='equip') hwRenderEquip();
+  else if(hwTab==='analysis') hwRenderAnalysis();
   hwUpdateFilterIcons(hwTab);
 }
 
@@ -14344,6 +14430,151 @@ function hwRenderStats(){
   const el=document.getElementById('hw-stats');
   el.innerHTML=[['品項數',hwItems.length],['低庫存',low],['缺貨',out],['進貨筆數',hwPurchases.filter(p=>p.category!=='修理品').length],['維修筆數',hwPurchases.filter(p=>p.category==='修理品').length],['領用筆數',hwUsage.length],['設備數',hwEquip.length]]
     .map(([l,n])=>`<div class="lstat"><span class="lstat-num">${n}</span><span class="lstat-label">${l}</span></div>`).join('');
+}
+
+// ── 分析:領取人頻率 / 最常被領取 / 花費最多(週/月/年/全部)──
+const hwAn={mode:'month', anchor:null, pSort:'count', iSort:'count', sSrc:'all', open:{}, more:{}};
+function hwAnIso(d){ const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+function hwAnParse(s){ const [y,m,d]=String(s).split('-').map(Number); return new Date(y,(m||1)-1,d||1); }
+function hwAnRange(){
+  const WK='日一二三四五六', a=hwAn.anchor? hwAnParse(hwAn.anchor) : hwAnParse(egToday());
+  const sl=d=>hwAnIso(d).replace(/-/g,'/');
+  if(hwAn.mode==='week'){
+    const st=new Date(a); st.setDate(a.getDate()-((a.getDay()+6)%7)); const en=new Date(st); en.setDate(st.getDate()+6);
+    return {from:hwAnIso(st),to:hwAnIso(en),label:sl(st)+'（'+WK[st.getDay()]+'）～ '+sl(en).slice(5)+'（'+WK[en.getDay()]+'）'};
+  }
+  if(hwAn.mode==='month'){
+    const st=new Date(a.getFullYear(),a.getMonth(),1), en=new Date(a.getFullYear(),a.getMonth()+1,0);
+    return {from:hwAnIso(st),to:hwAnIso(en),label:a.getFullYear()+' 年 '+(a.getMonth()+1)+' 月'};
+  }
+  if(hwAn.mode==='year') return {from:a.getFullYear()+'-01-01',to:a.getFullYear()+'-12-31',label:a.getFullYear()+' 年'};
+  return {from:'',to:'',label:'全部期間'};
+}
+function hwAnSetMode(m){ hwAn.mode=m; hwAn.open={}; hwAn.more={}; hwRenderAnalysis(); }
+function hwAnShift(dir){
+  const a=hwAn.anchor? hwAnParse(hwAn.anchor) : hwAnParse(egToday());
+  if(hwAn.mode==='week') a.setDate(a.getDate()+7*dir);
+  else if(hwAn.mode==='month'){ a.setDate(1); a.setMonth(a.getMonth()+dir); }
+  else if(hwAn.mode==='year'){ a.setMonth(0,1); a.setFullYear(a.getFullYear()+dir); }
+  hwAn.anchor=hwAnIso(a); hwAn.open={}; hwAn.more={}; hwRenderAnalysis();
+}
+function hwAnToday(){ hwAn.anchor=null; hwAn.open={}; hwAn.more={}; hwRenderAnalysis(); }
+function hwAnSort(which,v){ if(which==='p')hwAn.pSort=v; else if(which==='i')hwAn.iSort=v; else hwAn.sSrc=v; hwAn.more={}; hwRenderAnalysis(); }
+function hwAnTogglePerson(i){ hwAn.open[i]=!hwAn.open[i]; hwRenderAnalysis(); }
+function hwAnMore(k){ hwAn.more[k]=!hwAn.more[k]; hwRenderAnalysis(); }
+// 估算單價:該品項在領用日(含)以前最近一次進貨單價,沒有就用最早一次(與「成本」頁同算法)
+function hwAnPriceFn(){
+  const by={};
+  hwPurchases.forEach(p=>{ if(p.category==='修理品'||p.price==null||p.price==='') return; const pr=Number(p.price); if(isNaN(pr)) return;
+    (by[p.category+'|'+p.name]=by[p.category+'|'+p.name]||[]).push({d:String(p.tx_date||''),pr}); });
+  Object.values(by).forEach(a=>a.sort((x,y)=>x.d<y.d?-1:x.d>y.d?1:0));
+  return (cat,name,d)=>{ const a=by[cat+'|'+name]; if(!a) return null; let hit=null; for(const x of a){ if(x.d<=d) hit=x; else break; } return (hit||a[0]).pr; };
+}
+function hwAnMoney(n){ return '$'+Math.round(n).toLocaleString('en-US'); }
+function hwRenderAnalysis(){
+  const R=hwAnRange(), q=hwSearch(), today=egToday();
+  const inR=d=>{ d=String(d||''); return !R.from || (d>=R.from && d<=R.to); };
+  document.getElementById('hwan-label').textContent=R.label;
+  document.querySelectorAll('#hwan-mode button').forEach(b=>b.classList.toggle('on',b.dataset.m===hwAn.mode));
+  document.querySelectorAll('#hwan-p-sort button').forEach(b=>b.classList.toggle('on',b.dataset.s===hwAn.pSort));
+  document.querySelectorAll('#hwan-i-sort button').forEach(b=>b.classList.toggle('on',b.dataset.s===hwAn.iSort));
+  document.querySelectorAll('#hwan-s-src button').forEach(b=>b.classList.toggle('on',b.dataset.s===hwAn.sSrc));
+  const all=hwAn.mode==='all';
+  ['hwan-prev','hwan-next','hwan-today'].forEach(id=>{ const el=document.getElementById(id); el.style.visibility=all?'hidden':''; });
+  document.getElementById('hwan-next').disabled = !all && R.to>=today;
+
+  const price=hwAnPriceFn();
+  const match=r=>!q || [r.name,r.person,r.category,r.vendor].some(v=>String(v||'').toLowerCase().includes(q));
+  const use=hwUsage.filter(u=>inR(u.tx_date) && String(u.person||'').trim() && u.person!=='清點' && match(u));
+  const buys=hwPurchases.filter(p=>inR(p.tx_date) && match(p));
+
+  // 期間週數(進行中的期間只算到今天),用來算「平均每週幾次」
+  let wFrom=R.from, wTo=R.to;
+  if(all){ const ds=use.map(u=>String(u.tx_date||'')).filter(Boolean).sort(); wFrom=ds[0]||today; wTo=ds[ds.length-1]||today; }
+  if(wTo>today) wTo=today;
+  const days=wFrom&&wTo&&wTo>=wFrom? Math.round((hwAnParse(wTo)-hwAnParse(wFrom))/864e5)+1 : 7;
+  const weeks=Math.max(1,days/7);
+
+  // 領取人
+  const P={};
+  let useAmt=0;
+  use.forEach(u=>{
+    const pr=price(u.category,u.name,String(u.tx_date||'')), qty=hwNum(u.qty), amt=pr==null?0:pr*qty;
+    useAmt+=amt;
+    const p=P[u.person]||(P[u.person]={name:u.person,count:0,amount:0,items:{},days:new Set()});
+    p.count++; p.amount+=amt; if(u.tx_date) p.days.add(u.tx_date);
+    const k=u.category+'|'+u.name, it=p.items[k]||(p.items[k]={name:u.name,unit:u.unit||'',count:0,qty:0,amount:0});
+    it.count++; it.qty+=qty; it.amount+=amt;
+  });
+  // 品項
+  const I={};
+  use.forEach(u=>{
+    const k=u.category+'|'+u.name, pr=price(u.category,u.name,String(u.tx_date||'')), qty=hwNum(u.qty);
+    const it=I[k]||(I[k]={name:u.name,cat:u.category,unit:u.unit||'',count:0,qty:0,amount:0,people:new Set(),price:null});
+    it.count++; it.qty+=qty; if(pr!=null){ it.amount+=pr*qty; } it.people.add(u.person);
+  });
+  Object.values(I).forEach(it=>{ it.price=price(it.cat,it.name,R.to||today); });
+  // 花費
+  const S={}; let buyAmt=0;
+  buys.forEach(p=>{
+    const rep=p.category==='修理品';
+    if(hwAn.sSrc==='buy'&&rep || hwAn.sSrc==='repair'&&!rep) return;
+    const tot=p.total!=null&&p.total!==''? hwNum(p.total) : hwNum(p.price)*hwNum(p.qty);
+    const k=p.category+'|'+p.name, it=S[k]||(S[k]={name:p.name,cat:p.category,unit:p.unit||'',n:0,qty:0,total:0});
+    it.n++; it.qty+=hwNum(p.qty); it.total+=tot;
+  });
+  const buyAll=buys.reduce((n,p)=>n+(p.total!=null&&p.total!==''? hwNum(p.total) : hwNum(p.price)*hwNum(p.qty)),0);
+
+  // KPI
+  const kpi=(v,l,d)=>'<div class="hwan-kpi"><div class="v">'+v+'</div><div class="l">'+l+'</div>'+(d?'<div class="d">'+d+'</div>':'')+'</div>';
+  document.getElementById('hwan-kpis').innerHTML=
+    kpi(use.length,'領用次數', hwAn.mode==='week'?'':'平均每週 '+(use.length/weeks).toFixed(1)+' 次')
+   +kpi(Object.keys(P).length,'領取人數','')
+   +kpi(hwAnMoney(useAmt),'領用金額(估算)','')
+   +kpi(hwAnMoney(buyAll),'進貨＋維修實付',buys.length+' 筆');
+
+  const LIMIT=10;
+  const moreBtn=(k,n)=> n>LIMIT? '<button class="hwan-more" onclick="hwAnMore(\''+k+'\')">'+(hwAn.more[k]?'收合':'顯示全部 '+n+' 筆')+'</button>' : '';
+  const bar=(v,max)=>'<div class="hwan-bar"><i style="width:'+(max>0?Math.max(2,v/max*100):0).toFixed(1)+'%"></i></div>';
+  const meta=a=>'<div class="hwan-meta">'+a.filter(Boolean).join('<span class="sep">·</span>')+'</div>';
+  const empty='<div class="hwan-empty">這段期間沒有資料</div>';
+
+  // 領取人列表
+  const pk=hwAn.pSort;
+  const pl=Object.values(P).sort((a,b)=>(b[pk]-a[pk])||(b.count-a.count)||a.name.localeCompare(b.name,'zh-Hant'));
+  const pMax=pl.length? pl[0][pk] : 0;
+  const pShow=hwAn.more.p? pl : pl.slice(0,LIMIT);
+  document.getElementById('hwan-person').innerHTML = pl.length ? pShow.map((p,i)=>{
+    const items=Object.values(p.items).sort((a,b)=>b.count-a.count||b.qty-a.qty);
+    const top=items[0];
+    const freq=hwAn.mode==='week'? p.days.size+' 天有領' : '平均每週 '+(p.count/weeks).toFixed(1)+' 次';
+    const det=hwAn.open[p.name]? '<div class="hwan-detail">'+items.slice(0,12).map(it=>'<div><span>'+esc(it.name)+'</span><span>'+it.count+' 次 · '+esc(hwFmt(+it.qty.toFixed(2))+' '+it.unit)+(it.amount?' · '+hwAnMoney(it.amount):'')+'</span></div>').join('')+(items.length>12?'<div><span>…還有 '+(items.length-12)+' 項</span><span></span></div>':'')+'</div>' : '';
+    return '<div class="hwan-row click" onclick="hwAnTogglePerson(\''+esc(p.name).replace(/'/g,"\\'")+'\')"><div class="hwan-r1"><span class="hwan-rank">'+(i+1)+'</span><span class="hwan-name">'+esc(p.name)+'</span>'
+      +'<span class="hwan-val">'+(pk==='amount'? hwAnMoney(p.amount) : p.count+'<small>次</small>')+'</span></div>'
+      +meta([pk==='amount'? p.count+' 次' : (p.amount? hwAnMoney(p.amount):''), freq, top? '最常領 '+esc(top.name):''])+bar(p[pk],pMax)+det+'</div>';
+  }).join('')+moreBtn('p',pl.length) : empty;
+
+  // 品項列表
+  const ik=hwAn.iSort;
+  const il=Object.values(I).sort((a,b)=>(b[ik]-a[ik])||(b.count-a.count)||String(a.name).localeCompare(String(b.name),'zh-Hant'));
+  const iMax=il.length? il[0][ik] : 0;
+  const iShow=hwAn.more.i? il : il.slice(0,LIMIT);
+  document.getElementById('hwan-item').innerHTML = il.length ? iShow.map((it,i)=>{
+    const val= ik==='amount'? (it.price==null?'<small>無單價</small>':hwAnMoney(it.amount)) : ik==='qty'? esc(hwFmt(+it.qty.toFixed(2)))+'<small>'+esc(it.unit)+'</small>' : it.count+'<small>次</small>';
+    return '<div class="hwan-row"><div class="hwan-r1"><span class="hwan-rank">'+(i+1)+'</span><span class="hwan-name">'+esc(it.name)+'</span><span class="hwan-val">'+val+'</span></div>'
+      +meta([esc(it.cat), ik!=='count'? it.count+' 次':'', ik!=='qty'? '共 '+esc(hwFmt(+it.qty.toFixed(2))+' '+it.unit):'', it.people.size+' 人領',
+             it.price==null? '無進貨單價' : '單價 $'+hwMoney(it.price), ik!=='amount'&&it.price!=null? '約 '+hwAnMoney(it.amount):''])
+      +bar(ik==='amount'&&it.price==null?0:it[ik],iMax)+'</div>';
+  }).join('')+moreBtn('i',il.length) : empty;
+
+  // 花費列表
+  const sl=Object.values(S).sort((a,b)=>b.total-a.total);
+  const sSum=sl.reduce((n,x)=>n+x.total,0), sMax=sl.length? sl[0].total : 0;
+  const sShow=hwAn.more.s? sl : sl.slice(0,LIMIT);
+  document.getElementById('hwan-spend').innerHTML = sl.length ? sShow.map((it,i)=>
+    '<div class="hwan-row"><div class="hwan-r1"><span class="hwan-rank">'+(i+1)+'</span><span class="hwan-name">'+esc(it.name)+'</span><span class="hwan-val">'+hwAnMoney(it.total)+'</span></div>'
+    +meta([esc(it.cat), it.n+' 次'+(it.cat==='修理品'?'維修':'進貨'), '共 '+esc(hwFmt(+it.qty.toFixed(2))+' '+it.unit), it.qty? '均價 $'+hwMoney(+(it.total/it.qty).toFixed(2)):'', sSum? (it.total/sSum*100).toFixed(1)+'%':''])
+    +bar(it.total,sMax)+'</div>').join('')+moreBtn('s',sl.length) : empty;
 }
 
 // ── 手機卡片:純文字不放輸入格(整頁上千個輸入格會讓 iPhone 打字時當掉),點卡片開既有的編輯視窗 ──
