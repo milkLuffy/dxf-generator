@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.22.12"/>
+<meta name="sc-version" content="2026.09.22.13"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1376,14 +1376,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .hw-pager{display:flex;align-items:center;justify-content:center;gap:12px;padding:12px;font-family:var(--mono);font-size:12px;color:var(--text3)}
 .hw-pager button{background:var(--bg3);border:1px solid var(--border-hi);color:var(--text2);border-radius:var(--rad);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:12px}
 .hw-pager button:disabled{opacity:.4;cursor:default}
-.hw-ppe-name-note{font-size:12px;color:var(--text3);line-height:1.6}
-.hw-ppe-name-wrap{max-height:52vh;overflow:auto;border:1px solid var(--border);border-radius:var(--rad)}
-.hw-ppe-name-table{width:100%;border-collapse:collapse;table-layout:fixed}
-.hw-ppe-name-table th,.hw-ppe-name-table td{padding:7px;border-bottom:1px solid var(--border);text-align:left}
-.hw-ppe-name-table th{position:sticky;top:0;background:var(--bg3);z-index:1;font-family:var(--mono);font-size:11px;color:var(--text3)}
-.hw-ppe-name-table tr:last-child td{border-bottom:0}
-.hw-ppe-name-table input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);padding:8px 10px;font-family:var(--mono);font-size:13px;outline:none}
-.hw-ppe-name-table input:focus{border-color:var(--accent2)}
 /* 五金庫存表格:加大字級、欄位貼齊內容(不再撐滿整列) */
 #page-hardware .layout-table{font-size:13.5px;width:auto;min-width:auto}
 #page-hardware .layout-table th{font-size:12px;padding:8px 10px;letter-spacing:.03em;color:var(--text2)}
@@ -2697,26 +2689,6 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
 
 <!-- ── 通知設定 modal ── -->
 
-<!-- ── 五金防護用具姓名對照 modal ── -->
-<div class="modal-overlay" id="hw-ppe-name-modal">
-  <div class="modal" style="max-width:650px">
-    <div class="modal-title">防護用具匯出姓名對照</div>
-    <div class="hw-ppe-name-note">左側填領用紀錄中的中文姓名，右側填列印時顯示的英文姓名。此設定只套用於五金的「防護用具匯出」，並由全公司共用。</div>
-    <div class="hw-ppe-name-wrap">
-      <table class="hw-ppe-name-table">
-        <colgroup><col style="width:42%"><col style="width:48%"><col style="width:10%"></colgroup>
-        <thead><tr><th>中文姓名</th><th>匯出英文姓名</th><th></th></tr></thead>
-        <tbody id="hw-ppe-name-body"></tbody>
-      </table>
-    </div>
-    <button class="btn-sm" type="button" onclick="hwPpeAddNameRow()" style="align-self:flex-start">＋ 新增姓名</button>
-    <div class="modal-actions">
-      <button class="btn-modal-cancel" type="button" onclick="closeModal('hw-ppe-name-modal')">取消</button>
-      <button class="btn-modal-ok" type="button" id="hw-ppe-name-save" onclick="hwPpeSaveNames()">儲存姓名對照</button>
-    </div>
-  </div>
-</div>
-
 <!-- ── 帳號頁面權限 modal ── -->
 <div class="modal-overlay" id="perm-modal">
   <div class="modal" style="max-width:600px">
@@ -3104,6 +3076,7 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
     <div class="modal-title" id="staff-modal-title">新增員工</div>
     <div class="modal-grid">
       <div class="lf"><label>姓名</label><input type="text" id="staff-name" placeholder="王大明"/></div>
+      <div class="lf"><label>英文姓名（外籍人員填，防護用具匯出用）</label><input type="text" id="staff-name-en" placeholder="SOMPHON" data-noupper="1" oninput="this.value=this.value.toUpperCase()"/></div>
       <div class="lf"><label>部門</label>
         <select id="staff-dept" onchange="staffSyncRoleOptions()">
           <option value="本工">本工</option>
@@ -8030,7 +8003,7 @@ window.normalizeFullWidth=function(value){
       #page-hardware .layout-toolbar .layout-hint{display:none}
       #page-hardware .layout-toolbar>div{flex:1 1 100%;flex-wrap:wrap}
       #page-hardware .layout-toolbar :is(select,input){flex:1 1 140px;width:auto!important;min-height:40px;font-size:16px}
-      #page-hardware .layout-toolbar :is(button[onclick*="Export"],button[onclick^="hwClearFilters"],button[onclick^="hwPpeOpenNames"]){display:none}
+      #page-hardware .layout-toolbar :is(button[onclick*="Export"],button[onclick^="hwClearFilters"]){display:none}
       #page-hardware .layout-toolbar button[onclick^="hwToggleAddItem"]{flex:1 1 100%;min-height:42px}
       #page-hardware .layout-table-wrap{display:none!important}
       #page-hardware .hw-cards{display:block}
@@ -8977,7 +8950,6 @@ window.normalizeFullWidth=function(value){
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
               <label class="layout-hint" for="hw-ppe-month">月份</label>
               <input id="hw-ppe-month" type="month" class="search-input" style="width:145px"/>
-              <button class="btn-sm" onclick="hwPpeOpenNames()">姓名對照</button>
               <button class="btn-sm btn-export" onclick="hwExportPPE()">防護用具匯出</button>
               <button class="btn-sm btn-export" onclick="hwClearFilters('usage')">清除篩選</button>
               <button class="btn-sm btn-export" onclick="hwExportUsage()">⬇ 匯出 Excel</button>
@@ -12965,7 +12937,7 @@ const AUDIT_FIELD_LABEL={
   reviewed_at:'審核時間', reviewed_by:'審核人', applied_at:'申請時間', notified_at:'通知時間',
   scope:'類型', due_date:'期限', owner_id:'建立者', assignee_ids:'指派對象', created_by_name:'建立者姓名',
   is_template:'重複規則', parent_id:'來源規則', repeat_unit:'重複方式', repeat_interval:'重複間隔', repeat_from:'重複起始日', repeat_until:'重複結束日',
-  staff_name:'姓名', leave_type:'假別', start_date:'開始日期', end_date:'結束日期', day_part:'時段', hours:'時數', reason:'事由',
+  staff_name:'姓名', name_en:'英文姓名', leave_type:'假別', start_date:'開始日期', end_date:'結束日期', day_part:'時段', hours:'時數', reason:'事由',
   done_at:'完成時間', done_by:'完成人', done_by_name:'完成人姓名',
   // 構件 / 進度 / 產量
   proj_num:'工程編號', proj_no:'工程編號', proj_name:'工程名稱', zone_id:'工程區', zone_code:'工程區', zone:'工程區',
@@ -15355,6 +15327,7 @@ function hwEditEquip(id){
 
 // ── 防護用具領用表：依月份篩選並產生 A4 直式分頁列印 / PDF ──
 const HW_PPE_NAME_CONFIG_KEY = 'hw_ppe_foreign_names';
+// 英文姓名改登記在公司名冊(staff.name_en);以下舊對照表只當後備,給名冊查不到的人(例如已刪除的舊員工)
 const HW_PPE_FOREIGN_DEFAULTS = {
   '和松朋':'SOMPHON',
   '蘇林':'SURIN',
@@ -15390,50 +15363,13 @@ async function hwPpeLoadNames(){
     HW_PPE_FOREIGN_NAMES={...HW_PPE_FOREIGN_DEFAULTS};
   }
 }
-function hwPpeNameRow(local,english){
-  return '<tr><td><input class="hw-ppe-local" value="'+hwPpeEsc(local||'')+'" placeholder="例如：和松朋"></td>'+
-    '<td><input class="hw-ppe-english" value="'+hwPpeEsc(english||'')+'" placeholder="例如：SOMPHON"></td>'+
-    '<td style="text-align:center"><button class="hw-act del" type="button" title="刪除" onclick="this.closest(\'tr\').remove()">✕</button></td></tr>';
-}
-function hwPpeAddNameRow(local,english){
-  const body=document.getElementById('hw-ppe-name-body'); if(!body)return;
-  body.insertAdjacentHTML('beforeend',hwPpeNameRow(local||'',english||''));
-  const input=body.lastElementChild&&body.lastElementChild.querySelector('.hw-ppe-local'); if(input)input.focus();
-}
-function hwPpeOpenNames(){
-  const body=document.getElementById('hw-ppe-name-body'); if(!body)return;
-  const entries=Object.entries(HW_PPE_FOREIGN_NAMES).sort((a,b)=>a[0].localeCompare(b[0],'zh-Hant'));
-  body.innerHTML=entries.map(([local,english])=>hwPpeNameRow(local,english)).join('');
-  if(!entries.length) hwPpeAddNameRow();
-  openModal('hw-ppe-name-modal');
-}
-async function hwPpeSaveNames(){
-  const body=document.getElementById('hw-ppe-name-body'); if(!body)return;
-  const map={};
-  for(const tr of body.querySelectorAll('tr')){
-    const local=(tr.querySelector('.hw-ppe-local')?.value||'').trim();
-    const english=(tr.querySelector('.hw-ppe-english')?.value||'').trim();
-    if(!local&&!english)continue;
-    if(!local||!english){ alert('每一列都要同時填寫中文姓名與英文姓名'); return; }
-    if(Object.prototype.hasOwnProperty.call(map,local)){ alert('中文姓名重複：'+local); return; }
-    map[local]=english;
-  }
-  const btn=document.getElementById('hw-ppe-name-save'); if(btn){btn.disabled=true;btn.textContent='儲存中…';}
-  try{
-    const r=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:HW_PPE_NAME_CONFIG_KEY,value:JSON.stringify(map)})});
-    if(!r.ok){ alert('姓名對照儲存失敗，請確認目前帳號有設定權限'); return; }
-    HW_PPE_FOREIGN_NAMES=map;
-    closeModal('hw-ppe-name-modal');
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent='儲存姓名對照';}
-  }
-}
 function hwPpeEsc(s){
   return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function hwPpePersonName(name){
   const n=String(name||'').trim();
-  return HW_PPE_FOREIGN_NAMES[n]||n;
+  const st=(Array.isArray(allStaff)?allStaff:[]).find(s=>s&&s.name===n&&String(s.name_en||'').trim());
+  return st? String(st.name_en).trim() : (HW_PPE_FOREIGN_NAMES[n]||n);
 }
 function hwPpeIsCountRow(row){
   const text=[row&&row.name,row&&row.person,row&&row.note,row&&row.remark]
@@ -21644,6 +21580,7 @@ function staffClearSortFilter(){
 }
 const STAFF_COLS=[
   {key:'name',label:'姓名',filter:true},
+  {key:'name_en',label:'英文姓名',filter:true},
   {key:'role',label:'職稱',filter:true},
   {key:'department',label:'部門',filter:true},
   {key:'hire_date',label:'到職日',filter:true},
@@ -21743,7 +21680,7 @@ function renderStaff() {
   grid.innerHTML=list.map(s=>`<div class="staff-card">
     <div class="staff-card-header">
       <div class="staff-avatar">${(s.name||'?')[0]}</div>
-      <div><div class="staff-name">${s.name} ${staffStatusBadge(s.status)}</div><div class="staff-role">${s.role||'—'}</div></div>
+      <div><div class="staff-name">${s.name}${s.name_en?` <span style="font-weight:400;color:var(--text3);font-size:12px">${esc(s.name_en)}</span>`:''} ${staffStatusBadge(s.status)}</div><div class="staff-role">${s.role||'—'}</div></div>
     </div>
     <div class="staff-info">
       ${s.department?`<span>🏢 ${s.department}</span>`:''}
@@ -21765,6 +21702,7 @@ function openStaffModal(s=null) {
   editStaffId=s?s.id:null;
   document.getElementById('staff-modal-title').textContent=s?'編輯員工':'新增員工';
   document.getElementById('staff-name').value=s?.name||'';
+  document.getElementById('staff-name-en').value=s?.name_en||'';
   document.getElementById('staff-dept').value=staffDept(s?.role, s?.department);
   staffSyncRoleOptions();
   const _r=(s?.role||'').trim(); const _rSel=document.getElementById('staff-role');
@@ -21794,6 +21732,8 @@ function staffSyncStatusFromResign(){
   document.getElementById('staff-status').value=resign?'離職':'在職';
 }
 function editStaff(id){openStaffModal(allStaff.find(s=>s.id===id));}
+// staff 表有沒有 name_en 欄(select=* 會帶回所有欄位,看任一筆有沒有這個 key)
+function staffHasNameEn(){ return Array.isArray(allStaff) && allStaff.some(s=>s && Object.prototype.hasOwnProperty.call(s,'name_en')); }
 async function saveStaff() {
   const role=document.getElementById('staff-role').value.trim();
   const resign=document.getElementById('staff-resign').value||null;
@@ -21812,6 +21752,10 @@ async function saveStaff() {
   if(Array.isArray(pendingFaceDescriptor)) data.face_descriptor=pendingFaceDescriptor;
   else if(pendingFaceDescriptor==='DELETE') data.face_descriptor=null;
   if(!data.name){alert('姓名為必填');return;}
+  // 英文姓名欄要先跑 staff_name_en_migration.sql;還沒跑時不送這欄,以免整筆存不進去
+  const nameEn=document.getElementById('staff-name-en').value.trim().toUpperCase();
+  if(staffHasNameEn()) data.name_en=nameEn||null;
+  else if(nameEn){ alert('英文姓名欄位尚未建立,請先執行 staff_name_en_migration.sql;其他資料照常儲存'); }
   const btn=document.getElementById('btn-save-staff');
   btn.disabled=true; btn.textContent='儲存中...';
   let r;
@@ -23727,6 +23671,7 @@ function bkReadme(m, hasSchema){
 // ── 健康檢查 ──
 // 資料表與「後來用 SQL 加上去的欄位」:沒跑對應的 migration,相關頁面就會空白或存不進去
 const HEALTH_SCHEMA=[
+  ['staff','name_en','staff_name_en_migration.sql(公司名冊英文姓名)'],
   // [資料表, 要確認的欄位(逗號分隔,空字串=只確認表在不在), 對應的 SQL 檔 / 說明]
   ['projects','insp_photo_beam,insp_photo_col,insp_sc_form,insp_sc_sign,insp_sc_color,insp_note','insp_requirement_migration.sql(報驗需求)'],
   ['zones','erect_date,handover_date','loading_plan_migration.sql(月產量排程)'],
