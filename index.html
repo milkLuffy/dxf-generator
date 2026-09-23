@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.23.9"/>
+<meta name="sc-version" content="2026.09.23.10"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1362,9 +1362,12 @@ html.dtv-open,html.dtv-open body{overflow:hidden}
 #ds-touch-view .dtv-pn{flex:none;font:12px var(--mono);color:#9aa0a6}
 #ds-touch-view .dtv-bar button{flex:none;min-width:38px;height:36px;border:1px solid #5f6368;border-radius:8px;background:#3c4043;color:#e8eaed;font:600 15px var(--sans);padding:0 9px}
 #ds-touch-view .dtv-bar button.on{background:#8ab4f8;border-color:#8ab4f8;color:#202124}
-#ds-touch-view .dtv-doc{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:8px 0 calc(24px + env(safe-area-inset-bottom))}
+#ds-touch-view .dtv-doc{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;overscroll-behavior:contain}
+#ds-touch-view .dtv-inner{padding:0 0 calc(24px + env(safe-area-inset-bottom));will-change:transform}
+#ds-touch-view .dtv-done{color:#8ab4f8!important;border-color:transparent!important;background:transparent!important;font-weight:700!important}
 #ds-touch-view .dtv-msg{padding:40px 20px;text-align:center;font-size:15px;color:#e8eaed}
-#ds-touch-view .dtv-pg{position:relative;margin:0 0 10px;background:#fff;overflow:hidden}
+#ds-touch-view .dtv-pg{position:relative;margin:0 0 8px;background:#fff;overflow:hidden}
+#ds-touch-view .dtv-pg img{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #ds-touch-view .dtv-no{position:absolute;right:6px;top:6px;background:rgba(0,0,0,.55);color:#fff;border-radius:4px;padding:2px 7px;font-size:11px}
 .hw-scan-modal{width:min(420px,calc(100vw - 20px))!important}
 .hw-scan-box{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:1/1;margin-bottom:8px}
@@ -50876,7 +50879,7 @@ function dsSetSelectedFileName(name = '') {
 
 async function dsLoadAllUploaded(render = true) {
   const [fileResult, pageResult, zoneResult] = await Promise.all([
-    sbFetchAll('/rest/v1/drawing_files?select=id,project_id,zone_id,original_name,storage_key,storage_parts,page_count,size_bytes,created_by,created_at&order=created_at.desc'),
+    sbFetchAll('/rest/v1/drawing_files?select=id,project_id,zone_id,original_name,storage_key,storage_parts,page_count,size_bytes,created_by,created_at,preview_w&order=created_at.desc'),
     sbFetchAll('/rest/v1/drawing_page_drawings?select=id,file_id,drawing_no,page_no'),
     sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,zone_name,status&order=zone_code')
   ]);
@@ -50910,6 +50913,7 @@ async function drawingSearchInit() {
     if (select.value) await dsProjectChanged();
     await dsLoadAllUploaded();
     dsProcessCleanupQueue();
+    dsEnsurePreviews();   // 不 await:背景補產生手機預覽圖
   } catch (error) {
     console.error(error);
     dsSetProgress(0, '圖面快搜載入失敗：' + error.message);
@@ -50952,7 +50956,7 @@ async function dsZoneChanged() {
   dsEl('ds-bom-status').textContent = '載入 BOM 圖號與圖面頁碼…';
   const [bomResult, fileResult, pageResult] = await Promise.all([
     sbFetchAll('/rest/v1/components?select=part_no,drawing_no&zone_id=eq.' + encodeURIComponent(zoneId)),
-    sbFetch('/rest/v1/drawing_files?select=id,project_id,zone_id,original_name,storage_key,storage_parts,page_count,size_bytes,created_by,created_at&zone_id=eq.' + encodeURIComponent(zoneId) + '&order=created_at.desc'),
+    sbFetch('/rest/v1/drawing_files?select=id,project_id,zone_id,original_name,storage_key,storage_parts,page_count,size_bytes,created_by,created_at,preview_w&zone_id=eq.' + encodeURIComponent(zoneId) + '&order=created_at.desc'),
     sbFetchAll('/rest/v1/drawing_page_drawings?select=id,file_id,drawing_no,page_no&zone_id=eq.' + encodeURIComponent(zoneId))
   ]);
   dsBom = bomResult.ok && Array.isArray(bomResult.data) ? bomResult.data : [];
@@ -51267,6 +51271,7 @@ async function dsSavePending() {
       dsSetProgress(92 + Math.round(savedCount / pageRows.length * 7), '儲存頁碼標記 ' + savedCount + ' / ' + pageRows.length + '…');
     }
     dsSetProgress(100, '完成：已上傳 PDF 並標記 ' + pageRows.length + ' 頁圖號。');
+    setTimeout(() => dsLoadAllUploaded(false).then(() => dsEnsurePreviews()), 500);   // 背景產生手機預覽圖
     dsPending = null; dsEl('ds-file').value = '';
     await dsZoneChanged();
   } catch (error) {
@@ -51725,7 +51730,66 @@ async function dsOpenRangePdf(part) {
   catch (error) { throw failed || error; }
 }
 
-/* 手機:每張圖面只把那一頁轉成 JPEG(長邊約 2000px),直向頁轉成橫向;不經 pdf-lib 整份解析 */
+/* ── 手機預覽圖 ──
+   圖面是 600dpi 掃描,一頁內嵌 9921×7015 的圖,iPhone 光解開這張圖就要 200MB 以上記憶體,一開就整頁當掉跳回主畫面。
+   所以每頁另存一張約 3200px 寬的 JPG(<工程>/<工程區>/<檔案id>/preview-p001.jpg),手機只看這張;
+   電腦開圖面快搜時會自動幫還沒有預覽圖的檔案補產生(drawing_preview_migration.sql)。 */
+const DS_PREVIEW_W = 3200;
+function dsPreviewPath(file, pageNo) {
+  const seg = String(file.storage_key || '').split('/');
+  return seg[0] + '/' + seg[1] + '/' + file.id + '/preview-p' + String(pageNo).padStart(3, '0') + '.jpg';
+}
+async function dsLoadPreviewImage(file, pageNo) {
+  const response = await dsStorageDownload(dsPreviewPath(file, pageNo));
+  if (!response.ok) return null;
+  const url = URL.createObjectURL(await response.blob());
+  try {
+    const img = new Image(); img.src = url; await img.decode();
+    return { url, width: img.naturalWidth, height: img.naturalHeight };
+  } catch (_) { URL.revokeObjectURL(url); return null; }
+}
+let dsPreviewBusy = false;
+async function dsEnsurePreviews(files) {
+  if (dsPreviewBusy || dsTouchTab() || isGuest || !currentSession) return;
+  const todo = (files || dsAllFiles).filter(file => !file.preview_w && file.storage_key && Number(file.page_count) > 0);
+  if (!todo.length) return;
+  dsPreviewBusy = true;
+  try {
+    await scEnsurePdfjs();
+    for (const file of todo) {
+      const total = Number(file.page_count);
+      for (const part of dsPartsForFile(file)) {
+        const doc = await dsOpenRangePdf(part);
+        try {
+          for (let pageNo = part.page_start; pageNo <= part.page_end; pageNo++) {
+            const page = await doc.getPage(pageNo - part.page_start + 1);
+            const base = page.getViewport({ scale: 1 });
+            const viewport = page.getViewport({ scale: DS_PREVIEW_W / Math.max(base.width, base.height) });
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+            await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport, background: '#ffffff' }).promise;
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+            canvas.width = canvas.height = 0; try { page.cleanup(); } catch (_) {}
+            if (!blob) throw new Error('預覽圖轉檔失敗');
+            const up = await fetch(SUPA_URL + '/storage/v1/object/' + DS_BUCKET + '/' + dsEncodedPath(dsPreviewPath(file, pageNo)), {
+              method: 'POST', headers: dsStorageHeaders({ 'Content-Type': 'image/jpeg', 'x-upsert': 'true' }), body: blob });
+            if (!up.ok) throw new Error('預覽圖上傳失敗：HTTP ' + up.status);
+            dsSetProgress(Math.round(pageNo / total * 100), '正在產生手機預覽圖「' + (file.original_name || '') + '」' + pageNo + ' / ' + total + '（可繼續使用，不用等）');
+          }
+        } finally { try { await doc.destroy(); } catch (_) {} }
+      }
+      const mark = await sbFetch('/rest/v1/rpc/drawing_mark_preview', { method: 'POST', body: JSON.stringify({ p_id: file.id, p_w: DS_PREVIEW_W }) });
+      if (mark.ok && mark.data === true) file.preview_w = DS_PREVIEW_W;
+    }
+    dsSetProgress(0, '手機預覽圖已產生完成。');
+  } catch (error) {
+    console.warn('手機預覽圖產生中斷，下次開圖面快搜會再接著做：', error);
+  } finally {
+    dsPreviewBusy = false;
+  }
+}
+
+/* 手機:每張圖面讀預覽 JPG;沒有預覽圖的舊檔在電腦上才用 pdf.js 直接轉(手機直接轉會當機) */
 async function dsRowsToImagesLite(rows, onProgress) {
   const docs = new Map(), images = [];
   try {
@@ -51733,6 +51797,9 @@ async function dsRowsToImagesLite(rows, onProgress) {
       const row = rows[index];
       const file = dsFiles.find(item => item.id === row.file_id) || dsAllFiles.find(item => item.id === row.file_id);
       if (!file) throw new Error('找不到第 ' + row.page_no + ' 頁所屬 PDF。');
+      const preview = await dsLoadPreviewImage(file, Number(row.page_no));
+      if (preview) { images.push(preview); if (onProgress) onProgress(index + 1, rows.length); continue; }
+      if (dsTouchTab()) throw new Error('這份圖面還沒有手機預覽圖。請先用電腦打開一次「圖面快搜」，系統會自動產生，完成後手機就能看。');
       const part = dsPartsForFile(file).find(item => Number(row.page_no) >= item.page_start && Number(row.page_no) <= item.page_end);
       if (!part) throw new Error('找不到第 ' + row.page_no + ' 頁的儲存分段。');
       let doc = docs.get(part.storage_key);
@@ -51774,70 +51841,107 @@ async function dsImagesToPdfBlob(images, title) {
   return new Blob([await output.save()], { type: 'application/pdf' });
 }
 
-/* 手機頁內全螢幕圖面檢視器:一頁一張圖往下捲;＋／－放大(也可雙指縮放)、↻ 旋轉(直握手機時預設轉正)、下載 PDF、✕ 關閉 */
+/* 手機頁內全螢幕圖面檢視器(操作比照 iPhone「檔案」App):
+   ・兩指縮放、點兩下放大／還原、單指拖曳捲動;直向、橫向跟著手機轉,轉了自動重新貼齊寬度
+   ・多頁往下捲,右上顯示第幾頁;↻ 可手動轉 90°(手機開了直向鎖定時用);下載＝把預覽圖組成 PDF */
 function dsTouchOverlay(title) {
   const old = document.getElementById('ds-touch-view'); if (old) old.remove();
   const ov = document.createElement('div'); ov.id = 'ds-touch-view';
-  ov.innerHTML = '<div class="dtv-bar"><span class="dtv-t">' + dsEsc(title) + '</span><span class="dtv-pn"></span>' +
-    '<button type="button" data-a="out" aria-label="縮小">－</button><button type="button" data-a="in" aria-label="放大">＋</button>' +
-    '<button type="button" data-a="rot">↻</button><button type="button" data-a="dl" hidden>下載</button><button type="button" data-a="x" aria-label="關閉">✕</button></div>' +
-    '<div class="dtv-doc"><div class="dtv-msg">正在準備原始畫質圖面，請稍候…</div></div>';
+  ov.innerHTML = '<div class="dtv-bar"><button type="button" data-a="x" class="dtv-done">完成</button><span class="dtv-t">' + dsEsc(title) + '</span><span class="dtv-pn"></span>' +
+    '<button type="button" data-a="rot" aria-label="旋轉">↻</button><button type="button" data-a="dl" hidden aria-label="下載">⤓</button></div>' +
+    '<div class="dtv-doc"><div class="dtv-inner"><div class="dtv-msg">正在載入圖面…</div></div></div>';
   document.body.appendChild(ov);
   document.documentElement.classList.add('dtv-open');
-  const docEl = ov.querySelector('.dtv-doc'), counter = ov.querySelector('.dtv-pn');
+  const docEl = ov.querySelector('.dtv-doc'), inner = ov.querySelector('.dtv-inner'), counter = ov.querySelector('.dtv-pn');
   let images = [], zoom = 1, rot = false, pdfUrl = '', fileName = '圖面.pdf';
+  const onResize = () => { if (images.length) { const cx = docEl.scrollLeft / (docEl.scrollWidth || 1), cy = docEl.scrollTop / (docEl.scrollHeight || 1); layout(); docEl.scrollLeft = cx * docEl.scrollWidth; docEl.scrollTop = cy * docEl.scrollHeight; } };
   const close = () => {
     ov.remove(); document.documentElement.classList.remove('dtv-open');
+    window.removeEventListener('resize', onResize); window.removeEventListener('orientationchange', onOrient);
     images.forEach(image => { try { URL.revokeObjectURL(image.url); } catch (_) {} });
     if (pdfUrl) { try { URL.revokeObjectURL(pdfUrl); } catch (_) {} }
   };
-  const layout = () => {
-    const width = docEl.clientWidth * zoom;
-    ov.querySelectorAll('.dtv-pg').forEach(page => {
+  const onOrient = () => setTimeout(onResize, 300);
+  // 版面:每頁寬 = 可視寬 × zoom(zoom 1 = 整頁貼齊螢幕寬,跟「檔案」一樣)
+  function layout() {
+    const width = Math.round(docEl.clientWidth * zoom);
+    inner.style.width = width + 'px';
+    inner.querySelectorAll('.dtv-pg').forEach(page => {
       const w = Number(page.dataset.w) || 1, h = Number(page.dataset.h) || 1, img = page.querySelector('img');
-      page.style.width = width + 'px';
       if (rot) { page.style.height = Math.round(width * w / h) + 'px'; img.style.cssText = 'position:absolute;top:0;left:100%;height:' + width + 'px;width:auto;transform-origin:0 0;transform:rotate(90deg)'; }
       else { page.style.height = Math.round(width * h / w) + 'px'; img.style.cssText = 'display:block;width:100%;height:100%'; }
     });
     ov.querySelector('[data-a="rot"]').classList.toggle('on', rot);
+  }
+  // 以螢幕上某一點(px,py)為中心縮放到 z
+  function zoomAt(z, px, py) {
+    z = Math.max(1, Math.min(6, z));
+    const r = docEl.getBoundingClientRect(), ox = px - r.left, oy = py - r.top;
+    const fx = (docEl.scrollLeft + ox) / (inner.offsetWidth || 1), fy = (docEl.scrollTop + oy) / (inner.offsetHeight || 1);
+    zoom = z; layout();
+    docEl.scrollLeft = fx * inner.offsetWidth - ox; docEl.scrollTop = fy * inner.offsetHeight - oy;
+  }
+  // 兩指縮放:手勢進行中先用 transform 即時放大(順),放開手指才真正重排
+  let pinch = null, lastTap = 0;
+  const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  docEl.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      const r = docEl.getBoundingClientRect();
+      const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2, my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      pinch = { d0: dist(e.touches), mx, my, s: 1 };
+      inner.style.transformOrigin = (docEl.scrollLeft + mx - r.left) + 'px ' + (docEl.scrollTop + my - r.top) + 'px';
+      e.preventDefault();
+    } else if (e.touches.length === 1) {
+      const now = Date.now();
+      if (now - lastTap < 300) { e.preventDefault(); zoomAt(zoom > 1.05 ? 1 : 2.5, e.touches[0].clientX, e.touches[0].clientY); lastTap = 0; }
+      else lastTap = now;
+    }
+  }, { passive: false });
+  docEl.addEventListener('touchmove', e => {
+    if (!pinch || e.touches.length !== 2) return;
+    e.preventDefault();
+    pinch.s = Math.max(1 / zoom, Math.min(6 / zoom, dist(e.touches) / pinch.d0));
+    inner.style.transform = 'scale(' + pinch.s + ')';
+  }, { passive: false });
+  const endPinch = () => {
+    if (!pinch) return;
+    const p = pinch; pinch = null;
+    inner.style.transform = ''; inner.style.transformOrigin = '';
+    zoomAt(zoom * p.s, p.mx, p.my);
   };
-  const setZoom = z => {
-    const cx = (docEl.scrollLeft + docEl.clientWidth / 2) / (docEl.scrollWidth || 1), cy = (docEl.scrollTop + docEl.clientHeight / 2) / (docEl.scrollHeight || 1);
-    zoom = Math.max(1, Math.min(4, z)); layout();
-    docEl.scrollLeft = cx * docEl.scrollWidth - docEl.clientWidth / 2; docEl.scrollTop = cy * docEl.scrollHeight - docEl.clientHeight / 2;
-  };
+  docEl.addEventListener('touchend', e => { if (e.touches.length < 2) endPinch(); });
+  docEl.addEventListener('touchcancel', endPinch);
+  // 電腦觸控板/滑鼠測試用:Ctrl+滾輪縮放
+  docEl.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); zoomAt(zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15), e.clientX, e.clientY); }, { passive: false });
   ov.querySelector('.dtv-bar').addEventListener('click', async e => {
     const a = e.target.closest('button')?.dataset.a; if (!a) return;
     if (a === 'x') close();
-    else if (a === 'in') setZoom(zoom * 1.5);
-    else if (a === 'out') setZoom(zoom / 1.5);
-    else if (a === 'rot') { rot = !rot; layout(); docEl.scrollTo(0, 0); }
+    else if (a === 'rot') { rot = !rot; zoom = 1; layout(); docEl.scrollTo(0, 0); }
     else if (a === 'dl') {
       if (!confirm('要下載這份圖面嗎？\n檔名：' + fileName)) return;
-      const btn = e.target.closest('button'); btn.disabled = true; btn.textContent = '準備中…';
+      const btn = e.target.closest('button'); btn.disabled = true;
       try { if (!pdfUrl) pdfUrl = URL.createObjectURL(await dsImagesToPdfBlob(images, title)); dsSaveBlobAs(pdfUrl, fileName); }
       catch (error) { alert('下載失敗：' + error.message); }
-      finally { btn.disabled = false; btn.textContent = '下載'; }
+      finally { btn.disabled = false; }
     }
   });
   docEl.addEventListener('scroll', () => {
     if (images.length < 2) return;
-    const pages = ov.querySelectorAll('.dtv-pg'), mid = docEl.scrollTop + docEl.clientHeight / 2; let cur = 1;
+    const pages = inner.querySelectorAll('.dtv-pg'), mid = docEl.scrollTop + docEl.clientHeight / 2; let cur = 1;
     pages.forEach((page, i) => { if (page.offsetTop <= mid) cur = i + 1; });
     counter.textContent = cur + ' / ' + images.length;
   }, { passive: true });
-  window.addEventListener('resize', () => { if (images.length) layout(); });
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', onOrient);
   return {
     say: text => { const m = ov.querySelector('.dtv-msg'); if (m) m.textContent = text; },
     close,
     show: (imgs, name) => {
       images = imgs; fileName = name || fileName;
-      docEl.innerHTML = imgs.map((image, i) => '<div class="dtv-pg" data-w="' + image.width + '" data-h="' + image.height + '"><img src="' + image.url + '" alt="第 ' + (i + 1) + ' 頁圖面">' +
-        (imgs.length > 1 ? '<span class="dtv-no">' + (i + 1) + ' / ' + imgs.length + '</span>' : '') + '</div>').join('');
+      inner.innerHTML = imgs.map((image, i) => '<div class="dtv-pg" data-w="' + image.width + '" data-h="' + image.height + '"><img src="' + image.url + '" alt="第 ' + (i + 1) + ' 頁圖面" draggable="false"></div>').join('');
       counter.textContent = imgs.length > 1 ? '1 / ' + imgs.length : '';
       ov.querySelector('[data-a="dl"]').hidden = false;
-      rot = window.innerHeight > window.innerWidth && imgs[0] && imgs[0].width > imgs[0].height;   // 直握看橫向圖:預設轉正
-      layout();
+      zoom = 1; rot = false; layout();
     }
   };
 }
@@ -52141,6 +52245,7 @@ async function dsRenderStoredPage(file, pageNumber) {
 async function dsOpenFile(id, pageNumber) {
   const file = dsFiles.find(item => item.id === id) || dsAllFiles.find(item => item.id === id);
   if (!file?.storage_key) { alert('找不到此 PDF 的儲存位置。'); return; }
+  if (dsTouchTab()) { dsOpenPages([{ file_id: id, page_no: Math.max(1, Number(pageNumber) || 1), part_no: file.original_name || '圖面' }], file.original_name || '圖面'); return; }
   try {
     await scEnsurePdfjs();
     const parts = dsPartsForFile(file);
@@ -52201,7 +52306,8 @@ async function dsDeleteFile(id) {
   }
   if (!confirm('確定刪除「' + file.original_name + '」及其全部頁碼標記嗎？')) return;
   try {
-    const paths = Array.from(new Set([file.storage_key, ...(Array.isArray(file.storage_parts) ? file.storage_parts.map(part => part.storage_key) : [])].filter(Boolean)));
+    const previews = file.storage_key ? Array.from({ length: Number(file.page_count) || 0 }, (_, i) => dsPreviewPath(file, i + 1)) : [];
+    const paths = Array.from(new Set([file.storage_key, ...(Array.isArray(file.storage_parts) ? file.storage_parts.map(part => part.storage_key) : []), ...previews].filter(Boolean)));
     const storageResult = await dsStorageRemove(paths);
     if (!storageResult.ok && storageResult.status !== 404) throw new Error((await storageResult.text()) || ('Storage HTTP ' + storageResult.status));
     const dbResult = await sbFetch('/rest/v1/drawing_files?id=eq.' + id, { method: 'DELETE' });
