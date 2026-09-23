@@ -5,6 +5,8 @@
 //  ・上線準備紅燈:網頁端算好的快照(push_ready_snapshot) → 推給有訂閱「上線準備」的人
 //  ・報驗完成(待出貨):台灣時間 13:00 推今天上午報驗、08:00 推前一天下午報驗,依柱位整理 → 訂閱「ship」的人
 //    (也可帶 {mode:'ship', half:'am'|'pm', date:'YYYY-MM-DD'} 手動觸發)
+//  ・五金低庫存:庫存 ≤ 安全庫存(或缺貨)的品項 → 訂閱「hwlow」的人(週日不推)
+//  ・點工單未請款:每週一與每月 25 日推未請款筆數、金額與最久的一筆 → 訂閱「laborub」的人
 //  ・每日提醒時間:push_subscriptions.remind_time(HH:MM,30 分鐘一格,空=08:00);daily_sent_on 記錄今天送過,排程重跑也不重複
 // 另外支援:
 //  ・{mode:'test'}    登入者自己按「傳送測試通知」
@@ -140,6 +142,42 @@ async function buildReadyMessage(today: string): Promise<Msg | null> {
     title: '🚩 上線準備逾期 ' + items.length + ' 區',
     body: listBody(items.map(i => i.text)),
     tag: 'ready-' + today, url: APP_URL + '#/dashboard',
+  };
+}
+
+// 五金低庫存:規則同網頁 hwStatus(缺貨=庫存≤0;低庫存=有設安全庫存且庫存≤安全庫存;沒設的不推)
+async function buildHwLowMessage(): Promise<Msg | null> {
+  const items = await rest('hw_items?select=category,name,unit,stock,safety') as any[];
+  const n = (v: unknown) => { const x = parseFloat(String(v ?? '')); return isFinite(x) ? x : 0; };
+  const rows = items
+    .map(i => ({ name: String(i.name || ''), unit: String(i.unit || ''), stock: n(i.stock), safety: n(i.safety) }))
+    .filter(i => i.name && (i.stock <= 0 || (i.safety > 0 && i.stock <= i.safety)))
+    .sort((a, b) => (a.stock > 0 ? 1 : 0) - (b.stock > 0 ? 1 : 0) || a.stock / (a.safety || 1) - b.stock / (b.safety || 1));
+  if (!rows.length) return null;
+  const out = rows.filter(r => r.stock <= 0).length;
+  return {
+    title: '🧰 五金低庫存 ' + rows.length + ' 項' + (out ? '(缺貨 ' + out + ')' : ''),
+    body: listBody(rows.map(r => r.name + ' ' + (r.stock <= 0 ? '缺貨' : '剩 ' + r.stock + (r.unit ? ' ' + r.unit : '')) + (r.safety > 0 ? '(安全 ' + r.safety + ')' : ''))),
+    tag: 'hwlow-' + taipeiToday(), url: APP_URL + '#/hardware',
+  };
+}
+
+// 點工單未請款:規則同網頁「未請款」分頁(請款日空白、且有工程或編號)
+async function buildLaborUbMessage(today: string): Promise<Msg | null> {
+  const rows = (await rest('labor_orders?bill_date=is.null&select=proj_num,doc_no,work_date,amount') as any[])
+    .filter(r => String(r.proj_num || '').trim() || String(r.doc_no || '').trim());
+  if (!rows.length) return null;
+  const n = (v: unknown) => { const x = parseFloat(String(v ?? '')); return isFinite(x) ? x : 0; };
+  const total = rows.reduce((s, r) => s + n(r.amount), 0);
+  const byProj = new Map<string, { cnt: number; amt: number }>();
+  for (const r of rows) { const k = String(r.proj_num || '(未指定工程)').trim(); const g = byProj.get(k) || { cnt: 0, amt: 0 }; g.cnt++; g.amt += n(r.amount); byProj.set(k, g); }
+  const oldest = rows.map(r => String(r.work_date || '').slice(0, 10)).filter(Boolean).sort()[0];
+  const money = (x: number) => '$' + Math.round(x).toLocaleString('en-US');
+  const lines = [...byProj.entries()].sort((a, b) => b[1].amt - a[1].amt).map(([k, g]) => k + ' ' + g.cnt + ' 筆 ' + money(g.amt));
+  return {
+    title: '🧾 點工單未請款 ' + rows.length + ' 筆 · ' + money(total),
+    body: (oldest ? '最久一筆 ' + md(oldest) + '(' + daysBetween(oldest, today) + ' 天)\n' : '') + listBody(lines, 3),
+    tag: 'laborub-' + today, url: APP_URL + '#/labor',
   };
 }
 
@@ -335,6 +373,15 @@ Deno.serve(async req => {
     if (notices.length) { const t = due.filter(s => has(s, 'notice')); if (t.length) for (const m of notices) await deliver(t, m, stats); report.notice = notices.length; }
     const ready = await buildReadyMessage(today).catch(e => { console.warn('ready snapshot', e); return null; });
     if (ready) { const t = due.filter(s => has(s, 'ready')); if (t.length) await deliver(t, ready, stats); report.ready = t.length; }
+    const dow = d(today).getUTCDay();
+    if (dow !== 0 && due.some(s => has(s, 'hwlow'))) {
+      const hw = await buildHwLowMessage().catch(e => { console.warn('hwlow', e); return null; });
+      if (hw) { const t = due.filter(s => has(s, 'hwlow')); await deliver(t, hw, stats); report.hwlow = t.length; }
+    }
+    if ((dow === 1 || today.slice(8, 10) === '25' || body.mode === 'daily') && due.some(s => has(s, 'laborub'))) {
+      const lb = await buildLaborUbMessage(today).catch(e => { console.warn('laborub', e); return null; });
+      if (lb) { const t = due.filter(s => has(s, 'laborub')); await deliver(t, lb, stats); report.laborub = t.length; }
+    }
     out.report = report;
     if (body.mode !== 'daily') {
       // 標記今天已送;尚未跑 migration(沒有 daily_sent_on 欄)時略過,不影響推送
