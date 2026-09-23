@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.22.17"/>
+<meta name="sc-version" content="2026.09.23.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5992,7 +5992,7 @@ window.normalizeFullWidth=function(value){
       <div id="labor-detail-panel">
         <div class="labor-project-nav" id="labor-project-nav"></div>
         <div class="search-bar" style="display:flex;gap:10px;align-items:center">
-          <input class="search-input" id="labor-search" style="flex:1" placeholder="搜尋 編號 / 工程 / 點工內容 / 權責單位 / 主辦..." oninput="laborRender()"/>
+          <input class="search-input" id="labor-search" style="flex:1" placeholder="搜尋 編號 / 工程 / 點工內容 / 權責單位 / 主辦..." oninput="laborSearchInput()"/>
           <button class="btn" onclick="laborUndo()" title="復原 (Ctrl+Z)">↶ 復原</button>
           <button class="btn" onclick="laborRedoAct()" title="重作 (Ctrl+Y)">↷ 重作</button>
           <button class="btn" id="labor-add-btn" onclick="laborAddRow()">＋ 新增一列</button>
@@ -7355,6 +7355,10 @@ window.normalizeFullWidth=function(value){
     .spx-m-field>input,.spx-m-field>select{box-sizing:border-box;width:100%;height:42px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font:16px var(--sans);outline:none}
     .spx-m-field>input:focus,.spx-m-field>select:focus{border-color:var(--accent2)}
     .spx-m-field>input[readonly]{background:var(--bg);color:var(--text2)}
+    .spx-m-field>textarea{box-sizing:border-box;width:100%;min-height:74px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font:16px/1.4 var(--sans);resize:vertical}
+    .spx-m-field.lab-m-chk>div{display:flex;align-items:center;gap:8px;height:42px;font-size:15px;color:var(--text2)}
+    .spx-m-field.lab-m-chk input{width:22px;height:22px;accent-color:var(--accent2)}
+    .spx-m-field.lab-m-chk em{font-style:normal;font-family:var(--mono)}
     .spx-m-toggle{display:flex;align-items:center;gap:10px;min-height:42px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font:600 15px var(--sans);cursor:pointer}
     .spx-m-toggle input[type=checkbox]{width:22px!important;height:22px!important;margin:0;accent-color:var(--green)}
     .spx-m-toggle label{justify-content:flex-start!important;width:100%;font-size:15px}
@@ -8078,6 +8082,24 @@ window.normalizeFullWidth=function(value){
       #page-labor .lm-rates{grid-template-columns:1fr}
       #page-labor .lm-row{flex-wrap:wrap}
       #labor-make-panel>div:last-of-type .btn{flex:1 1 100%;justify-content:center;min-height:44px}
+      /* 點工單明細：手機改純文字卡片，點卡片開底部面板編輯 */
+      #labor-detail-panel>.card{overflow:visible!important;border:0;background:transparent;box-shadow:none}
+      #page-labor .lab-m-card{position:relative;padding:12px 14px 11px;margin-bottom:8px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);cursor:pointer;-webkit-tap-highlight-color:transparent}
+      #page-labor .lab-m-card:active{background:var(--bg3)}
+      #page-labor .lab-m-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding-right:34px}
+      #page-labor .lab-m-title{font:600 15px/1.35 var(--mono);color:var(--text);min-width:0;overflow-wrap:anywhere}
+      #page-labor .lab-m-num{flex:none;font:600 16px var(--mono);color:var(--text)}
+      #page-labor .lab-m-num small{font-size:12px;font-weight:400;color:var(--text3);margin-left:3px}
+      #page-labor .lab-m-meta{margin-top:4px;font-size:13px;color:var(--text2);line-height:1.5;overflow-wrap:anywhere}
+      #page-labor .lab-m-meta .sep{color:var(--text3);margin:0 6px}
+      #page-labor .lab-m-content{margin-top:4px;font-size:14px;color:var(--text);line-height:1.45;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+      #page-labor .lab-m-sub{margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+      #page-labor .lab-m-badge{font-size:11px;padding:2px 8px;border-radius:999px;background:rgba(239,68,68,.12);color:var(--danger)}
+      #page-labor .lab-m-badge.ok{background:rgba(34,197,94,.12);color:var(--success)}
+      #page-labor .lab-m-badge.ret{background:rgba(245,158,11,.14);color:var(--yellow)}
+      #page-labor .lab-m-amt{margin-left:auto;font:600 13px var(--mono);color:var(--text2)}
+      #page-labor .lab-m-del{position:absolute;top:8px;right:8px;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:var(--text3);font-size:16px;line-height:30px;padding:0;cursor:pointer}
+      #page-labor .lab-m-del:active{background:rgba(224,82,82,.15);color:var(--red)}
       /* 個人頁面：篩選列比照打卡紀錄；請假／打卡紀錄表改卡片 */
       #page-mypage .attendlog-filter{flex-wrap:wrap;gap:8px}
       #page-mypage .attendlog-dates{flex:1 1 100%;min-width:0}
@@ -40991,6 +41013,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       if(!q) return true;
       return [r.doc_no,r.proj_num,r.content,r.manager,r.resp_unit].some(function(v){ return String(v||'').toLowerCase().indexOf(q)>=0; });
     });
+    if(laborIsMobile()){ laborRenderCards(tbl,rows); return; }
     var body='';
     rows.forEach(function(r){
       var rid=r._rid;
@@ -41019,6 +41042,103 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       +laborDetailHead('請款日','bill_date')+laborDetailHead('權責單位','resp_unit')+laborDetailHead('備註','note')+laborDetailHead('主辦','manager')+'<th>操作</th>'
       +'</tr></thead><tbody>'+body+'</tbody></table>';
     if(typeof tblInitSelection==='function') tblInitSelection(document.getElementById('labor-grid'));
+  };
+
+  // ── 手機版明細:純文字卡片 + 底部編輯面板(整頁上千個輸入格、每列掛 datalist 會讓 iPhone 當掉,與五金同病) ──
+  var LABOR_M_PAGE=50, laborMPage=1, laborMSearchTimer=null, laborMLastQ='';
+  function laborIsMobile(){ return typeof spTrackIsMobile==='function' && spTrackIsMobile(); }
+  window.laborSearchInput=function(){
+    if(!laborIsMobile()){ laborRender(); return; }
+    clearTimeout(laborMSearchTimer); laborMSearchTimer=setTimeout(laborRender,300);   // 手機停手再篩,打字時不整頁重畫
+  };
+  window.laborMGo=function(p){ laborMPage=p; laborRender(); var t=document.getElementById('labor-table'); if(t) t.scrollIntoView(); };
+  function laborRenderCards(tbl,rows){
+    var q=(document.getElementById('labor-search').value||'').trim();
+    if(q!==laborMLastQ){ laborMLastQ=q; laborMPage=1; }
+    // 新到舊:未存的新列最前,其餘依日期、編號倒序
+    rows=rows.slice().sort(function(a,b){
+      if(!!a._new!==!!b._new) return a._new?-1:1;
+      return String(b.work_date||'').localeCompare(String(a.work_date||'')) || String(b.doc_no||'').localeCompare(String(a.doc_no||''),undefined,{numeric:true});
+    });
+    var pages=Math.max(1,Math.ceil(rows.length/LABOR_M_PAGE));
+    laborMPage=Math.min(pages,Math.max(1,laborMPage));
+    var slice=rows.slice((laborMPage-1)*LABOR_M_PAGE,laborMPage*LABOR_M_PAGE);
+    var sep='<span class="sep">·</span>';
+    var html=slice.map(function(r){
+      var meta=[r.proj_num,r.work_date,r.resp_unit,r.manager].filter(has).map(esc).join(sep);
+      var billed=isBilled(r);
+      var sub=(billed?'<span class="lab-m-badge ok">已請款 '+esc(r.bill_date)+'</span>':'<span class="lab-m-badge">未請款</span>')
+        +(r.has_retention?'<span class="lab-m-badge ret">保</span>':'')
+        +(has(r.amount)?'<span class="lab-m-amt">$'+money(r.amount)+'</span>':'');
+      return '<div class="lab-m-card" onclick="laborMOpen('+r._rid+')">'
+        +'<button class="lab-m-del" aria-label="刪除" onclick="event.stopPropagation();laborDelete('+r._rid+')">✕</button>'
+        +'<div class="lab-m-top"><span class="lab-m-title">'+esc(r.doc_no||'（未編號）')+'</span>'
+        +(has(r.work_count)?'<span class="lab-m-num">'+esc(r.work_count)+'<small>工</small></span>':'')+'</div>'
+        +(meta?'<div class="lab-m-meta">'+meta+'</div>':'')
+        +(has(r.content)?'<div class="lab-m-content">'+esc(r.content)+'</div>':'')
+        +'<div class="lab-m-sub">'+sub+'</div></div>';
+    }).join('');
+    if(!rows.length) html='<div class="empty-state">'+(laborOnlyUnbilled?'沒有未請款的點工單 🎉':'目前沒有點工單,按上方「＋ 新增一列」')+'</div>';
+    if(pages>1) html+='<div class="hw-pager"><button '+(laborMPage<=1?'disabled':'')+' onclick="laborMGo('+(laborMPage-1)+')">‹ 上一頁</button><span>第 '+laborMPage+' / '+pages+' 頁（共 '+rows.length+' 筆）</span><button '+(laborMPage>=pages?'disabled':'')+' onclick="laborMGo('+(laborMPage+1)+')">下一頁 ›</button></div>';
+    tbl.innerHTML='<div class="lab-m-list">'+html+'</div>';
+  }
+  function laborMOptions(list,cur){
+    var seen={}, out='<option value=""></option>';
+    list.concat(has(cur)?[cur]:[]).forEach(function(v){ v=String(v||'').trim(); if(!v||seen[v]) return; seen[v]=1; out+='<option value="'+escAttr(v)+'"'+(v===String(cur||'').trim()?' selected':'')+'>'+esc(v)+'</option>'; });
+    return out;
+  }
+  window.laborMOpen=function(rid){
+    var r=findRow(rid); if(!r) return;
+    var old=document.getElementById('laborMobileSheet'); if(old) old.remove();
+    var projs=laborProjs.map(function(p){ return p.proj_num; }).sort(function(a,b){ return String(a).localeCompare(String(b),undefined,{numeric:true}); });
+    var resp=[]; var rl=document.getElementById('labor-resp-list'); if(rl) resp=[].map.call(rl.options,function(o){ return o.value; });
+    laborRows.forEach(function(x){ if(has(x.resp_unit)) resp.push(x.resp_unit); });
+    var ch=function(f,extra){ return ' data-f="'+f+'" onchange="laborMCell('+rid+',\''+f+'\','+(extra||'this.value')+')"'; };
+    var fld=function(label,inner,wide){ return '<label class="spx-m-field'+(wide?' wide':'')+'"><span>'+label+'</span>'+inner+'</label>'; };
+    var txt=function(f,ph,mode){ return '<input type="text"'+(mode?' inputmode="'+mode+'"':'')+' value="'+escAttr(f==='amount'||f==='actual_amount'?money(r[f]):r[f])+'" placeholder="'+ph+'"'+ch(f)+'>'; };
+    var form=fld('工程',  '<select'+ch('proj_num')+'>'+laborMOptions(projs,r.proj_num)+'</select>')
+      +fld('編號',  txt('doc_no','自動產生'))
+      +fld('日期',  '<input type="date" value="'+escAttr(r.work_date)+'"'+ch('work_date')+'>')
+      +fld('工數',  txt('work_count','0','decimal'))
+      +fld('金額',  txt('amount','工數×'+LABOR_RATE,'decimal'))
+      +fld('權責單位','<select'+ch('resp_unit')+'>'+laborMOptions(resp,r.resp_unit)+'</select>')
+      +fld('點工內容','<textarea rows="3" placeholder="點工內容"'+ch('content')+'>'+esc(r.content||'')+'</textarea>',true)
+      +fld('請款工數',txt('actual_count','0','decimal'))
+      +fld('請款金額',txt('actual_amount','','decimal'))
+      +fld('請款日',  '<input type="date" value="'+escAttr(r.bill_date)+'"'+ch('bill_date')+'>')
+      +'<label class="spx-m-field lab-m-chk"><span>保留款</span><div><input type="checkbox"'+(r.has_retention?' checked':'')+ch('has_retention','this.checked')+'> <em data-f="ret-amt">'+(r.has_retention?'$'+money(Math.round(num(r.actual_amount)*0.2)):'—')+'</em></div></label>'
+      +fld('主辦',  txt('manager',''))
+      +fld('備註',  txt('note',''),true)
+      +'<div class="cpr-m-actions"><button type="button" class="cpr-m-danger" onclick="laborMDelete('+rid+')">刪除這筆</button></div>';
+    var sheet=document.createElement('div'); sheet.className='sp-sheet spx-m-sheet'; sheet.id='laborMobileSheet'; sheet.dataset.rid=rid;
+    sheet.innerHTML='<div class="sp-sheet-panel" role="dialog" aria-modal="true" aria-label="編輯點工單"><div class="sp-sheet-grip"></div>'
+      +'<div class="spx-m-head"><div class="sp-sheet-title" data-f="title">'+esc(r.doc_no||'新點工單')+'</div><button type="button" class="spx-m-close" aria-label="關閉" onclick="laborMClose()">✕</button></div>'
+      +'<div class="spx-m-form">'+form+'</div><div class="spx-m-note">修改會自動儲存；金額＝工數×'+LABOR_RATE+'（可改寫）</div></div>';
+    sheet.addEventListener('click',function(e){ if(e.target===sheet) laborMClose(); });
+    document.body.appendChild(sheet);
+  };
+  window.laborMCell=function(rid,f,v){
+    laborCell(rid,f,v);
+    var sh=document.getElementById('laborMobileSheet'); if(sh) sh.dataset.touched='1';
+    // 只更新面板裡被連動的欄位(不重畫整個面板,避免正在點的下一格被換掉)
+    var r=findRow(rid), s=document.getElementById('laborMobileSheet'); if(!r||!s) return;
+    ['doc_no','amount','actual_amount','bill_date','manager'].forEach(function(k){
+      var el=s.querySelector('[data-f="'+k+'"]'); if(el && el!==document.activeElement) el.value=(k==='amount'||k==='actual_amount')?money(r[k]):(r[k]==null?'':r[k]);
+    });
+    var ra=s.querySelector('[data-f="ret-amt"]'); if(ra) ra.textContent=r.has_retention?'$'+money(Math.round(num(r.actual_amount)*0.2)):'—';
+    var t=s.querySelector('[data-f="title"]'); if(t) t.textContent=r.doc_no||'新點工單';
+  };
+  window.laborMClose=function(){
+    var s=document.getElementById('laborMobileSheet'); if(!s) return;
+    var r=findRow(+s.dataset.rid), touched=!!s.dataset.touched; s.remove();
+    // 開了新列卻什麼都沒改(工程是自動帶的)就關掉 → 不留空卡、也不寫進資料庫
+    if(r && r._new && !r.id && (!touched || isEmptyRow(r))) laborRows=laborRows.filter(function(x){ return x!==r; });
+    if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    laborRender();
+  };
+  window.laborMDelete=async function(rid){
+    await laborDelete(rid);
+    if(!findRow(rid)){ var s=document.getElementById('laborMobileSheet'); if(s) s.remove(); }
   };
 
   // 欄位索引 → 資料欄名(供貼上/導覽;7=保 checkbox、13=操作 跳過)
@@ -41194,6 +41314,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var r=newBlankRow();
     if(laborProject!=='__cards__' && laborProject!=='__all__') applyField(r,'proj_num',laborProject);
     laborRows.push(r);
+    if(laborIsMobile()){ laborMPage=1; laborRender(); laborMOpen(r._rid); return; }
     laborRender();
     // 聚焦新列第一格(同步;若由 Enter 觸發,呼叫端會再把焦點移到同欄)
     var tb=document.querySelector('#labor-grid tbody'); if(tb&&tb.lastElementChild){ var f=tb.lastElementChild.querySelector('input'); if(f) f.focus(); }
