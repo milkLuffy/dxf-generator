@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.23.4"/>
+<meta name="sc-version" content="2026.09.23.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1355,6 +1355,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .hw-card-sub{margin-top:3px;font-size:12px;color:var(--text3);font-family:var(--mono)}
 .hw-card-del{position:absolute;top:8px;right:8px;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:var(--text3);font-size:16px;line-height:30px;padding:0;cursor:pointer}
 .hw-card-del:active{background:rgba(224,82,82,.15);color:var(--red)}
+.hw-scan-modal{width:min(420px,calc(100vw - 20px))!important}
+.hw-scan-box{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:1/1;margin-bottom:8px}
+.hw-scan-box video{width:100%;height:100%;object-fit:cover;display:block}
+.hw-scan-box i{position:absolute;inset:18%;border:3px solid rgba(255,255,255,.85);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
 .hw-hist-modal{width:min(520px,calc(100vw - 20px))!important;max-height:86vh;display:flex;flex-direction:column}
 .hw-hist-sum{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--text2);margin:4px 0 10px}
 .hw-hist-list{overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;flex:1;border-top:1px solid var(--border)}
@@ -8898,6 +8902,7 @@ window.normalizeFullWidth=function(value){
             <div style="display:flex;gap:8px">
               <button class="btn-sm btn-export" onclick="hwToggleAddItem()">＋ 新增品項</button>
               <button class="btn-sm btn-export" onclick="hwClearFilters('stock')">清除篩選</button>
+              <button class="btn-sm btn-export" onclick="hwPrintQR()" title="依目前篩選的品項印 QR 標籤,貼在櫃位上,手機掃了直接登記領用">🏷️ QR 標籤</button>
               <button class="btn-sm btn-export" onclick="hwExportStock()">⬇ 匯出 Excel</button>
             </div>
           </div>
@@ -8982,6 +8987,7 @@ window.normalizeFullWidth=function(value){
             <input id="hw-us-unit" class="search-input" placeholder="單位" style="width:70px"/>
             <select id="hw-us-person" class="search-input" style="width:220px"></select>
             <button class="btn-sm btn-gen" id="hw-us-btn" onclick="hwAddUsage()">＋ 新增領用</button>
+            <button class="btn-sm" id="hw-us-scan" onclick="hwScanOpen()" title="掃品項上的 QR 標籤,自動帶入種類與品名">📷 掃 QR</button>
           </div>
           <div class="hw-tblbox">
           <div class="layout-toolbar">
@@ -12818,6 +12824,8 @@ function hashToView(h) {
     return v;
   }
   if (p[0] === 'layout' && p[1] === 'chart') return { page:'layout', tab:'chart' };
+  if (p[0] === 'hardware' && p[1] === 'use' && /^\d+$/.test(p[2]||'')) return { page:'hardware', hwuse:Number(p[2]) };   // 五金 QR 標籤
+
   if (p[0] === 'layout' && p[1] === 'ship') return { page:'layout', tab:'ship' };   // 推播「報驗完成」點開 → 待出貨看板
   if (p[0] === 'multilevel' && p[1] === 'results') return { page:'multilevel', ma:'results' };
   if (p[0] === 'loading' && p[1]) { const v={page:'loading', ldtab:p[1]==='board'?'board':'plan'}; if(/^\d{4}-\d{2}$/.test(p[2]||'')) v.ldym=p[2]; return v; }
@@ -12845,6 +12853,7 @@ async function applyView(v) {
       if(!onProd){ navTo('prod'); _prodPendingView=v; prodMaybeApplyPending(); }   // 從別頁回來:載入後套用
       else { prodApplyViewNow(v); }                                                // 已在 SP 頁:直接套用,不重載
     } else {
+      if (v && v.hwuse) { window._hwPendingUse = v.hwuse; v = { page:'hardware' }; if (document.getElementById('page-hardware')?.classList.contains('active') && hwItems.length) { hwQuickUse(window._hwPendingUse); window._hwPendingUse = null; } }
       navTo((v && v.page) ? v.page : 'dashboard', v || null);
       if (v && v.page === 'layout' && v.tab === 'chart') layoutSwitchTab('chart', false);
       if (v && v.page === 'layout' && v.tab === 'ship' && typeof openShipBoard === 'function') openShipBoard();
@@ -14393,6 +14402,7 @@ async function hwInit(){
     hwVendors.sort(byName);
     hwEquip.sort((a,b)=> (a.owner===b.owner? hwNum(a.seq)-hwNum(b.seq) : String(a.owner||'').localeCompare(String(b.owner||''))));
     hwPopulateSelects(); hwRender();
+    if(window._hwPendingUse){ const u=window._hwPendingUse; window._hwPendingUse=null; hwQuickUse(u); }
   }catch(e){ console.error('hwInit',e); }
   finally{ hwBusy=false; }
 }
@@ -14749,14 +14759,17 @@ function hwOpenFilter(tab,ci,anchor){
 }
 
 // ── 庫存總表 ──
-function hwRenderStock(){
+function hwStockRows(){
   const q=hwSearch(), cat=document.getElementById('hw-stock-cat').value, lowOnly=document.getElementById('hw-low-only').checked;
-  const rows=hwApplyColFilters('stock', hwItems.filter(i=>{
+  return hwApplyColFilters('stock', hwItems.filter(i=>{
     if(cat && i.category!==cat) return false;
     if(lowOnly && !['low','out'].includes(hwStatus(i))) return false;
     if(q && !(String(i.name||'').toLowerCase().includes(q) || String(i.category||'').toLowerCase().includes(q))) return false;
     return true;
   }));
+}
+function hwRenderStock(){
+  const rows=hwStockRows();
   const badge={ok:'<span class="hw-badge ok">正常</span>',low:'<span class="hw-badge low">低庫存</span>',out:'<span class="hw-badge out">缺貨</span>',unset:'<span class="hw-badge unset">未設定</span>'};
   const tb=document.getElementById('hw-stock-body');
   if(hwMobile()){ hwCardsRender('stock',rows,i=>hwCard({edit:'hwEditItem('+i.id+')',del:'hwDeleteItem('+i.id+')',title:i.name,num:hwFmt(hwNum(i.stock)),unit:i.unit,
@@ -14772,6 +14785,86 @@ function hwRenderStock(){
     <td style="text-align:center;white-space:nowrap"><button class="hw-act" onclick="hwItemHistory(${i.id})">歷程</button> <button class="hw-act" onclick="hwEditItem(${i.id})">編輯</button> <button class="hw-act del" onclick="hwDeleteItem(${i.id})">刪除</button></td>
   </tr>`).join('');
   const stkTbl=document.getElementById('hw-stock-table'); if(stkTbl) tblInitSelection(stkTbl);
+}
+// ── QR 標籤:印出品項 QR(內容=系統網址 #/hardware/use/品項id),手機相機或頁內「掃 QR」掃了直接帶入領用 ──
+const HW_QR_BASE_FALLBACK='https://milkluffy.github.io/dxf-generator/';
+function hwQrUrl(id){
+  const local=/^(localhost|127\.|192\.168\.)/.test(location.hostname);
+  return (local? HW_QR_BASE_FALLBACK : location.origin+location.pathname)+'#/hardware/use/'+id;
+}
+function hwLoadScript(src,test){
+  if(test()) return Promise.resolve();
+  return new Promise((ok,bad)=>{ const s=document.createElement('script'); s.src=src; s.onload=()=>test()?ok():bad(new Error('load')); s.onerror=()=>bad(new Error('load')); document.head.appendChild(s); });
+}
+async function hwPrintQR(){
+  const rows=hwStockRows();
+  if(!rows.length){ alert('目前篩選沒有品項'); return; }
+  if(rows.length>200 && !await uiConfirm('要印 '+rows.length+' 張標籤,確定?(可先用上方種類/搜尋篩選)')) return;
+  const w=window.open('','_blank'); if(!w){ alert('請允許彈出視窗後再試一次'); return; }
+  w.document.write('<p style="font:16px sans-serif;padding:20px">產生標籤中…</p>');
+  try{ await hwLoadScript('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js',()=>typeof window.qrcode==='function'); }
+  catch(e){ w.close(); alert('QR 產生器載入失敗,請確認網路後再試'); return; }
+  const svg=text=>{ const q=qrcode(0,'M'); q.addData(text); q.make(); return q.createSvgTag({cellSize:4,margin:0,scalable:true}); };
+  const cards=rows.map(i=>'<div class="lb"><div class="qr">'+svg(hwQrUrl(i.id))+'</div><div class="tx"><div class="c">'+esc(i.category)+'</div><div class="n">'+esc(i.name)+'</div><div class="u">'+esc(i.unit||'')+'</div><div class="h">掃描登記領用</div></div></div>').join('');
+  w.document.open();
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>五金 QR 標籤</title><style>'
+    +'@page{size:A4;margin:8mm}body{margin:0;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;color:#000}'
+    +'.bar{padding:10px;text-align:center}.bar button{font-size:16px;padding:8px 20px}@media print{.bar{display:none}}'
+    +'.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm}'
+    +'.lb{display:flex;gap:3mm;align-items:center;border:1px dashed #999;border-radius:2mm;padding:3mm;break-inside:avoid;height:30mm;box-sizing:border-box}'
+    +'.qr{width:24mm;height:24mm;flex:none}.qr svg{width:100%;height:100%}'
+    +'.tx{min-width:0}.c{font-size:9pt;color:#555}.n{font-size:12pt;font-weight:700;line-height:1.2;overflow-wrap:anywhere}.u{font-size:9pt;color:#555}.h{font-size:7pt;color:#888;margin-top:1mm}'
+    +'</style></head><body><div class="bar"><button onclick="print()">列印</button> 共 '+rows.length+' 張・建議用貼紙紙或印好護貝</div><div class="grid">'+cards+'</div></body></html>');
+  w.document.close();
+}
+// 掃描:優先用瀏覽器內建 BarcodeDetector,沒有(iPhone Safari)就載入 jsQR 逐格解
+let hwScanStream=null, hwScanTimer=null;
+async function hwScanOpen(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ alert('這個瀏覽器不支援相機。iPhone 請用 Safari 或加入主畫面的 App 開啟。'); return; }
+  const ov=document.createElement('div'); ov.className='input-modal-overlay'; ov.id='hw-scan';
+  ov.innerHTML='<div class="input-modal hw-scan-modal"><div class="input-modal-title">📷 掃描品項 QR</div><div class="hw-scan-box"><video playsinline muted autoplay></video><i></i></div><div class="layout-hint" id="hw-scan-msg">把標籤上的 QR 對準框內</div><div class="input-modal-actions"><button class="input-modal-btn cancel">關閉</button></div></div>';
+  document.body.appendChild(ov);
+  ov.querySelector('.cancel').onclick=hwScanClose; ov.onclick=e=>{ if(e.target===ov) hwScanClose(); };
+  const msg=t=>{ const m=document.getElementById('hw-scan-msg'); if(m) m.textContent=t; };
+  try{ hwScanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false}); }
+  catch(e){ msg('無法開啟相機:請到設定允許相機權限'); return; }
+  if(!document.getElementById('hw-scan')){ hwScanClose(); return; }
+  const v=ov.querySelector('video'); v.srcObject=hwScanStream; try{ await v.play(); }catch(e){}
+  let detect=null;
+  if('BarcodeDetector' in window){ try{ const bd=new BarcodeDetector({formats:['qr_code']}); detect=async()=>{ const r=await bd.detect(v); return r[0]&&r[0].rawValue; }; }catch(e){} }
+  if(!detect){
+    try{ await hwLoadScript('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',()=>typeof window.jsQR==='function'); }
+    catch(e){ msg('掃描元件載入失敗,請確認網路'); return; }
+    const cv=document.createElement('canvas'), cx=cv.getContext('2d',{willReadFrequently:true});
+    detect=async()=>{ if(!v.videoWidth) return null; const s=Math.min(1,480/v.videoWidth); cv.width=v.videoWidth*s|0; cv.height=v.videoHeight*s|0; cx.drawImage(v,0,0,cv.width,cv.height); const r=jsQR(cx.getImageData(0,0,cv.width,cv.height).data,cv.width,cv.height,{inversionAttempts:'dontInvert'}); return r&&r.data; };
+  }
+  const tick=async()=>{
+    if(!document.getElementById('hw-scan')) return;
+    let txt=null; try{ txt=await detect(); }catch(e){}
+    const m=txt&&String(txt).match(/#\/hardware\/use\/(\d+)/);
+    if(m){ hwScanClose(); hwQuickUse(Number(m[1])); return; }
+    if(txt) msg('這不是五金品項的 QR 標籤');
+    hwScanTimer=setTimeout(tick,220);
+  };
+  tick();
+}
+function hwScanClose(){
+  clearTimeout(hwScanTimer); hwScanTimer=null;
+  if(hwScanStream){ hwScanStream.getTracks().forEach(t=>t.stop()); hwScanStream=null; }
+  const ov=document.getElementById('hw-scan'); if(ov) ov.remove();
+}
+// 帶入領用表單:切到領用紀錄、選好種類與品名,游標停在數量
+function hwQuickUse(id){
+  const it=hwItems.find(x=>x.id===id);
+  if(!it){ alert('找不到這個品項(可能已刪除),請到庫存總表確認'); return; }
+  hwSwitchTab('usage');
+  const ty=document.getElementById('hw-us-type'); if(ty){ ty.value='領用'; hwUsTypeSync(); }
+  const cat=document.getElementById('hw-us-cat'); cat.value=it.category; hwSyncUnit('us');
+  document.getElementById('hw-us-name').value=it.name;
+  const un=document.getElementById('hw-us-unit'); un.value=it.unit||'';
+  const q=document.getElementById('hw-us-qty'); q.value='';
+  q.scrollIntoView({block:'center'}); setTimeout(()=>q.focus(),60);
+  if(window.showToast) showToast('已帶入「'+it.name+'」,目前庫存 '+hwFmt(hwNum(it.stock))+(it.unit?' '+it.unit:''),'success');
 }
 // 品項異動歷程:進貨(+)、領用(−)、退回(+)、盤點(差額),由新到舊;結存從目前庫存往回推
 function hwItemHistory(id){
