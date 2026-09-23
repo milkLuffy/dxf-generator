@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.23.6"/>
+<meta name="sc-version" content="2026.09.23.7"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2714,6 +2714,11 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
   <div class="modal" style="max-width:600px">
     <div class="modal-title">頁面權限 — <span id="perm-modal-acc" style="color:var(--accent2)">—</span></div>
     <div id="perm-modal-note" style="font-size:12px;color:var(--text3);margin:4px 0 10px;line-height:1.6"></div>
+    <div id="perm-bulk" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px;align-items:center;font-size:12px;color:var(--text3)">一鍵設定所有頁面：
+      <button type="button" class="btn" style="padding:4px 10px;font-size:12px" onclick="permBulk('edit')">✏️ 全部允許</button>
+      <button type="button" class="btn" style="padding:4px 10px;font-size:12px" onclick="permBulk('read')">👁 全部唯讀</button>
+      <button type="button" class="btn" style="padding:4px 10px;font-size:12px" onclick="permBulk('hide')">🚫 全部隱藏</button>
+    </div>
     <div style="max-height:52vh;overflow:auto;border:1px solid var(--border,#e5e7eb);border-radius:8px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="position:sticky;top:0;background:var(--bg2,#f3f4f6)">
@@ -6483,7 +6488,7 @@ window.normalizeFullWidth=function(value){
     <div class="page" id="page-accounts">
       <div class="page-header">
         <div class="page-title" style="margin-bottom:0">帳號管理</div>
-        <button class="btn-add-new" id="accounts-save-btn" onclick="saveAllAccounts()">💾 儲存全部</button>
+        <span id="accounts-save-btn" style="font-family:var(--mono);font-size:12px;color:var(--text3)">改完自動儲存</span>
       </div>
       <div class="card ah-card" id="acc-hours-card"></div>
       <div class="card ah-card" id="acc-device-card"></div>
@@ -6509,7 +6514,7 @@ window.normalizeFullWidth=function(value){
       </div>
       <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:10px;line-height:1.7">
         ※ 顯示名稱留空時,會自動使用綁定的公司名冊姓名。<br>
-        ※ 名稱/綁定/管理員改好後,按右上角「儲存全部」一次存檔。<br>
+        ※ 名稱/綁定/管理員<b>改完自動儲存</b>(名稱在離開欄位時存;勾選管理員會先確認)。<br>
         ※ 綁定公司名冊後,會自動把該帳號的 Email 寫入名冊中該員工的 Email 欄。<br>
         ※ 新帳號以 Google 登入後會是「⏳ 待審核」,必須在此按「通過」才能使用系統;按「拒絕」則永久無法進入(可再次按「通過」復原)。<br>
         ※ <b>停用</b>與<b>頁面權限</b>為即時生效(按下即存),對方下次登入/重新整理套用。<br>
@@ -13723,6 +13728,7 @@ async function notifyAdminNewAccount(name,account){
   }catch(e){ console.warn('通知管理員失敗(不影響帳號建立,管理員仍可於帳號管理頁看到待審核清單)',e); }
 }
 async function logout() {
+  document.getElementById('noperm-notice')?.remove();
   if(!isGuest){
     await auditWrite({action:'logout', ok:true});   // 要等它送出:下一行的登出會讓 token 失效
     await presenceClear();
@@ -13833,6 +13839,21 @@ function renderUserAvatar(u){
   img.onerror=fallback; el.innerHTML=''; el.appendChild(img);
 }
 // 直接進主頁,並重設網址與歷史起點
+// 帳號所有頁面都被設成隱藏:不顯示任何頁面(包含主頁的公布欄、通知、行事曆、值班),只留提示與登出
+function showNoPermNotice(){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  let el=document.getElementById('noperm-notice');
+  if(!el){
+    el=document.createElement('div'); el.id='noperm-notice';
+    el.style.cssText='position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:20px';
+    el.innerHTML='<div style="max-width:360px;text-align:center;line-height:1.8;color:var(--text2)"><div style="font-size:34px">🔒</div>'
+      +'<div style="font-size:16px;color:var(--text);margin:6px 0">這個帳號目前沒有任何頁面的使用權限</div>'
+      +'<div style="font-size:13px">請聯絡管理員到「帳號管理 → 頁面權限」開通。</div>'
+      +'<button class="btn-primary" style="margin-top:14px" onclick="logout()">登出 / 切換帳號</button></div>';
+    document.body.appendChild(el);
+  }
+  el.style.display='flex';
+}
 function goHome() {
   const v = { page: 'dashboard' };
   _applyingPop = true;
@@ -14206,8 +14227,10 @@ function navTo(page, viewState) {
   if(pagePerm(page)==='hide'){          // 無權限的頁面:改導向第一個可見頁,避免空白畫面
     const fb=PAGE_META.find(pm=>pm.k!=='evergreen-sys' && pagePerm(pm.k)!=='hide');
     if(fb && fb.k!==page) return navTo(fb.k);
+    if(!fb) showNoPermNotice();
     return;
   }
+  document.getElementById('noperm-notice')?.remove();
   // 離開點工單前立即送出尚未完成的自動儲存，避免切頁太快漏存。
   if(page!=='labor' && document.getElementById('page-labor')?.classList.contains('active') && typeof window.laborFlushNow==='function') window.laborFlushNow();
   // 離開線上進度表前同樣立即送出，避免切頁太快、200ms 自動儲存還沒觸發就漏存。
@@ -22248,9 +22271,9 @@ function renderAccounts(list){
         : btn('改為拒絕','#b91c1c','#f1c0c0',`reviewAccount('${jid}','rejected')`);
     return `<tr data-id="${a.id}"${off?' style="opacity:.55"':''}>
     <td style="font-family:var(--mono);font-size:12px">${(a.account||'—').replace(/</g,'&lt;')}</td>
-    <td><input type="text" class="acc-name search-input" style="width:140px;padding:6px 8px" value="${(a.name||'').replace(/"/g,'&quot;')}" placeholder="(用名冊姓名)"/></td>
-    <td><select class="acc-staff filter-select" style="min-width:130px">${staffOpts(a.staff_id)}</select></td>
-    <td style="text-align:center"><input type="checkbox" class="acc-admin" ${a.is_admin?'checked':''} style="width:16px;height:16px;cursor:pointer"/></td>
+    <td><input type="text" class="acc-name search-input" style="width:140px;padding:6px 8px" value="${(a.name||'').replace(/"/g,'&quot;')}" placeholder="(用名冊姓名)" onchange="saveAccountRow('${jid}',this)"/></td>
+    <td><select class="acc-staff filter-select" style="min-width:130px" onchange="saveAccountRow('${jid}',this)">${staffOpts(a.staff_id)}</select></td>
+    <td style="text-align:center"><input type="checkbox" class="acc-admin" ${a.is_admin?'checked':''} style="width:16px;height:16px;cursor:pointer" onchange="saveAccountRow('${jid}',this)"/></td>
     <td style="text-align:center;white-space:nowrap">
       <div>${badge}</div>
       <div style="margin-top:4px;display:flex;flex-wrap:nowrap;gap:4px;justify-content:center">${actionBtns}</div>
@@ -22551,6 +22574,14 @@ function permHrSummary(){
     +li('✔','一律看得到:出勤天數、加班天數、遲退扣、請假扣、餐補、便當。')
     +fixed;
 }
+// 一鍵把所有頁面(含人事薪資四頁)設成同一種權限;按「儲存」才生效。全部隱藏=登入後什麼都看不到(主頁的公布欄、通知、行事曆、值班也一樣)
+function permBulk(v){
+  const sels=[...document.querySelectorAll('#perm-modal-body select.perm-sel:not(:disabled)')];
+  if(!sels.length){ alert('管理員一律可編輯全部頁面,不必設定'); return; }
+  sels.forEach(s=>{ s.value=v; });
+  if(typeof permHrSummary==='function') permHrSummary();
+  if(typeof showToast==='function') showToast('已全部設為「'+({edit:'可編輯',read:'唯讀',hide:'隱藏'})[v]+'」,按「儲存」才會生效','info');
+}
 async function savePermModal(){
   const acc=allAccounts.find(a=>String(a.id)===String(_permEditId)); if(!acc){ closeModal('perm-modal'); return; }
   const perms=Object.assign({}, acc.perms||{});   // 以現有設定為基底,避免弄丟這個視窗沒呈現的鍵
@@ -22584,41 +22615,41 @@ async function savePermModal(){
   closeModal('perm-modal');
 }
 // 統一儲存:逐列 PATCH profiles;有綁定名冊者,把登入 Email 寫入該員工的 email
-async function saveAllAccounts(){
-  const btn=document.getElementById('accounts-save-btn');
-  const rows=[...document.querySelectorAll('#accounts-body tr[data-id]')];
-  if(!rows.length) return;
-  btn.disabled=true; btn.textContent='儲存中...';
-  let okCount=0, fail=0;
-  const staffEmailUpdates={};   // staff_id -> email (去重,後者覆蓋)
-  for(const tr of rows){
-    const id=tr.getAttribute('data-id');
-    const name=tr.querySelector('.acc-name').value.trim();
-    const staffSel=tr.querySelector('.acc-staff').value;
-    const isAdmin=tr.querySelector('.acc-admin').checked;
-    const data={ name:name||null, staff_id:staffSel?parseInt(staffSel):null, is_admin:isAdmin };
-    const r=await sbFetch(`/rest/v1/profiles?id=eq.${id}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(data)});
-    if(!r.ok){ fail++; continue; }
-    okCount++;
-    const acc=allAccounts.find(a=>String(a.id)===String(id));
-    if(acc){ acc.name=data.name; acc.staff_id=data.staff_id; acc.is_admin=data.is_admin; if(data.staff_id&&acc.account) staffEmailUpdates[data.staff_id]=acc.account; }
+// 帳號列改完自動存(取代「儲存全部」):名稱離開欄位、綁定名冊、管理員勾選都即時寫入
+async function saveAccountRow(id, el){
+  const tr=document.querySelector('#accounts-body tr[data-id="'+id+'"]'); if(!tr) return;
+  const acc=allAccounts.find(a=>String(a.id)===String(id));
+  const name=tr.querySelector('.acc-name').value.trim();
+  const staffSel=tr.querySelector('.acc-staff').value;
+  const adminEl=tr.querySelector('.acc-admin'), isAdmin=adminEl.checked;
+  if(el===adminEl && acc && !!acc.is_admin!==isAdmin){
+    const who=acc.account||acc.name||'這個帳號';
+    const ok=await uiConfirm(isAdmin?('確定把「'+who+'」設為管理員?\n管理員可以看、改所有頁面,包含薪資與帳號管理。'):('確定取消「'+who+'」的管理員身分?'));
+    if(!ok){ adminEl.checked=!isAdmin; return; }
   }
+  const data={ name:name||null, staff_id:staffSel?parseInt(staffSel):null, is_admin:isAdmin };
+  const st=document.getElementById('accounts-save-btn'); if(st){ st.textContent='儲存中…'; st.style.color='var(--text3)'; }
+  const r=await sbFetch('/rest/v1/profiles?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(data)});
+  if(!r.ok){
+    if(st){ st.textContent='⚠ 儲存失敗'; st.style.color='var(--danger)'; }
+    if(acc){ tr.querySelector('.acc-name').value=acc.name||''; tr.querySelector('.acc-staff').value=acc.staff_id||''; adminEl.checked=!!acc.is_admin; }
+    alert('帳號儲存失敗'+(r.data&&r.data.message?'('+r.data.message+')':'')+',已恢復原本的值');
+    return;
+  }
+  const staffChanged=acc && String(acc.staff_id||'')!==String(data.staff_id||'');
+  if(acc){ acc.name=data.name; acc.staff_id=data.staff_id; acc.is_admin=data.is_admin; }
   // 綁定名冊 -> 自動把 Email 寫入公司名冊
-  for(const sid of Object.keys(staffEmailUpdates)){
-    await sbFetch(`/rest/v1/staff?id=eq.${sid}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({email:staffEmailUpdates[sid]})});
+  if(staffChanged && data.staff_id && acc && acc.account){
+    await sbFetch('/rest/v1/staff?id=eq.'+data.staff_id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({email:acc.account})});
+    await loadStaff();
   }
-  // 若改到自己,即時更新側邊欄
-  if(currentUser&&allAccounts.some(a=>String(a.id)===String(currentUser.id))){
+  if(currentUser && String(currentUser.id)===String(id)){
     await loadProfile();
     document.getElementById('sidebar-name').textContent=currentUser.name;
     renderUserAvatar(currentUser);
   }
-  btn.disabled=false;
-  btn.textContent = fail ? ('⚠ '+okCount+' 筆成功 / '+fail+' 筆失敗') : '✓ 已全部儲存';
-  if(Object.keys(staffEmailUpdates).length) await loadStaff();   // 名冊 email 已更新,重載
-  setTimeout(()=>{btn.textContent='💾 儲存全部';},1800);
+  if(st){ st.textContent='✓ 已儲存'; st.style.color='var(--success)'; setTimeout(()=>{ st.textContent='改完自動儲存'; st.style.color='var(--text3)'; },1600); }
 }
-
 // ── 操作紀錄頁 (管理員) ──────────────────────────────────────
 const AUDIT_PAGE_SIZE=200;
 let auditRows=[], auditOffset=0, auditHasMore=false, auditInited=false;
