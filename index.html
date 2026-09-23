@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.23.1"/>
+<meta name="sc-version" content="2026.09.23.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -14862,13 +14862,53 @@ function hwStockShort(it, need, have){
     if(String(t.value).trim().startsWith('-') || Number(t.value)<0){ t.value=''; if(window.showToast) showToast('數量不能是負數','warn'); }
   },true);
 })();
-async function hwAdjustStock(item, delta){
+// 庫存加減交給資料庫做(hw_stock_adjust_migration.sql):stock = stock + delta 一次完成,
+// 多台裝置同時領用不會互相蓋掉;不夠扣時資料庫直接拒絕並回傳最新庫存。還沒跑 SQL 前退回舊做法(整數覆蓋)。
+let hwRpcOk=null;   // null=還不知道、true=有 hw_stock_adjust、false=沒有
+async function hwAdjustStock(item, delta, quiet){
+  if(!item || !delta) return true;
+  if(hwRpcOk!==false){
+    const r=await sbFetch('/rest/v1/rpc/hw_stock_adjust',{method:'POST',body:JSON.stringify({p_id:item.id,p_delta:delta})});
+    if(r.ok){ hwRpcOk=true; const v=Number(Array.isArray(r.data)?r.data[0]:r.data); item.stock=isFinite(v)?v:hwNum(item.stock)+delta; return true; }
+    const msg=String((r.data&&(r.data.message||r.data.msg))||'');
+    const m=msg.match(/HW_STOCK_SHORT:(-?[\d.]+)/);
+    if(m){ hwRpcOk=true; item.stock=Number(m[1]); if(!quiet) hwStockShort(item,'再扣 '+hwFmt(-delta),item.stock); hwRenderStats(); return false; }
+    if(r.status===404 || /PGRST202|hw_stock_adjust/.test(String(r.data&&r.data.code||'')+msg)) hwRpcOk=false;
+    else { if(!quiet) alert('庫存更新失敗'+(msg?'('+msg+')':'')); return false; }
+  }
   const ns=hwNum(item.stock)+delta;
-  if(ns<0){ hwStockShort(item,'再扣 '+hwFmt(-delta),hwNum(item.stock)); return false; }
+  if(ns<0){ if(!quiet) hwStockShort(item,'再扣 '+hwFmt(-delta),hwNum(item.stock)); return false; }
   const r=await sbFetch('/rest/v1/hw_items?id=eq.'+item.id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({stock:ns})});
-  if(r.ok) item.stock=ns;
+  if(r.ok) item.stock=ns; else if(!quiet) alert('庫存更新失敗');
   return r.ok;
 }
+// 一次套用多筆庫存增減(先加後減,避免中途短暫變負數);任一筆失敗就把已套用的還原並回傳 null。
+// 成功回傳已套用清單:之後寫紀錄失敗時交給 hwStockUndo 還原,庫存不會跟紀錄對不起來。
+async function hwStockApply(list){
+  const todo=list.filter(x=>x&&x[0]&&x[1]).sort((a,b)=>b[1]-a[1]), done=[];
+  for(const [it,dl] of todo){
+    if(!await hwAdjustStock(it,dl)){ await hwStockUndo(done); return null; }
+    done.push([it,dl]);
+  }
+  return done;
+}
+async function hwStockUndo(done){
+  for(const [it,dl] of (done||[]).slice().reverse()){
+    if(!await hwAdjustStock(it,-dl,true)) alert('「'+it.name+'」庫存還原失敗,請到庫存總表確認數量');
+  }
+}
+// 品名不在庫存總表(多半是打錯字)時先問,不然這筆不會扣/加庫存
+async function hwConfirmNoItem(name,cat){
+  return uiConfirm('「'+name+'」不在「'+cat+'」的庫存總表裡(可能打錯字),這筆不會動到庫存。\n仍要登記嗎?');
+}
+// 重新抓最新庫存(手機放著沒關、別台裝置改過時用)
+async function hwRefreshStock(){
+  const r=await sbFetchAll('/rest/v1/hw_items?select=id,stock'); if(!r.ok||!Array.isArray(r.data)) return;
+  const m=new Map(r.data.map(x=>[x.id,x.stock])); let ch=false;
+  hwItems.forEach(it=>{ if(m.has(it.id) && hwNum(m.get(it.id))!==hwNum(it.stock)){ it.stock=m.get(it.id); ch=true; } });
+  if(ch && !document.querySelector('.input-modal-overlay') && !(document.activeElement&&document.activeElement.closest&&document.activeElement.closest('#page-hardware'))){ hwRenderStats(); hwRender(); }
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && document.getElementById('page-hardware')?.classList.contains('active') && hwItems.length) hwRefreshStock(); });
 function hwSyncUnit(pfx, typing){
   if(!typing) hwRefreshItemList(pfx);   // 打字中不重寫品名清單(只有換種類才需要)
   const cat=document.getElementById('hw-'+pfx+'-cat').value, name=document.getElementById('hw-'+pfx+'-name').value.trim();
@@ -14916,10 +14956,10 @@ async function hwAddPurchase(){
     const ri=await sbFetch('/rest/v1/hw_items',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({category:cat,name,unit,stock:0,safety:0})});
     if(!ri.ok||!ri.data){ alert('自動建立品項失敗'); return; } it=ri.data[0]; hwItems.push(it);
   }
+  const done=await hwStockApply([[it,qty]]); if(!done) return;
   const r=await sbFetch('/rest/v1/hw_purchases',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({tx_date:date,category:cat,name,qty,unit,price,total,vendor})});
-  if(!r.ok||!r.data){ alert('新增進貨失敗'); return; }
+  if(!r.ok||!r.data){ await hwStockUndo(done); alert('新增進貨失敗'); return; }
   hwPurchases.unshift(r.data[0]);
-  await hwAdjustStock(it, qty);
   if(vendor && !hwVendors.some(v=>v.name===vendor)){ const rv=await sbFetch('/rest/v1/hw_vendors',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({name:vendor})}); if(rv.ok&&rv.data)hwVendors.push(rv.data[0]); }
   document.getElementById('hw-pu-name').value=''; document.getElementById('hw-pu-qty').value=''; document.getElementById('hw-pu-unit').value=''; document.getElementById('hw-pu-price').value=''; document.getElementById('hw-pu-vendor').value='';
   hwPage.purchase=1; hwPopulateSelects(); hwRender();
@@ -14930,11 +14970,10 @@ async function hwDeletePurchase(id){
   const delIt=repair?null:hwItems.find(i=>i.name===p.name && i.category===p.category);
   if(delIt && hwNum(delIt.stock)-hwNum(p.qty)<0){ hwStockShort(delIt,'刪除這筆 '+hwFmt(p.qty)+' 的進貨(已被領用)',hwNum(delIt.stock)); return; }
   if(!await uiConfirm(repair?'確定刪除此筆維修紀錄？':'刪除此筆進貨會回扣對應庫存,確定?')) return;
+  const done=await hwStockApply([[delIt,-hwNum(p.qty)]]); if(!done){ hwRender(); return; }
   const r=await sbFetch('/rest/v1/hw_purchases?id=eq.'+id,{method:'DELETE'});
-  if(!r.ok){ alert('刪除失敗'); return; }
+  if(!r.ok){ await hwStockUndo(done); alert('刪除失敗'); return; }
   hwPurchases=hwPurchases.filter(x=>x.id!==id);
-  const it=hwItems.find(i=>i.name===p.name && i.category===p.category);
-  if(it&&!repair) await hwAdjustStock(it, -hwNum(p.qty));
   hwRender();
 }
 function hwEditPurchase(id){
@@ -14991,16 +15030,16 @@ function hwEditPurchase(id){
     const oldIt=repair?null:hwItems.find(i=>i.name===p.name && i.category===p.category);
     let newIt=hwItems.find(i=>i.name===name && i.category===cat);
     const sameIt=!!oldIt && oldIt===newIt;
-    // 同一品項只調差額(先扣舊量再加新量,中途可能短暫變負數被擋)
-    if(oldIt && !sameIt) await hwAdjustStock(oldIt, -hwNum(p.qty));
     if(!repair&&!newIt){
       const ri=await sbFetch('/rest/v1/hw_items',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({category:cat,name,unit,stock:0,safety:0})});
-      if(!ri.ok||!ri.data){ alert('自動建立品項失敗'); if(oldIt) await hwAdjustStock(oldIt, hwNum(p.qty)); return; }
+      if(!ri.ok||!ri.data){ alert('自動建立品項失敗'); return; }
       newIt=ri.data[0]; hwItems.push(newIt);
     }
-    if(!repair) await hwAdjustStock(newIt, sameIt? qty-hwNum(p.qty) : qty);
+    // 同一品項只調差額;換品項則舊的扣回、新的加上。紀錄存不進去就把庫存還原
+    const done=repair? [] : await hwStockApply(sameIt? [[newIt, qty-hwNum(p.qty)]] : [[oldIt,-hwNum(p.qty)],[newIt,qty]]);
+    if(!done){ hwRender(); return; }
     const r=await sbFetch('/rest/v1/hw_purchases?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({tx_date:date,category:cat,name,qty,unit,price,total,vendor})});
-    if(!r.ok){ alert('更新失敗'); return; }
+    if(!r.ok){ await hwStockUndo(done); alert('更新失敗'); return; }
     Object.assign(p,{tx_date:date,category:cat,name,qty,unit,price,total,vendor});
     if(vendor && !hwVendors.some(v=>v.name===vendor)){ const rv=await sbFetch('/rest/v1/hw_vendors',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify({name:vendor})}); if(rv.ok&&rv.data)hwVendors.push(rv.data[0]); }
     close();
@@ -15045,7 +15084,7 @@ function hwRenderUsage(){
   const rtd=(v,style)=>'<td><input type="text" readonly value="'+esc(v==null?'':v)+'"'+(style?' style="'+style+'"':'')+'></td>';
   tb.innerHTML=slice.map(u=>`<tr data-hw-usage-id="${u.id}"${hwIsRet(u)?' class="hw-ret" title="退回:庫存加回"':''}>${
     edit(u,'tx_date',u.tx_date||'')}${edit(u,'category',u.category||'')}${edit(u,'name',u.name,'','hw-item-list-us')
-    }${edit(u,'qty',hwFmt(u.qty),'text-align:right')}${edit(u,'unit',u.unit||'')}${edit(u,'person',u.person||'','', 'hw-person-list')
+    }${edit(u,'qty',hwFmt(Math.abs(hwNum(u.qty))),'text-align:right')}${edit(u,'unit',u.unit||'')}${edit(u,'person',u.person||'','', 'hw-person-list')
     }${rtd(u.remaining==null?'':hwFmt(u.remaining),'text-align:right')}
     <td style="text-align:center">${hwIsRet(u)?'<span class="hw-badge ret">退回</span> ':''}<button class="hw-act del" onclick="hwDeleteUsage(${u.id})">刪除</button></td>
   </tr>`).join('')+hwPagerRow(hwPage.usage,pages,8,'hwUsagePage');
@@ -15057,17 +15096,21 @@ function hwUsageLocal(id,field,value){const u=hwUsage.find(x=>String(x.id)===Str
 function hwUsageCellSave(id,field,input){if(field==='person'&&!String(input.value||'').trim()){const s=hwUsageEditState[id],old=s?.old?.person||'';input.value=old;hwUsage.find(x=>String(x.id)===String(id)).person=old;alert('領取人不能空白');return;}hwUsageLocal(id,field,input.value);}
 async function hwUsageFlushEdit(id){
   const u=hwUsage.find(x=>String(x.id)===String(id)),s=hwUsageEditState[id];if(!u||!s)return;clearTimeout(s.timer);
-  const old=s.old,cat=String(u.category||'').trim(),name=String(u.name||'').trim(),qty=hwNum(u.qty),person=String(u.person||'').trim();
+  const old=s.old,cat=String(u.category||'').trim(),name=String(u.name||'').trim(),qty=Math.abs(hwNum(u.qty)),person=String(u.person||'').trim();
   if(!cat||!name||!qty||!person){Object.assign(u,old);delete hwUsageEditState[id];hwRenderUsage();alert('種類、品項、數量及領取人皆不能空白');return;}
   const oldIt=hwItems.find(i=>i.name===old.name&&i.category===old.category),newIt=hwItems.find(i=>i.name===name&&i.category===cat);
-  const sg=old.tx_type==='退回'?1:-1, oldEff=hwUseEff(old), newEff=sg*qty, same=!!oldIt&&oldIt===newIt;
+  const isRet=hwIsRet(old), sg=isRet?1:-1, oldEff=hwUseEff(old), newEff=sg*qty, same=!!oldIt&&oldIt===newIt;
   const projected=newIt?hwNum(newIt.stock)-(same?oldEff:0)+newEff:null, oldAfter=(oldIt&&!same)?hwNum(oldIt.stock)-oldEff:0;
   if(qty<0||(projected!=null&&projected<0)||oldAfter<0){Object.assign(u,old);delete hwUsageEditState[id];hwRenderUsage();if(qty<0)alert('數量不能是負數');else if(oldAfter<0)hwStockShort(oldIt,'改掉這筆退回(退回的東西已被領走)',hwNum(oldIt.stock));else hwStockShort(newIt,'領 '+hwFmt(qty),hwNum(newIt.stock)-(same?oldEff:0));return;}
-  const payload={tx_date:u.tx_date||null,category:cat,name,qty,unit:String(u.unit||'').trim(),person,remaining:projected};
+  const done=await hwStockApply(same?[[newIt,newEff-oldEff]]:[[oldIt,-oldEff],[newIt,newEff]]);
+  if(!done){Object.assign(u,old);delete hwUsageEditState[id];hwRenderUsage();return;}
+  // 舊資料用負數記退回:有 tx_type 欄就轉成正數+退回,沒有就維持負數
+  const payload={tx_date:u.tx_date||null,category:cat,name,qty:(isRet&&!hwUsageTypeCol)?-qty:qty,unit:String(u.unit||'').trim(),person,remaining:newIt?hwNum(newIt.stock):null};
+  if(hwUsageTypeCol) payload.tx_type=isRet?'退回':'領用';
   const res=await sbFetch('/rest/v1/hw_usage?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(payload)});
-  if(!res.ok){Object.assign(u,old);delete hwUsageEditState[id];hwRenderUsage();alert('領用紀錄儲存失敗，已恢復原資料');return;}
-  if(same)await hwAdjustStock(newIt,newEff-oldEff);else{if(oldIt)await hwAdjustStock(oldIt,-oldEff);if(newIt)await hwAdjustStock(newIt,newEff);}Object.assign(u,payload);delete hwUsageEditState[id];
-  const tr=document.querySelector('tr[data-hw-usage-id="'+id+'"]'),rem=tr?.children?.[6]?.querySelector('input');if(rem)rem.value=projected==null?'':hwFmt(projected);hwRenderStats();
+  if(!res.ok){await hwStockUndo(done);Object.assign(u,old);delete hwUsageEditState[id];hwRenderUsage();alert('領用紀錄儲存失敗，已恢復原資料');return;}
+  Object.assign(u,payload);delete hwUsageEditState[id];
+  const tr=document.querySelector('tr[data-hw-usage-id="'+id+'"]'),rem=tr?.children?.[6]?.querySelector('input');if(rem)rem.value=payload.remaining==null?'':hwFmt(payload.remaining);hwRenderStats();
 }
 // 退回:數量一樣填正數,庫存加回。舊資料用負數記退回的也當退回(跑完 migration 會轉成正數+tx_type)
 let hwUsageTypeCol=false;   // hw_usage 有沒有 tx_type 欄(hw_usage_return_migration.sql)
@@ -15088,13 +15131,15 @@ async function hwAddUsage(){
   if(!cat||!name||!qty||!person){ alert('請填寫種類、品項、數量及'+(ret?'退回人':'領取人')+'；'+(ret?'退回人':'領取人')+'不能空白'); return; }
   if(hwHasNeg([['數量',qty]])) return;
   const it=hwItems.find(i=>i.name===name && i.category===cat);
+  if(!it && !await hwConfirmNoItem(name,cat)) return;
   if(!ret && it && hwNum(it.stock)<qty){ hwStockShort(it,'領 '+hwFmt(qty),hwNum(it.stock)); return; }
-  const eff=ret?qty:-qty, remaining = it? hwNum(it.stock)+eff : null;
+  const eff=ret?qty:-qty;
+  const done=await hwStockApply([[it,eff]]); if(!done){ hwRender(); return; }
+  const remaining = it? hwNum(it.stock) : null;
   const body={tx_date:date,category:cat,name,qty,unit,person,remaining}; if(hwUsageTypeCol) body.tx_type=ret?'退回':'領用';
   const r=await sbFetch('/rest/v1/hw_usage',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(body)});
-  if(!r.ok||!r.data){ alert(ret?'新增退回失敗':'新增領用失敗'); return; }
+  if(!r.ok||!r.data){ await hwStockUndo(done); alert(ret?'新增退回失敗':'新增領用失敗'); return; }
   hwUsage.unshift(r.data[0]);
-  if(it) await hwAdjustStock(it, eff);
   document.getElementById('hw-us-name').value=''; document.getElementById('hw-us-qty').value=''; document.getElementById('hw-us-unit').value=''; document.getElementById('hw-us-person').value='';
   hwPage.usage=1; hwPopulateSelects(); hwRender();
 }
@@ -15103,10 +15148,10 @@ async function hwDeleteUsage(id){
   const it=hwItems.find(i=>i.name===u.name && i.category===u.category), eff=hwUseEff(u);
   if(it && hwNum(it.stock)-eff<0){ hwStockShort(it,'刪除這筆退回(退回的東西已被領走)',hwNum(it.stock)); return; }
   if(!await uiConfirm(hwIsRet(u)?'刪除此筆退回會扣回對應庫存,確定?':'刪除此筆領用會回補對應庫存,確定?')) return;
+  const done=await hwStockApply([[it,-eff]]); if(!done){ hwRender(); return; }
   const r=await sbFetch('/rest/v1/hw_usage?id=eq.'+id,{method:'DELETE'});
-  if(!r.ok){ alert('刪除失敗'); return; }
+  if(!r.ok){ await hwStockUndo(done); alert('刪除失敗'); return; }
   hwUsage=hwUsage.filter(x=>x.id!==id);
-  if(it) await hwAdjustStock(it, -eff);
   hwRender();
 }
 function hwEditUsage(id){
@@ -15153,13 +15198,14 @@ function hwEditUsage(id){
       const base=hwNum(newIt.stock)-(same?oldEff:0);
       if(base+newEff<0){ hwStockShort(newIt,ret?'改成退回 '+hwFmt(qty)+'(差額已被領走)':'領 '+hwFmt(qty),base); return; }
     }
-    // 同一品項只調差額;換品項則舊的還原、新的套用
-    if(same) await hwAdjustStock(newIt, newEff-oldEff);
-    else { if(oldIt) await hwAdjustStock(oldIt, -oldEff); if(newIt) await hwAdjustStock(newIt, newEff); }
+    if(!newIt && !await hwConfirmNoItem(name,cat)) return;
+    // 同一品項只調差額;換品項則舊的還原、新的套用。紀錄存不進去就把庫存還原
+    const done=await hwStockApply(same? [[newIt,newEff-oldEff]] : [[oldIt,-oldEff],[newIt,newEff]]);
+    if(!done){ hwRender(); return; }
     const remaining = newIt? hwNum(newIt.stock) : null;
-    const body={tx_date:date,category:cat,name,qty,unit,person,remaining}; if(hwUsageTypeCol) body.tx_type=ret?'退回':'領用';
+    const body={tx_date:date,category:cat,name,qty:(ret&&!hwUsageTypeCol)?-qty:qty,unit,person,remaining}; if(hwUsageTypeCol) body.tx_type=ret?'退回':'領用';
     const r=await sbFetch('/rest/v1/hw_usage?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(body)});
-    if(!r.ok){ alert('更新失敗'); return; }
+    if(!r.ok){ await hwStockUndo(done); alert('更新失敗'); return; }
     Object.assign(u,body);
     close();
     hwPopulateSelects(); hwRender();
