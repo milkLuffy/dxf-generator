@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.23.3"/>
+<meta name="sc-version" content="2026.09.23.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1355,6 +1355,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .hw-card-sub{margin-top:3px;font-size:12px;color:var(--text3);font-family:var(--mono)}
 .hw-card-del{position:absolute;top:8px;right:8px;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:var(--text3);font-size:16px;line-height:30px;padding:0;cursor:pointer}
 .hw-card-del:active{background:rgba(224,82,82,.15);color:var(--red)}
+.hw-hist-modal{width:min(520px,calc(100vw - 20px))!important;max-height:86vh;display:flex;flex-direction:column}
+.hw-hist-sum{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--text2);margin:4px 0 10px}
+.hw-hist-list{overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;flex:1;border-top:1px solid var(--border)}
+.hw-hist-row{display:flex;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border)}
+.hw-hist-l{min-width:0}
+.hw-hist-k{font-weight:600;font-size:14px;margin-right:8px}
+.hw-hist-d{font:13px var(--mono);color:var(--text2)}
+.hw-hist-who{font-size:12px;color:var(--text3);margin-top:2px;overflow-wrap:anywhere}
+.hw-hist-r{text-align:right;flex:none;display:flex;flex-direction:column;align-items:flex-end;font-family:var(--mono)}
+.hw-hist-r b{font-size:15px}
+.hw-hist-r small{font-size:11px;color:var(--text3)}
 .hw-card-empty{padding:28px 12px;text-align:center;color:var(--text3);font-size:14px}
 .hw-sug{position:absolute;z-index:2147483000;display:none;background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .hw-sug>div{padding:11px 12px;font-size:16px;color:var(--text);border-bottom:1px solid var(--border);cursor:pointer}
@@ -14758,9 +14769,37 @@ function hwRenderStock(){
     <td style="text-align:right"><input type="number" class="search-input" style="width:82px;padding:4px 6px;text-align:right" value="${hwNum(i.stock)}" onchange="hwUpdateItem(${i.id},'stock',this.value)"></td>
     <td style="text-align:right"><input type="number" class="search-input" style="width:82px;padding:4px 6px;text-align:right" value="${hwNum(i.safety)}" onchange="hwUpdateItem(${i.id},'safety',this.value)"></td>
     <td>${badge[hwStatus(i)]}</td>
-    <td style="text-align:center"><button class="hw-act" onclick="hwEditItem(${i.id})">編輯</button> <button class="hw-act del" onclick="hwDeleteItem(${i.id})">刪除</button></td>
+    <td style="text-align:center;white-space:nowrap"><button class="hw-act" onclick="hwItemHistory(${i.id})">歷程</button> <button class="hw-act" onclick="hwEditItem(${i.id})">編輯</button> <button class="hw-act del" onclick="hwDeleteItem(${i.id})">刪除</button></td>
   </tr>`).join('');
   const stkTbl=document.getElementById('hw-stock-table'); if(stkTbl) tblInitSelection(stkTbl);
+}
+// 品項異動歷程:進貨(+)、領用(−)、退回(+)、盤點(差額),由新到舊;結存從目前庫存往回推
+function hwItemHistory(id){
+  const it=hwItems.find(x=>x.id===id); if(!it) return;
+  const same=r=>r&&r.name===it.name&&r.category===it.category;
+  const ev=[];
+  hwPurchases.filter(p=>p.category!=='修理品'&&same(p)).forEach(p=>ev.push({d:p.tx_date||'',k:'進貨',q:hwNum(p.qty),who:p.vendor||'',o:1,id:p.id}));
+  hwUsage.filter(same).forEach(u=>ev.push({d:u.tx_date||'',k:hwIsRet(u)?'退回':'領用',q:hwUseEff(u),who:u.person||'',o:2,id:u.id}));
+  hwStocktake.filter(same).forEach(s=>ev.push({d:s.tx_date||'',k:'盤點',q:hwNum(s.diff),who:s.person||'',o:3,id:s.id,note:'盤點 '+hwFmt(s.count_qty)+(s.note?' · '+s.note:'')}));
+  ev.sort((a,b)=>String(b.d).localeCompare(String(a.d))||b.o-a.o||hwNum(b.id)-hwNum(a.id));
+  let bal=hwNum(it.stock);
+  ev.forEach(e=>{ e.after=bal; bal=bal-e.q; });
+  const inQ=ev.filter(e=>e.q>0).reduce((n,e)=>n+e.q,0), outQ=ev.filter(e=>e.q<0).reduce((n,e)=>n-e.q,0);
+  const color=k=>k==='進貨'||k==='退回'?'var(--green)':k==='盤點'?'var(--accent2)':'var(--red)';
+  const unit=esc(it.unit||'');
+  const rows=ev.length? ev.map(e=>'<div class="hw-hist-row"><div class="hw-hist-l"><span class="hw-hist-k" style="color:'+color(e.k)+'">'+e.k+'</span><span class="hw-hist-d">'+esc(e.d||'(無日期)')+'</span><div class="hw-hist-who">'+esc([e.who,e.note].filter(Boolean).join(' · '))+'</div></div>'
+      +'<div class="hw-hist-r"><b style="color:'+color(e.k)+'">'+(e.q>0?'+':'')+hwFmt(e.q)+'</b><small>結存 '+hwFmt(+e.after.toFixed(3))+' '+unit+'</small></div></div>').join('')
+    : '<div class="empty-state">這個品項還沒有進貨、領用或盤點紀錄</div>';
+  const overlay=document.createElement('div'); overlay.className='input-modal-overlay';
+  overlay.innerHTML='<div class="input-modal hw-hist-modal"><div class="input-modal-title">📜 '+esc(it.name)+' <small style="font-weight:400;color:var(--text3)">'+esc(it.category)+'</small></div>'
+    +'<div class="hw-hist-sum"><span>目前庫存 <b>'+hwFmt(hwNum(it.stock))+'</b> '+unit+'</span><span>累計進 <b style="color:var(--green)">'+hwFmt(+inQ.toFixed(3))+'</b></span><span>累計出 <b style="color:var(--red)">'+hwFmt(+outQ.toFixed(3))+'</b></span></div>'
+    +'<div class="hw-hist-list">'+rows+'</div>'
+    +'<div class="layout-hint" style="margin-top:8px">※ 結存是由目前庫存往回推算;直接在庫存總表改過庫存量的不會出現在這裡,推算到那之前會對不上。</div>'
+    +'<div class="input-modal-actions"><button class="input-modal-btn ok">關閉</button></div></div>';
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  overlay.querySelector('.ok').onclick=close;
+  overlay.onclick=e=>{ if(e.target===overlay) close(); };
 }
 function hwToggleAddItem(){
   const f=document.getElementById('hw-additem');
@@ -14802,7 +14841,7 @@ function hwEditItem(id){
   overlay.className='input-modal-overlay';
   overlay.innerHTML =
     '<div class="input-modal">' +
-    '<div class="input-modal-title">編輯品項</div>' +
+    '<div class="input-modal-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px">編輯品項<button type="button" class="btn-sm" id="hw-edit-hist">📜 異動歷程</button></div>' +
     '<select class="input-modal-field" id="hw-edit-cat" style="margin-bottom:8px">'+hwOpt(HW_CATS,false)+'</select>' +
     '<input type="text" class="input-modal-field" id="hw-edit-name" placeholder="品名" style="margin-bottom:8px"/>' +
     '<input type="text" class="input-modal-field" id="hw-edit-unit" placeholder="單位" style="margin-bottom:8px"/>' +
@@ -14826,6 +14865,7 @@ function hwEditItem(id){
   setTimeout(()=>nameEl.focus(),50);
   const close=()=>overlay.remove();
   overlay.querySelector('.cancel').onclick=close;
+  overlay.querySelector('#hw-edit-hist').onclick=()=>{ close(); hwItemHistory(id); };
   const doSave=async()=>{
     const cat=catEl.value, name=nameEl.value.trim();
     const unit=unitEl.value.trim(), stock=hwNum(stockEl.value), safety=hwNum(safetyEl.value);
