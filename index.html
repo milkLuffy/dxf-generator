@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.23.7"/>
+<meta name="sc-version" content="2026.09.23.8"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -51278,6 +51278,7 @@ function dsPartsForFile(file) {
     ? file.storage_parts : [{ storage_key: file?.storage_key, page_start: 1, page_end: file?.page_count }];
   return parts.map((part, index) => ({
     storage_key: part.storage_key,
+    size_bytes: Number(part.size_bytes) || (parts.length === 1 ? Number(file?.size_bytes) || 0 : 0),
     page_start: Number(part.page_start) || (index === 0 ? 1 : 0),
     page_end: Number(part.page_end) || Number(file?.page_count) || 1
   })).sort((a, b) => a.page_start - b.page_start);
@@ -51614,6 +51615,21 @@ async function dsOpenPages(rows, titleOverride = '') {
   if (win) { try { win.document.title = tabTitle; win.document.body.style.cssText = 'margin:0;font-family:system-ui,sans-serif'; } catch (_) {} }
   say(uniqueRows.length > 1 ? ('正在合併 ' + uniqueRows.length + ' 張圖面，請稍候…') : '正在準備原始畫質圖面，請稍候…');
   dsOpenBusy = true; dsUpdatePrintControls();
+  if (dsTouchTab()) {
+    try {
+      const images = await dsRowsToImagesLite(uniqueRows, (done, total) => { if (total > 1) say('正在準備圖面 ' + done + ' / ' + total + '…'); });
+      if (win && !win.closed) dsRenderTouchViewer(win, images, tabTitle, dsFileBaseName(uniqueRows) + '.pdf', null);
+      else { window.open(images[0].url, '_blank'); }
+    } catch (error) {
+      console.error(error);
+      if (win && !win.closed) { try { win.close(); } catch (_) {} }
+      dsSetProgress(0, '開啟圖面失敗：' + error.message);
+      alert('開啟圖面失敗：' + error.message);
+    } finally {
+      dsOpenBusy = false; dsUpdatePrintControls();
+    }
+    return;
+  }
   try {
     const bytes = await dsMergeRowsToPdf(uniqueRows, (done, total) => {
       if (total < 2) return;
@@ -51657,6 +51673,88 @@ async function dsOpenPages(rows, titleOverride = '') {
   } finally {
     dsOpenBusy = false; dsUpdatePrintControls();
   }
+}
+
+/* 分段下載開 PDF:圖面檔一段就 20~40MB,整段下載再解析,iPhone 記憶體不夠會整頁當掉重開(跳回主畫面)。
+   改用 HTTP Range 只抓 pdf.js 真的用到的部分(目錄+那一頁),通常一頁不到 1~2MB。
+   Supabase Storage 支援 Range(206),但瀏覽器讀不到 Content-Range,所以總長度取自 storage_parts.size_bytes,沒有才用 HEAD。 */
+async function dsOpenRangePdf(part) {
+  await scEnsurePdfjs();
+  const url = SUPA_URL + '/storage/v1/object/authenticated/' + DS_BUCKET + '/' + dsEncodedPath(part.storage_key);
+  const headers = dsStorageHeaders();
+  let length = Number(part.size_bytes) || 0;
+  if (!length) {
+    try { const head = await fetch(url, { method: 'HEAD', headers }); if (head.ok) length = Number(head.headers.get('content-length')) || 0; } catch (_) {}
+  }
+  if (!length) {   // 拿不到長度就退回整段下載
+    const response = await dsStorageDownload(part.storage_key);
+    if (!response.ok) throw new Error((await response.text()) || ('PDF 下載失敗：HTTP ' + response.status));
+    return pdfjsLib.getDocument({ data: await response.arrayBuffer() }).promise;
+  }
+  let failed = null;
+  const transport = new pdfjsLib.PDFDataRangeTransport(length, null);
+  transport.requestDataRange = (begin, end) => {
+    fetch(url, { headers: Object.assign({}, headers, { Range: 'bytes=' + begin + '-' + (end - 1) }) })
+      .then(async response => {
+        if (response.status !== 206 && !response.ok) throw new Error('PDF 下載失敗：HTTP ' + response.status);
+        let chunk = new Uint8Array(await response.arrayBuffer());
+        if (response.status === 200 && chunk.length > end - begin) chunk = chunk.slice(begin, end);   // 伺服器不理 Range 時自己切
+        transport.onDataRange(begin, chunk);
+      })
+      .catch(error => { failed = error; try { task.destroy(); } catch (_) {} });
+  };
+  const task = pdfjsLib.getDocument({ range: transport, rangeChunkSize: 256 * 1024, disableAutoFetch: true, disableStream: true });
+  try { return await task.promise; }
+  catch (error) { throw failed || error; }
+}
+
+/* 手機:每張圖面只把那一頁轉成 JPEG(長邊約 2000px),直向頁轉成橫向;不經 pdf-lib 整份解析 */
+async function dsRowsToImagesLite(rows, onProgress) {
+  const docs = new Map(), images = [];
+  try {
+    for (let index = 0; index < rows.length; index++) {
+      const row = rows[index];
+      const file = dsFiles.find(item => item.id === row.file_id) || dsAllFiles.find(item => item.id === row.file_id);
+      if (!file) throw new Error('找不到第 ' + row.page_no + ' 頁所屬 PDF。');
+      const part = dsPartsForFile(file).find(item => Number(row.page_no) >= item.page_start && Number(row.page_no) <= item.page_end);
+      if (!part) throw new Error('找不到第 ' + row.page_no + ' 頁的儲存分段。');
+      let doc = docs.get(part.storage_key);
+      if (!doc) { doc = await dsOpenRangePdf(part); docs.set(part.storage_key, doc); }
+      const page = await doc.getPage(Number(row.page_no) - part.page_start + 1);
+      const base = page.getViewport({ scale: 1 });
+      const rotation = base.width < base.height ? (page.rotate + 90) % 360 : page.rotate;
+      const scale = Math.min(3, Math.max(1, 2000 / Math.max(base.width, base.height)));
+      const viewport = page.getViewport({ scale, rotation });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+      await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport, background: '#ffffff' }).promise;
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.88));
+      if (!blob) throw new Error('圖面轉檔失敗');
+      images.push({ url: URL.createObjectURL(blob), width: canvas.width, height: canvas.height });
+      canvas.width = canvas.height = 0;
+      try { page.cleanup(); } catch (_) {}
+      if (onProgress) onProgress(index + 1, rows.length);
+    }
+  } catch (error) {
+    images.forEach(image => { try { URL.revokeObjectURL(image.url); } catch (_) {} });
+    throw error;
+  } finally {
+    for (const doc of docs.values()) { try { await doc.destroy(); } catch (_) {} }
+  }
+  return images;
+}
+
+/* 手機「下載 PDF」:用已經轉好的頁圖組一份 PDF(輕量,不必再抓原檔) */
+async function dsImagesToPdfBlob(images, title) {
+  await scLoadLib('pdf-lib', 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js');
+  const output = await PDFLib.PDFDocument.create();
+  try { output.setTitle(String(title || '圖面')); } catch (_) {}
+  for (const image of images) {
+    const jpg = await output.embedJpg(await (await fetch(image.url)).arrayBuffer());
+    const width = 1190.55, height = width * image.height / image.width;   // A3 橫向寬度
+    output.addPage([width, height]).drawImage(jpg, { x: 0, y: 0, width, height });
+  }
+  return new Blob([await output.save()], { type: 'application/pdf' });
 }
 
 /* 判斷是否使用手機／平板的最上層原生 PDF 檢視器。 */
@@ -51757,7 +51855,13 @@ function dsRenderTouchViewer(win, images, tabTitle, fileName, downloadUrl) {
   if (downloadButton) downloadButton.onclick = () => {
     const asker = win && !win.closed && typeof win.confirm === 'function' ? win : window;
     if (!asker.confirm('要下載這份圖面嗎？\n檔名：' + fileName)) return;
-    dsSaveBlobAs(downloadUrl, fileName);
+    if (downloadUrl) { dsSaveBlobAs(downloadUrl, fileName); return; }
+    downloadButton.disabled = true; downloadButton.textContent = '準備中…';
+    dsImagesToPdfBlob(images, tabTitle).then(blob => {
+      downloadUrl = URL.createObjectURL(blob);
+      dsSaveBlobAs(downloadUrl, fileName);
+    }).catch(error => { asker.alert('下載失敗：' + error.message); })
+      .finally(() => { downloadButton.disabled = false; downloadButton.textContent = '下載 PDF'; });
   };
   // 直握手機看橫向 A3 只會小小一條;預設先轉正,想看原方向再按一次「旋轉」
   if (win.innerHeight > win.innerWidth && images[0] && images[0].width > images[0].height) doc.body.classList.add('rot');
@@ -51767,7 +51871,7 @@ function dsRenderTouchViewer(win, images, tabTitle, fileName, downloadUrl) {
   try {
     win.addEventListener('pagehide', () => setTimeout(() => {
       images.forEach(image => { try { URL.revokeObjectURL(image.url); } catch (_) {} });
-      try { URL.revokeObjectURL(downloadUrl); } catch (_) {}
+      if (downloadUrl) { try { URL.revokeObjectURL(downloadUrl); } catch (_) {} }
     }, 500));
   } catch (_) {}
 }
@@ -51966,9 +52070,7 @@ async function dsOpenFile(id, pageNumber) {
     if (dsViewerFileId !== id || dsViewerPartIndex !== partIndex || !dsViewerPdf) {
       dsSetProgress(0, '正在載入第 ' + requestedPage + ' / ' + totalPages + ' 頁…');
       await dsReleaseViewerPdf();
-      const response = await dsStorageDownload(part.storage_key);
-      if (!response.ok) throw new Error((await response.text()) || ('HTTP ' + response.status));
-      dsViewerPdf = await pdfjsLib.getDocument({ data: await response.arrayBuffer() }).promise;
+      dsViewerPdf = await dsOpenRangePdf(part);
       dsViewerFileId = id;
       dsViewerPartIndex = partIndex;
     }
