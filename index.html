@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.23.5"/>
+<meta name="sc-version" content="2026.09.23.6"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -14998,6 +14998,26 @@ function hwStockShort(it, need, have){
 // 庫存加減交給資料庫做(hw_stock_adjust_migration.sql):stock = stock + delta 一次完成,
 // 多台裝置同時領用不會互相蓋掉;不夠扣時資料庫直接拒絕並回傳最新庫存。還沒跑 SQL 前退回舊做法(整數覆蓋)。
 let hwRpcOk=null;   // null=還不知道、true=有 hw_stock_adjust、false=沒有
+// ── 全站手機保護:搜尋框「停手 0.25 秒」才真的篩選重畫 ──
+// 手機打中文(注音)每按一鍵都會觸發 input,大表格每次都整頁重畫會卡頓甚至讓 iPhone 當掉(五金當初就是這樣)。
+// 做法:在最外層先攔下搜尋框的 input 事件,等停手後再補發一次,原本各頁的 oninput 完全不用改;電腦版不受影響。
+// 選取清單類(按 Enter 選第一筆)與本來就有延遲的搜尋不攔。
+(function(){
+  const MQ=window.matchMedia && matchMedia('(max-width:768px),(pointer:coarse) and (max-width:1100px)');
+  const SKIP=/Later|laborSearchInput|Picker|Notion/;
+  function isSearch(el){
+    if(!el || el.tagName!=='INPUT' || el.dataset.noDebounce!=null) return false;
+    if(!(el.type==='search' || /搜尋|篩選/.test(el.placeholder||''))) return false;
+    return !SKIP.test(el.getAttribute('oninput')||'');
+  }
+  document.addEventListener('input',function(e){
+    if(e.__scDeb || !MQ || !MQ.matches || !isSearch(e.target)) return;
+    const el=e.target;
+    e.stopImmediatePropagation();
+    clearTimeout(el._scDebT);
+    el._scDebT=setTimeout(function(){ const ev=new Event('input',{bubbles:true}); ev.__scDeb=1; el.dispatchEvent(ev); },250);
+  },true);
+})();
 async function hwAdjustStock(item, delta, quiet){
   if(!item || !delta) return true;
   if(hwRpcOk!==false){
