@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.23.10"/>
+<meta name="sc-version" content="2026.09.23.11"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -4936,7 +4936,14 @@ window.normalizeFullWidth=function(value){
     #ds-viewer-part{white-space:nowrap}.ds-viewer-page-input{width:58px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px;text-align:center}
     @media(max-width:600px){#ds-viewer-head{height:92px;align-content:center;flex-wrap:wrap;padding:7px 9px}#ds-viewer-head .ds-viewer-info{width:100%}#ds-viewer-nav{width:100%;justify-content:space-between}#ds-frame,#ds-canvas-wrap{height:calc(100% - 92px)}.ds-viewer-page-input{width:48px}}
     @media(max-width:800px){#page-drawingsearch .ds-top{grid-template-columns:1fr}#page-drawingsearch .ds-card{padding:11px}.ds-code{font-size:16px}#page-drawingsearch .ds-map-row{grid-template-columns:58px minmax(0,1fr) auto}#page-drawingsearch .ds-map-detail{grid-column:2/4}#page-drawingsearch .ds-map-row .btn:last-child{grid-column:auto}#page-drawingsearch .ds-file-name{max-width:100%;flex:1 1 160px}#page-drawingsearch .ds-file-picker{flex:1 1 auto;justify-content:center}#page-drawingsearch .ds-files-head{align-items:stretch}#page-drawingsearch .ds-file-filter{width:100%}}
-    @media(max-width:768px){#page-drawingsearch #ds-upload-panel{display:none!important}#page-drawingsearch .ds-delete-owner-only{display:none!important}}
+    @media(max-width:768px){#page-drawingsearch #ds-upload-panel{display:none!important}}
+    #page-drawingsearch .ds-rules{margin:0 0 12px;padding:0;border:1px solid var(--border);border-radius:10px;background:var(--bg2)}
+    #page-drawingsearch .ds-rules summary{cursor:pointer;padding:9px 12px;font-size:13px;color:var(--text2);list-style:none}
+    #page-drawingsearch .ds-rules summary::-webkit-details-marker{display:none}
+    #page-drawingsearch .ds-rules[open] summary{border-bottom:1px solid var(--border)}
+    #page-drawingsearch .ds-rules ul{margin:0;padding:10px 14px 12px 30px;font-size:13px;line-height:1.75;color:var(--text2)}
+    #page-drawingsearch .ds-rules b{color:var(--text)}
+    #page-drawingsearch .ds-rules .warn{color:var(--danger)}
     #page-drawingsearch .ds-search-card{margin-bottom:12px}
     #page-drawingsearch .ds-upload-details{padding:0;overflow:hidden}
     #page-drawingsearch .ds-upload-details>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;user-select:none}
@@ -4962,6 +4969,16 @@ window.normalizeFullWidth=function(value){
     </style>
     <div class="page" id="page-drawingsearch">
       <div class="page-title">圖面快搜</div>
+      <details class="ds-rules">
+        <summary>📘 使用規則（點此展開）</summary>
+        <ul>
+          <li><b>誰能刪除：</b>管理員可以刪全部圖面；上傳者可以刪自己上傳的（電腦、手機都可以）；其他人只能看。刪除前會再確認一次，<span class="warn">刪了無法復原</span>。</li>
+          <li><b>自動刪除：</b>工程區或工程的狀態變成「已完成」時（工程區所有構件都登記每日產量後，系統會自動改成已完成），該區圖面會在下次有人打開圖面快搜時<span class="warn">自動刪除、無法復原</span>。</li>
+          <li><b>上傳：</b>只能用電腦上傳（手機不顯示上傳區），而且只能上傳到「進行中」的工程區。</li>
+          <li><b>手機看圖：</b>手機看的是預覽圖（不是原始 PDF，才不會當機）。電腦上傳完、或用電腦打開圖面快搜時會自動產生；還沒產生前手機會提示「先用電腦開一次」。可兩指縮放、點兩下放大，直向橫向都能看。</li>
+          <li><b>原始畫質、列印、合併多張：</b>請用電腦。</li>
+        </ul>
+      </details>
       <div class="proj-section ds-row">
         <span class="section-label">工程</span>
         <select id="ds-project" class="filter-select" onchange="dsProjectChanged()"></select>
@@ -51401,7 +51418,7 @@ function dsRenderFiles() {
       (uploadedAt ? ' · ' + dsEsc(uploadedAt) : '') + '</div></div><div class="ds-row">' +
       '<button class="btn" onclick="dsOpenFile(\'' + file.id + '\',1)">開啟</button>' +
       (canManage ? '<button class="btn" onclick="' + (sameZone ? 'dsEditFileMappings' : 'dsSelectFileZone') + '(\'' + file.id + '\')">' + (sameZone ? '編輯標記' : '切換並編輯') + '</button>' : '') +
-      (canManage ? '<button class="btn' + (!isAdmin ? ' ds-delete-owner-only' : '') + '" onclick="dsDeleteFile(\'' + file.id + '\')">刪除</button>' : '') +
+      (canManage ? '<button class="btn" onclick="dsDeleteFile(\'' + file.id + '\')">刪除</button>' : '') +
       '</div></div>';
   }).join('');
 }
@@ -52296,10 +52313,6 @@ async function dsDeleteFile(id) {
   if (!file) return;
   const isAdmin = !!currentUser?.isAdmin;
   const isOwner = String(file.created_by || '') === String(currentUser?.id || '');
-  if (window.matchMedia('(max-width:768px)').matches && !isAdmin) {
-    alert('手機版只有管理員可以刪除圖面。');
-    return;
-  }
   if (!isAdmin && !isOwner) {
     alert('只有管理員或原上傳者可以刪除圖面。');
     return;
