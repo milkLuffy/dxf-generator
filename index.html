@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.23.11"/>
+<meta name="sc-version" content="2026.09.24.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2795,7 +2795,7 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
   <div class="modal" style="max-width:1100px;width:96vw">
     <div class="modal-title">有／無板全區試算 — <span id="ibt-title" style="color:var(--accent2)">—</span></div>
     <div class="ibt-sum" id="ibt-sum">—</div>
-    <div class="section-label" style="margin:0">只是試算：不會改動報驗頁的任何欄位，也不會寫進資料庫。規則＝排除母件本體後，第一層零件只要還有不是成品材／FB／水電 H／帷幕 Q 的零件，就判有板。</div>
+    <div class="section-label" style="margin:0">只是試算：不會改動報驗頁的任何欄位，也不會寫進資料庫。規則＝排除母件本體後，第一層零件只要還有不是成品材／FB／水電 H／帷幕 Q、也不是 E 開頭（工地用）的零件，就判有板。</div>
     <div class="ibt-wrap" id="ibt-body"></div>
     <div class="modal-actions">
       <button class="btn-modal-cancel" onclick="maBoardTrialExport()">⬇ 匯出 Excel</button>
@@ -53118,14 +53118,16 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   };
 
   // ── 有／無板自動判定 ──
-  // 規則:排除母件本體後,第一層零件只要還有「不是成品材、不是 FB、不是水電 H、不是帷幕 Q」的,就算有板。
+  // 規則:排除母件本體後,第一層零件只要還有「不是成品材、不是 FB、不是水電 H、不是帷幕 Q、零件編號不是 E 開頭(工地用)」的,就算有板。
   // 亦即 SP、角鐵 L,以及本體以外額外的 BH/RH/BOX/BT/U(托樑、補強 H)都算有板。
   // H(水電)、Q(帷幕)暫定不算板:圖面有時沒畫、多階表卻有,先當不算;要改規則只動這個陣列。
   var MA_BOARD_NOT=['成品材','FB','H','Q'];
   var MA_BOARD_FIRST=['SP','L'];
   // 分類優先用存檔時寫進資料庫的 category,畫面看到什麼分類就用什麼判定;現場解析出來的才即時算
   function maItemCat(i){return (i&&i.category)?i.category:maPartCategory(i);}
-  function maBoardHits(items){return items.filter(function(i){return MA_BOARD_NOT.indexOf(maItemCat(i))<0;});}
+  // 零件編號 E 開頭是工地用的板子,跟廠內無關,一律不算板(只有 E 開頭的板子→無板)
+  function maBoardSitePart(i){return /^E/i.test(String((i.partNo!=null?i.partNo:i.part_no)||'').trim());}
+  function maBoardHits(items){return items.filter(function(i){return MA_BOARD_NOT.indexOf(maItemCat(i))<0&&!maBoardSitePart(i);});}
   // 依據文字:依分類分組,格式「SP×5：S247、XH9…等 23 種」;field='spec' 列規格,否則列零件編號
   function maBoardWhy(hits,field,limit){
     var order=[],map={};
@@ -53169,7 +53171,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       var hits=maBoardHits(maPartItems(byComp[k]));
       map[k]={verdict:hits.length?'有板':'無板',
         whyNo:maBoardWhy(hits,'no',0),whyShort:maBoardWhy(hits,'no',8),whySpec:maBoardWhy(hits,'spec',0),
-        note:hits.length?'':'第一層零件都不算板（成品材／FB／水電 H／帷幕 Q）'};
+        note:hits.length?'':'第一層零件都不算板（成品材／FB／水電 H／帷幕 Q／E 開頭工地用板）'};
     });
     return {ok:true,hit:hit,map:map};
   };
