@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.24.1"/>
+<meta name="sc-version" content="2026.09.28.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -4300,6 +4300,11 @@ window.normalizeFullWidth=function(value){
 .ma-prompt-box{width:100%;min-height:440px;resize:vertical;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text2);padding:14px;font-family:var(--mono);font-size:12px;line-height:1.75;outline:none}
 .ma-prompt-box:focus{border-color:var(--accent2)}
 .ma-copy-status{font-size:11px;color:var(--green);min-height:16px;margin-top:7px}
+.ma-prompt-mode{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--text3)}
+.ma-prompt-mode .ma-mode-seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--rad);overflow:hidden}
+.ma-prompt-mode button{background:var(--bg3);color:var(--text2);border:0;padding:6px 14px;font-size:12px;cursor:pointer}
+.ma-prompt-mode button+button{border-left:1px solid var(--border)}
+.ma-prompt-mode button.active{background:var(--accent2);color:#fff;font-weight:600}
 .ma-prompt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .ma-prompt-card.q{border-top:3px solid var(--purple)}
 .ma-prompt-card.h{border-top:3px solid var(--accent3)}
@@ -4511,12 +4516,20 @@ window.normalizeFullWidth=function(value){
         </div>
 
         <div class="ma-tab-pane" id="ma-pane-wordprompt">
+          <div class="ma-prompt-mode">
+            <span>Prompt 版本</span>
+            <span class="ma-mode-seg">
+              <button type="button" data-ma-pmode="skill" onclick="maSetPromptMode('skill')">有 skill（steel-drawing-docx）</button>
+              <button type="button" data-ma-pmode="full" onclick="maSetPromptMode('full')">無 skill（完整版）</button>
+            </span>
+            <span id="ma-prompt-mode-hint"></span>
+          </div>
           <div class="ma-prompt-grid">
             <div class="ma-prompt-card q">
               <div class="ma-prompt-head">
                 <div>
                   <div class="ma-prompt-title">帷幕 Word 匯出 Prompt</div>
-                  <div class="ma-prompt-note">只處理 Q 帷幕圖面；可提供 PDF、DWG 或 DXF，且只需其中一種；DWG／DXF 會要求轉成白底黑字再置入。Q 編號組合相同的多支構件會合併成同一頁。</div>
+                  <div class="ma-prompt-note">只處理 Q 帷幕圖面，附上帷幕圖面（PDF、DWG 或 DXF 擇一，DWG／DXF 會轉白底黑字）；每張圖權重相同、每頁最多 4 張。圖號與 Q 編號組合相同的多支構件會合併成同一頁。</div>
                 </div>
                 <div class="ma-detail-actions">
                   <button class="btn btn-gen" onclick="maCopyWordPrompt('Q')">複製帷幕 Prompt</button>
@@ -4530,7 +4543,7 @@ window.normalizeFullWidth=function(value){
               <div class="ma-prompt-head">
                 <div>
                   <div class="ma-prompt-title">水電 Word 匯出 Prompt</div>
-                  <div class="ma-prompt-note">只處理 H 水電圖面；可提供 PDF、DWG 或 DXF，且只需其中一種；DWG／DXF 會要求轉成白底黑字再置入。H 編號組合相同的多支構件會合併成同一頁。</div>
+                  <div class="ma-prompt-note">只處理 H 水電圖面，附上水電圖面（PDF、DWG 或 DXF 擇一，DWG／DXF 會轉白底黑字）；依規格判定複雜圖（寬X高，2 點）／一般圖（1 點），每頁上限 4 點。圖號與 H 編號組合相同的多支構件會合併成同一頁。</div>
                 </div>
                 <div class="ma-detail-actions">
                   <button class="btn btn-gen" onclick="maCopyWordPrompt('H')">複製水電 Prompt</button>
@@ -52909,79 +52922,133 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     return rows;
   }
 
+  // Word 匯出 Prompt:「有 skill」只帶資料;「無 skill」= 共用本體＋類別區塊(H 水電／Q 帷幕),改規則只改這裡
+  var MA_PMODE_KEY='ma_prompt_mode';
+  function maPromptMode(){var m='skill';try{m=localStorage.getItem(MA_PMODE_KEY)||'skill';}catch(e){}return m==='full'?'full':'skill';}
+  window.maSetPromptMode=function(m){
+    try{localStorage.setItem(MA_PMODE_KEY,m==='full'?'full':'skill');}catch(e){}
+    maUpdateWordPrompt();
+  };
+  var MA_DWG_RULE='DWG／DXF：以唯讀方式開啟，輸出圖面一律白底黑字——背景設為白色、所有物件以黑色輸出（等同 monochrome.ctb 單色列印樣式），線寬、線型、文字、尺寸與相對位置維持原樣；只改輸出／列印設定，不得修改原檔的物件、顏色屬性或圖層。優先輸出 SVG／EMF，若缺字、缺線或偏移，改以 600 DPI 無損 PNG 輸出；格位與圖框以圖檔幾何直接定位。';
+  function maNum(list){return list.map(function(t,i){return (i+1)+'. '+t;}).join('\n');}
+
   function maPrompt(code,label){
+    var H=code==='H';
     var rows=maPromptRows(code);
     var rowCount=rows.reduce(function(s,r){return s+r.rawCount;},0);
-    var list=rows.length?rows.map(function(r){
-      var numsText=r.nums.map(function(n){return code==='H'&&r.specs[n]?n+'（規格：'+r.specs[n]+'）':n;}).join('、');
+    var list=rows.length?label+'（'+rows.length+' 支構件／'+rowCount+' 筆）：\n'+rows.map(function(r){
+      var numsText=r.nums.map(function(n){return H&&r.specs[n]?n+'（規格：'+r.specs[n]+'）':n;}).join('、');
       return '* 構件編號 '+r.componentNo+'｜圖號 '+r.drawingNo+'｜'+label+'編號：'+numsText;
     }).join('\n'):'（目前沒有 '+code+' 類別資料，請先完成多階資料分析）';
-    var sample='';
-    if(rows.length){
-      var sig=rows[0].drawingNo+'|'+rows[0].nums.join(',');
-      var same=rows.filter(function(r){return r.drawingNo+'|'+r.nums.join(',')===sig;}).map(function(r){return r.componentNo;});
-      sample='，例如「構件編號：'+same.join('、')+'　｜　圖號：'+rows[0].drawingNo+'」';
+    var projLine='工程編號：'+(maProject.工程編號||'未提供')+'｜工程區：'+(maProject.工程區||maProject.母件編號||'未提供');
+
+    if(maPromptMode()==='skill'){
+      return [
+        '請使用 steel-drawing-docx skill，依我隨附的多階資料剖析結果與'+label+'圖面檔（PDF、DWG 或 DXF 擇一），製作 Word 圖面整合文件。',
+        MA_DWG_RULE,
+        '',
+        projLine,
+        '',
+        '【本次剖析清單】',
+        list,
+        '',
+        '請直接開始讀取附件、擷取圖面並產出 Word，不要只提供操作步驟或文字說明。'
+      ].join('\n');
     }
-    var capLong=code==='H'
-      ?'每頁採「版面配額制」：單頁配額上限 4 點，複雜圖每張佔 2 點、一般圖每張佔 1 點。合法組合例如「2 張複雜圖」「1 張複雜圖＋2 張一般圖」「1 張複雜圖＋1 張一般圖」「1～4 張一般圖」，同頁配額總和不得超過 4 點。'
-      :'每頁最多放 4 張圖。';
-    var capShort=code==='H'?'同頁配額總和不超過 4 點（複雜圖 2 點、一般圖 1 點）':'每頁最多 4 張圖片';
-    var minWidthChk=code==='H'?'、同頁圖片寬度小於頁面可用寬度 22%':'';
-    var imageRules=[
-      'DWG／DXF／PDF 來源檔及圖框內資訊一律視為唯讀，不得編輯、覆寫或另存回來源檔。Word 可編輯僅指文件排版可編輯，不代表圖面內容可以修改。',
-      '只允許將完整圖面當成一個整體做等比例放大或縮小，以及裁除圖框外的空白；不得重繪、描圖、重新排版、補字、修字、翻譯、校正、推測或生成任何圖面內容。',
-      '圖框內的文字、字型呈現、數字、圖號、零件編號、規格、材質、數量、尺寸值、尺寸線、引線、符號、剖面、線條、線型、線寬、顏色、圖層可見性、比例關係、座標及相對位置，都必須與來源檔完全一致，不得因放大、縮小、轉檔或排版而增刪、替換、位移、變形或改變。',
-      '所有圖面圖片必須鎖定原始長寬比。寬度與高度只能使用相同倍率等比例縮放，嚴禁拉伸、壓扁、改變形狀或使用「填滿格位」造成變形。圖片比例與格位比例不同時，允許留白。',
-      '「完整圖框」是指目標圖面最外圍的黑色封閉圖框線及其框內全部內容，不代表必須保留整個 PDF 頁面。',
-      '擷取 PDF 時，必須先辨識目標圖面的最外圍黑色圖框，以黑框外緣作為裁切邊界，裁除黑框以外的白色頁面空間。黑框外最多保留 1～2 mm 安全邊界，不得保留明顯的大面積外部白邊。裁切後才可等比例縮放。',
-      '不得裁掉黑色外框線，也不得裁掉框內的圖號、零件編號、規格、材質、數量、尺寸、標註或剖面；不得將圖框內原有的白色區域誤判為外部白邊。',
-      '若同一個 PDF 頁面包含左右兩張獨立圖面，應以各自獨立的黑色圖框為邊界，只擷取與目標 '+code+' 編號相符的圖框，不得保留另一張圖面或兩圖之間的空白。',
-      'PDF 不得使用螢幕截圖、瀏覽器截圖、附件預覽圖或低解析度縮圖。應直接由原始 PDF 頁面渲染或匯出，依圖框裁切後以至少 400 DPI、建議 600 DPI 輸出無損 PNG；禁止使用 JPEG。',
-      '若 PDF 原始內容為向量圖，優先轉為 Word 可置入的 SVG 或 EMF，以保留文字與線條清晰度；若轉換後發生缺字、缺線、字型錯誤或版面偏移，才改用 600 DPI PNG。',
-      '圖面以白色版面背景渲染後置入，但背景轉白只能是輸出／顯示設定，不得修改 DWG／DXF 原檔、物件屬性、圖層或圖面資料。圖框內若原本含有不同顏色、灰階、線型或線寬，必須忠實保留；不得為了白底黑字而將全部物件強制改色、改線寬或造成資訊差異。若無法在不改變資訊的前提下轉為白底，應保留來源原貌並註明，不可擅自加工。',
-      '每張圖片置入前，必須逐項比對來源檔與輸出圖片，確認黑框四邊、全部文字與數值、線條、符號、圖層內容、顏色及相對位置完全一致，且框外無大面積白邊、長寬比未改變、尺寸文字清楚。任一資訊不一致即不得使用，必須回到來源檔以唯讀方式重新渲染；禁止人工修改輸出圖來修補。'
+
+    // 一、資料對應(類別區塊)
+    var sec1=H?[
+      '以剖析結果的構件編號、圖號、H 零件編號及規格為唯一對應清單，只處理 H 開頭項目，不得自行增減。',
+      '水電 PDF 通常包含：詳圖圖號表（SH-100-x：開孔編號 → 詳圖圖號）、水電開孔詳圖（SH-xxx）、水電開孔料表（E4xxB）。先取出每頁原始影像，將各頁右下角圖號欄拼成縮圖總覽，看圖建立「圖號 → PDF 頁碼」對照；再用圖號表找出每個 H 編號所在的詳圖圖號。',
+      '詳圖頁的繪圖區以格線分成格位（2×2，或上下兩列整寬），右側為規格圖例欄與標題欄。每格左上角「開孔型號」表格的第一列即零件編號。頁碼與格位都必須看圖核對，不可只依賴 OCR；OCR 找不到時仍要逐頁檢查。',
+      '同一圖號若在檔案中出現多個版次（ALT），採用最新版次，並列入待確認清單。',
+      '比對剖析規格與詳圖「開孔規格」欄（例：D200 ↔ ø200MM、#800X400 ↔ □800X400）。若附件含料表，一併核對構件與 H 編號組合。不一致時仍依 H 編號置入，但列入待確認清單並寫出兩邊數值與頁碼。',
+      '不得猜測配對。找不到的項目不置入圖片，摘要表狀態寫「未找到」，並列入待確認清單。'
+    ]:[
+      '以剖析結果的構件編號、圖號及 Q 零件編號為唯一對應清單，只處理 Q 開頭項目，不得自行增減。',
+      '帷幕 PDF 通常包含：A4 直式送審文件、平面圖與料表（E5xx，LIST OF MATERIAL：MEMBER MARK／C-MARK）、帷幕鐵件詳圖圖號表（SQ-900：鐵件編號 → 圖號 → 使用部位）、帷幕鐵件詳圖（SQ-901 起，一頁一個圖號）。先取出每頁原始影像，做全頁縮圖總覽了解結構，並將各頁右下角圖號欄拼成縮圖，看圖建立「圖號 → PDF 頁碼」對照；再用圖號表找出每個 Q 編號所在的詳圖圖號。',
+      '一張詳圖頁常有 2～4 個 Q 編號。每格左上角有 Q 編號標籤框，必須看圖逐格確認目標位於哪一格，不可只依賴 OCR；OCR 找不到時仍要逐頁檢查。',
+      '同一圖號若在檔案中出現多個版次（ALT），採用最新版次，並列入待確認清單。',
+      '若附件含料表，核對構件與 Q 編號組合（料表同一列可能列出多支構件）。不一致時仍依 Q 編號置入，但列入待確認清單。',
+      '不得猜測配對。找不到的項目不置入圖片，摘要表狀態寫「未找到」，並列入待確認清單。'
     ];
-    if(code==='H')imageRules.push('水電圖面複雜度一律以「多階資料剖析結果」中該 H 項目的結構化規格欄判定，不得依零件編號中的英文字母、前綴或命名方式判斷，也不得再依圖面內零件編號種類數判斷。規格若為兩個尺寸組成的「寬X高」格式，即判定為複雜圖；前方有無「#」皆相同，例如「#700X200」與「700X200」都屬複雜圖，並兼容大寫 X、小寫 x 及乘號 ×。此條件須由多階資料表的文字資料直接判讀，不可依賴 DWG／DXF 圖面 OCR。其餘不符合「寬X高」格式者屬一般圖。複雜圖與一般圖的版面大小一律依配額決定，不得任意拉開差距：複雜圖每張分配約半頁版面（2 點），一般圖每張分配約四分之一頁版面（1 點），因此同頁複雜圖與一般圖的顯示寬度比例應落在約 1.4：1 至 2：1 之間，嚴禁把一般圖壓縮到尺寸文字無法辨識。任何一張圖片的顯示寬度都不得小於頁面可用寬度的 22%（A3 橫向約 8.6 公分）；若配額內無法同時滿足此下限，應減少該頁圖片數量並分頁，而不是繼續縮小一般圖。同類型圖片彼此的顯示尺度應一致。若該頁全部都是同一類型，則不需刻意製造大小差異，依圖片數量平均且盡量放大。所有調整只能改變完整圖片在 Word 中的顯示尺寸與位置，不得裁切圖框內內容、重繪或變更任何圖面資訊；同頁配額總和不得超過 4 點，也不得把該頁原應放置的圖片推到下一頁。');
-    imageRules=imageRules.map(function(t,i){return (i+1)+'. '+t;}).join('\n');
-    var layout=[
-      '頁面尺寸必須固定為 A3 橫向（寬 42 公分、高 29.7 公分），上下左右邊界均不超過 1.27 公分；不得改成 A4、Letter、自訂尺寸或直向。',
-      '每一支構件獨立成頁；若多支構件的圖號與 '+code+' 編號組合完全相同，則合併為同一頁，並在頁首同時列出這些構件編號。',
-      '頁首只需精簡標註「構件編號：◯◯◯、◯◯◯　｜　圖號：◯◯◯」'+sample+'，多支構件以「、」相連。標註尺寸只要文字清楚可讀即可，不得為此建立橫跨整頁的大型外框、色塊、表格列或佔用大量高度。不要出現「多階資料分析」之類的標題行、副標、說明文字、日期或頁碼。',
-      '不得使用藍底白字標題列、色塊標題橫條，或任何與圖片同寬的標題列。圖框內既有的零件編號已足以辨識時，可完全省略圖片標題；若仍需標示，只能在圖片正下方加一行純文字「'+label+' '+code+'編號」，字級 9～10pt、無底色、無外框、無框線，且不得為此建立表格列、儲存格或獨立版面區塊。',
-      '每張圖片與其文字標註一律以「浮動物件」插入：文繞圖設定為「文字在前」或「浮於文字上方」，錨定於所屬頁面並以絕對位置指定座標，使用者必須能在 Word 中直接以滑鼠拖曳圖片自由調整位置。嚴禁把圖片或標註放進表格、儲存格、文字方塊、圖說框或群組物件，也不得使用嵌入式（與文字排列）方式插入圖片；即使框線設定為「無」，也不得以表格作為排版骨架。',
-      capLong+'以上只是每頁的容量上限，並非固定 2×2 格位，也不必補滿版面。依實際張數採單張、並排、上下排列或 2×2 等最清楚的配置；未達上限時不得建立空白格、空白框或預留空位。超出上限時就地手動分頁，下一頁重複同一組精簡的構件編號與圖號標註。',
-      '圖片之間不得加大型共用外框、表格框線、儲存格邊界或包住整組圖片的容器框；即使框線設定為「無」，也不得使用表格或文字方塊作為排版骨架。畫面應以各張圖面圖片本身為主，效果如直接將獨立圖片排列在頁面上。此處禁止的是 Word 排版新增的外框；來源圖面本身最外圍的黑色封閉圖框及框內內容仍須完整保留。',
-      '請先計算 A3 單頁可用寬高，規劃好每張浮動圖片的座標與顯示尺寸，確保同頁圖片彼此不重疊、不超出頁面邊界、不被推到下一頁；圖片下方的文字標註須與所屬圖片一起定位、不得分離。不得使用連續空白段落撐版。',
-      '一般頁面盡量減少無效空白與圖片間距；在不裁切、不變形且同頁圖片不跨頁的前提下，依圖片數量與長寬比彈性配置，將每張圖片等比例放大至清楚可讀。',
-      'Word 必須設定為「不壓縮檔案中的影像」並使用最高保真度；不得自動降低圖片解析度，也不得先縮成低解析度圖片後再放大。',
-      '圖片只可使用與裁切後原圖一致的長寬比等比例縮放，不得使用填滿、拉伸或分別指定不同比例的寬度與高度；縮放只改變整張圖片在 Word 中的顯示尺寸，不得改變圖片內任何資訊。'
+
+    // 二、圖面擷取(共用本體,少數字句依類別)
+    var sec2=[
+      '來源檔一律唯讀，不得編輯、覆寫或另存。',
+      '點陣掃描 PDF：直接取出原始嵌入影像像素（pdfimages），不可使用螢幕截圖、預覽圖或縮圖。向量 PDF：優先輸出 SVG／EMF；若缺字、缺線或偏移，改以 600 DPI 渲染。'+MA_DWG_RULE,
+      H?'格位定位：偵測頁面外框、繪圖區右界（圖例欄左側的全高直線）、橫向與直向分隔線。掃描常有輕微歪斜，線條須分段擬合實際位置。真正的分隔線必須在多數分段都連續出現，且兩端接到框線；圖面內的長直線不可誤判為分隔線。'
+       :'格位定位：詳圖頁右側只有標題欄、沒有圖例欄，繪圖區右界是標題欄左側的全高直線。格位形式不一，包括 2×2、上排整寬＋下排左右、左右兩張全高、整頁單張。偵測頁面外框、繪圖區右界、橫向與直向分隔線；掃描常有輕微歪斜，線條須分段擬合實際位置。真正的分隔線必須在多數分段都連續出現，且兩端接到框線；圖面內的長直線不可誤判為分隔線（整頁單張的頁面不可被切成兩格）。',
+      '只擷取「內容物」：\n'+[
+        H?'   (1) 沿擬合的實際框線，移除格位四周的格線／框線，包含與相鄰圖例表重疊的雙線，以及相距稍遠的另一條平行邊框。'
+         :'   (1) 沿擬合的實際框線，移除格位四周的格線／框線，包含相鄰的雙線與平行邊框。',
+        H?'   (2) 與框線重合的表格外框必須保留：貼著格位上框的表格或標籤框（高度不超過格位 35%，且有直線垂直接到框線），保留它寬度範圍內的那段上框；若位於角落，一併保留對應的左框或右框段。表格四邊必須完整。'
+         :'   (2) 與框線重合的外框必須保留：左上角的 Q 編號標籤框（與上框、左框重合），以及上緣中段的零件編號表格（上框與圖框線重合）。凡是貼著格位上框、高度不超過格位 35%、且有直線垂直接到框線的表格或標籤框，保留它寬度範圍內的那段上框；位於角落者一併保留對應的左框或右框段。標籤框與表格四邊都必須完整。',
+        '   (3) 以內容最外緣加約 1.5 mm 留白為裁切邊界，不保留框外大面積空白；判斷邊界時忽略小於約 12 像素的孤立掃描雜點。',
+        '   (4) 不得帶入相鄰格位的任何內容（'+(H?'':'標籤、')+'表頭、文字、線頭），也不得切到本格內容；因歪斜無法以矩形裁切時，沿框線做非矩形裁除。'
+      ].join('\n'),
+      '內容像素一律不得變動：不可重繪、描圖、補字、修字、平滑、改色或生成。放大只允許整數倍最近鄰（例：200 ppi × 3 = 600 DPI），放大後每隔 3 像素取樣必須與原像素完全相同。一律輸出無損 PNG，禁止 JPEG；PDF 來源保留原本顏色與灰階，DWG／DXF 來源依上述白底黑字輸出。',
+      H?'同一零件被多支構件共用時只擷取一次。':'同一 Q 編號被多支構件共用時只擷取一次。',
+      '每張擷取完成後拼成總覽圖目視檢查，並放大四邊確認：'+(H?'表格四邊完整、無殘留格線或圖例表線條':'標籤框與表格四邊完整、無殘留格線')+'、無相鄰格位內容、內容未被切掉。不合格須回到來源重新擷取，禁止修改輸出圖補救。'
     ];
-    layout.push('文件最後加入摘要表：構件編號、圖號、'+code+' 編號、來源圖面頁碼、配對狀態。');
-    layout.push('完成後請以列印版面逐頁檢查 Word：每頁都必須是 A3 橫向，'+capShort+'且該頁圖片均完整留在同一頁；未達上限時不得出現補位用的空白格或空白框；不得出現藍底白字標題列或色塊標題橫條；每張圖片都必須是可用滑鼠自由拖曳的浮動物件，未被放入表格、儲存格、文字方塊或群組；不得有 Word 排版新增的大型外框、共用容器框或表格框線（含框線設為「無」的表格），也不得有標題與圖片分離、裁切、重疊、空白頁、圖片失真'+minWidthChk+'、來源圖面黑框缺邊、框外大面積白邊或低解析度。另須逐張對照來源 DWG／DXF／PDF，確認圖框內全部資訊完全一致；任何增刪、替換、位移、變形、改色或線型／線寬差異均不合格，必須回到來源檔以唯讀方式重新渲染，禁止直接修改圖片補救。任何一項不合格都要先修正並重新檢查，再交付 .docx。');
-    layout=layout.map(function(t,i){return (i+1)+'. '+t;}).join('\n');
+
+    // 三、配額(類別區塊;帷幕清單若之後加規格欄,這裡要改回配額制)
+    var sec3=H?[
+      '複雜度一律以剖析結果的規格欄文字判定，不看零件編號字母、不靠圖面 OCR：規格為「寬X高」格式（前方有無 # 皆同，兼容 X、x、×）為複雜圖，其餘（如 D200）為一般圖。',
+      '每頁配額上限 4 點：複雜圖 2 點、一般圖 1 點。依清單順序排入，超出上限就分頁，下一頁重複同一組頁首。不必補滿版面，不得建立空白格或空白框。',
+      '同頁複雜圖與一般圖的顯示寬度比約 1.4:1～2:1（建議 1.6:1）；同類型圖片使用同一縮放比例；全頁同類型時盡量放大。',
+      '任何圖片顯示寬度不得小於頁面可用寬度的 22%（A3 橫向約 8.6 cm）；無法滿足時減少該頁張數，不得繼續縮小。',
+      '依圖片長寬比比較「左右並排、上下排列、一大兩小（三張時）、2×2（四張時）」，選擇圖面最大且不重疊的排法。'
+    ]:[
+      '剖析清單沒有規格欄，不分複雜圖與一般圖：每張圖權重相同，每頁最多 4 張。依清單順序排入，超出就分頁，下一頁重複同一組頁首。不必補滿版面，不得建立空白格或空白框。',
+      '同頁圖片使用同一縮放比例，盡量放大。',
+      '任何圖片顯示寬度不得小於頁面可用寬度的 22%（A3 橫向約 8.6 cm）；無法滿足時減少該頁張數，不得繼續縮小。',
+      '依圖片長寬比比較「左右並排、上下排列、一大兩小（三張時）、2×2（四張時）」，選擇圖面最大且不重疊的排法。'
+    ];
+
+    // 四、Word 排版(共用本體)
+    var sec4=[
+      '頁面固定 A3 橫向（42 × 29.7 cm），上下左右邊界均為 1.27 cm。',
+      '每支構件獨立成頁；只有圖號與 '+code+' 編號組合完全相同的多支構件才合併同頁，並在頁首同時列出構件編號。',
+      '頁首只寫一行純文字「構件編號：◯◯◯、◯◯◯　｜　圖號：◯◯◯」，多支構件以「、」相連。不得有其他標題、副標、日期、頁碼、色塊、表格列或外框。',
+      H?'不加圖片標題（開孔型號表格已足以辨識）。':'不加圖片標題（Q 編號標籤框已足以辨識）。',
+      '每張圖片以浮動物件插入：文繞圖為「文字在前」（wrapNone、浮於文字上方），以相對頁面的絕對座標定位，錨定於該頁頁首段落，可用滑鼠自由拖曳。嚴禁嵌入式插入，不得放進表格、儲存格、文字方塊、圖說框或群組；不得以表格（含框線設為「無」者）或空白段落撐版。',
+      '每張圖片各自加 1 pt 黑色實線的 Word 圖片框線作為分隔。框線不得畫入圖片像素，不得建立包住多張圖片的共用外框。',
+      '先計算可用區域再規劃每張圖的座標與尺寸：同頁圖片不重疊、不超出邊界、不被推到下一頁。',
+      '圖片鎖定長寬比，只能等比例縮放，不得拉伸或填滿格位。',
+      '設定「不壓縮檔案中的影像」（settings.xml 加 w:doNotAutoCompressPictures）並使用最高保真度。'
+    ];
+
+    // 五、文件最後
+    var sec5=[
+      H?'摘要表：構件編號、圖號、H 編號、規格、圖面類型、來源圖號／PDF 頁碼、配對狀態。'
+       :'摘要表：構件編號、圖號、Q 編號、來源圖號／PDF 頁碼、配對狀態。',
+      '待確認清單，獨立一頁；沒有待確認事項時註明「無」。'
+    ];
+
+    // 六、交付前檢查
+    var sec6='將 Word 轉成 PDF 逐頁目視檢查，並以程式確認：浮動錨點數等於圖片數、無嵌入式圖片、文件中只有摘要表一個表格、無文字方塊與群組、每張圖都有框線、'
+      +(H?'配額、寬度比、最小寬度':'每頁不超過 4 張、最小寬度')+'、重疊與邊界全部符合。任一項不合格，先修正並重新檢查，再交付 .docx。';
+
     return [
-      '請使用我隨附的「多階資料剖析結果」、'+label+'圖面檔（PDF、DWG 或 DXF 擇一即可）與參考排版圖片，製作一份可編輯的 Word（.docx）圖面整合文件。',
+      '請使用我隨附的「多階資料剖析結果」與'+label+'圖面檔（PDF、DWG 或 DXF 擇一），製作一份可編輯的 Word（.docx）圖面整合文件。請直接讀取附件、擷取圖面並產出 Word，不要只提供操作步驟或文字說明。',
       '',
-      '工程編號：'+(maProject.工程編號||'未提供')+'｜工程區：'+(maProject.工程區||maProject.母件編號||'未提供'),
+      projLine,
       '',
-      '【資料對應原則】',
-      '1. 以剖析結果中的構件編號、圖號，以及 '+code+' 零件編號為唯一對應清單。',
-      '2. 本份文件只處理 '+code+' 開頭的'+label+'圖面，請到相對應圖面檔中逐張找出相同圖號。',
-      '3. 必須直接查看圖框標題及圖面內容進行視覺核對，不可只依賴 OCR；OCR 找不到時仍要逐頁檢查。',
-      '4. 圖面必須包含完整黑色圖框及框內全部內容，不可裁掉或修改圖號、零件編號、規格、材質、數量、尺寸、標註及剖面；黑框以外的頁面白邊不屬於圖面，可以裁除。除整張圖等比例縮放及裁除框外空白外，圖框內資訊一律不得變更。',
-      '5. 若同一頁面有左右兩張圖，只保留與目標 '+code+' 編號相符之獨立黑色圖框，裁除另一張圖與兩圖之間的空白。',
-      '6. 不得自行猜測配對。無法確認的項目請列在文件最後的「待確認清單」。',
+      '【一、資料對應】',maNum(sec1),
       '',
-      '【圖面裁切、縮放及清晰度規格】',
-      imageRules,
+      '【二、圖面擷取】',maNum(sec2),
       '',
-      '【Word 排版規格】',
-      layout,
+      H?'【三、複雜度與版面配額】':'【三、版面配額】',maNum(sec3),
       '',
-      '【本次剖析清單】'+label+'（'+rows.length+' 支構件／'+rowCount+' 筆）：',
-      list,
+      '【四、Word 排版】',maNum(sec4),
       '',
-      '請直接開始讀取附件、擷取圖面並產出 Word，不要只提供操作步驟或文字說明。'
+      '【五、文件最後】',maNum(sec5),
+      '',
+      '【六、交付前檢查】',sec6,
+      '',
+      '【本次剖析清單】',
+      list
     ].join('\n');
   }
 
@@ -52989,6 +53056,10 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var q=document.getElementById('ma-ai-word-prompt-q'),h=document.getElementById('ma-ai-word-prompt-h');
     if(q)q.value=maPrompt('Q','帷幕');
     if(h)h.value=maPrompt('H','水電');
+    var m=maPromptMode();
+    document.querySelectorAll('#page-multilevel [data-ma-pmode]').forEach(function(btn){btn.classList.toggle('active',btn.getAttribute('data-ma-pmode')===m);});
+    var hint=document.getElementById('ma-prompt-mode-hint');
+    if(hint)hint.textContent=m==='skill'?'擷取與排版規則都在 skill 裡，Prompt 只帶資料（帳號需已安裝 skill）':'規則全部寫進 Prompt，給沒裝 skill 的帳號／API 使用';
   }
 
   window.maCopyWordPrompt=async function(code){
