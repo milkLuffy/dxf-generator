@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.29.5"/>
+<meta name="sc-version" content="2026.09.29.6"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -9177,7 +9177,7 @@ window.normalizeFullWidth=function(value){
               <input id="hw-purchase-month" type="month" class="search-input" style="width:140px" onchange="hwPurchaseMonthRange(this.value)">
               <input id="hw-purchase-from" type="date" class="search-input" style="width:145px" onchange="hwPurchaseDateChanged()">
               <span class="layout-hint">～</span><input id="hw-purchase-to" type="date" class="search-input" style="width:145px" onchange="hwPurchaseDateChanged()">
-              <span class="layout-hint">匯出 Excel 會自動合併維修金額</span>
+              <span class="layout-hint">匯出 Excel 會照表格目前的篩選(例:廠商只勾一家)並合併維修金額</span>
               <button class="btn-sm btn-export" onclick="hwClearFilters('purchase')">清除篩選</button>
               <button class="btn-sm btn-export" onclick="hwExportPurchase()">⬇ 匯出 Excel</button>
             </div>
@@ -16017,12 +16017,18 @@ function hwExportStock(){
 function hwExportPurchase(){
   const from=document.getElementById('hw-purchase-from')?.value||'',to=document.getElementById('hw-purchase-to')?.value||'';
   if(from&&to&&from>to){alert('匯出起始日期不能晚於結束日期');return;}
-  const rows=hwPurchases.filter(p=>(!from||String(p.tx_date||'')>=from)&&(!to||String(p.tx_date||'')<=to));
-  if(!rows.length){alert('所選日期區間沒有可匯出的紀錄');return;}
+  // 照表格目前的篩選匯出(欄位篩選、搜尋);維修紀錄跟著「廠商」篩選一起合併進來
+  const inDate=p=>(!from||String(p.tx_date||'')>=from)&&(!to||String(p.tx_date||'')<=to);
+  const vf=hwColFilter.purchase[HW_COLDEFS.purchase.findIndex(d=>d&&d.key==='vendor')];
+  const keep=new Set(hwApplyColFilters('purchase',hwFilterRecords(hwPurchases.filter(p=>p.category!=='修理品'&&inDate(p)))));
+  hwFilterRecords(hwPurchases.filter(p=>p.category==='修理品'&&inDate(p))).forEach(p=>{ if(!vf||!vf.size||vf.has(p.vendor==null?'':String(p.vendor))) keep.add(p); });
+  const rows=hwPurchases.filter(p=>keep.has(p));
+  if(!rows.length){alert('目前的日期區間與篩選沒有可匯出的紀錄');return;}
+  const vendorTag=vf&&vf.size===1?[...vf][0]+' ':'';
   const aoa=[['日期','種類','品名','數量','單位','單價','總額','廠商']];
   rows.forEach(p=>aoa.push([p.tx_date||p.date_label||'',p.category||'',p.name,hwNum(p.qty),p.unit||'',p.price,p.total,p.vendor||'']));
   aoa.push(['合計','','','','','',rows.reduce((n,p)=>n+hwNum(p.total),0),'']);
-  hwExport(aoa,'進貨與維修紀錄','五金進貨與維修紀錄 '+(from||'全部')+'_'+(to||egToday())+'.xlsx');
+  hwExport(aoa,'進貨與維修紀錄',(vendorTag+'五金進貨與維修紀錄 '+(from||'全部')+'_'+(to||egToday())).replace(/[\\/:*?"<>|]/g,'')+'.xlsx');
 }
 function hwExportRepair(){
   const rows=hwPurchases.filter(p=>p.category==='修理品'),aoa=[['日期','種類','品名','數量','單位','單價','總額','廠商']];
