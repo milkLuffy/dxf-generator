@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.29.4"/>
+<meta name="sc-version" content="2026.09.29.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -8593,6 +8593,17 @@ window.normalizeFullWidth=function(value){
         #page-spcount .spc-bar{display:flex;height:8px;border-radius:99px;background:var(--bg3);overflow:hidden}
         #page-spcount .spc-bar i{display:block;height:100%}#page-spcount .spc-bar i.ok{background:var(--spc-ok)}#page-spcount .spc-bar i.short{background:var(--spc-short)}
         #page-spcount .spc-search{display:flex;gap:8px;margin-top:8px}
+        #page-spcount .spc-progress{margin-bottom:8px}
+        #page-spcount .spc-catsum{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-bottom:8px}
+        #page-spcount .spc-catsum:empty{display:none}
+        #page-spcount .spc-cs{display:flex;flex-direction:column;gap:4px;padding:7px 9px;border:1px solid var(--border);border-radius:9px;background:var(--bg2);cursor:pointer;text-align:left;color:var(--text)}
+        #page-spcount .spc-cs.active{border-color:var(--accent2);box-shadow:0 0 0 1px var(--accent2) inset}
+        #page-spcount .spc-cs.done{border-color:var(--spc-ok)}
+        #page-spcount .spc-cs-top{display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-size:13px;font-weight:700}
+        #page-spcount .spc-cs-top small{font-weight:500;color:var(--text3);font-size:11px}
+        #page-spcount .spc-cs-nums{display:flex;gap:8px;font-size:12px;color:var(--text3)}
+        #page-spcount .spc-cs-nums .ok{color:var(--spc-ok)}#page-spcount .spc-cs-nums .short{color:var(--spc-short);font-weight:700}
+        #page-spcount .spc-cs .spc-bar{height:5px}
         #page-spcount .spc-filters{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
         #page-spcount .spc-filters button,#page-spcount .spc-chip{min-height:36px;padding:4px 14px;border-radius:999px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-size:13px;cursor:pointer}
         #page-spcount .spc-filters button.active,#page-spcount .spc-chip.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
@@ -8665,8 +8676,9 @@ window.normalizeFullWidth=function(value){
             <button class="btn btn-add-row" onclick="spcExcel()">⬇ 下載 Excel</button>
           </div>
         </div>
+        <div id="spc-progress" class="spc-progress"></div>
+        <div class="spc-catsum" id="spc-catsum"></div>
         <div class="spc-sticky">
-          <div id="spc-progress"></div>
           <div class="spc-search"><input type="search" class="search-input" id="spc-search" placeholder="搜尋零件編號、規格、構件…" oninput="spcSearch(this.value)"/></div>
           <div class="spc-filters" id="spc-filters">
             <button type="button" data-f="all" onclick="spcSetFilter('all')">全部</button>
@@ -25892,7 +25904,7 @@ function layoutOpenMobileSheet(i, refresh) {
     '<label class="spx-m-field"><span>上線日期</span><input type="date" value="' + esc(row.work_date || '') + '" onchange="layoutEdit(' + i + ',\'work_date\',this.value)"></label>' +
     '<div class="spx-m-field"><span>數量</span>' + layoutQtySelect(i) + '</div>' +
     '<label class="spx-m-field"><span>床位</span><select onchange="layoutEdit(' + i + ',\'bed\',this.value);' + again + '">' + bedOpts + '</select></label>' +
-    ((row.part_no || '').trim() ? '<label class="spx-m-field"><span>狀態</span><select onchange="layoutEdit(' + i + ',\'status\',this.value)">' + statusOpts + '</select></label>'
+    ((row.part_no || '').trim() ? '<label class="spx-m-field"><span>狀態</span><select onchange="layoutEdit(' + i + ',\'status\',this.value);' + again + '">' + statusOpts + '</select></label>'
       : '<label class="spx-m-field"><span>狀態</span><input readonly value="-"></label>') +
     // 出貨日期：選擇器關閉（blur）後才重畫，避免手機上日期選擇器一開就被重畫關掉
     '<label class="spx-m-field wide"><span>出貨日期</span><input type="date" value="' + esc(row.ship_date || '') + '" onchange="layoutEdit(' + i + ',\'ship_date\',this.value)" onblur="' + again + '"></label>' +
@@ -26024,6 +26036,11 @@ function layoutEdit(i, field, val) {
     const tr = document.querySelector('#layout-input-body tr[data-key="' + layoutRows[i]._key + '"]');
     const stSel = tr ? tr.querySelector('select[class*="stcell-"]') : null;
     if (stSel) { stSel.value = layoutRows[i].status; stSel.className = 'lt-edit-sel stcell-' + layoutRows[i].status; }
+  }
+  // 已出貨的構件把狀態改回待出貨/上線中/HOLD:出貨日期自動取消(手機的日期欄沒辦法清空,改狀態就好)
+  if (field === 'status' && val !== '已出貨' && layoutRows[i].ship_date) {
+    layoutRows[i].ship_date = '';
+    renderLayoutInput();
   }
   if (field === 'status' || field === 'bed' || field === 'ship_date') renderLayoutStats();
   layoutMarkDirty(i);   // 自動存
@@ -56364,7 +56381,7 @@ async function ldDashPlan(){
     var s=el('spc-search');if(s)s.value='';
     showView('zone');
     el('spc-zone-title').textContent=zoneLabel();
-    el('spc-body').innerHTML='<div class="spc-empty">載入中…</div>';el('spc-progress').innerHTML='';el('spc-cats').innerHTML='';
+    el('spc-body').innerHTML='<div class="spc-empty">載入中…</div>';el('spc-progress').innerHTML='';el('spc-cats').innerHTML='';el('spc-catsum').innerHTML='';
     // 每次開都重抓:剛在多階頁重存過的要用新的那版
     try{await loadList(true,true);}catch(e){el('spc-body').innerHTML='<div class="spc-empty">載入失敗：'+h(e.message)+'</div>';return;}
     var found=spc.zones.map(function(z){return {z:z,a:spc.list.find(function(x){return up(x.project_no)===spc.proj&&up(x.zone_code||x.mother_no)===z;})};});
@@ -56448,6 +56465,14 @@ async function ldDashPlan(){
       (spc.syncNote?'<div class="spc-sync">'+h(spc.syncNote)+'</div>':'');
     document.querySelectorAll('#spc-filters [data-f]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-f')===spc.filter);});
     var cats={};spc.items.forEach(function(it){cats[it.cat]=(cats[it.cat]||0)+1;});
+    // 各分類的到齊／缺料／未點;點一下只看該分類
+    var cs={};spc.items.forEach(function(it){var c=cs[it.cat]||(cs[it.cat]={n:0,ok:0,short:0,todo:0});c.n++;c[stateOf(it).s]++;});
+    el('spc-catsum').innerHTML=ORDER().filter(function(c){return cs[c];}).map(function(c){
+      var x=cs[c],done=!x.todo&&!x.short;
+      return '<button type="button" class="spc-cs'+(spc.cat===c?' active':'')+(done?' done':'')+'" onclick="spcSetCat(\''+h(c)+'\')"><span class="spc-cs-top">'+h(LABEL(c))+'<small>'+(x.n-x.todo)+'/'+x.n+' 種'+(done?' ✓':'')+'</small></span>'+
+        '<span class="spc-cs-nums"><span class="ok">到齊 '+x.ok+'</span><span class="'+(x.short?'short':'')+'">缺料 '+x.short+'</span><span>未點 '+x.todo+'</span></span>'+
+        '<span class="spc-bar"><i class="ok" style="width:'+(x.ok/x.n*100)+'%"></i><i class="short" style="width:'+(x.short/x.n*100)+'%"></i></span></button>';
+    }).join('');
     el('spc-cats').innerHTML=['ALL'].concat(ORDER().filter(function(c){return cats[c];})).map(function(c){
       return '<button type="button" class="spc-chip'+(spc.cat===c?' active':'')+'" onclick="spcSetCat(\''+h(c)+'\')">'+h(c==='ALL'?'全部':LABEL(c))+' <small>'+(c==='ALL'?spc.items.length:cats[c])+'</small></button>';
     }).join('');
@@ -56471,7 +56496,7 @@ async function ldDashPlan(){
     }).join('');
   }
   window.spcSetFilter=function(f){spc.filter=f;render();};
-  window.spcSetCat=function(c){spc.cat=c;render();};
+  window.spcSetCat=function(c){spc.cat=spc.cat===c&&c!=='ALL'?'ALL':c;render();};   // 再點一次同分類 = 回全部
   window.spcSearch=function(v){spc.q=String(v||'');render();};
 
   // ── 寫入 ─────────────────────────────
