@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.29.7"/>
+<meta name="sc-version" content="2026.09.29.8"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5093,6 +5093,7 @@ window.normalizeFullWidth=function(value){
     @media(max-width:1100px){.sc-main{grid-template-columns:1fr}}
     .sc-left{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);display:flex;flex-direction:column;min-width:0}
     .sc-bar{padding:8px 10px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .sc-bar .sc-rot{display:inline-flex;gap:4px;align-items:center}
     .sc-bar #sc-pagelbl{min-width:64px;text-align:center;font-size:12px;color:var(--text2);font-family:var(--mono)}
     .sc-stage{position:relative;overflow:auto;max-height:64vh;min-height:260px;padding:12px;display:flex;justify-content:center;align-items:flex-start}
     #sc-wrap{position:relative;line-height:0;box-shadow:0 3px 16px rgba(0,0,0,.35)}
@@ -5169,6 +5170,11 @@ window.normalizeFullWidth=function(value){
             <span id="sc-pagelbl">— / —</span>
             <button class="btn-sm" onclick="scShowPage(scPi+1)">▶</button>
             <span class="sc-field"><label>本頁圖號</label><input type="text" id="sc-pagedwg" size="10" placeholder="S4-B601" oninput="scPageDwgInput(this.value)"/></span>
+            <span class="sc-rot">
+              <button class="btn-sm" title="這頁往左轉 90°" onclick="scRotate(-90)">↺</button>
+              <button class="btn-sm" title="這頁往右轉 90°" onclick="scRotate(90)">↻</button>
+              <button class="btn-sm" id="sc-rot-all" title="把這頁的角度套用到全部頁面(整份掃描都倒的時候用)" onclick="scRotateAll()">整份套用</button>
+            </span>
             <span class="sc-dim" style="margin-left:auto">在圖上拖拉框選樑立面圖 → 填入自檢表</span>
           </div>
           <div class="sc-stage" id="sc-stage">
@@ -24290,6 +24296,7 @@ const HEALTH_SCHEMA=[
   ['leave_board','','leave_requests_migration.sql(檢視表)'],
   ['deduction_details','seq_no,voided','deduction_columns_migration.sql'],
   ['ship_dispatches','dispatched_at,arrived_at,beds,layout_ids,shipped_ids,batch_id,trip_no,trip_of,cancelled_at','ship_dispatches_migration.sql(派車紀錄)'],
+  ['drawing_files','page_rot','drawing_page_rot_migration.sql(圖面頁面旋轉)'],
   ['push_subscriptions','remind_time,daily_sent_on','push_remind_time_migration.sql(推播時間)'],
   ['pre_inspections','','pre_inspections_migration.sql'],
   ['sp_track','','sp_production_migration.sql'],
@@ -29642,7 +29649,7 @@ async function inspMergeDrawingAttachment(checked, zoneId, title) {
   setInspStatus('📎 附圖：查詢圖面快搜索引…', true);
   const [pageResult, fileResult] = await Promise.all([
     sbFetchAll('/rest/v1/drawing_page_drawings?select=file_id,drawing_no,page_no&zone_id=eq.' + encodeURIComponent(zoneId)),
-    sbFetch('/rest/v1/drawing_files?select=id,zone_id,original_name,storage_key,storage_parts,page_count,created_at&zone_id=eq.' + encodeURIComponent(zoneId) + '&order=created_at.desc')
+    sbFetch('/rest/v1/drawing_files?select=*&zone_id=eq.' + encodeURIComponent(zoneId) + '&order=created_at.desc')
   ]);
   if (!pageResult.ok || !fileResult.ok) throw new Error('讀取圖面快搜索引失敗（HTTP ' + (pageResult.ok ? fileResult.status : pageResult.status) + '）');
   const files = Array.isArray(fileResult.data) ? fileResult.data : [];
@@ -50371,7 +50378,7 @@ async function scZoneChange(){
   if(!zid){ sel.innerHTML='<option value="">— 請先選擇工程區 —</option>'; return; }
   sel.innerHTML='<option value="">— 載入中… —</option>';
   const [fr,pr]=await Promise.all([
-    sbFetch('/rest/v1/drawing_files?select=id,project_id,zone_id,original_name,storage_key,storage_parts,page_count,size_bytes,created_at&zone_id=eq.'+encodeURIComponent(zid)+'&order=created_at.desc'),
+    sbFetch('/rest/v1/drawing_files?select=*&zone_id=eq.'+encodeURIComponent(zid)+'&order=created_at.desc'),
     sbFetchAll('/rest/v1/drawing_page_drawings?select=file_id,drawing_no,page_no&zone_id=eq.'+encodeURIComponent(zid))
   ]);
   scDrawingFiles=fr.ok&&Array.isArray(fr.data)?fr.data:[];
@@ -50442,10 +50449,85 @@ async function scFiles(inp){
 
 function scReleasePages(){
   scLoadGeneration++;
-  scPages.forEach(p=>{ try{ if(p.img?.src?.startsWith('blob:')) URL.revokeObjectURL(p.img.src); }catch(_){} });
+  scPages.forEach(p=>{ [p.img,p.img0].forEach(im=>{ try{ if(im?.src?.startsWith('blob:')) URL.revokeObjectURL(im.src); }catch(_){} }); });
   scPdfDocs.forEach(doc=>{ try{ doc.destroy(); }catch(_){} });
   scPdfDocs=[]; scPageRenderJobs.clear();
   scPages=[]; scPi=0;
+}
+
+/* ── 頁面旋轉:顛倒/側躺的掃描圖用 ↺↻ 轉正 ──
+   pg.rot = 在 PDF 原本方向上再順時針轉幾度(0/90/180/270)。
+   共用圖面(pg.fileId)的角度存雲端 drawing_files.page_rot {頁碼:角度},圖面快搜、報驗附圖同一份;
+   自己上傳、沒進圖面快搜的 PDF 只在這次畫面有效。
+   有 pdfPage 的頁直接用 pdf.js 依角度重畫(清晰);本機轉好的頁圖(沒 pdfPage)從原圖 img0 用 canvas 轉,不會越轉越糊。 */
+function scRotNorm(r){ return (((Math.round((Number(r)||0)/90)*90)%360)+360)%360; }
+function scPageVp(page,rot){
+  const r=(scRotNorm(page.rotate)+scRotNorm(rot))%360, v=page.getViewport({scale:1,rotation:r});
+  return page.getViewport({scale:Math.min(SC_PAGE_W/v.width,8),rotation:r});
+}
+async function scRotateImg(img,rot){
+  const r=scRotNorm(rot); if(!r) return img;
+  const w=img.naturalWidth, h=img.naturalHeight, side=r%180!==0;
+  const cv=document.createElement('canvas'); cv.width=side?h:w; cv.height=side?w:h;
+  const ctx=cv.getContext('2d'); ctx.translate(cv.width/2,cv.height/2); ctx.rotate(r*Math.PI/180); ctx.drawImage(img,-w/2,-h/2);
+  const blob=await new Promise(res=>cv.toBlob(res,'image/jpeg',0.9)); cv.width=cv.height=0;
+  if(!blob) throw new Error('旋轉頁圖失敗');
+  return scLoadImg(URL.createObjectURL(blob));
+}
+function scDropImg(pg){   // 釋放目前顯示用的頁圖(原圖 img0 留著)
+  const im=pg.img; pg.img=null;
+  if(im&&im!==pg.img0&&im.src&&im.src.startsWith('blob:')) try{ URL.revokeObjectURL(im.src); }catch(_){}
+}
+async function scApplyRot(pg){
+  if(scPageRenderJobs.has(pg)) try{ await scPageRenderJobs.get(pg); }catch(_){}
+  if(pg.pdfPage){
+    scDropImg(pg);
+    const vp=scPageVp(pg.pdfPage,pg.rot); pg.w=Math.round(vp.width); pg.h=Math.round(vp.height);   // 要看時才重畫
+  }else if(pg.img0){
+    const old=pg.img, img=await scRotateImg(pg.img0,pg.rot);
+    if(old&&old!==pg.img0&&old!==img&&old.src&&old.src.startsWith('blob:')) try{ URL.revokeObjectURL(old.src); }catch(_){}
+    pg.img=img; pg.w=img.naturalWidth; pg.h=img.naturalHeight;
+  }
+  // 自己上傳的 PDF:原本顛倒沒認到圖號,轉正後再辨識一次(已認到/手打的不動)
+  if(!pg.fileId&&!pg.dwg&&(pg.ocr==='done'||pg.ocr==='fail')) pg.ocr='wait';
+}
+async function scRotate(delta){
+  const pg=scPages[scPi]; if(!pg) return;
+  pg.rot=scRotNorm((pg.rot||0)+delta);
+  await scApplyRot(pg); scFilms(); await scShowPage(scPi);
+  scRotSave(pg.fileId); if(scPages.some(p=>p.ocr==='wait')) scOcrKick();
+}
+async function scRotateAll(){
+  const cur=scPages[scPi]; if(!cur) return;
+  const r=scRotNorm(cur.rot), todo=scPages.filter(p=>scRotNorm(p.rot)!==r);
+  if(!todo.length){ scLoadMsg('全部頁面已經是這個角度了'); return; }
+  if(!await uiConfirm('把全部 '+scPages.length+' 頁都轉成跟這頁一樣的角度'+(r?'(順時針 '+r+'°)':'(原本方向)')+'?\n有 '+todo.length+' 頁會改變。')) return;
+  for(let i=0;i<todo.length;i++){ todo[i].rot=r; await scApplyRot(todo[i]); if(i%5===4) scLoadMsg('旋轉中… '+(i+1)+' / '+todo.length); }
+  scLoadMsg('已把 '+todo.length+' 頁轉成同一個角度');
+  scFilms(); await scShowPage(scPi);
+  [...new Set(todo.map(p=>p.fileId).filter(Boolean))].forEach(scRotSave);
+  if(scPages.some(p=>p.ocr==='wait')) scOcrKick();
+}
+// 存雲端:整份檔案的角度表一次覆蓋(debounce,連按幾下只存最後一次)
+const scRotTimers=new Map(); let scRotWarned=false;
+function scRotSave(fileId){
+  if(!fileId) return;
+  clearTimeout(scRotTimers.get(fileId));
+  scRotTimers.set(fileId,setTimeout(async()=>{
+    scRotTimers.delete(fileId);
+    const map={}; scPages.forEach(p=>{ if(p.fileId===fileId&&scRotNorm(p.rot)) map[p.pageNo]=scRotNorm(p.rot); });
+    const r=await sbFetch('/rest/v1/rpc/drawing_set_page_rot',{method:'POST',body:JSON.stringify({p_id:String(fileId),p_rot:map})});
+    if(!r.ok||r.data===false){
+      console.warn('drawing_set_page_rot failed',r.status,r.data);
+      if(!scRotWarned){ scRotWarned=true; alert('旋轉角度沒有存到雲端('+r.status+'),這次畫面照樣是轉好的,但下次載入會恢復原樣。\n請到 Supabase SQL Editor 執行 drawing_page_rot_migration.sql。'); }
+      return;
+    }
+    // 同一份檔案在記憶體裡的其他地方(自檢表清單、圖面快搜)一起更新
+    [scDrawingFiles,(typeof dsAllFiles!=='undefined'?dsAllFiles:[]),(typeof dsFiles!=='undefined'?dsFiles:[])].forEach(list=>{
+      (list||[]).forEach(f=>{ if(String(f.id)===String(fileId)) f.page_rot=map; });
+    });
+    if(typeof dsViewerFileId!=='undefined'&&String(dsViewerFileId)===String(fileId)&&typeof dsViewerPageCache!=='undefined') dsViewerPageCache.clear();
+  },600));
 }
 
 async function scLoadSelectedDrawing(){
@@ -50467,10 +50549,10 @@ async function scLoadStoredDrawing(file){
       scPdfDocs.push(doc);
       for(let p=1;p<=doc.numPages;p++){
         globalPage=part.page_start+p-1;
-        const page=await doc.getPage(p), vp=page.getViewport({scale:1});
+        const page=await doc.getPage(p), rot=scRotNorm((file.page_rot||{})[globalPage]), vp=scPageVp(page,rot);
         scPages.push({name:file.original_name.replace(/\.pdf$/i,'')+' p'+String(globalPage).padStart(3,'0'),img:null,
-          w:Math.round(vp.width*Math.min(SC_PAGE_W/vp.width,8)),h:Math.round(vp.height*Math.min(SC_PAGE_W/vp.width,8)),
-          dwg:map.get(globalPage)||'',ocr:'done',pdfPage:page});
+          w:Math.round(vp.width),h:Math.round(vp.height),
+          dwg:map.get(globalPage)||'',ocr:'done',pdfPage:page,rot,fileId:file.id,pageNo:globalPage});
         if(!shown){
           shown=true; scEl('sc-empty').hidden=true; scEl('sc-wrap').hidden=false; scFilms();
           await scShowPage(0);
@@ -50489,7 +50571,7 @@ async function scEnsurePageRendered(index){
   const generation=scLoadGeneration;
   const job=(async()=>{
     const page=pg.pdfPage; if(!page) return pg;
-    let vp=page.getViewport({scale:1}); vp=page.getViewport({scale:Math.min(SC_PAGE_W/vp.width,8)});
+    const vp=scPageVp(page,pg.rot);
     const cv=document.createElement('canvas'); cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
     await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
     const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.85));
@@ -50510,7 +50592,7 @@ async function scPdfPageToScPage(page,name,dwg){
   const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.85));
   if(!blob) throw new Error('頁面轉圖失敗');
   const img=await scLoadImg(URL.createObjectURL(blob));
-  scPages.push({name,img,w:img.naturalWidth,h:img.naturalHeight,dwg:String(dwg||''),ocr:'done'});
+  scPages.push({name,img,img0:img,rot:0,w:img.naturalWidth,h:img.naturalHeight,dwg:String(dwg||''),ocr:'done'});
   try{ page.cleanup(); }catch(_){} cv.width=cv.height=0;
 }
 
@@ -50564,9 +50646,9 @@ async function scUploadSharedDrawing(file){
       for(const part of uploadParts){
         const doc=await pdfjsLib.getDocument({data:await part.file.arrayBuffer()}).promise; scPdfDocs.push(doc);
         for(let p=1;p<=doc.numPages;p++){
-          const globalPage=part.page_start+p-1, page=await doc.getPage(p), vp=page.getViewport({scale:1}), scale=Math.min(SC_PAGE_W/vp.width,8);
+          const globalPage=part.page_start+p-1, page=await doc.getPage(p), vp=scPageVp(page,0);
           scPages.push({name:file.name.replace(/\.pdf$/i,'')+' p'+String(globalPage).padStart(3,'0'),img:null,
-            w:Math.round(vp.width*scale),h:Math.round(vp.height*scale),dwg:map.get(globalPage)||'',ocr:'done',pdfPage:page});
+            w:Math.round(vp.width),h:Math.round(vp.height),dwg:map.get(globalPage)||'',ocr:'done',pdfPage:page,rot:0,fileId:id,pageNo:globalPage});
         }
       }
       scEl('sc-empty').hidden=true; scEl('sc-wrap').hidden=false; scFilms(); await scShowPage(0);
@@ -50595,7 +50677,7 @@ async function scPdfToPages(file){
     const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.85));
     if(!blob) throw new Error('頁面轉圖失敗');
     const img=await scLoadImg(URL.createObjectURL(blob));
-    scPages.push({name:base+' p'+String(p).padStart(3,'0'),img,w:img.naturalWidth,h:img.naturalHeight,dwg:'',ocr:'wait'});
+    scPages.push({name:base+' p'+String(p).padStart(3,'0'),img,img0:img,rot:0,w:img.naturalWidth,h:img.naturalHeight,dwg:'',ocr:'wait'});
     try{ page.cleanup(); }catch(_){}
     cv.width=cv.height=0;
     if(scPages.length===1){ scEl('sc-empty').hidden=true; scEl('sc-wrap').hidden=false; scFilms(); scShowPage(0); }
@@ -51208,7 +51290,7 @@ function dsSetSelectedFileName(name = '') {
 
 async function dsLoadAllUploaded(render = true) {
   const [fileResult, pageResult, zoneResult] = await Promise.all([
-    sbFetchAll('/rest/v1/drawing_files?select=id,project_id,zone_id,original_name,storage_key,storage_parts,page_count,size_bytes,created_by,created_at,preview_w&order=created_at.desc'),
+    sbFetchAll('/rest/v1/drawing_files?select=*&order=created_at.desc'),
     sbFetchAll('/rest/v1/drawing_page_drawings?select=id,file_id,drawing_no,page_no'),
     sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,zone_name,status&order=zone_code')
   ]);
@@ -51285,7 +51367,7 @@ async function dsZoneChanged() {
   dsEl('ds-bom-status').textContent = '載入 BOM 圖號與圖面頁碼…';
   const [bomResult, fileResult, pageResult] = await Promise.all([
     sbFetchAll('/rest/v1/components?select=part_no,drawing_no&zone_id=eq.' + encodeURIComponent(zoneId)),
-    sbFetch('/rest/v1/drawing_files?select=id,project_id,zone_id,original_name,storage_key,storage_parts,page_count,size_bytes,created_by,created_at,preview_w&zone_id=eq.' + encodeURIComponent(zoneId) + '&order=created_at.desc'),
+    sbFetch('/rest/v1/drawing_files?select=*&zone_id=eq.' + encodeURIComponent(zoneId) + '&order=created_at.desc'),
     sbFetchAll('/rest/v1/drawing_page_drawings?select=id,file_id,drawing_no,page_no&zone_id=eq.' + encodeURIComponent(zoneId))
   ]);
   dsBom = bomResult.ok && Array.isArray(bomResult.data) ? bomResult.data : [];
@@ -51879,6 +51961,8 @@ function dsRowsTitle(rows) {
 }
 
 /* 圖面一律是橫向 A3/A4；尺寸一律保留原樣，只把直向的頁面順時針轉 90° */
+/* 自檢表產生器 ↺↻ 轉正的角度(drawing_files.page_rot),圖面快搜、報驗附圖一起吃 */
+function dsPageRot(file, pageNo) { return scRotNorm(((file && file.page_rot) || {})[Number(pageNo)]); }
 function dsForceLandscape(page) {
   const { width, height } = page.getSize();
   const angle = ((page.getRotation().angle % 360) + 360) % 360;
@@ -51932,6 +52016,8 @@ async function dsMergeRowsToPdf(uniqueRows, onProgress, title = '', files = null
       sourceDocuments.set(part.storage_key, source);
     }
     const copied = await output.copyPages(source, [Number(row.page_no) - part.page_start]);
+    const userRot = dsPageRot(file, row.page_no);
+    if (userRot) copied[0].setRotation(PDFLib.degrees((copied[0].getRotation().angle + userRot) % 360));
     dsForceLandscape(copied[0]);
     output.addPage(copied[0]);
     if (onProgress) onProgress(index + 1, uniqueRows.length);
@@ -52118,6 +52204,15 @@ async function dsEnsurePreviews(files) {
   }
 }
 
+/* 手機預覽圖是原方向產生的,轉過的頁在這裡跟著轉(3200px 一張,手機記憶體吃得下) */
+async function dsRotatePreview(preview, rot) {
+  try {
+    const img = new Image(); img.src = preview.url; await img.decode();
+    const turned = await scRotateImg(img, rot);
+    URL.revokeObjectURL(preview.url);
+    return { url: turned.src, width: turned.naturalWidth, height: turned.naturalHeight };
+  } catch (_) { return preview; }
+}
 /* 手機:每張圖面讀預覽 JPG;沒有預覽圖的舊檔在電腦上才用 pdf.js 直接轉(手機直接轉會當機) */
 async function dsRowsToImagesLite(rows, onProgress) {
   const docs = new Map(), images = [];
@@ -52126,7 +52221,8 @@ async function dsRowsToImagesLite(rows, onProgress) {
       const row = rows[index];
       const file = dsFiles.find(item => item.id === row.file_id) || dsAllFiles.find(item => item.id === row.file_id);
       if (!file) throw new Error('找不到第 ' + row.page_no + ' 頁所屬 PDF。');
-      const preview = await dsLoadPreviewImage(file, Number(row.page_no));
+      let preview = await dsLoadPreviewImage(file, Number(row.page_no));
+      if (preview && dsPageRot(file, row.page_no)) preview = await dsRotatePreview(preview, dsPageRot(file, row.page_no));
       if (preview) { images.push(preview); if (onProgress) onProgress(index + 1, rows.length); continue; }
       if (dsTouchTab()) throw new Error('這份圖面還沒有手機預覽圖。請先用電腦打開一次「圖面快搜」，系統會自動產生，完成後手機就能看。');
       const part = dsPartsForFile(file).find(item => Number(row.page_no) >= item.page_start && Number(row.page_no) <= item.page_end);
@@ -52135,7 +52231,9 @@ async function dsRowsToImagesLite(rows, onProgress) {
       if (!doc) { doc = await dsOpenRangePdf(part); docs.set(part.storage_key, doc); }
       const page = await doc.getPage(Number(row.page_no) - part.page_start + 1);
       const base = page.getViewport({ scale: 1 });
-      const rotation = base.width < base.height ? (page.rotate + 90) % 360 : page.rotate;
+      let rotation = (scRotNorm(page.rotate) + dsPageRot(file, row.page_no)) % 360;
+      const turned = page.getViewport({ scale: 1, rotation });
+      if (turned.width < turned.height) rotation = (rotation + 90) % 360;
       const scale = Math.min(3, Math.max(1, 2000 / Math.max(base.width, base.height)));
       const viewport = page.getViewport({ scale, rotation });
       const canvas = document.createElement('canvas');
@@ -52455,14 +52553,15 @@ async function dsReleaseViewerPdf() {
   dsViewerPageCache.clear();
 }
 
-function dsViewerRenderMetrics(pdfPage) {
+function dsViewerRenderMetrics(pdfPage, userRot = 0) {
   const wrap = dsEl('ds-canvas-wrap');
-  const baseViewport = pdfPage.getViewport({ scale: 1 });
+  const rotation = (scRotNorm(pdfPage.rotate) + scRotNorm(userRot)) % 360;
+  const baseViewport = pdfPage.getViewport({ scale: 1, rotation });
   const availableWidth = Math.max(280, wrap.clientWidth - 32);
   const visualScale = Math.max(0.25, Math.min(2.5, availableWidth / baseViewport.width));
   const maxPixelRatio = window.matchMedia('(max-width:600px)').matches ? 1 : 1.25;
   const pixelRatio = Math.min(maxPixelRatio, window.devicePixelRatio || 1);
-  return { viewport: pdfPage.getViewport({ scale: visualScale * pixelRatio }), pixelRatio };
+  return { viewport: pdfPage.getViewport({ scale: visualScale * pixelRatio, rotation }), pixelRatio };
 }
 
 function dsFinishViewerPage(file, requestedPage, totalPages) {
@@ -52509,7 +52608,7 @@ function dsScheduleViewerPrefetch(file, pageNumber) {
     try {
       const part = parts[targetPart];
       const pdfPage = await dsViewerPdf.getPage(pageNumber - part.page_start + 1);
-      const metrics = dsViewerRenderMetrics(pdfPage);
+      const metrics = dsViewerRenderMetrics(pdfPage, dsPageRot(file, pageNumber));
       const cached = document.createElement('canvas');
       cached.width = Math.ceil(metrics.viewport.width); cached.height = Math.ceil(metrics.viewport.height);
       cached.dataset.pixelRatio = metrics.pixelRatio;
@@ -52549,7 +52648,7 @@ async function dsRenderStoredPage(file, pageNumber) {
   }
   const pdfPage = await dsViewerPdf.getPage(localPage);
   const canvas = dsEl('ds-canvas');
-  const metrics = dsViewerRenderMetrics(pdfPage);
+  const metrics = dsViewerRenderMetrics(pdfPage, dsPageRot(file, requestedPage));
   const renderViewport = metrics.viewport, pixelRatio = metrics.pixelRatio;
   canvas.width = Math.ceil(renderViewport.width);
   canvas.height = Math.ceil(renderViewport.height);
