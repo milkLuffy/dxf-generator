@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.29.2"/>
+<meta name="sc-version" content="2026.09.29.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -13052,6 +13052,8 @@ function hashToView(h) {
 
   if (p[0] === 'layout' && p[1] === 'ship') return { page:'layout', tab:'ship' };   // 推播「報驗完成」點開 → 待出貨看板
   if (p[0] === 'multilevel' && p[1] === 'results') return { page:'multilevel', ma:'results' };
+  if (p[0] === 'approve') return { page:'dashboard', approve:1 };   // 推播「有新帳號/裝置待審核」→ 審核彈窗
+  if (p[0] === 'notice') return { page:'dashboard', notice:1 };     // 推播「通知管理」的通知 → 右上角通知清單
   if (p[0] === 'spcount' && p[2]) return { page:'spcount', spproj:decodeURIComponent(p[1]), spzone:decodeURIComponent(p[2]) };
   if (p[0] === 'loading' && p[1]) { const v={page:'loading', ldtab:p[1]==='board'?'board':'plan'}; if(/^\d{4}-\d{2}$/.test(p[2]||'')) v.ldym=p[2]; return v; }
   if (p[0] === 'prod' && p[1] === 'receipt' && p[2] === 'status') return {page:'prod',ptab:'receipt',cphome:1,cpstatus:decodeURIComponent(p[3]||'all')};
@@ -13073,6 +13075,12 @@ async function applyView(v) {
       if (!allBOM.length) await loadBOM();
       await showProjectDetail(v.proj);
       if (v.zone) await showZoneDetail(v.zone);
+    } else if (v && (v.approve || v.notice)) {   // 只是打開彈窗/通知清單,停在原本的頁面(剛開 App 還沒進任何頁才進主頁)
+      if (!window._scNavCount) navTo('dashboard');
+      const cur = getView();
+      try { history.replaceState({ __view: cur }, '', viewToHash(cur)); } catch(e) {}
+      if (v.approve) openApprovalModal();
+      else { const np=document.getElementById('notif-panel'); if(np && np.style.display!=='block') toggleNotifPanel(); }
     } else if (v && v.page==='prod' && (v.ptab || v.pdetail)) {   // SP 頁子狀態(分頁/工程區詳情)
       const onProd = document.getElementById('page-prod')?.classList.contains('active');
       if(!onProd){ navTo('prod'); _prodPendingView=v; prodMaybeApplyPending(); }   // 從別頁回來:載入後套用
@@ -13085,6 +13093,19 @@ async function applyView(v) {
     }
   } catch(e) { /* 還原失敗就維持在目前畫面 */ }
   _applyingPop = false;
+}
+// 點推播(或瀏覽器通知)→ 跳到推播指定的畫面。App 已經開著時由 service worker 傳訊息進來;
+// 還沒登入/還卡在門禁畫面就先記著,進系統後再跳。
+function scOpenPushUrl(hash){
+  const v = hashToView(hash || '');
+  if (!v) return;
+  const inApp = document.getElementById('app-screen')?.style.display === 'flex';
+  if (!inApp || (!currentSession && !isGuest)) { window._pushPendingHash = hash; return; }
+  applyView(v).then(() => {
+    if (v.approve || v.notice) return;
+    const cur = getView();
+    try { history.pushState({ __view: cur }, '', viewToHash(cur)); } catch(e) {}   // 可以按上一頁回到點推播前的畫面
+  });
 }
 // 真正重新整理後還原頁面：優先用網址 hash，其次用上次記錄；瀏覽器重新開啟不會呼叫此函式。
 async function restoreLastView() {
@@ -13650,7 +13671,8 @@ function apvToast(list){
       +'<button class="btn-primary" onclick="apvToastClose();openApprovalModal()">立即審核</button></div>';
   try{
     if(typeof Notification!=='undefined' && Notification.permission==='granted')
-      new Notification('鎮山工程 — 有新的待審核',{body:list.map(x=>x.t).join('\n').slice(0,200), tag:'sc-approval'});
+      { const n=new Notification('鎮山工程 — 有新的待審核',{body:list.map(x=>x.t).join('\n').slice(0,200), tag:'sc-approval'});
+        n.onclick=()=>{ try{ window.focus(); }catch(e){} n.close(); apvToastClose(); openApprovalModal(); }; }
   }catch(e){}
 }
 function apvToastClose(){ const t=document.getElementById('apv-toast'); if(t) t.remove(); }
@@ -14012,6 +14034,7 @@ async function enterApp(restore) {   // restore=true 才還原上次頁面 (重�
   document.getElementById('pending-screen').style.display='none';
   document.getElementById('rejected-screen').style.display='none';
   document.getElementById('login-screen').style.display='none';
+  document.getElementById('blocked-screen').style.display='none';   // 裝置核准後按「重新檢查」:要把擋下畫面收掉,不然主畫面被壓在下面
   document.getElementById('app-screen').style.display='flex';
   const u=currentUser||{name:'?',isAdmin:false};
   adminPreviewMode=false;
@@ -14048,6 +14071,8 @@ async function enterApp(restore) {   // restore=true 才還原上次頁面 (重�
   if(!isGuest) setTimeout(()=>window.dsProcessCleanupQueue?.(),1200);
   if (restore) restoreLastView();   // 重新整理:回到上次所在頁面(該頁的資料由 navTo 載入)
   else goHome();                    // 登入(含 Google/帳密):一律進主頁
+  // 還沒登入時點了推播:登入完再跳到推播指定的畫面
+  const ph=window._pushPendingHash; if(ph){ window._pushPendingHash=null; setTimeout(()=>scOpenPushUrl(ph),0); }
 }
 function renderUserAvatar(u){
   const el=document.getElementById('sidebar-avatar'); if(!el)return;
@@ -14445,6 +14470,7 @@ window.addEventListener('resize', ()=>{
 window.addEventListener('keydown', e=>{ if(e.key==='Escape') closeNav(); });
 
 function navTo(page, viewState) {
+  window._scNavCount=(window._scNavCount||0)+1;   // 推播開啟時判斷「App 已經在某一頁了嗎」
   if(pagePerm(page)==='hide'){          // 無權限的頁面:改導向第一個可見頁,避免空白畫面
     const fb=PAGE_META.find(pm=>pm.k!=='evergreen-sys' && pagePerm(pm.k)!=='hide');
     if(fb && fb.k!==page) return navTo(fb.k);
@@ -16647,7 +16673,7 @@ function saturdayDutyReminderFromCalendar(ics,today,ICAL){
   saturdayDutyNotifications=[item];updateNotifBadge();
   if(typeof Notification!=='undefined'&&Notification.permission==='granted'){
     const sentKey='zs_duty_push_sent:'+item.key;
-    try{if(localStorage.getItem(sentKey)!=='1'){new Notification('明日週六值班提醒',{body:'明天輪到您值班，請記得準時到班。',tag:item.key});localStorage.setItem(sentKey,'1');}}catch(e){}
+    try{if(localStorage.getItem(sentKey)!=='1'){const n=new Notification('明日週六值班提醒',{body:'明天輪到您值班，請記得準時到班。',tag:item.key});n.onclick=()=>{try{window.focus();}catch(e){}n.close();scOpenPushUrl('#/notice');};localStorage.setItem(sentKey,'1');}}catch(e){}
   }
 }
 
@@ -23520,7 +23546,10 @@ function showBlockedScreen(b){
 async function blockedRecheck(btn){
   if(btn){ btn.disabled=true; btn.textContent='檢查中…'; }
   try{ await enterApp(false); }catch(e){}
-  if(btn){ btn.disabled=false; btn.textContent='重新檢查'; }
+  if(!btn) return;
+  const still=document.getElementById('blocked-screen')?.style.display!=='none';
+  btn.disabled=false; btn.textContent=still?'還沒核准,請稍後再按':'重新檢查';
+  if(still) setTimeout(()=>{ btn.textContent='重新檢查'; },2500);
 }
 
 // ══════════ 請假中不能使用系統 ══════════
@@ -56178,7 +56207,7 @@ async function ldDashPlan(){
       else scShowUpdateBar(d.version, d.stored!==false);
     }
     if(d.type==='sc-reset-done' && scReloadPending){ scReloadPending=false; location.reload(); }
-    if(d.type==='sc-open' && d.url){ try{ var u=new URL(d.url); if(u.hash && u.hash!==location.hash) location.hash=u.hash; }catch(e){} }
+    if(d.type==='sc-open' && d.url){ try{ var u=new URL(d.url); if(typeof scOpenPushUrl==='function') scOpenPushUrl(u.hash||'#/dashboard'); }catch(e){} }
   });
   // 目前這份 index.html 的版本號(<meta name="sc-version">)
   function scMyVer(){ var m=document.querySelector('meta[name="sc-version"]'); return m?String(m.content||'').trim():''; }

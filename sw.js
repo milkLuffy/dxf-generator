@@ -208,7 +208,8 @@ self.addEventListener('notificationclick', ev => {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const cl of all) {
       if (cl.url.startsWith(SCOPE.href)) {
-        await cl.focus();
+        // iOS 主畫面 App 有時 focus 會丟錯,不能因此就不送訊息(送了才會跳到推播指定的畫面)
+        try { await cl.focus(); } catch (e) {}
         cl.postMessage({ type: 'sc-open', url: target });
         return;
       }

@@ -257,7 +257,7 @@ async function buildNoticeMessages(today: string): Promise<Msg[]> {
     const icon = n.priority === '緊急' ? '🚨 ' : n.priority === '重要' ? '❗ ' : unit === 'lunar' ? '🙏 ' : '🔔 ';
     const push = (extra: string, key: string) => out.push({
       title: icon + (n.title || '通知'), body: [extra, n.message || ''].filter(Boolean).join('\n'),
-      tag: 'notice-' + n.id + '-' + key, url: APP_URL + '#/dashboard',
+      tag: 'notice-' + n.id + '-' + key, url: APP_URL + '#/notice',
     });
     if (unit === 'lunar') { for (const o of lunarOccurrences(n, today, isHoliday)) push(o.text, o.key); continue; }
     const diff = daysBetween(start, today);
@@ -320,13 +320,13 @@ Deno.serve(async req => {
     let msg: Msg | null = null;
     if (kind === 'account') {
       if (!me || me.status !== 'pending') return json({ ok: true, skipped: 'no pending account' });
-      msg = { title: '👤 有新帳號等待審核', body: who + '(' + (me.account || '') + ')申請使用系統', tag: 'approval-account', url: APP_URL };
+      msg = { title: '👤 有新帳號等待審核', body: who + '(' + (me.account || '') + ')申請使用系統', tag: 'approval-account', url: APP_URL + '#/approve' };
     } else {
       const devs = await rest('user_devices?user_id=eq.' + user.id + '&approved=is.false&select=device_key,ua,first_seen&order=first_seen.desc&limit=1')
         .catch(() => []) as any[];
       if (!devs.length) return json({ ok: true, skipped: 'no pending device' });
       const code = String(devs[0].device_key || '').slice(0, 8).toUpperCase();
-      msg = { title: '💻 有新裝置等待核准', body: who + ' 的新裝置  裝置代碼 ' + code, tag: 'approval-device', url: APP_URL };
+      msg = { title: '💻 有新裝置等待核准', body: who + ' 的新裝置  裝置代碼 ' + code, tag: 'approval-device', url: APP_URL + '#/approve' };
     }
     const admins = (await rest('profiles?is_admin=is.true&select=id,disabled') as any[]).filter(a => !a.disabled);
     if (!admins.length) return json({ ok: true, admins: 0 });
