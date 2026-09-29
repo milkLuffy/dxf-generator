@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.29.8"/>
+<meta name="sc-version" content="2026.09.29.9"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5115,6 +5115,9 @@ window.normalizeFullWidth=function(value){
     .sc-list{overflow:auto;max-height:64vh;padding:10px;display:flex;flex-direction:column;gap:10px}
     .sc-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);padding:9px;cursor:pointer}
     .sc-card.sel{border-color:var(--accent2);box-shadow:inset 3px 0 0 var(--accent2)}
+    .sc-card.autowarn{border-color:var(--yellow,#f5b83d)}
+    .sc-auto{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--green,#3fb950);border:1px solid currentColor;border-radius:999px;padding:0 7px}
+    .sc-auto.warn{color:var(--yellow,#f5b83d)}
     .sc-card .top{display:flex;gap:7px;align-items:center;margin-bottom:6px}
     .sc-card .no{background:var(--accent2);color:#fff;font-weight:700;border-radius:4px;padding:1px 7px;font-size:12px;font-family:var(--mono)}
     .sc-card .pn{font-weight:600;font-size:14px}
@@ -5175,6 +5178,11 @@ window.normalizeFullWidth=function(value){
               <button class="btn-sm" title="這頁往右轉 90°" onclick="scRotate(90)">↻</button>
               <button class="btn-sm" id="sc-rot-all" title="把這頁的角度套用到全部頁面(整份掃描都倒的時候用)" onclick="scRotateAll()">整份套用</button>
             </span>
+            <span class="sc-rot">
+              <button class="btn-sm" title="自動找這頁的樑立面圖並截圖(沒把握會標黃色,可以再手動重框)" onclick="scAutoThisPage()">🪄 自動框這頁</button>
+              <button class="btn-sm" title="用上一次手動框的位置截這頁(同一批圖版面一樣時好用)" onclick="scUseLastBox()">照上一框</button>
+            </span>
+            <label class="sc-chk" title="手動框大一點就好,放開後自動縮到圖面內容的邊緣;取消勾選 = 框多少截多少"><input type="checkbox" id="sc-snap" onchange="scSnapPref(this.checked)"/>自動貼齊</label>
             <span class="sc-dim" style="margin-left:auto">在圖上拖拉框選樑立面圖 → 填入自檢表</span>
           </div>
           <div class="sc-stage" id="sc-stage">
@@ -5188,6 +5196,7 @@ window.normalizeFullWidth=function(value){
             <b style="font-size:13px">自檢表</b><span id="sc-cnt" class="sc-dim">0 張</span>
             <span style="flex:1"></span>
             <label class="sc-chk" title="框選截圖時,同圖號+同規格且尚未有圖的表一併帶入同一張截圖"><input type="checkbox" id="sc-applysame" checked/>同圖號規格一併套用</label>
+            <button class="btn-sm" id="sc-autoall" title="依圖號找到每張表的那一頁,自動截立面圖;只填還沒有圖的表" onclick="scAutoAll()">🪄 整份自動截圖</button>
             <button class="btn-sm" onclick="scClearAll()">清空</button>
             <button class="btn-sm" onclick="document.getElementById('sc-tplfile').click()" title="預設內建 B820 空白自檢表;可換成別份 .docx(表格欄列結構需與 B820 範本一致)">🧩 換範本</button>
             <input type="file" id="sc-tplfile" accept=".docx" hidden onchange="scTplChange(this)"/>
@@ -50337,7 +50346,7 @@ const scLoadMsg=m=>{ const e=scEl('sc-loadmsg'); if(e) e.textContent=m; };
 async function selfcheckInit(){
   if(scInited){ if(scPages.length) scShowPage(scPi); return; }
   scInited=true;
-  scBindCrop();
+  scBindCrop(); scSnapInit();
   window.addEventListener('resize',()=>{ if(document.getElementById('page-selfcheck')?.classList.contains('active') && scPages.length) scShowPage(scPi); });
   document.addEventListener('keydown',e=>{
     if(!document.getElementById('page-selfcheck')?.classList.contains('active')) return;
@@ -50818,9 +50827,12 @@ function scBindCrop(){
     if(rect.w<20||rect.h<10) return;
     await scCrop(rect); });
 }
-async function scCropPng(rect,idx){
+async function scCropPng(rect,idx){   // rect = 畫面座標
+  return scCropPagePng({x:rect.x/scDisp,y:rect.y/scDisp,w:rect.w/scDisp,h:rect.h/scDisp},idx);
+}
+async function scCropPagePng(pr,idx){  // pr = 頁圖原始像素座標
   const p=scPages[idx];
-  const sx=rect.x/scDisp, sy=rect.y/scDisp, sw=rect.w/scDisp, sh=rect.h/scDisp;
+  const sx=pr.x, sy=pr.y, sw=pr.w, sh=pr.h;
   const k=Math.min(1,SC_CROP_CAP/Math.max(sw,sh));
   const cv=document.createElement('canvas');
   cv.width=Math.max(1,Math.round(sw*k)); cv.height=Math.max(1,Math.round(sh*k));
@@ -50834,11 +50846,100 @@ function scGcUrl(f,newUrl){ // 替換/移除卡片圖時,若無其他卡片共�
   const old=f.url; f.url=newUrl;
   if(old && old!==newUrl && !scForms.some(x=>x!==f&&x.url===old)) URL.revokeObjectURL(old);
 }
-async function scCrop(rect){
-  scStatus('裁切中…');
-  const snap=scPi, pg=scPages[snap];
-  const {blob,w,h}=await scCropPng(rect,snap);
+/* ── 自動截圖(不用 AI,純影像分析) ──
+   A 自動貼齊:手動框大一點,放開後縮到框內墨水的外緣(勾「自動貼齊」才做,取消勾就是原本的精準手框)
+   B 照上一框:同一批圖版面一樣,用上一次框的相對位置(再貼齊)截這頁
+   C 自動找立面圖:去掉紅/藍等彩色手寫註記與圖框線 → 逐列統計墨水 → 依空白切成水平圖塊
+      → 留下夠寬的圖塊(材料表、圖名太窄會被排除)→ 取最高的那塊(立面圖有孔位與上下尺寸線,比平面圖高)
+      只有一塊寬圖塊、或最高的剛好是最下面那塊(平面在上、立面在下)才算有把握;其餘標「請確認」
+   自動截的卡片會標綠色「自動」或黃色「請確認」,手動重框一次就蓋掉。 */
+let scLastRel=null;   // 上一次框的位置(占頁面比例),給 B 用
+// 「自動貼齊」記在這台電腦(預設開)
+function scSnapPref(on){ try{ localStorage.setItem('sc_snap',on?'1':'0'); }catch(_){} }
+function scSnapInit(){ const el=scEl('sc-snap'); if(!el) return; let v='1'; try{ v=localStorage.getItem('sc_snap')??'1'; }catch(_){} el.checked=v!=='0'; }
+function scInkMask(pg,x,y,w,h,maxW){
+  const k=Math.min(1,maxW/w), W=Math.max(1,Math.round(w*k)), H=Math.max(1,Math.round(h*k));
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d',{willReadFrequently:true});
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H); ctx.drawImage(pg.img,x,y,w,h,0,0,W,H);
+  const d=ctx.getImageData(0,0,W,H).data, m=new Uint8Array(W*H);
+  for(let i=0,j=0;j<m.length;i+=4,j++){
+    const r=d[i],g=d[i+1],b=d[i+2], mx=Math.max(r,g,b), mn=Math.min(r,g,b);
+    if(mx-mn>60) continue;                       // 彩色(紅/粉紅/藍筆手寫)不算
+    if(r*0.299+g*0.587+b*0.114<170) m[j]=1;
+  }
+  cv.width=cv.height=0;
+  return {m,W,H,k};
+}
+// A:把框縮到框內墨水外緣,四周留一點邊;框內沒東西就原樣
+function scSnapRect(pg,pr){
+  const x=Math.max(0,Math.round(pr.x)), y=Math.max(0,Math.round(pr.y));
+  const w=Math.min(pg.w-x,Math.round(pr.w)), h=Math.min(pg.h-y,Math.round(pr.h));
+  if(w<4||h<4) return pr;
+  const {m,W,H,k}=scInkMask(pg,x,y,w,h,1400);
+  const rows=new Uint32Array(H), cols=new Uint32Array(W);
+  for(let yy=0;yy<H;yy++) for(let xx=0;xx<W;xx++) if(m[yy*W+xx]){ rows[yy]++; cols[xx]++; }
+  const first=a=>{ for(let i=0;i<a.length;i++) if(a[i]>=2) return i; return -1; };
+  const last=a=>{ for(let i=a.length-1;i>=0;i--) if(a[i]>=2) return i; return -1; };
+  const y0=first(rows), y1=last(rows), x0=first(cols), x1=last(cols);
+  if(y0<0||x0<0) return pr;
+  const pad=Math.max(10,Math.round(Math.max(pg.w,pg.h)*0.006));
+  const nx=Math.max(0,x+x0/k-pad), ny=Math.max(0,y+y0/k-pad);
+  return {x:nx,y:ny,w:Math.min(pg.w,x+(x1+1)/k+pad)-nx,h:Math.min(pg.h,y+(y1+1)/k+pad)-ny};
+}
+// C:回傳 {rect(頁圖座標), conf:'ok'|'warn', why} 或 null
+function scDetectElevation(pg){
+  const {m,W,H,k}=scInkMask(pg,0,0,pg.w,pg.h,1600);
+  const mx=Math.round(W*0.02), my=Math.round(H*0.02);
+  // 圖框線:幾乎整列/整欄(93%以上)都是墨水的才清掉;樑本身的長線約 80~90%,不能誤清
+  for(let y=0;y<H;y++){ let c=0; for(let x=0;x<W;x++) c+=m[y*W+x]; if(c>W*0.93) for(let x=0;x<W;x++) m[y*W+x]=0; }
+  for(let x=0;x<W;x++){ let c=0; for(let y=0;y<H;y++) c+=m[y*W+x]; if(c>H*0.93) for(let y=0;y<H;y++) m[y*W+x]=0; }
+  const rp=new Uint32Array(H);
+  for(let y=my;y<H-my;y++){ let c=0; for(let x=mx;x<W-mx;x++) c+=m[y*W+x]; rp[y]=c; }
+  const blank=Math.max(2,W*0.002), gap=Math.max(3,Math.round(H*0.012));
+  const bands=[]; let s=-1, lastInk=-1;
+  for(let y=my;y<H-my;y++){
+    if(rp[y]>blank){ if(s<0) s=y; lastInk=y; }
+    else if(s>=0&&y-lastInk>gap){ bands.push([s,lastInk]); s=-1; }
+  }
+  if(s>=0) bands.push([s,lastInk]);
+  const wide=[];
+  bands.forEach(([y0,y1])=>{
+    if(y1-y0<H*0.03) return;
+    const cp=new Uint32Array(W);
+    for(let y=y0;y<=y1;y++) for(let x=mx;x<W-mx;x++) cp[x]+=m[y*W+x];
+    // 欄方向取最長一段(中間小空白併在一起),旁邊零散的註記不算
+    const cg=Math.round(W*0.04); let best=null, cs=-1, cl=-1;
+    for(let x=mx;x<W-mx;x++){
+      if(cp[x]>=1){ if(cs<0) cs=x; cl=x; }
+      else if(cs>=0&&x-cl>cg){ if(!best||cl-cs>best[1]-best[0]) best=[cs,cl]; cs=-1; }
+    }
+    if(cs>=0&&(!best||cl-cs>best[1]-best[0])) best=[cs,cl];
+    if(best&&best[1]-best[0]>=W*0.35) wide.push({x0:best[0],x1:best[1],y0,y1,h:y1-y0});
+  });
+  if(!wide.length) return null;
+  const tall=wide.reduce((a,b)=>b.h>a.h?b:a), lowest=wide[wide.length-1];
+  let conf='ok', why='';
+  if(wide.length>2){ conf='warn'; why='圖上有 '+wide.length+' 塊橫向圖面'; }
+  else if(wide.length===2&&tall!==lowest){ conf='warn'; why='最高的圖塊不在最下面'; }
+  if(tall.h>H*0.6){ conf='warn'; why='圖塊太高,可能黏到別的圖'; }
+  const pad=Math.round(Math.max(W,H)*0.008);
+  const x0=Math.max(0,tall.x0-pad), y0=Math.max(0,tall.y0-pad), x1=Math.min(W,tall.x1+pad), y1=Math.min(H,tall.y1+pad);
+  return {rect:{x:x0/k,y:y0/k,w:(x1-x0)/k,h:(y1-y0)/k},conf,why};
+}
+// 把一個頁圖區域截下來,填到指定的卡片(同圖號規格一併套用照原本規則)
+async function scFillFromPage(idx,pr,target,auto){
+  const pg=scPages[idx];
+  const {blob,w,h}=await scCropPagePng(pr,idx);
   const url=URL.createObjectURL(blob);
+  const targets=[target];
+  if(scEl('sc-applysame').checked&&scKey(target)!=='|')
+    scForms.forEach(f=>{ if(f!==target&&!f.png&&scKey(f)===scKey(target)) targets.push(f); });
+  targets.forEach(f=>{ f.png=blob; scGcUrl(f,url); f.w=w; f.h=h; f.auto=auto||null; });
+  if(!auto) scLastRel={x:pr.x/pg.w,y:pr.y/pg.h,w:pr.w/pg.w,h:pr.h/pg.h};
+  return {w,h,n:targets.length};
+}
+function scPickTarget(pg){
   const pageDwg=String(pg.dwg||'').trim().toUpperCase();
   let target=scSelId!=null?scForms.find(f=>f.id===scSelId):null;
   if(!target&&pageDwg) target=scForms.find(f=>!f.png&&String(f.dwg||'').trim().toUpperCase()===pageDwg);
@@ -50847,17 +50948,77 @@ async function scCrop(rect){
     target={id:++scSeq,partNo:'',dwg:pg.dwg||'',spec:'',dims:{},png:null,url:null,w:0,h:0};
     scForms.push(target);
   }
-  const targets=[target];
-  if(scEl('sc-applysame').checked&&scKey(target)!=='|')
-    scForms.forEach(f=>{ if(f!==target&&!f.png&&scKey(f)===scKey(target)) targets.push(f); });
-  targets.forEach(f=>{ f.png=blob; scGcUrl(f,url); f.w=w; f.h=h; });
+  return target;
+}
+function scAfterFill(msg){
   const next=scForms.find(f=>!f.png);      // 選取往下一張沒圖的表移動
   scSelId=next?next.id:null;
   scRender();
   const el=document.querySelector('.sc-card.sel'); if(el) el.scrollIntoView({block:'nearest'});
-  scStatus('已填入截圖('+w+'×'+h+'px)'+(targets.length>1?',共 '+targets.length+' 張同圖號規格的表':'')+'。');
+  scStatus(msg);
 }
-
+// 這頁:自動找立面圖(C 單頁版);找不到就退回上一框位置
+async function scAutoThisPage(){
+  const pg=scPages[scPi]; if(!pg?.img) return;
+  let det=scDetectElevation(pg), auto=det?det.conf:null;
+  if(!det&&scLastRel){ det={rect:scSnapRect(pg,{x:scLastRel.x*pg.w,y:scLastRel.y*pg.h,w:scLastRel.w*pg.w,h:scLastRel.h*pg.h})}; auto='warn'; }
+  if(!det){ alert('這頁找不到立面圖,請手動框選'); return; }
+  const target=scPickTarget(pg), r=await scFillFromPage(scPi,det.rect,target,auto||'warn');
+  scShowSelBox(det.rect);
+  scAfterFill('已自動截圖('+r.w+'×'+r.h+'px)'+(auto==='ok'?'':' — 請確認,不對就直接在左圖重框')+(det.why?'('+det.why+')':''));
+}
+// B:照上一框的位置截這頁
+async function scUseLastBox(){
+  const pg=scPages[scPi]; if(!pg?.img) return;
+  if(!scLastRel){ alert('還沒有手動框過,先在圖上框一次'); return; }
+  let pr={x:scLastRel.x*pg.w,y:scLastRel.y*pg.h,w:scLastRel.w*pg.w,h:scLastRel.h*pg.h};
+  if(scEl('sc-snap')?.checked) pr=scSnapRect(pg,pr);
+  const target=scPickTarget(pg), r=await scFillFromPage(scPi,pr,target,'warn');
+  scShowSelBox(pr);
+  scAfterFill('已照上一框的位置截圖('+r.w+'×'+r.h+'px),請確認');
+}
+// 截完在圖上閃一下框的位置,讓人看得到截了哪裡
+function scShowSelBox(pr){
+  const sel=scEl('sc-sel'); if(!sel) return;
+  Object.assign(sel.style,{display:'block',left:pr.x*scDisp+'px',top:pr.y*scDisp+'px',width:pr.w*scDisp+'px',height:pr.h*scDisp+'px'});
+  sel.dataset.size='';
+  clearTimeout(scShowSelBox.t); scShowSelBox.t=setTimeout(()=>{ sel.style.display='none'; },1600);
+}
+// C:整份自動截圖,只填還沒有圖的表(已經有圖的、手動截的都不動)
+async function scAutoAll(){
+  const todo=scForms.filter(f=>!f.png);
+  if(!todo.length){ alert('每張自檢表都已經有截圖了。\n要重截某張,先按那張的「刪除截圖」。'); return; }
+  if(!scPages.length){ alert('請先載入製造圖'); return; }
+  if(!await uiConfirm('自動截圖 '+todo.length+' 張還沒有圖的自檢表?\n已經有圖的不會動;沒把握的會標黃色「請確認」,之後可以手動重框。')) return;
+  const btn=scEl('sc-autoall'); if(btn) btn.disabled=true;
+  const byDwg=new Map(); todo.forEach(f=>{ const d=String(f.dwg||'').trim().toUpperCase(); if(!byDwg.has(d)) byDwg.set(d,[]); byDwg.get(d).push(f); });
+  let ok=0, warn=0, miss=0, noPage=0, done=0;
+  try{
+    for(const [dwg,forms] of byDwg){
+      done++; scStatus('自動截圖中… '+done+' / '+byDwg.size+' 個圖號');
+      const idx=dwg?scPages.findIndex(p=>String(p.dwg||'').trim().toUpperCase()===dwg):-1;
+      if(idx<0){ noPage+=forms.length; continue; }
+      const pg=await scEnsurePageRendered(idx); if(!pg?.img){ miss+=forms.length; continue; }
+      let det=scDetectElevation(pg), conf=det?det.conf:'warn';
+      if(!det&&scLastRel) det={rect:scSnapRect(pg,{x:scLastRel.x*pg.w,y:scLastRel.y*pg.h,w:scLastRel.w*pg.w,h:scLastRel.h*pg.h})};
+      if(!det){ miss+=forms.length; continue; }
+      // 同一張圖有好幾個不同規格的構件 → 圖上可能不只一支,標請確認
+      if(new Set(forms.map(f=>String(f.spec||'').trim().toUpperCase())).size>1) conf='warn';
+      const {blob,w,h}=await scCropPagePng(det.rect,idx), url=URL.createObjectURL(blob);
+      forms.forEach(f=>{ f.png=blob; scGcUrl(f,url); f.w=w; f.h=h; f.auto=conf; });
+      if(conf==='ok') ok+=forms.length; else warn+=forms.length;
+    }
+  }finally{ if(btn) btn.disabled=false; }
+  scAfterFill('自動截圖完成:有把握 '+ok+' 張'+(warn?'、請確認 '+warn+' 張(黃色)':'')+(miss?'、找不到立面圖 '+miss+' 張':'')+(noPage?'、找不到同圖號的頁 '+noPage+' 張':'')+'。沒圖的請手動框選。');
+}
+async function scCrop(rect){
+  scStatus('裁切中…');
+  const snap=scPi, pg=scPages[snap];
+  let pr={x:rect.x/scDisp,y:rect.y/scDisp,w:rect.w/scDisp,h:rect.h/scDisp};
+  if(scEl('sc-snap')?.checked){ pr=scSnapRect(pg,pr); scShowSelBox(pr); }
+  const target=scPickTarget(pg), r=await scFillFromPage(snap,pr,target,null);
+  scAfterFill('已填入截圖('+r.w+'×'+r.h+'px)'+(r.n>1?',共 '+r.n+' 張同圖號規格的表':'')+'。');
+}
 /* ── 自檢表清單 ── */
 function scRender(){
   scEl('sc-cnt').textContent=scForms.length+' 張'+(scForms.some(f=>!f.png)?'(未截圖 '+scForms.filter(f=>!f.png).length+')':'');
@@ -50868,9 +51029,10 @@ function scRender(){
 }
 function scCard(f,i){
   const el=document.createElement('div');
-  el.className='sc-card'+(f.id===scSelId?' sel':'')+(f.png?'':' noimg');
+  el.className='sc-card'+(f.id===scSelId?' sel':'')+(f.png?'':' noimg')+(f.png&&f.auto==='warn'?' autowarn':'');
   el.innerHTML=
     '<div class="top"><span class="no">'+(i+1)+'</span><span class="pn">'+esc(f.partNo||'(未填構件)')+'</span>'+
+    (f.png&&f.auto?'<span class="sc-auto'+(f.auto==='warn'?' warn':'')+'" title="'+(f.auto==='warn'?'自動截圖沒把握,請看一下縮圖;不對就點這張卡片再到左圖重框':'自動截圖')+'">'+(f.auto==='warn'?'請確認':'自動')+'</span>':'')+
     '<span class="meta">'+esc(f.dwg||'')+(f.spec?' · '+esc(f.spec):'')+'</span>'+
     (f.png?'<button class="btn-sm" data-act="delshot" title="保留自檢表，只移除這張截圖">刪除截圖</button>':'')+
     '<button class="btn-sm" data-act="del" style="color:var(--danger)">刪除</button></div>'+
