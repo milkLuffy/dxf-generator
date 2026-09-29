@@ -4466,7 +4466,7 @@ window.normalizeFullWidth=function(value){
                 <button class="btn btn-add-row" onclick="maTogglePartsDetails(false)">全部收合</button>
               </span>
             </div>
-            <button class="btn btn-gen" onclick="maDownloadParts()">⬇ 下載第一層零件明細 Excel</button>
+            <button class="btn btn-gen" onclick="maDownloadParts()">⬇ 下載詳細資料 Excel</button>
           </div>
           <div class="ma-subtabs ma-no-print" id="ma-parts-cat-tabs"></div>
           <div id="ma-parts-body"></div>
@@ -53103,12 +53103,31 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
 
   window.maDownloadExcel=function(){
     if(!maComponents.length){alert('請先開始分析');return;}
-    maSaveWorkbook('多階資料分析.xlsx',[{name:'全部第一層零件',rows:maExportRows('')},{name:'帷幕Q',rows:maExportRows('Q')},{name:'水電H',rows:maExportRows('H')}]);
+    maSaveWorkbook(maFileBaseZoneFirst()+'多階.xlsx',[{name:'全部第一層零件',rows:maExportRows('')},{name:'帷幕Q',rows:maExportRows('Q')},{name:'水電H',rows:maExportRows('H')}]);
   };
   window.maDownloadParts=function(){
     if(!maComponents.length){alert('請先開始分析');return;}
-    maSaveWorkbook('第一層零件明細.xlsx',[{name:'第一層零件',rows:maExportRows('')}]);
+    // 第一張是逐筆明細;之後依網頁分類各一張統計表,同一種零件(零件編號/品名/規格/材質/單位相同)數量累計
+    var all=[];maComponents.forEach(function(c){all=all.concat(maPartItems(c));});
+    var sheets=[{name:'第一層零件',rows:maExportRows('')}];
+    MA_PART_ORDER.forEach(function(cat){
+      var merged=maMergeParts(all.filter(function(i){return maPartCategory(i)===cat;}));
+      if(!merged.length)return;
+      var total=0;
+      var rows=merged.map(function(m){
+        var i=m.item,q=Number(m.quantity);if(m.quantity!==''&&!isNaN(q))total+=q;
+        return {'零件編號':i.partNo,'品名':i.description,'規格':i.specification,'材質':i.material,'單位':i.unit,'數量':m.quantity,'出現筆數':m.rows};
+      });
+      rows.push({'零件編號':'合計','品名':'','規格':'','材質':'','單位':'','數量':maQtyFmt(total),'出現筆數':merged.reduce(function(n,m){return n+m.rows;},0)});
+      sheets.push({name:MA_PART_SHEET[cat]||cat,rows:rows});
+    });
+    maSaveWorkbook(maFileBaseZoneFirst()+'多階詳細資料.xlsx',sheets);
   };
+  // 下載檔名用「工程區-工程編號」
+  function maFileBaseZoneFirst(){
+    var base=[String(maProject.工程區||maProject.母件編號||'').trim(),String(maProject.工程編號||'').trim()].filter(Boolean).join('-');
+    return base.replace(/[\\/:*?"<>|]/g,'').trim();
+  }
   window.maDownloadCategory=function(code){
     var key=String(code||'').toUpperCase(),rows=maExportRows(key);
     if(!rows.length){alert('沒有 '+key+' 類別資料');return;}
