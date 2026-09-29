@@ -4370,6 +4370,19 @@ window.normalizeFullWidth=function(value){
 .ma-history-item:focus-visible{outline:2px solid var(--accent2);outline-offset:2px;border-color:transparent}
 .ma-history-main{min-width:0}.ma-history-title{font-family:var(--mono);font-size:12px;line-height:1.25;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ma-history-meta{font-size:10px;line-height:1.2;color:var(--text3);margin-top:2px}.ma-history-actions{display:flex;gap:5px}.ma-history-actions .btn{min-height:28px;padding:3px 9px;font-size:11px;border-radius:7px}
 @media(max-width:720px){.ma-history-item{grid-template-columns:minmax(0,1fr) auto}}
+.ma-history-tools{display:flex;gap:8px;margin-bottom:8px}.ma-history-tools .search-input{flex:1;max-width:none;min-width:0}
+.ma-part-hits{margin-bottom:10px;padding:10px;border:1px solid var(--accent2);border-radius:10px;background:var(--bg2)}
+.ma-part-hits-head{font-size:12px;color:var(--text2);margin-bottom:8px}
+.ma-part-proj{margin-bottom:8px}.ma-part-proj:last-child{margin-bottom:0}
+.ma-part-proj-head{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-family:var(--mono);font-size:12px;color:var(--text)}
+.ma-part-proj-head .btn{min-height:26px;padding:2px 9px;font-size:11px}
+.ma-part-proj .ma-history-item{display:grid;grid-template-columns:minmax(0,1fr);margin-bottom:5px}
+.ma-part-proj .ma-history-meta{white-space:normal;font-family:var(--mono)}
+.ma-merge-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;padding:8px 10px;border:1px dashed var(--accent2);border-radius:10px;font-size:12px;color:var(--text2)}
+.ma-merge-bar .btn{min-height:28px;padding:3px 10px;font-size:12px}
+.ma-history-pick{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--text3);cursor:pointer;padding:0 4px;user-select:none}
+.ma-history-item.picked{border-color:var(--accent2)}
+.ma-zone-tag{font-family:var(--mono);font-size:11px;padding:1px 6px;margin-right:6px;border-radius:5px;background:var(--bg3);border:1px solid var(--border);color:var(--text2)}
 @media(max-width:1100px){.ma-summary{grid-template-columns:repeat(3,minmax(110px,1fr))}}
 @media(max-width:900px){.ma-input-grid,.ma-pdf-grid{grid-template-columns:1fr}.ma-sheet{grid-template-columns:1fr}.ma-component-meta{display:none}.ma-results-nav{top:var(--appbar-h)}}
 /* 手機:數量移到零件編號右邊,拿掉品名/材質(電腦版不變) */
@@ -4418,6 +4431,11 @@ window.normalizeFullWidth=function(value){
           <div><div class="ma-panel-title">歷史分析紀錄</div><div class="ma-panel-note">登入後可載入過去儲存的結果</div></div>
           <button class="btn btn-add-row" onclick="maLoadHistory(true)">↻ 重新整理</button>
         </div>
+        <div class="ma-history-tools">
+          <input type="search" class="search-input" id="ma-part-search" placeholder="搜尋零件編號（找出有這個零件的工程區）…" oninput="maPartSearchInput(this.value)"/>
+        </div>
+        <div class="ma-part-hits" id="ma-part-hits" hidden></div>
+        <div class="ma-merge-bar" id="ma-merge-bar" hidden></div>
         <div class="ma-history-list" id="ma-history-list"><div class="ma-empty">載入中…</div></div>
       </div>
 
@@ -52435,6 +52453,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   var maCurrentAnalysisId=null;
   var maHistoryLoaded=false;
   var maHistoryRows=[];
+  var maMerged=false,maMergeSel=[],maAllAnalyses=null,maPartSearchSeq=0,maPartSearchTimer=null;
 
   function maEsc(v){
     return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
@@ -52555,7 +52574,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   function maCodeCount(code){return maComponents.reduce(function(n,c){return n+c.items.filter(function(i){return i.code===code;}).length;},0);}
   function maSearchTokens(){return String(maSearchQuery||'').toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);}
   function maSearchText(c,item){
-    return [maProject.工程編號,maProject.工程區,maProject.母件編號,c.componentNo,c.drawingNo,c.componentSpec,
+    return [maProject.工程編號,maProject.工程區,maProject.母件編號,c.zone,c.componentNo,c.drawingNo,c.componentSpec,
       item&&item.sequence,item&&item.partNo,item&&item.description,item&&item.specification,item&&item.material,
       item&&item.unit,item&&item.quantity,item&&item.code,item&&maPartCategory(item)].join(' ').toLocaleLowerCase();
   }
@@ -52732,6 +52751,13 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   window.maParseData=function(){
     var raw=(document.getElementById('ma-raw-input').value||'').replace(/^\uFEFF/,'');
     if(!raw.trim()){alert('請先貼上或選擇多階資料文字檔');return;}
+    var parsed=maParseRaw(raw);
+    if(!parsed){alert('找不到單星號構件列，請確認資料格式');return;}
+    maProject=parsed.project;maMerged=false;
+    maApplyComponents(parsed.components);
+  };
+  // 純解析(不動畫面):回傳 {components,project};合併開啟多個工程區時逐筆呼叫
+  function maParseRaw(raw){
     var components=[],current=null;
     var tabular=maParseTabular(raw);
     var mdbTab=tabular?null:maParseMdbTab(raw);
@@ -52761,13 +52787,16 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
         });
       });
     }
-    if(!components.length){alert('找不到單星號構件列，請確認資料格式');return;}
-    maProject={工程編號:'',工程區:'',母件編號:''};
+    if(!components.length)return null;
+    var maProject={工程編號:'',工程區:'',母件編號:''};
     var mProj=raw.match(/工程編號\s*[:：]\s*(\S+)/);
     if(mProj)maProject.工程編號=mProj[1];
     var mMother=raw.match(/母件編號\s*[:：]\s*(\S+)/);
     if(mMother){maProject.母件編號=mMother[1];maProject.工程區=mMother[1];}
     if(tabular){maProject.工程編號=tabular.projectNo||'';maProject.工程區=tabular.zoneCode||'';}
+    return {components:components,project:maProject};
+  }
+  function maApplyComponents(components){
     maComponents=components;
     maSearchQuery='';var searchEl=document.getElementById('ma-result-search');if(searchEl)searchEl.value='';
     maPdfMap={};maRenderedCrops={};
@@ -52798,7 +52827,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     }).join('')+'</tbody><tfoot><tr class="ma-total-row"><td colspan="2">數量加總</td><td class="ma-m-only ma-m-qty">'+maSumQty(items)+'</td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide">'+maSumQty(items)+'</td>'+(showCategory?'<td></td>':'')+'</tr></tfoot></table></div>';
   }
   function maComponentBlock(c,items,showCategory,open){
-    return '<details class="ma-component" '+(open?'open':'')+'><summary><span class="ma-component-id">'+maEsc(c.componentNo)+'</span><span class="ma-drawing-no">圖號 '+maEsc(c.drawingNo||'—')+'</span><span class="ma-component-meta">'+maEsc(c.componentSpec)+' · '+items.length+' 筆</span></summary>'+maRowsTable(items,showCategory,c)+'</details>';
+    return '<details class="ma-component" '+(open?'open':'')+'><summary>'+(c.zone?'<span class="ma-zone-tag">'+maEsc(c.zone)+'</span>':'')+'<span class="ma-component-id">'+maEsc(c.componentNo)+'</span><span class="ma-drawing-no">圖號 '+maEsc(c.drawingNo||'—')+'</span><span class="ma-component-meta">'+maEsc(c.componentSpec)+' · '+items.length+' 筆</span></summary>'+maRowsTable(items,showCategory,c)+'</details>';
   }
   function maPartCatCount(key){
     var comps=0,rows=0;
@@ -53093,7 +53122,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var rows=[];
     maComponents.forEach(function(c){c.items.forEach(function(i){
       if(filterCode&&i.code!==filterCode)return;
-      rows.push({'工程編號':maProject.工程編號,'工程區':maProject.工程區,'構件編號':c.componentNo,'圖號':c.drawingNo,'項次':i.sequence,'零件編號':i.partNo,'品名':i.description,'規格':i.specification,'材質':i.material,'單位':i.unit,'數量':i.quantity,'分類':maPartCategory(i)});
+      rows.push({'工程編號':maProject.工程編號,'工程區':c.zone||maProject.工程區,'構件編號':c.componentNo,'圖號':c.drawingNo,'項次':i.sequence,'零件編號':i.partNo,'品名':i.description,'規格':i.specification,'材質':i.material,'單位':i.unit,'數量':i.quantity,'分類':maPartCategory(i)});
     });});
     return rows;
   }
@@ -53150,11 +53179,14 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     if(!maHistoryRows.length){host.innerHTML='<div class="ma-empty">尚無已儲存的分析紀錄</div>';return;}
     host.innerHTML=maHistoryRows.map(function(r){
       var title=[r.project_no,r.zone_code,r.mother_no].filter(Boolean).filter(function(v,i,a){return a.indexOf(v)===i;}).join(' · ')||'未命名分析';
-      return '<div class="ma-history-item" role="button" tabindex="0" title="點一下載入此分析" onclick="maOpenAnalysis('+r.id+')" onkeydown="if(event.target===this&&(event.key===\'Enter\'||event.key===\' \')){event.preventDefault();maOpenAnalysis('+r.id+');}"><div class="ma-history-main"><div class="ma-history-title">'+maEsc(title)+'</div><div class="ma-history-meta">'+maEsc(maHistoryDate(r.created_at))+(r.created_by_name?' · '+maEsc(r.created_by_name):'')+'</div></div><div class="ma-history-actions"><button class="btn btn-add-row" style="color:var(--danger)" title="刪除此紀錄" onclick="event.stopPropagation();maDeleteAnalysis('+r.id+')">刪除</button></div></div>';
+      var picked=maMergeSel.indexOf(String(r.id))>=0;
+      return '<div class="ma-history-item'+(picked?' picked':'')+'" role="button" tabindex="0" title="點一下載入此分析" onclick="maOpenAnalysis('+r.id+')" onkeydown="if(event.target===this&&(event.key===\'Enter\'||event.key===\' \')){event.preventDefault();maOpenAnalysis('+r.id+');}"><div class="ma-history-main"><div class="ma-history-title">'+maEsc(title)+'</div><div class="ma-history-meta">'+maEsc(maHistoryDate(r.created_at))+(r.created_by_name?' · '+maEsc(r.created_by_name):'')+'</div></div><div class="ma-history-actions"><label class="ma-history-pick" title="勾選同工程編號的多個工程區,合併開啟一起搜尋" onclick="event.stopPropagation()"><input type="checkbox" '+(picked?'checked ':'')+'onchange="maToggleMergePick('+r.id+',this.checked,this)">合併</label><button class="btn btn-add-row" style="color:var(--danger)" title="刪除此紀錄" onclick="event.stopPropagation();maDeleteAnalysis('+r.id+')">刪除</button></div></div>';
     }).join('');
+    maRenderMergeBar();
   }
   window.maLoadHistory=async function(force){
     if(maHistoryLoaded&&!force)return;
+    maAllAnalyses=null;
     var host=document.getElementById('ma-history-list');if(!host)return;
     if(isGuest||!currentSession){maHistoryRender([]);return;}
     host.innerHTML='<div class="ma-empty">載入中…</div>';
@@ -53166,6 +53198,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   window.maSaveAnalysis=async function(){
     if(isGuest||!currentSession){maSetSaveStatus('請先登入後再儲存',true);return;}
     if(!maComponents.length){maSetSaveStatus('請先開始分析',true);return;}
+    if(maMerged){maSetSaveStatus('合併檢視不能儲存，請分別開啟各工程區',true);return;}
     maSetSaveDisabled(true);maSetSaveStatus('儲存中…');
     var raw=document.getElementById('ma-raw-input').value||'';
     var parent={project_no:maProject.工程編號||'',zone_code:maProject.工程區||'',mother_no:maProject.母件編號||'',raw_text:raw,component_count:maComponents.length,part_count:maPartCount(),q_count:maCodeCount('Q'),h_count:maCodeCount('H'),created_by:currentUser&&currentUser.id||null,created_by_name:currentUser&&currentUser.name||''};
@@ -53176,11 +53209,103 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     if(items.length){var ir=await sbFetch('/rest/v1/multilevel_analysis_items',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(items)});if(!ir.ok){await sbFetch('/rest/v1/multilevel_analyses?id=eq.'+id,{method:'DELETE'});maSetSaveDisabled(false);maSetSaveStatus('明細儲存失敗：'+maDbError(ir),true);return;}}
     maCurrentAnalysisId=id;maHistoryLoaded=false;maSetSaveStatus('✓ 已儲存分析紀錄 #'+id);maSetSaveDisabled(false);await window.maLoadHistory(true);
   };
-  window.maOpenAnalysis=async function(id){
+  window.maOpenAnalysis=async function(id,query){
     var r=await sbFetch('/rest/v1/multilevel_analyses?id=eq.'+encodeURIComponent(id)+'&select=id,raw_text&limit=1');
     if(!r.ok||!r.data||!r.data[0]){maSetSaveStatus('載入失敗：'+maDbError(r),true);return;}
     document.getElementById('ma-raw-input').value=r.data[0].raw_text||'';window.maParseData();maCurrentAnalysisId=r.data[0].id;maSetSaveStatus('已載入紀錄 #'+id+'；再次儲存會建立新版本');
+    maApplyResultQuery(query);
   };
+  // 從零件編號搜尋點進來:結果頁的搜尋框直接帶入零件編號
+  function maApplyResultQuery(query){
+    if(!query||!maComponents.length)return;
+    var el=document.getElementById('ma-result-search');if(el)el.value=query;window.maSetResultSearch(query);
+  }
+  // 合併開啟:同一個工程編號的多個工程區併成一份結果(可一起搜尋、看分類、下載 Excel;不能儲存)
+  window.maOpenMerged=async function(ids,query){
+    ids=(ids||maMergeSel).map(String).filter(function(v,i,a){return v&&a.indexOf(v)===i;});
+    if(ids.length<2){alert('請至少勾選兩個工程區');return;}
+    var r=await sbFetch('/rest/v1/multilevel_analyses?id=in.('+ids.map(encodeURIComponent).join(',')+')&select=id,project_no,zone_code,raw_text');
+    if(!r.ok||!Array.isArray(r.data)||!r.data.length){maSetSaveStatus('載入失敗：'+maDbError(r),true);return;}
+    var all=[],zones=[],proj='';
+    ids.forEach(function(id){
+      var row=r.data.find(function(x){return String(x.id)===id;});if(!row)return;
+      var parsed=maParseRaw(String(row.raw_text||'').replace(/^\uFEFF/,''));if(!parsed)return;
+      var zone=parsed.project.工程區||row.zone_code||('#'+row.id);
+      proj=proj||parsed.project.工程編號||row.project_no||'';zones.push(zone);
+      parsed.components.forEach(function(c){c.zone=zone;all.push(c);});
+    });
+    if(!all.length){alert('選取的紀錄沒有可解析的資料');return;}
+    maProject={工程編號:proj,工程區:zones.join('+'),母件編號:''};
+    document.getElementById('ma-raw-input').value='';
+    maApplyComponents(all);
+    maMerged=true;maSetSaveDisabled(true);maSetSaveStatus('合併檢視：'+zones.join('、')+'（不能儲存）');
+    maMergeSel=[];maHistoryRender();
+    maApplyResultQuery(query);
+  };
+  window.maToggleMergePick=function(id,on,el){
+    id=String(id);
+    if(on){
+      var row=maHistoryRows.find(function(x){return String(x.id)===id;}),first=maMergeSel.length&&maHistoryRows.find(function(x){return String(x.id)===maMergeSel[0];});
+      if(row&&first&&String(row.project_no||'').toUpperCase()!==String(first.project_no||'').toUpperCase()){alert('只能合併同一個工程編號（目前已選 '+first.project_no+'）');if(el)el.checked=false;return;}
+      if(maMergeSel.indexOf(id)<0)maMergeSel.push(id);
+    }else maMergeSel=maMergeSel.filter(function(v){return v!==id;});
+    maRenderMergeBar();
+  };
+  window.maClearMergePick=function(){maMergeSel=[];maHistoryRender();};
+  function maRenderMergeBar(){
+    var bar=document.getElementById('ma-merge-bar');if(!bar)return;
+    if(!maMergeSel.length){bar.hidden=true;bar.innerHTML='';return;}
+    var rows=maMergeSel.map(function(id){return maHistoryRows.find(function(x){return String(x.id)===id;});}).filter(Boolean);
+    bar.hidden=false;
+    bar.innerHTML='<span>已勾選 <b>'+maEsc(rows[0]?rows[0].project_no:'')+'</b>：'+rows.map(function(r){return maEsc(r.zone_code||r.mother_no||'#'+r.id);}).join('、')+'</span>'+
+      '<button class="btn btn-gen" '+(maMergeSel.length<2?'disabled title="再勾一個同工程編號的工程區"':'')+' onclick="maOpenMerged()">合併開啟（'+maMergeSel.length+' 區）</button><button class="btn btn-add-row" onclick="maClearMergePick()">取消</button>';
+  }
+  // 零件編號搜尋:找所有工程區(每個工程區只看最新一次儲存)裡有這個零件的
+  window.maPartSearchInput=function(v){clearTimeout(maPartSearchTimer);maPartSearchTimer=setTimeout(function(){maRunPartSearch(v);},300);};
+  async function maAnalysesIndex(){
+    if(maAllAnalyses)return maAllAnalyses;
+    var r=await sbFetch('/rest/v1/multilevel_analyses?select=id,project_no,zone_code,mother_no,created_at&order=created_at.desc&limit=2000');
+    if(!r.ok)throw new Error(maDbError(r));
+    maAllAnalyses=Array.isArray(r.data)?r.data:[];return maAllAnalyses;
+  }
+  async function maRunPartSearch(v){
+    var host=document.getElementById('ma-part-hits');if(!host)return;
+    var q=String(v||'').trim(),seq=++maPartSearchSeq;
+    if(!q){host.hidden=true;host.innerHTML='';return;}
+    if(isGuest||!currentSession){host.hidden=false;host.innerHTML='<div class="ma-empty">登入後才能搜尋</div>';return;}
+    host.hidden=false;host.innerHTML='<div class="ma-empty">搜尋中…</div>';
+    var pat='*'+q.replace(/[*,()%_\\]/g,'')+'*',list,r;
+    try{
+      list=await maAnalysesIndex();
+      r=await sbFetch('/rest/v1/multilevel_analysis_items?select=analysis_id,part_no,component_no,quantity&part_no=ilike.'+encodeURIComponent(pat)+'&limit=5000');
+    }catch(e){if(seq===maPartSearchSeq)host.innerHTML='<div class="ma-empty">搜尋失敗：'+maEsc(e.message)+'</div>';return;}
+    if(seq!==maPartSearchSeq)return;
+    if(!r.ok){host.innerHTML='<div class="ma-empty">搜尋失敗：'+maEsc(maDbError(r))+'</div>';return;}
+    // 同一個工程編號+工程區可能存過好幾版,只算最新那版
+    var latest={},byId={};
+    list.forEach(function(a){var k=String(a.project_no||'').toUpperCase()+'|'+String(a.zone_code||a.mother_no||'').toUpperCase();if(!latest[k]){latest[k]=a;byId[a.id]=a;}});
+    var hits={};
+    (r.data||[]).forEach(function(it){
+      var a=byId[it.analysis_id];if(!a)return;
+      var h=hits[a.id]||(hits[a.id]={a:a,parts:{},order:[],comps:{}});
+      var pn=String(it.part_no||'');if(!(pn in h.parts)){h.parts[pn]=0;h.order.push(pn);}
+      var qn=Number(it.quantity);if(!isNaN(qn))h.parts[pn]+=qn;
+      h.comps[it.component_no]=1;
+    });
+    var arr=Object.keys(hits).map(function(k){return hits[k];}).sort(function(x,y){return String(x.a.project_no).localeCompare(String(y.a.project_no),undefined,{numeric:true})||String(x.a.zone_code).localeCompare(String(y.a.zone_code),undefined,{numeric:true});});
+    if(!arr.length){host.innerHTML='<div class="ma-empty">沒有工程區有符合「'+maEsc(q)+'」的零件編號</div>';return;}
+    var byProj={},projOrder=[];
+    arr.forEach(function(h){var p=String(h.a.project_no||'');if(!byProj[p]){byProj[p]=[];projOrder.push(p);}byProj[p].push(h);});
+    var qs=JSON.stringify(q).replace(/"/g,'&quot;');
+    host.innerHTML='<div class="ma-part-hits-head">「'+maEsc(q)+'」出現在 '+arr.length+' 個工程區（每區只看最新一次儲存）</div>'+projOrder.map(function(p){
+      var hs=byProj[p],ids=JSON.stringify(hs.map(function(h){return h.a.id;}));
+      return '<div class="ma-part-proj"><div class="ma-part-proj-head"><b>'+maEsc(p||'未填工程編號')+'</b>'+(hs.length>1?'<button class="btn btn-add-row" onclick="maOpenMerged('+ids+','+qs+')">合併開啟這 '+hs.length+' 區</button>':'')+'</div>'+
+        hs.map(function(h){
+          var parts=h.order.slice(0,6).map(function(pn){return maEsc(pn)+' ×'+maQtyFmt(h.parts[pn]);}).join('、')+(h.order.length>6?' 等 '+h.order.length+' 種':'');
+          return '<div class="ma-history-item" role="button" tabindex="0" title="開啟此工程區並帶入搜尋" onclick="maOpenAnalysis('+h.a.id+','+qs+')" onkeydown="if(event.key===\'Enter\'){maOpenAnalysis('+h.a.id+','+qs+');}"><div class="ma-history-main"><div class="ma-history-title">'+maEsc(h.a.zone_code||h.a.mother_no||'#'+h.a.id)+' · '+Object.keys(h.comps).length+' 支構件</div><div class="ma-history-meta">'+parts+'</div></div></div>';
+        }).join('')+'</div>';
+    }).join('');
+  }
   window.maDeleteAnalysis=async function(id){
     if(!await uiConfirm('確定刪除這筆多階分析紀錄？\n其明細也會一併刪除，且無法復原。'))return;
     var r=await sbFetch('/rest/v1/multilevel_analyses?id=eq.'+encodeURIComponent(id),{method:'DELETE'});
