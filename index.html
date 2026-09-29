@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.29.6"/>
+<meta name="sc-version" content="2026.09.29.7"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2055,6 +2055,11 @@ body.lc-dragging *{cursor:grabbing!important}
 .ship-hist-tbl th{position:sticky;top:0;background:var(--bg2)}
 .ship-hist-tbl td.txt{text-align:left}
 .ship-hist-tbl tr.late td{color:var(--danger,#e0555b)}
+.ship-hist-tbl tr.cancel td{color:var(--text3);text-decoration:line-through}
+.ship-hist-tbl tr.cancel td.ops{text-decoration:none}
+.ship-wait-cancel{color:var(--text2)}
+.ship-trip-note{font-size:13px;padding:6px 8px;margin-bottom:8px;border-radius:var(--rad);background:rgba(90,170,255,.12)}
+.ship-trip-rest{display:flex;align-items:center;gap:6px;font-size:13px;margin:10px 0 0;padding:8px;border:1px dashed var(--border);border-radius:var(--rad);cursor:pointer}
 /* 「修改」欄黏在最右邊:表格橫向捲動時,補記車到／編輯／刪除永遠按得到 */
 .ship-hist-tbl td.ops{white-space:nowrap;padding:2px 6px;position:sticky;right:0;background:var(--bg2);box-shadow:-6px 0 6px -6px rgba(0,0,0,.45)}
 .ship-hist-tbl th:last-child{right:0;z-index:2;box-shadow:-6px 0 6px -6px rgba(0,0,0,.45)}
@@ -13249,7 +13254,7 @@ const AUDIT_FIELD_LABEL={
   proj_num:'工程編號', proj_no:'工程編號', proj_name:'工程名稱', zone_id:'工程區', zone_code:'工程區', zone:'工程區',
   part_no:'構件編號', comp_no:'構件編號', net_weight:'淨重', weight:'重量', length:'長度',
   work_date:'施作日期', ship_date:'出貨日期', bed:'床位', serial_no:'單據編號', doc_no:'單據編號',
-  dispatched_at:'派車時間', arrived_at:'車到時間', beds:'柱位', cars:'車數', col_qty:'柱子支數', layout_ids:'派車構件', shipped_ids:'標記出貨構件', arrived_by_name:'記錄車到者', message:'派車訊息',
+  dispatched_at:'派車時間', arrived_at:'車到時間', beds:'柱位', cars:'車數', col_qty:'柱子支數', layout_ids:'派車構件', shipped_ids:'標記出貨構件', arrived_by_name:'記錄車到者', message:'派車訊息', trip_no:'第幾車', trip_of:'共派幾車', batch_id:'派車批次', cancelled_at:'不用了(取消)時間', cancelled_by_name:'標記不用了者',
   company:'公司', inspect_time:'報驗時間', proc_code:'製程', sub_code:'區別',
   // 報驗需求（projects 的 insp_* 欄位）
   insp_photo_beam:'樑拍照張數', insp_photo_col:'柱拍照張數', insp_sc_form:'自檢表',
@@ -24284,7 +24289,7 @@ const HEALTH_SCHEMA=[
   ['leave_requests','','leave_requests_migration.sql'],
   ['leave_board','','leave_requests_migration.sql(檢視表)'],
   ['deduction_details','seq_no,voided','deduction_columns_migration.sql'],
-  ['ship_dispatches','dispatched_at,arrived_at,beds,layout_ids,shipped_ids','ship_dispatches_migration.sql(派車紀錄)'],
+  ['ship_dispatches','dispatched_at,arrived_at,beds,layout_ids,shipped_ids,batch_id,trip_no,trip_of,cancelled_at','ship_dispatches_migration.sql(派車紀錄)'],
   ['push_subscriptions','remind_time,daily_sent_on','push_remind_time_migration.sql(推播時間)'],
   ['pre_inspections','','pre_inspections_migration.sql'],
   ['sp_track','','sp_production_migration.sql'],
@@ -31706,7 +31711,7 @@ function shipRender(){
     let h='<div class="ship-bed'+(sel.on?' on':'')+'">'
       +'<label class="ship-bed-h"><input type="checkbox"'+(sel.on?' checked':'')+(noBed?' disabled title="未排柱位,無法產生派車訊息"':'')+' data-key="'+k+'" onchange="shipToggleBed(this.dataset.key,this.checked)">'
       +'<b>'+esc(bed)+'</b>'+(recv?'<span class="ship-bed-recv">受檢 '+esc(recv)+'</span>':'')
-      +(shipBedDispatch(bed).length?'<span class="ship-bed-disp">已派車 '+shipBedDispatch(bed).map(d=>shipHm(d.dispatched_at)).join('、')+'</span>':'')
+      +(shipBedDispatch(bed).length?'<span class="ship-bed-disp">已派車 '+shipBedDispatch(bed).map(d=>shipHm(d.dispatched_at)+(shipIsMulti(d)?' 第'+d.trip_no+'車':'')).join('、')+'</span>':'')
       +'<span class="ship-bed-n" data-key="'+k+'">'+shipBedCountTxt(key)+'</span></label>';
     [...projs.keys()].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).forEach(pj=>{
       const pr=projs.get(pj);
@@ -31798,10 +31803,20 @@ window.shipCopyMsg=async function(){
 // 需執行 ship_dispatches_migration.sql;還沒建表時派車訊息照樣能複製,只是不記錄。
 let shipDispatches=[], shipDispatchReady=null, shipLastMeta=null, shipLastRecorded={txt:'',at:0};
 async function shipLoadDispatches(){
-  const r=await sbFetch('/rest/v1/ship_dispatches?select=*&arrived_at=is.null&order=dispatched_at.asc');
+  const r=await sbFetch('/rest/v1/ship_dispatches?select=*&arrived_at=is.null&order=dispatched_at.asc,id.asc');
   shipDispatchReady=!!r.ok;
-  shipDispatches=(r.ok&&Array.isArray(r.data))?r.data:[];
+  // 取消的車(cancelled_at)在前端濾掉:還沒跑分車 migration 時沒這欄,不能放進網址條件
+  shipDispatches=(r.ok&&Array.isArray(r.data))?r.data.filter(d=>!d.cancelled_at):[];
 }
+// ── 分車:一次派 N 車(N>1)拆成 N 筆,同一個 batch_id,trip_no=第幾車、trip_of=共幾車 ──
+// 車不會同時到、每車載的也不一樣,所以各自按「車到了」、各自勾構件;不需要的那車按「不用了」(cancelled_at)。
+// 需執行 ship_dispatches_migration.sql 最後一段;沒跑時照舊一筆記整批。
+let shipTripColsMissing=false;
+function shipTripOf(d){ return Math.max(1,Number(d&&d.trip_of)||1); }
+function shipIsMulti(d){ return !!(d&&d.batch_id)&&shipTripOf(d)>1; }
+function shipTripTxt(d){ return shipIsMulti(d)?('第'+(d.trip_no||'?')+'車／共'+shipTripOf(d)+'車'):''; }
+// 同一次派車、還在等的其他車
+function shipBatchWaiting(d){ return shipIsMulti(d)?shipDispatches.filter(x=>x.batch_id===d.batch_id&&Number(x.id)!==Number(d.id)):[]; }
 function shipWaitTxt(iso){
   const ms=Date.now()-new Date(iso).getTime(); if(!(ms>=0)) return '';
   const m=Math.floor(ms/60000);
@@ -31813,6 +31828,7 @@ function shipHm(iso){ const d=new Date(iso); return String(d.getHours()).padStar
 function shipIsIn(d){ return String((d&&d.dir)||'out')==='in'; }   // dir:out=出貨(舊資料沒這欄也算出貨)、in=進料
 function shipDispatchLabel(d){
   if(shipIsIn(d)) return 'C棟'+(d.beds||[]).join('.')+' 進料'+(d.note?' '+d.note:'');
+  if(d.kind!=='col'&&shipIsMulti(d)) return 'C棟'+(d.beds||[]).join('.')+' · '+shipTripTxt(d);
   return 'C棟'+(d.beds||[]).join('.')+(d.kind==='col'?(' · '+(d.col_qty||0)+' 支柱子'):(' · '+(d.cars||0)+' 車'));
 }
 function shipBedDispatch(bed){ return shipDispatches.filter(d=>!shipIsIn(d)&&(d.beds||[]).includes(bed)); }   // 柱位上的「已派車」只算出貨
@@ -31821,11 +31837,24 @@ async function shipRecordDispatch(txt){
   if(shipLastRecorded.txt===txt && Date.now()-shipLastRecorded.at<10*60000) return;   // 同一則訊息 10 分鐘內重複複製不重記
   if(shipDispatchReady===false){ return; }
   const who=(currentUser&&currentUser.name)||'';
-  const recs=[];
-  if(meta.beamBeds.length&&meta.cars>0) recs.push({kind:'beam',beds:meta.beamBeds,cars:meta.cars,layout_ids:meta.beamIds,message:'C棟'+meta.beamBeds.join('.')+'需出'+meta.cars+'車',created_by_name:who});
-  if(meta.colN>0) recs.push({kind:'col',beds:meta.colBeds,col_qty:meta.colN,layout_ids:meta.colIds,message:'C棟'+meta.colBeds.join('.')+'需出'+meta.colN+'支柱子',created_by_name:who});
+  const recs=[], legacy=[];
+  if(meta.beamBeds.length&&meta.cars>0){
+    const base={kind:'beam',beds:meta.beamBeds,cars:meta.cars,layout_ids:meta.beamIds,message:'C棟'+meta.beamBeds.join('.')+'需出'+meta.cars+'車',created_by_name:who};
+    legacy.push(base);
+    if(meta.cars>1&&!shipTripColsMissing){   // 多車:每車一筆,構件清單整批共用,車到時再勾這車載了哪些
+      const batch='b'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      for(let i=1;i<=meta.cars;i++) recs.push(Object.assign({},base,{cars:1,batch_id:batch,trip_no:i,trip_of:meta.cars}));
+    } else recs.push(base);
+  }
+  if(meta.colN>0){ const c={kind:'col',beds:meta.colBeds,col_qty:meta.colN,layout_ids:meta.colIds,message:'C棟'+meta.colBeds.join('.')+'需出'+meta.colN+'支柱子',created_by_name:who}; recs.push(c); legacy.push(c); }
   if(!recs.length) return;
-  const r=await sbFetch('/rest/v1/ship_dispatches',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(recs)});
+  let r=await sbFetch('/rest/v1/ship_dispatches',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(recs)});
+  if(!r.ok&&recs.length!==legacy.length&&/batch_id|trip_no|trip_of|PGRST204/.test(JSON.stringify(r.data||''))){
+    // 分車欄位還沒建:退回一筆記整批,派車時間照樣留著
+    shipTripColsMissing=true;
+    alert('派車已記錄,但還不能分車記錄(每車各自記車到時間)。\n請到 Supabase SQL Editor 執行 ship_dispatches_migration.sql 最後「分車記錄」那段。');
+    r=await sbFetch('/rest/v1/ship_dispatches',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(legacy)});
+  }
   if(!r.ok){ console.warn('ship dispatch record failed',r.status,r.data); if(r.status===404||/ship_dispatches/.test(JSON.stringify(r.data||''))) shipDispatchReady=false; return; }
   shipLastRecorded={txt,at:Date.now()};
   if(Array.isArray(r.data)) shipDispatches=shipDispatches.concat(r.data);
@@ -31838,6 +31867,7 @@ function shipWaitRowHtml(d){
     +'<span class="ship-wait-msg">'+esc(shipDispatchLabel(d))+'</span>'
     +'<span class="ship-wait-t'+(shipIsLate(d)?' late':'')+'" data-at="'+esc(d.dispatched_at)+'">派車 '+shipHm(d.dispatched_at)+' · 已等 '+shipWaitTxt(d.dispatched_at)+'</span>'
     +'<button class="btn-sm btn-export" onclick="'+(shipIsIn(d)?'shipArriveIn':'shipArriveOpen')+'('+Number(d.id)+')">車到了</button>'
+    +(shipIsMulti(d)?'<button class="btn-sm ship-wait-cancel" title="這車不用來了(例如一車就載完),紀錄會留著標成取消" onclick="shipTripCancel('+Number(d.id)+')">不用了</button>':'')
     +'<button class="ship-wait-x" title="派錯了,刪除這筆派車紀錄" onclick="shipDispatchDelete('+Number(d.id)+')">✕</button>'
     +'</div>';
 }
@@ -32128,7 +32158,23 @@ window.shipDispatchDelete=async function(id){
   shipDispatches=shipDispatches.filter(x=>Number(x.id)!==Number(id));
   shipRender(); shipDashRender();
 };
-let shipArriveId=null, shipArriveAllBeds=false, shipArrivePick=null, shipArriveMainIds=[];
+// 分車的某一車不用來了:不刪紀錄,標 cancelled_at,等車中拿掉、派車紀錄仍看得到(灰字「取消」)
+async function shipTripCancelIds(ids){
+  if(!ids.length) return true;
+  const r=await sbFetch('/rest/v1/ship_dispatches?id=in.('+ids.map(Number).join(',')+')',{method:'PATCH',headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify({cancelled_at:new Date().toISOString(),cancelled_by_name:(currentUser&&currentUser.name)||''})});
+  if(!r.ok){ alert('標記「不用了」失敗('+r.status+')'+(/cancelled/.test(JSON.stringify(r.data||''))?'\n請先執行 ship_dispatches_migration.sql 最後「分車記錄」那段':'')); return false; }
+  shipDispatches=shipDispatches.filter(x=>!ids.map(Number).includes(Number(x.id)));
+  return true;
+}
+window.shipTripCancel=async function(id){
+  const d=shipDispatches.find(x=>Number(x.id)===Number(id)); if(!d) return;
+  const rest=shipBatchWaiting(d);
+  if(!await uiConfirm(shipDispatchLabel(d)+' 不用來了?\n(紀錄會留著,標成「取消」,不算等車)'+(rest.length?'':'\n這批已經沒有其他車在等了'))) return;
+  if(!await shipTripCancelIds([Number(d.id)])) return;
+  shipRender(); shipDashRender();
+};
+let shipArriveId=null, shipArriveAllBeds=false, shipArrivePick=null, shipArriveMainIds=[], shipArriveCancelRest=false;
 // shipArrivePick = 這車要標記已出貨的 layout_items.id(派車時勾的 + 車到了現場補勾的)
 function shipArriveModalEl(){
   let m=document.getElementById('ship-arrive-modal');
@@ -32144,7 +32190,7 @@ function shipArriveModalEl(){
 window.shipArriveOpen=async function(id){
   const d0=shipDispatches.find(x=>Number(x.id)===Number(id)); if(!d0) return;
   if(shipIsIn(d0)) return shipArriveIn(id);   // 進料只記時間
-  shipArriveId=Number(id); shipArriveAllBeds=false; shipArrivePick=null;
+  shipArriveId=Number(id); shipArriveAllBeds=false; shipArrivePick=null; shipArriveCancelRest=false;
   const m=shipArriveModalEl();
   m.innerHTML='<div class="modal ship-modal" style="max-width:560px"><div class="modal-title">車到了</div>'
     +'<div class="ship-body" style="max-height:46vh"><div class="empty-state">載入中...</div></div>'
@@ -32163,7 +32209,9 @@ window.shipArriveOpen=async function(id){
 function shipArriveRender(d){
   const m=shipArriveModalEl();
   const ids=new Set((d.layout_ids||[]).map(String));
-  const pre=ids.size>0;   // 派車時就勾好了這車要載哪幾支 → 這裡預設全部帶進來,沒載到的再取消(舊紀錄沒記才要自己勾)
+  // 分車:同批還有別的車在等 → 這車載哪些不一定,預設不勾讓人勾;已經是最後一車才把剩下的全帶進來
+  const mates=shipBatchWaiting(d), multi=shipIsMulti(d);
+  const pre=ids.size>0&&!mates.length;   // 派車時就勾好了這車要載哪幾支 → 這裡預設全部帶進來,沒載到的再取消(舊紀錄沒記才要自己勾)
   const inBeds=r=>(d.beds||[]).includes(r.bed);
   // shipBoardRows 本身就是「已報驗(每日產量有、非預報)且未出貨」的待出貨構件;
   // 上半:派車時勾的那幾支,舊紀錄沒記(ids 空)才退回依樑/柱整個柱位列。
@@ -32184,13 +32232,19 @@ function shipArriveRender(d){
   m.innerHTML='<div class="modal ship-modal" style="max-width:560px"><div class="modal-title">車到了 — '+esc(shipDispatchLabel(d))+'</div>'
     +'<div class="ship-arrive-time">派車 '+shipHm(d.dispatched_at)+' → 到達 '+shipHm(new Date().toISOString())+' · 等了 '+shipWaitTxt(d.dispatched_at)+'</div>'
     +'<div class="ship-body" style="max-height:46vh">'
-      +'<div class="ship-arrive-h"><span>'+(pre?'派車時勾的 '+main.reduce((a,r)=>a+r.qty,0)+' 支已經全部帶進來,<b>沒載到的再取消</b>':'這車實際載走的構件(要順便標記已出貨才勾)')+'</span>'
+      +(multi?'<div class="ship-trip-note">這次共派 '+shipTripOf(d)+' 車,這是<b>第 '+esc(d.trip_no)+' 車</b>'
+        +(mates.length?'；還有 '+mates.map(x=>'第'+x.trip_no+'車').join('、')+' 在等。<b>勾這一車實際載的</b>,沒勾的留給下一車'
+          :'；其他車都到了或不用了,剩下的全部帶進來')+'</div>':'')
+      +'<div class="ship-arrive-h"><span>'+(pre?(multi?'剩下的 ':'派車時勾的 ')+main.reduce((a,r)=>a+r.qty,0)+' 支已經全部帶進來,<b>沒載到的再取消</b>'
+        :(multi&&ids.size?'這批派車的構件 — <b>勾這一車載走的</b>':'這車實際載走的構件(要順便標記已出貨才勾)'))+'</span>'
         +(main.length?'<label><input type="checkbox"'+(allOn?' checked':'')+' onchange="shipArriveAll(this.checked)"> 全選</label>':'')+'</div>'
       +(main.length?grp(main):'<div class="empty-state">這些柱位目前沒有待出貨的構件(可能已標記出貨)</div>')
       +'<div class="ship-arrive-h" style="margin-top:6px;border-top:1px dashed var(--border);padding-top:8px"><span>還多載了別的?<b>在這裡補勾</b></span>'
         +'<label><input type="checkbox"'+(shipArriveAllBeds?' checked':'')+' onchange="shipArriveOtherBeds(this.checked)"> 連其他柱位一起列</label></div>'
       +(extra.length?grp(extra):'<div class="ship-wait-note">'+(shipArriveAllBeds?'沒有其他待出貨的構件了':'這幾個柱位沒有其他待出貨的構件;要補勾別的柱位,打開上面那個')+'</div>')
     +'</div>'
+    +(mates.length?'<label class="ship-trip-rest"><input type="checkbox"'+(shipArriveCancelRest?' checked':'')+' onchange="shipArriveCancelRest=this.checked">'
+      +' 這車就載完了,'+mates.map(x=>'第'+x.trip_no+'車').join('、')+' <b>不用來了</b></label>':'')
     +'<div class="modal-actions"><button class="btn-modal-cancel" onclick="closeModal(\'ship-arrive-modal\')">取消</button>'
     +'<button class="btn-modal-cancel" onclick="shipArriveSave(false)">只記車到,不標記出貨</button>'
     +'<button class="btn-modal-ok" id="ship-arr-ship" onclick="shipArriveSave(true)" disabled>車到了,標記已出貨</button></div></div>';
@@ -32240,7 +32294,9 @@ window.shipArriveSave=async function(withShip){
   const r2=await sbFetch('/rest/v1/ship_dispatches?id=eq.'+Number(d.id),{method:'PATCH',headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({arrived_at:new Date().toISOString(),arrived_by_name:(currentUser&&currentUser.name)||'',shipped_ids:ids})});
   if(!r2.ok){ alert('記錄車到時間失敗('+r2.status+')'+(ids.length?',構件已標記出貨':'')); return; }
+  const rest=shipArriveCancelRest?shipBatchWaiting(d).map(x=>Number(x.id)):[];
   shipDispatches=shipDispatches.filter(x=>Number(x.id)!==Number(d.id));
+  if(rest.length) await shipTripCancelIds(rest);   // 一車就載完 → 同批其他車標「不用了」
   if(ids.length) shipBoardRows=shipBoardRows.filter(r=>!ids.includes(String(r.id)));
   closeModal('ship-arrive-modal');
   shipRender(); shipDashRender();
@@ -32252,7 +32308,7 @@ let shipHistRows=[], shipHistDir='all', shipHistStat='all', shipHistLate=false, 
 function shipYmOf(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function shipMinBetween(a,b){ return Math.round((new Date(b)-new Date(a))/60000); }
 // 等了多久(還沒記車到就算到現在);超過 SHIP_LATE_MIN 就是「等太久」,紅字與篩選共用同一個判斷
-function shipLateMin(d){ return (d&&d.dispatched_at)?shipMinBetween(d.dispatched_at,d.arrived_at||new Date().toISOString()):0; }
+function shipLateMin(d){ return (d&&d.dispatched_at&&!d.cancelled_at)?shipMinBetween(d.dispatched_at,d.arrived_at||new Date().toISOString()):0; }
 function shipIsLate(d){ return shipLateMin(d)>SHIP_LATE_MIN; }
 function shipDurTxt(min){
   if(min==null||!(min>=0)) return '—';
@@ -32267,7 +32323,7 @@ async function shipHistLoad(){
   box.innerHTML='<div class="ship-hist-bar"><input type="month" id="ship-hist-ym" value="'+esc(ym)+'" onchange="shipHistSetYm(this.value)">'
     +'<input type="date" id="ship-hist-day" value="'+esc(shipHistDay)+'" title="只看這一天(清空就看整個月)" onchange="shipHistSetDay(this.value)">'
     +'<select id="ship-hist-dir" onchange="shipHistSetDir(this.value)">'+opt('all','全部',shipHistDir)+opt('out','出貨',shipHistDir)+opt('in','進料',shipHistDir)+'</select>'
-    +'<select id="ship-hist-stat" onchange="shipHistSetStat(this.value)">'+opt('all','到達不拘',shipHistStat)+opt('open','還沒記車到',shipHistStat)+opt('done','已記車到',shipHistStat)+'</select>'
+    +'<select id="ship-hist-stat" onchange="shipHistSetStat(this.value)">'+opt('all','到達不拘',shipHistStat)+opt('open','還沒記車到',shipHistStat)+opt('done','已記車到',shipHistStat)+opt('cancel','不用了(取消)',shipHistStat)+'</select>'
     +'<label title="等車超過 '+SHIP_LATE_MIN+' 分鐘的,也就是表上紅字那幾趟"><input type="checkbox"'+(shipHistLate?' checked':'')+' onchange="shipHistSetLate(this.checked)"> 只看超過 '+SHIP_LATE_MIN+' 分</label>'
     +'<button class="btn-sm" onclick="shipHistClearFilter()">清除篩選</button><span id="ship-hist-stat-txt"></span>'
     +'<button class="btn-sm btn-export" style="margin-left:auto" onclick="shipHistExport()">⬇ 匯出 Excel</button></div><div id="ship-hist-list"><div class="empty-state">載入中...</div></div>';
@@ -32296,8 +32352,9 @@ function shipDayOf(iso){ const d=new Date(iso), p=n=>String(n).padStart(2,'0'); 
 function shipHistFiltered(){
   return shipHistRows.filter(d=>{
     if(shipHistDir!=='all'&&(shipIsIn(d)?'in':'out')!==shipHistDir) return false;
-    if(shipHistStat==='open'&&d.arrived_at) return false;
+    if(shipHistStat==='open'&&(d.arrived_at||d.cancelled_at)) return false;
     if(shipHistStat==='done'&&!d.arrived_at) return false;
+    if(shipHistStat==='cancel'&&!d.cancelled_at) return false;
     if(shipHistLate&&!shipIsLate(d)) return false;
     if(shipHistDay&&shipDayOf(d.dispatched_at)!==shipHistDay) return false;
     return true;
@@ -32313,23 +32370,24 @@ function shipExtraShipped(d){
 function shipHistRender(){
   const list=document.getElementById('ship-hist-list'); if(!list) return;
   const rows=shipHistFiltered();
-  const done=rows.filter(d=>d.arrived_at), waits=done.map(d=>shipMinBetween(d.dispatched_at,d.arrived_at));
-  const avg=waits.length?Math.round(waits.reduce((a,b)=>a+b,0)/waits.length):null, late=rows.filter(shipIsLate).length, open=rows.length-done.length;
+  const act=rows.filter(d=>!d.cancelled_at), cancel=rows.length-act.length;   // 不用了的車不算趟數、不算等車
+  const done=act.filter(d=>d.arrived_at), waits=done.map(d=>shipMinBetween(d.dispatched_at,d.arrived_at));
+  const avg=waits.length?Math.round(waits.reduce((a,b)=>a+b,0)/waits.length):null, late=act.filter(shipIsLate).length, open=act.length-done.length;
   const stat=document.getElementById('ship-hist-stat-txt');
-  if(stat) stat.innerHTML=(shipHistDay?esc(shipHistDay.slice(5).replace('-','/'))+' ':'本月 ')+'<b>'+rows.length+'</b> 趟 · 平均等 <b>'+shipDurTxt(avg)+'</b> · 超過 '+SHIP_LATE_MIN+' 分 <b'+(late?' style="color:var(--danger)"':'')+'>'+late+'</b> 趟'+(open?' · 還沒記車到 <b>'+open+'</b> 趟':'');
+  if(stat) stat.innerHTML=(shipHistDay?esc(shipHistDay.slice(5).replace('-','/'))+' ':'本月 ')+'<b>'+act.length+'</b> 趟 · 平均等 <b>'+shipDurTxt(avg)+'</b> · 超過 '+SHIP_LATE_MIN+' 分 <b'+(late?' style="color:var(--danger)"':'')+'>'+late+'</b> 趟'+(open?' · 還沒記車到 <b>'+open+'</b> 趟':'')+(cancel?' · 不用了 <b>'+cancel+'</b> 車':'');
   if(!rows.length){ list.innerHTML='<div class="empty-state">沒有符合篩選條件的派車紀錄</div>'; return; }
   list.innerHTML='<div class="ship-hist-wrap"><table class="ship-hist-tbl"><thead><tr><th>日期</th><th>派車</th><th>到達</th><th>等了</th><th>類別</th><th>內容</th><th>派車人</th><th>記錄車到</th><th>標記出貨</th><th>修改</th></tr></thead><tbody>'
     +rows.map(d=>{
       const dd=new Date(d.dispatched_at), min=d.arrived_at?shipMinBetween(d.dispatched_at,d.arrived_at):null;
-      const lateCls=shipIsLate(d)?' class="late"':'';
+      const cx=!!d.cancelled_at, lateCls=cx?' class="cancel"':(shipIsLate(d)?' class="late"':'');
       return '<tr'+lateCls+'><td>'+String(dd.getMonth()+1).padStart(2,'0')+'/'+String(dd.getDate()).padStart(2,'0')+'</td>'
-        +'<td>'+shipHm(d.dispatched_at)+'</td><td>'+(d.arrived_at?shipHm(d.arrived_at):'(未到)')+'</td>'
-        +'<td class="num">'+(d.arrived_at?shipDurTxt(min):'等 '+shipWaitTxt(d.dispatched_at))+'</td>'
+        +'<td>'+shipHm(d.dispatched_at)+'</td><td>'+(cx?'不用了':(d.arrived_at?shipHm(d.arrived_at):'(未到)'))+'</td>'
+        +'<td class="num">'+(cx?'<span title="'+esc((d.cancelled_by_name||'')+' '+shipHm(d.cancelled_at)+' 標記不用了')+'">取消</span>':(d.arrived_at?shipDurTxt(min):'等 '+shipWaitTxt(d.dispatched_at)))+'</td>'
         +'<td>'+(shipIsIn(d)?'進料':'出貨')+'</td>'
         +'<td class="txt">'+esc(shipDispatchLabel(d))+'</td><td>'+esc(d.created_by_name||'')+'</td><td>'+esc(d.arrived_by_name||'')+'</td>'
         +'<td class="num"'+(shipExtraShipped(d)?' title="其中 '+shipExtraShipped(d)+' 項是車到了才補勾的"':'')+'>'
           +((d.shipped_ids||[]).length?(d.shipped_ids.length+' 項'+(shipExtraShipped(d)?'（補勾 '+shipExtraShipped(d)+'）':'')):'—')+'</td>'
-        +'<td class="ops">'+(d.arrived_at?'':'<button class="ship-hist-op warn" title="忘了按車到了?在這裡補記到達時間" onclick="shipHistEdit('+Number(d.id)+',1)">補記車到</button>')
+        +'<td class="ops">'+(d.arrived_at||cx?'':'<button class="ship-hist-op warn" title="忘了按車到了?在這裡補記到達時間" onclick="shipHistEdit('+Number(d.id)+',1)">補記車到</button>')
           +'<button class="ship-hist-op" title="編輯這筆" onclick="shipHistEdit('+Number(d.id)+')">✏</button>'
           +'<button class="ship-hist-op del" title="刪除這筆" onclick="shipHistDel('+Number(d.id)+')">✕</button></td></tr>';
     }).join('')+'</tbody></table></div>';
@@ -32364,7 +32422,9 @@ window.shipHistEdit=function(id,fillNow){
         +'<button type="button" class="btn-sm" onclick="shipHistClearArr()">改回還在等車</button></div>'
       +'<div class="row"><label><span>柱位（多個用 . 分隔）</span><input id="she-beds" value="'+esc((d.beds||[]).join('.'))+'"></label>'
         +(mat?'<label><span>進料內容</span><input id="she-note" value="'+esc(d.note||'')+'"></label>'
+             :shipIsMulti(d)?'<label class="narrow"><span>車次</span><input value="'+esc(shipTripTxt(d))+'" disabled></label>'
              :'<label class="narrow"><span>'+qtyLabel+'</span><input type="number" min="0" step="1" id="she-n" value="'+esc(qtyVal==null?'':qtyVal)+'"></label>')+'</div>'
+      +('cancelled_at' in d?'<div class="row"><label class="ship-trip-rest" style="margin:0"><input type="checkbox" id="she-cancel"'+(d.cancelled_at?' checked':'')+'> 這車<b>不用了</b>(取消,不算等車)</label></div>':'')
       +'<div class="row"><label><span>派車人</span><input id="she-by" value="'+esc(d.created_by_name||'')+'"></label>'
         +'<label><span>記錄車到</span><input id="she-arrby" value="'+esc(d.arrived_by_name||'')+'"></label></div>'
       +'<label><span>派車訊息</span><textarea id="she-msg">'+esc(d.message||'')+'</textarea></label>'
@@ -32389,7 +32449,13 @@ window.shipHistSave=async function(){
     created_by_name:v('she-by'), arrived_by_name:arr?(v('she-arrby')||(currentUser&&currentUser.name)||''):''};
   if(shipIsIn(d)) patch.note=v('she-note')||null;
   else if(d.kind==='col') patch.col_qty=Math.max(0,parseInt(v('she-n'))||0);
-  else patch.cars=Math.max(0,parseInt(v('she-n'))||0);
+  else if(document.getElementById('she-n')) patch.cars=Math.max(0,parseInt(v('she-n'))||0);
+  const cxEl=document.getElementById('she-cancel');
+  if(cxEl){
+    if(cxEl.checked&&arr){ hint('已經記了到達時間就不能標「不用了」;要取消請先清空到達時間'); return; }
+    patch.cancelled_at=cxEl.checked?(d.cancelled_at||new Date().toISOString()):null;
+    patch.cancelled_by_name=cxEl.checked?(d.cancelled_by_name||(currentUser&&currentUser.name)||''):null;
+  }
   const r=await sbFetch('/rest/v1/ship_dispatches?id=eq.'+Number(d.id),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(patch)});
   if(!r.ok){ hint('儲存失敗('+r.status+')'); return; }
   closeModal('ship-hist-edit-modal');
@@ -32410,10 +32476,10 @@ window.shipHistExport=function(){
   const rows=shipHistFiltered();
   if(!rows.length){ alert('這個月沒有派車紀錄'); return; }
   const fmt=iso=>{ if(!iso) return ''; const d=new Date(iso); return d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+' '+shipHm(iso); };
-  const aoa=[['派車時間','到達時間','等車(分鐘)','類別','柱位','種類','進料內容','車數','柱子支數','派車人','記錄車到','標記出貨項數','其中車到補勾']]
+  const aoa=[['派車時間','到達時間','等車(分鐘)','類別','柱位','種類','進料內容','車數','車次','不用了(取消)','柱子支數','派車人','記錄車到','標記出貨項數','其中車到補勾']]
     .concat(rows.slice().reverse().map(d=>[fmt(d.dispatched_at),fmt(d.arrived_at),d.arrived_at?shipMinBetween(d.dispatched_at,d.arrived_at):'',
       shipIsIn(d)?'進料':'出貨','C棟'+(d.beds||[]).join('.'),shipIsIn(d)?'材料':(d.kind==='col'?'柱':'樑'),shipIsIn(d)?(d.note||''):'',
-      d.cars||'',d.col_qty||'',d.created_by_name||'',d.arrived_by_name||'',(d.shipped_ids||[]).length||'',shipExtraShipped(d)||'']));
+      d.cars||'',shipTripTxt(d),d.cancelled_at?fmt(d.cancelled_at)+(d.cancelled_by_name?' '+d.cancelled_by_name:''):'',d.col_qty||'',d.created_by_name||'',d.arrived_by_name||'',(d.shipped_ids||[]).length||'',shipExtraShipped(d)||'']));
   const ws=XLSX.utils.aoa_to_sheet(aoa), wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'派車紀錄');
   XLSX.writeFile(wb,'派車紀錄_'+((document.getElementById('ship-hist-ym')||{}).value||'')+'.xlsx');
