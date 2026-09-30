@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.30.1"/>
+<meta name="sc-version" content="2026.09.30.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2884,7 +2884,7 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
     <div class="modal-title" id="egst-modal-title">新增長榮人員</div>
     <div class="modal-grid">
       <div class="lf"><label>姓名</label><input type="text" id="egst-f-name" placeholder="姓名"/></div>
-      <div class="lf"><label>單位</label><select id="egst-f-unit"><option value="">—</option></select></div>
+      <div class="lf"><label>單位</label><div style="display:flex;gap:6px"><select id="egst-f-unit" style="flex:1;min-width:0"><option value="">—</option></select><button type="button" class="btn-sm" onclick="egstAddUnit()" title="新增單位(存到資料庫,大家共用)" style="border:1px solid var(--border);white-space:nowrap">＋ 單位</button></div></div>
       <div class="lf"><label>職級</label><select id="egst-f-rank"><option value="">—</option></select></div>
       <div class="lf"><label>辦公室位置</label><input type="text" id="egst-f-office" placeholder="辦公室位置"/></div>
     </div>
@@ -18899,8 +18899,22 @@ function filterBOM() {
   }
 }
 // 長榮人員「單位 / 職級」固定排序(全域,長榮人員表與 BOM 主辦下拉共用)
-const EGST_UNIT_ORDER=['長榮鋼鐵營業事業本部','製造部','機材部','職安部','品管課','總務課','製造二課','製造二課(S/P)','製造一課','管料課(車管)','管料課(堆高機手)','管料課(天車手)','管料課(鋼板)','保養課'];
+const EGST_UNIT_ORDER=['長榮鋼鐵營業事業本部','製造部','機材部','職安部','品管課','總務課','製造二課','製造二課(S/P)','製造一課','管料課(車管)','管料課(堆高機手)','管料課(天車手)','管料課(鋼板)','保養課','警衛室'];
 const EGST_RANK_ORDER=['副總','協理','經理','課長','專業工程師','助副','課員(主辦)','課員','工程員'];
+// 網頁上自行新增的單位存 app_config.eg_units_extra(JSON 陣列),載入後接在固定清單後面
+const EGST_UNIT_KEY='eg_units_extra';
+let egUnitsInflight=null;
+function egLoadUnits(force){
+  if(egUnitsInflight && !force) return egUnitsInflight;
+  egUnitsInflight=(async()=>{
+    try{
+      const r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+encodeURIComponent(EGST_UNIT_KEY));
+      const arr=(r.ok&&Array.isArray(r.data)&&r.data[0])?JSON.parse(r.data[0].value||'[]'):[];
+      (Array.isArray(arr)?arr:[]).forEach(u=>{ u=String(u||'').trim(); if(u && EGST_UNIT_ORDER.indexOf(u)<0) EGST_UNIT_ORDER.push(u); });
+    }catch(e){ console.warn('egLoadUnits',e); egUnitsInflight=null; }
+  })();
+  return egUnitsInflight;
+}
 function egOrderIdx(arr,v){ const i=arr.indexOf(String(v||'').trim()); return i<0?999:i; }
 // 長榮人員清單快取(供 BOM 主辦下拉使用;有 inflight 去重)
 let egStaffCache=null, egStaffInflight=null;
@@ -18908,7 +18922,7 @@ async function loadEgStaffList(){
   if(egStaffCache) return egStaffCache;
   if(egStaffInflight) return egStaffInflight;
   egStaffInflight=(async()=>{
-    try{ const r=await sbFetchAll('/rest/v1/eg_staff?select=name,unit,rank,seq'); egStaffCache=Array.isArray(r.data)?r.data:[]; }
+    try{ const [r]=await Promise.all([sbFetchAll('/rest/v1/eg_staff?select=name,unit,rank,seq'), egLoadUnits()]); egStaffCache=Array.isArray(r.data)?r.data:[]; }
     catch(e){ egStaffCache=[]; }
     egStaffInflight=null; return egStaffCache;
   })();
@@ -42125,7 +42139,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   window.egstInit=async function(){
     var tbl=document.getElementById('egst-table'); if(tbl) tbl.innerHTML='<div class="empty-state">載入中...</div>';
     try{
-      var res=await sbFetchAll('/rest/v1/eg_staff?select=*');
+      var res=(await Promise.all([sbFetchAll('/rest/v1/eg_staff?select=*'), egLoadUnits()]))[0];
       egstRows=Array.isArray(res.data)?res.data:[];
     }catch(e){ console.warn('egstInit failed',e); if(tbl) tbl.innerHTML='<div class="empty-state">載入失敗</div>'; return; }
     egstRender();
@@ -42168,6 +42182,26 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     fillSel('egst-f-unit', EGST_UNIT_ORDER, r?(r.unit||''):'');
     fillSel('egst-f-rank', EGST_RANK_ORDER, r?(r.rank||''):'');
     openModal('egst-modal');
+  };
+
+  // 新增單位:存進 app_config(全公司共用),存好直接選取
+  window.egstAddUnit=async function(){
+    var u=cleanStr(prompt('新增單位名稱'));
+    if(!u) return;
+    var sel=document.getElementById('egst-f-unit');
+    if(EGST_UNIT_ORDER.indexOf(u)>=0){ if(sel) sel.value=u; return; }
+    await egLoadUnits(true);   // 先抓最新,避免蓋掉別人剛加的
+    var fixed=EGST_UNIT_ORDER.indexOf(u)>=0;
+    if(!fixed){
+      var r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+encodeURIComponent(EGST_UNIT_KEY));
+      var extra=[]; try{ extra=(r.ok&&Array.isArray(r.data)&&r.data[0])?JSON.parse(r.data[0].value||'[]'):[]; }catch(e){ extra=[]; }
+      if(!Array.isArray(extra)) extra=[];
+      extra.push(u);
+      var w=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:EGST_UNIT_KEY,value:JSON.stringify(extra)})});
+      if(!w.ok){ alert('新增單位失敗'+(w.data&&w.data.message?(':'+w.data.message):'')); return; }
+      EGST_UNIT_ORDER.push(u);
+    }
+    fillSel('egst-f-unit', EGST_UNIT_ORDER, u);
   };
 
   window.egstSaveModal=async function(){
@@ -42223,7 +42257,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       res=await Promise.all([
         sbFetchAll('/rest/v1/eg_staff?select=id,name,unit,rank,office'),
         sbFetchAll('/rest/v1/staff?select=id,name,role,department,status&order=name'),
-        sbFetch('/rest/v1/app_config?select=value&key=eq.'+GL_KEY)
+        sbFetch('/rest/v1/app_config?select=value&key=eq.'+GL_KEY),
+        egLoadUnits()
       ]);
     }catch(e){ console.warn('glInit',e); }
     if(!res){ status('載入失敗，請重新整理','err'); return; }
