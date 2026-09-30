@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.30.3"/>
+<meta name="sc-version" content="2026.09.30.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2882,7 +2882,7 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
 <div class="modal-overlay" id="egst-unit-modal">
   <div class="modal">
     <div class="modal-title">單位管理</div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">改名會連同已經用這個單位的人一起改;刪除後,用這個單位的人單位會清空。清單順序就是人員表的排序。</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">改名會連同已經用這個單位的人一起改;刪除後,用這個單位的人單位會清空。可用上下箭頭調整順序,清單順序就是人員表的排序。</div>
     <div id="egst-unit-list" style="max-height:55vh;overflow:auto"></div>
     <div class="modal-actions">
       <button class="btn-modal-cancel" onclick="egstUnitAdd()">＋ 新增單位</button>
@@ -42238,6 +42238,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       return '<div style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--border)">'
         +'<span style="flex:1;min-width:0;overflow-wrap:anywhere">'+esc(u)+'</span>'
         +'<span style="font-size:12px;color:var(--text3);white-space:nowrap">'+n+' 人</span>'
+        +'<button class="btn-icon" onclick="egstMoveUnit('+i+',-1)" title="上移"'+(i===0?' disabled style="border:1px solid var(--border);opacity:.35"':' style="border:1px solid var(--border)"')+'>'+icSvg('chevUp')+'</button>'
+        +'<button class="btn-icon" onclick="egstMoveUnit('+i+',1)" title="下移"'+(i===EGST_UNIT_ORDER.length-1?' disabled style="border:1px solid var(--border);opacity:.35"':' style="border:1px solid var(--border)"')+'>'+icSvg('chevDown')+'</button>'
         +'<button class="btn-icon edit" onclick="egstRenameUnit('+i+')" title="改名" style="border:1px solid var(--border)">'+icSvg('pencil')+'</button>'
         +'<button class="btn-icon del" onclick="egstDeleteUnit('+i+')" title="刪除" style="border:1px solid var(--border)">'+icSvg('trash')+'</button>'
         +'</div>';
@@ -42254,6 +42256,22 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     renderUnitList();
   };
   window.egstUnitAdd=async function(){ if(await addUnit()) renderUnitList(); };
+  // 上下移動:清單順序＝人員表排序;先抓最新再依名字找位置,避免跟別人同時改時移錯
+  var unitMoving=false;
+  window.egstMoveUnit=async function(i,dir){
+    if(unitMoving) return;
+    var u=EGST_UNIT_ORDER[i]; if(u==null) return;
+    unitMoving=true;
+    try{
+      await egLoadUnits(true);
+      var list=EGST_UNIT_ORDER.slice(), idx=list.indexOf(u), to=idx+dir;
+      if(idx<0 || to<0 || to>=list.length){ renderUnitList(); return; }
+      list[idx]=list[to]; list[to]=u;
+      var w=await egSaveUnits(list);
+      if(!w.ok){ alert('排序儲存失敗'+unitErr(w)); }
+      afterUnitChange();
+    }finally{ unitMoving=false; }
+  };
   // 改名:清單換名字,已經用這個單位的人一起改
   window.egstRenameUnit=async function(i){
     var old=EGST_UNIT_ORDER[i]; if(old==null) return;
