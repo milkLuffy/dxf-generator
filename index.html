@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.30.2"/>
+<meta name="sc-version" content="2026.09.30.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2874,6 +2874,19 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
     <div class="modal-actions">
       <button class="btn-modal-cancel" onclick="closeModal('bom-modal')">取消</button>
       <button class="btn-modal-ok" onclick="saveBOM()" id="btn-save-bom">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 長榮人員單位管理 modal ── -->
+<div class="modal-overlay" id="egst-unit-modal">
+  <div class="modal">
+    <div class="modal-title">單位管理</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">改名會連同已經用這個單位的人一起改;刪除後,用這個單位的人單位會清空。清單順序就是人員表的排序。</div>
+    <div id="egst-unit-list" style="max-height:55vh;overflow:auto"></div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="egstUnitAdd()">＋ 新增單位</button>
+      <button class="btn-modal-ok" onclick="closeModal('egst-unit-modal')">完成</button>
     </div>
   </div>
 </div>
@@ -6236,7 +6249,10 @@ window.normalizeFullWidth=function(value){
     <div class="page" id="page-egstaff">
       <div class="page-header">
         <div class="page-title" style="margin-bottom:0">長榮人員</div>
-        <button class="btn-add-new" onclick="egstOpenModal(null)">＋ 新增人員</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-add-new" style="background:none;border:1px solid var(--border-hi);color:var(--text2)" onclick="egstOpenUnits()">🏷 單位管理</button>
+          <button class="btn-add-new" onclick="egstOpenModal(null)">＋ 新增人員</button>
+        </div>
       </div>
       <div class="search-bar">
         <input class="search-input" id="egst-search" placeholder="搜尋姓名、單位、職級、位置..." oninput="egstRender()"/>
@@ -18901,19 +18917,30 @@ function filterBOM() {
 // 長榮人員「單位 / 職級」固定排序(全域,長榮人員表與 BOM 主辦下拉共用)
 const EGST_UNIT_ORDER=['長榮鋼鐵營業事業本部','製造部','機材部','職安部','品管課','總務課','製造二課','製造二課(S/P)','製造一課','管料課(車管)','管料課(堆高機手)','管料課(天車手)','管料課(鋼板)','保養課','警衛室'];
 const EGST_RANK_ORDER=['副總','協理','經理','課長','專業工程師','助副','課員(主辦)','課員','工程員'];
-// 網頁上自行新增的單位存 app_config.eg_units_extra(JSON 陣列),載入後接在固定清單後面
-const EGST_UNIT_KEY='eg_units_extra';
+// 單位清單可在網頁上新增/改名/刪除:整份清單(含順序)存 app_config.eg_units(JSON 陣列)。
+// 還沒存過時 = 上面的預設清單 + 舊版 eg_units_extra(之前只存自行新增的單位)。
+const EGST_UNIT_KEY='eg_units', EGST_UNIT_EXTRA_KEY='eg_units_extra';
+const EGST_UNIT_DEFAULT=EGST_UNIT_ORDER.slice();
 let egUnitsInflight=null;
 function egLoadUnits(force){
   if(egUnitsInflight && !force) return egUnitsInflight;
   egUnitsInflight=(async()=>{
     try{
-      const r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+encodeURIComponent(EGST_UNIT_KEY));
-      const arr=(r.ok&&Array.isArray(r.data)&&r.data[0])?JSON.parse(r.data[0].value||'[]'):[];
-      (Array.isArray(arr)?arr:[]).forEach(u=>{ u=String(u||'').trim(); if(u && EGST_UNIT_ORDER.indexOf(u)<0) EGST_UNIT_ORDER.push(u); });
+      const r=await sbFetch('/rest/v1/app_config?select=key,value&key=in.('+EGST_UNIT_KEY+','+EGST_UNIT_EXTRA_KEY+')');
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const get=k=>{ const row=(r.data||[]).find(x=>x.key===k); if(!row) return null; try{ const a=JSON.parse(row.value||'[]'); return Array.isArray(a)?a:null; }catch(e){ return null; } };
+      const full=get(EGST_UNIT_KEY);
+      const list=full?[]:EGST_UNIT_DEFAULT.slice();
+      (full||get(EGST_UNIT_EXTRA_KEY)||[]).forEach(u=>{ u=String(u||'').trim(); if(u && list.indexOf(u)<0) list.push(u); });
+      EGST_UNIT_ORDER.splice(0, EGST_UNIT_ORDER.length, ...list);
     }catch(e){ console.warn('egLoadUnits',e); egUnitsInflight=null; }
   })();
   return egUnitsInflight;
+}
+async function egSaveUnits(list){
+  const w=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:EGST_UNIT_KEY,value:JSON.stringify(list)})});
+  if(w.ok) EGST_UNIT_ORDER.splice(0, EGST_UNIT_ORDER.length, ...list);
+  return w;
 }
 function egOrderIdx(arr,v){ const i=arr.indexOf(String(v||'').trim()); return i<0?999:i; }
 // 長榮人員清單快取(供 BOM 主辦下拉使用;有 inflight 去重)
@@ -42184,24 +42211,84 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     openModal('egst-modal');
   };
 
-  // 新增單位:存進 app_config(全公司共用),存好直接選取
-  window.egstAddUnit=async function(){
+  function unitErr(w){ return (w&&w.data&&w.data.message)?(':'+w.data.message):''; }
+  // 新增單位:存進 app_config(全公司共用);回傳新單位名稱(失敗/取消回傳 null)
+  async function addUnit(){
     var u=cleanStr(prompt('新增單位名稱'));
-    if(!u) return;
-    var sel=document.getElementById('egst-f-unit');
-    if(EGST_UNIT_ORDER.indexOf(u)>=0){ if(sel) sel.value=u; return; }
-    await egLoadUnits(true);   // 先抓最新,避免蓋掉別人剛加的
-    var fixed=EGST_UNIT_ORDER.indexOf(u)>=0;
-    if(!fixed){
-      var r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+encodeURIComponent(EGST_UNIT_KEY));
-      var extra=[]; try{ extra=(r.ok&&Array.isArray(r.data)&&r.data[0])?JSON.parse(r.data[0].value||'[]'):[]; }catch(e){ extra=[]; }
-      if(!Array.isArray(extra)) extra=[];
-      extra.push(u);
-      var w=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:EGST_UNIT_KEY,value:JSON.stringify(extra)})});
-      if(!w.ok){ alert('新增單位失敗'+(w.data&&w.data.message?(':'+w.data.message):'')); return; }
-      EGST_UNIT_ORDER.push(u);
-    }
+    if(!u) return null;
+    await egLoadUnits(true);   // 先抓最新,避免蓋掉別人剛改的
+    if(EGST_UNIT_ORDER.indexOf(u)>=0) return u;
+    var w=await egSaveUnits(EGST_UNIT_ORDER.concat([u]));
+    if(!w.ok){ alert('新增單位失敗'+unitErr(w)); return null; }
+    return u;
+  }
+  // 人員編輯視窗的「＋ 單位」:存好直接選取
+  window.egstAddUnit=async function(){
+    var u=await addUnit(); if(!u) return;
     fillSel('egst-f-unit', EGST_UNIT_ORDER, u);
+  };
+
+  // ── 單位管理(新增/改名/刪除)──
+  function unitCount(u){ return egstRows.filter(function(r){ return String(r.unit||'').trim()===u; }).length; }
+  function renderUnitList(){
+    var box=document.getElementById('egst-unit-list'); if(!box) return;
+    if(!EGST_UNIT_ORDER.length){ box.innerHTML='<div class="empty-state">目前沒有單位</div>'; return; }
+    box.innerHTML=EGST_UNIT_ORDER.map(function(u,i){
+      var n=unitCount(u);
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--border)">'
+        +'<span style="flex:1;min-width:0;overflow-wrap:anywhere">'+esc(u)+'</span>'
+        +'<span style="font-size:12px;color:var(--text3);white-space:nowrap">'+n+' 人</span>'
+        +'<button class="btn-icon edit" onclick="egstRenameUnit('+i+')" title="改名" style="border:1px solid var(--border)">'+icSvg('pencil')+'</button>'
+        +'<button class="btn-icon del" onclick="egstDeleteUnit('+i+')" title="刪除" style="border:1px solid var(--border)">'+icSvg('trash')+'</button>'
+        +'</div>';
+    }).join('');
+  }
+  function afterUnitChange(){
+    if(typeof window.__invalidateEgStaff==='function') window.__invalidateEgStaff();
+    renderUnitList(); egstRender();
+  }
+  window.egstOpenUnits=async function(){
+    var box=document.getElementById('egst-unit-list'); if(box) box.innerHTML='<div class="empty-state">載入中...</div>';
+    openModal('egst-unit-modal');
+    await egLoadUnits(true);
+    renderUnitList();
+  };
+  window.egstUnitAdd=async function(){ if(await addUnit()) renderUnitList(); };
+  // 改名:清單換名字,已經用這個單位的人一起改
+  window.egstRenameUnit=async function(i){
+    var old=EGST_UNIT_ORDER[i]; if(old==null) return;
+    var nu=cleanStr(prompt('「'+old+'」改名為', old));
+    if(!nu || nu===old) return;
+    await egLoadUnits(true);
+    var idx=EGST_UNIT_ORDER.indexOf(old);
+    if(idx<0){ alert('「'+old+'」已經被別人改掉或刪除了'); renderUnitList(); return; }
+    var list=EGST_UNIT_ORDER.slice();
+    if(list.indexOf(nu)>=0){
+      if(!await uiConfirm('「'+nu+'」已經有了,要把「'+old+'」的人併到「'+nu+'」嗎?')) return;
+      list.splice(idx,1);
+    }else list[idx]=nu;
+    var p=await sbFetch('/rest/v1/eg_staff?unit=eq.'+encodeURIComponent(old), {method:'PATCH', headers:{'Prefer':'return=minimal'}, body:JSON.stringify({unit:nu})});
+    if(!p.ok){ alert('人員單位更新失敗'+unitErr(p)); return; }
+    egstRows.forEach(function(r){ if(String(r.unit||'').trim()===old) r.unit=nu; });
+    var w=await egSaveUnits(list);
+    if(!w.ok){ alert('單位清單儲存失敗'+unitErr(w)); }
+    afterUnitChange();
+  };
+  // 刪除:有人在用 → 確認後把那些人的單位清空
+  window.egstDeleteUnit=async function(i){
+    var u=EGST_UNIT_ORDER[i]; if(u==null) return;
+    var n=unitCount(u);
+    if(!await uiConfirm('確定刪除單位「'+u+'」?'+(n?('\n目前有 '+n+' 人是這個單位,刪除後他們的單位會清空。'):''))) return;
+    await egLoadUnits(true);
+    var list=EGST_UNIT_ORDER.filter(function(x){ return x!==u; });
+    if(n){
+      var p=await sbFetch('/rest/v1/eg_staff?unit=eq.'+encodeURIComponent(u), {method:'PATCH', headers:{'Prefer':'return=minimal'}, body:JSON.stringify({unit:null})});
+      if(!p.ok){ alert('人員單位清空失敗'+unitErr(p)); return; }
+      egstRows.forEach(function(r){ if(String(r.unit||'').trim()===u) r.unit=null; });
+    }
+    var w=await egSaveUnits(list);
+    if(!w.ok){ alert('刪除單位失敗'+unitErr(w)); }
+    afterUnitChange();
   };
 
   window.egstSaveModal=async function(){
