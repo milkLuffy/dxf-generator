@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.30.4"/>
+<meta name="sc-version" content="2026.09.30.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -8442,6 +8442,8 @@ window.normalizeFullWidth=function(value){
             <input type="date" id="productBulkBefore" class="search-input" style="width:138px">
           </label>
           <button class="btn" onclick="spxCompleteBeforeDate('product')">批次勾選完成</button>
+          <button class="btn btn-primary" id="pmMergeBtn" onclick="pmOpenMergedDetails()" disabled title="在「細項」欄勾選多張通知單,合併看同規格數量加總">合併細項（0）</button>
+          <button class="btn" id="pmMergeClear" onclick="pmClearSel()" style="display:none">清除勾選</button>
           <input type="text" id="spxSearch-product" placeholder="全欄搜尋…" oninput="spxSearchInput('product')">
           <div style="flex:1"></div>
           <span class="prod-count" id="spxCount-product"></span>
@@ -47766,6 +47768,33 @@ function pmOpenDetails(rowKey){
   modal.innerHTML=pmDetailModalHtml(title,metaText,pmDetailItems(row,meta,details));
   modal.style.display='';
 }
+// 成品材多張通知單合併:勾選幾筆(例 B259-1D2B + 1D2G 常一起領)→ 同一張彈窗看全部細項與同規格加總
+// 勾選以資料庫 id 記(重新載入後 _key 會換),還沒存進資料庫的新列才用 _key
+const pmSel=new Set();
+function pmSelKey(r){ return r.id!=null?'id'+r.id:'k'+r._key; }
+function pmIsSel(r){ return pmSel.has(pmSelKey(r)); }
+function pmSelRows(){ return prodProduct.filter(r=>pmIsSel(r)&&((pmMeta(r.remark)||{}).details||[]).length); }
+function pmUpdateSelBar(){
+  const n=pmSelRows().length, b=document.getElementById('pmMergeBtn'), c=document.getElementById('pmMergeClear');
+  if(b){ b.textContent='合併細項（'+n+'）'; b.disabled=n<1; }
+  if(c) c.style.display=n?'':'none';
+}
+function pmToggleSel(rowKey,on){ const r=prodProduct.find(x=>String(x._key)===String(rowKey)); if(!r) return; const k=pmSelKey(r); if(on) pmSel.add(k); else pmSel.delete(k); pmUpdateSelBar(); }
+function pmClearSel(){ pmSel.clear(); pmUpdateSelBar(); spxRender('product'); }
+function pmOpenMergedDetails(){
+  const rows=pmSelRows().sort((a,b)=>String(a.pick_date||'').localeCompare(String(b.pick_date||''))||String(a.serial||'').localeCompare(String(b.serial||'')));
+  if(!rows.length){ alert('請先在「細項」欄勾選要合併的通知單。'); return; }
+  const items=[]; rows.forEach(row=>{ const meta=pmMeta(row.remark); items.push(...pmDetailItems(row,meta,meta.details)); });
+  const serials=rows.map(r=>{ const m=pmMeta(r.remark)||{}; return m.full_serial||r.serial||''; }).filter(Boolean);
+  const projs=[...new Set(rows.map(r=>String(r.proj_no||'').trim()).filter(Boolean))];
+  const dates=rows.map(r=>String(r.pick_date||'').slice(0,10)).filter(Boolean).sort();
+  const span=dates.length?(dates[0]===dates[dates.length-1]?dates[0]:dates[0]+' ～ '+dates[dates.length-1]):'';
+  const modal=document.getElementById('pmDetailModal');
+  const title=projs.join('、')+'－合併細項（'+rows.length+' 張）';
+  const metaText=(span?span+'　':'')+'流水編號 '+serials.join('、')+'　共 '+items.length+' 筆細項';
+  modal.innerHTML=pmDetailModalHtml(title,metaText,items);
+  modal.style.display='';
+}
 // 工程區詳情頁:把該工程區所有成品材通知單的細項彙整成一張
 function pmOpenZoneDetails(){
   const {proj,zone}=prodDetailCtx;
@@ -48495,7 +48524,7 @@ function spTrackNewCP(defaultProj,defaultZone){
 }
 
 // ── 渲染 ──
-function spxRender(key){ if(key==='track'){spTrackRenderOuter();return;}if(key==='detail'){spTrackRenderDetailOuter();return;} spxRenderHead(key); spxRenderBody(key); }
+function spxRender(key){ if(key==='track'){spTrackRenderOuter();return;}if(key==='detail'){spTrackRenderDetailOuter();return;} spxRenderHead(key); spxRenderBody(key); if(key==='product') pmUpdateSelBar(); }
 function spxRenderHead(key){ const cfg=SPX[key], head=document.getElementById('spxHead-'+key); if(!head) return;
   head.innerHTML='<tr>'+spxCols(key).map(c=>{ const active=colFilterActive(key,c.k)?' active':'';
     return '<th>'+esc(c.h)+'<button class="cf-th-btn'+active+'" title="篩選" onclick="event.stopPropagation();spxOpenFilter(event,\''+key+'\',\''+c.k+'\')">▼</button></th>';
@@ -48547,7 +48576,8 @@ function spxOpenMobileSheet(key,i,refresh){
       if(c.k==='_details'){
         const n=key==='manual'?moDetails(r).length:((pmMeta(r.remark)||{}).details||[]).length, fn=key==='manual'?'moOpenDetails':'pmOpenDetails';
         if(!n&&key!=='manual') return '<div class="spx-m-field wide">'+label+'<div class="spx-m-toggle" style="cursor:default;color:var(--text3)">沒有細項</div></div>';
-        return '<div class="spx-m-field wide">'+label+'<button type="button" class="sp-sheet-cancel" style="margin:0" onclick="spxCloseMobileSheet(false);'+fn+'('+r._key+')">'+(n?'查看細項（'+n+' 筆）':'新增細項')+'</button></div>';
+        const pick=(key==='product'&&n)?'<label class="spx-m-toggle" style="margin-top:6px"><input type="checkbox"'+(pmIsSel(r)?' checked':'')+' onchange="pmToggleSel('+r._key+',this.checked)">勾選合併細項</label>':'';
+        return '<div class="spx-m-field wide">'+label+'<button type="button" class="sp-sheet-cancel" style="margin:0" onclick="spxCloseMobileSheet(false);'+fn+'('+r._key+')">'+(n?'查看細項（'+n+' 筆）':'新增細項')+'</button>'+pick+'</div>';
       }
       return '';
     }
@@ -48607,7 +48637,9 @@ function spxRowHtml(key,i){ const cfg=SPX[key], arr=prodArr(key), r=arr[i], blan
       if(typeof c.render==='function'){ h+=td+c.render(r)+'</td>'; }   // 自訂顯示欄(不寫入 DB)
       else{
         const meta=(key==='product'||key==='welding')?pmMeta(r.remark):null, n=meta&&Array.isArray(meta.details)?meta.details.length:0;
-        h+=td+(n?'<button class="spx-detail-btn" onclick="pmOpenDetails('+r._key+')">查看 '+n+' 筆</button>':'—')+'</td>';
+        const btn=n?'<button class="spx-detail-btn" onclick="pmOpenDetails('+r._key+')">查看 '+n+' 筆</button>':'—';
+        // 成品材:細項旁可勾選,多張通知單合併看同規格加總
+        h+=td+((key==='product'&&n)?'<span style="display:inline-flex;align-items:center;gap:6px"><input type="checkbox" title="勾選後按上方「合併細項」" style="min-width:0;width:16px;height:16px;cursor:pointer"'+(pmIsSel(r)?' checked':'')+' onchange="pmToggleSel('+r._key+',this.checked)">'+btn+'</span>':btn)+'</td>';
       }
     } else if(c.check){
       h+=td+'<label style="display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer"><input type="checkbox" style="min-width:0;width:18px;height:18px" '+(r[c.k]?'checked ':'')+'onchange="spxEdit(\''+key+'\','+i+',\''+c.k+'\',this.checked)"><span>'+(r[c.k]?'完成':'未完成')+'</span></label></td>';
