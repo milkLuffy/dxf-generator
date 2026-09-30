@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.29.11"/>
+<meta name="sc-version" content="2026.09.30.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -54907,6 +54907,8 @@ function ldFix(n,d){ return (Math.round(ldNum(n)*Math.pow(10,d==null?2:d))/Math.
 function ldISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function ldToday(){ return ldISO(new Date()); }
 function ldYMOf(ymd){ return String(ymd||'').slice(0,7); }
+// 今天所在的產量月(上月 26 日 ~ 當月 25 日;26 號起算下個月)
+function ldProdYM(){ const t=ldToday(); return (+t.slice(8,10)>=26)?ldYMAdd(t.slice(0,7),1):t.slice(0,7); }
 function ldYMAdd(ym,n){ let a=String(ym||'').split('-'); let y=+a[0], m=+a[1]+n; while(m<1){m+=12;y--;} while(m>12){m-=12;y++;} return y+'-'+String(m).padStart(2,'0'); }
 function ldWk(ymd){ const d=new Date(String(ymd||'')+'T00:00:00'); return isNaN(d)?'':['日','一','二','三','四','五','六'][d.getDay()]; }
 
@@ -55079,7 +55081,7 @@ async function ldInit(){
     if(v.ldtab) ldTab=(v.ldtab==='board')?'board':'plan';
     if(/^\d{4}-\d{2}$/.test(v.ldym||'')) ldYM=v.ldym;
   }
-  if(!ldYM) ldYM=ldToday().slice(0,7);
+  if(!ldYM) ldYM=ldProdYM();
   const m=ldEl('ld-month'); if(m) m.value=ldYM;
   ldSyncView(false);   // 把實際的分頁/月份補寫進目前這一筆歷史(側邊欄進來時只記了 {page:'loading'})
   if(typeof ldApplyTab==='function'){ ldApplyTab(); if(ldTab==='board') wbLoad(); }   // 上線白板在檔案最末
@@ -55092,7 +55094,7 @@ function ldSyncView(push){
   try{ localStorage.setItem(PAGE_KEY, JSON.stringify(v)); history.replaceState({__view:v}, '', viewToHash(v)); }catch(e){}
 }
 function ldMonthNav(dir){
-  ldYM = (dir===0) ? ldToday().slice(0,7) : ldYMAdd(ldYM,dir);
+  ldYM = (dir===0) ? ldProdYM() : ldYMAdd(ldYM,dir);
   const m=ldEl('ld-month'); if(m) m.value=ldYM;
   ldSyncView(true);
   ldLoad();
@@ -56265,7 +56267,7 @@ function wbDrop(e,mon){
 async function ldDashPlan(){
   const box=document.getElementById('dash-plan'); if(!box) return;
   try{
-    const t=ldToday(), ym=(+t.slice(8,10)>=26)?ldYMAdd(t.slice(0,7),1):t.slice(0,7), rg=ldMonthRange(ym);
+    const ym=ldProdYM(), rg=ldMonthRange(ym);
     const rpl=await sbFetchAll('/rest/v1/loading_plan?select=zone_id,plan_tons&ym=eq.'+encodeURIComponent(ym));
     const plans=(rpl.ok&&Array.isArray(rpl.data))?rpl.data:[];
     if(!plans.length){ box.hidden=true; return; }
