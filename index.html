@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.02.1"/>
+<meta name="sc-version" content="2026.10.02.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -43467,6 +43467,12 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       if(String(s.name||'').trim()==='鄭寓守') return;   // 老闆不列入薪資計算及任何薪資匯出
       var hireDate=String(s.hire_date||'').slice(0,10);
       if(/^\d{4}-\d{2}-\d{2}$/.test(hireDate)&&hireDate>r.last) return;   // 尚未到職：不出現在該月網頁、CSV 及 Excel
+      var resignDate=String(s.resign_date||'').slice(0,10);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(resignDate)&&resignDate<r.first) return;   // 計薪月之前就離職：不列入(當月離職照算)
+      if(s.status==='離職'&&!resignDate){   // 標離職但沒填離職日：當月打卡、出勤回報都沒有資料才不列入
+        var hasPunch=usePunch&&((prPunchByKey[s.id_number]||prPunchByKey[s.name]||[]).length>0);
+        if(!hasPunch&&!(prAttByName[s.name]||[]).length) return;
+      }
       var pay=prPayMap[s.id];
       if(!pay||!pay.pay_type){ if(s.status!=='離職') noset.push(s.name); return; }
       var staffName=String(s.name||'').trim();
