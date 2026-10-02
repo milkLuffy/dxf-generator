@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.09.30.5"/>
+<meta name="sc-version" content="2026.10.02.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -4980,6 +4980,9 @@ window.normalizeFullWidth=function(value){
     #page-drawingsearch .ds-map-list{display:grid;gap:6px;max-height:540px;overflow:auto;padding-right:3px}
     #page-drawingsearch .ds-map-row{display:grid;grid-template-columns:64px minmax(180px,1fr) minmax(140px,1.2fr) auto auto auto;gap:7px;align-items:center;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg3)}
     #page-drawingsearch .ds-map-page{font-size:13px;font-weight:600;white-space:nowrap}.ds-map-select{width:100%;min-width:0}.ds-map-detail{font-size:11px;color:var(--text3);min-width:0;overflow-wrap:anywhere}
+    #page-drawingsearch .ds-sheet-box{padding:10px;border:1px dashed var(--border);border-radius:8px;margin:8px 0}
+    #page-drawingsearch .ds-sheet-box textarea{width:100%;box-sizing:border-box;font-family:var(--mono);font-size:12px;margin-top:8px;resize:vertical}
+    #page-drawingsearch .ds-sheet-label{color:var(--accent2);font-family:var(--mono)}
     #page-drawingsearch .ds-map-warn{padding:9px 11px;border:1px solid #d29922;border-radius:8px;background:rgba(210,153,34,.12);color:#d29922;font-size:12px;line-height:1.6}
     #page-drawingsearch .ds-page-input{width:62px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px}
     #ds-viewer{width:min(1100px,96vw);height:min(850px,94vh);padding:0;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text)}
@@ -5062,6 +5065,21 @@ window.normalizeFullWidth=function(value){
             <label class="ds-file-picker" for="ds-file"><span class="ds-file-badge">PDF</span><span>選擇圖面檔案</span></label>
             <span id="ds-file-name" class="ds-file-name" title="尚未選擇檔案">尚未選擇檔案</span>
             <button id="ds-save" class="btn btn-gen" onclick="dsSavePending()" disabled>上傳並儲存頁碼標記</button>
+          </div>
+          <div class="ds-sheet-box">
+            <div class="ds-row">
+              <span class="ds-title" style="font-size:13px;margin:0">圖號表（選填）</span>
+              <input id="ds-sheet-file" class="ds-file-native" type="file" accept=".xlsx,.xls,.csv,.txt" onchange="dsSheetFileSelected(this)">
+              <label class="btn" for="ds-sheet-file">選擇 Excel／CSV</label>
+              <button class="btn" onclick="dsSheetTogglePaste()">貼上</button>
+              <button id="ds-sheet-clear" class="btn" onclick="dsSheetClear()" hidden>清除圖號表</button>
+              <span id="ds-sheet-status" class="ds-status" style="margin:0"></span>
+            </div>
+            <div id="ds-sheet-paste" hidden>
+              <textarea id="ds-sheet-text" class="ds-input" rows="5" placeholder="從 Excel 整張複製貼上（含「圖號」標題列），或一行一個圖號，例如：&#10;S4-D21041(1/2)&#10;S4-D21041(2/2)"></textarea>
+              <div class="ds-row" style="margin-top:6px"><button class="btn btn-gen" onclick="dsSheetApplyText()">套用圖號表</button></div>
+            </div>
+            <div class="ds-status" style="margin:4px 0 0">有圖號表就照圖號表的順序一頁一頁對；S4-D21041(1/2)、(2/2) 兩頁都會對到 BOM 的 S4-D21041。沒有圖號表就照 BOM 圖號順序。圖號表依工程區存起來，下次上傳同一區不用再貼。</div>
           </div>
           <div class="ds-progress"><i id="ds-progress-bar"></i></div>
           <div id="ds-progress-text" class="ds-status">選擇 PDF 後，系統會依 BOM 圖號順序預填每一頁。只要預覽並修正封面、缺頁或重複圖號，再一次儲存即可。</div>
@@ -51289,6 +51307,7 @@ let dsViewerFileId = '', dsViewerPartIndex = -1;
 let dsViewerPageNumber = 1, dsViewerPdf = null, dsViewerRenderTask = null, dsActiveFileId = '';
 let dsSearchResults = [], dsPrintSelection = new Set(), dsPrintBusy = false, dsOpenBusy = false;
 let dsPrintQueue = new Map();
+let dsSheet = null;   // 圖號表(依工程區存 app_config.ds_sheet_<zoneId>):PDF 頁序的圖號清單,例 S4-D21041(1/2)、S4-D21041(2/2)
 let dsViewerPageCache = new Map(), dsViewerPrefetchTask = null, dsViewerPrefetchTimer = 0;
 
 const dsEl = id => document.getElementById(id);
@@ -51527,7 +51546,7 @@ async function dsProjectChanged() {
   zoneSelect.innerHTML = '<option value="">載入中…</option>';
   dsEl('ds-file').value = '';
   dsSetSelectedFileName();
-  dsBom = []; dsDrawingGroups = []; dsFiles = []; dsPageDrawings = []; dsPending = null; dsRenderAll();
+  dsBom = []; dsDrawingGroups = []; dsFiles = []; dsPageDrawings = []; dsPending = null; dsSheet = null; dsRenderSheetStatus(); dsRenderAll();
   if (!projectId) {
     zoneSelect.innerHTML = '<option value="">請先選擇工程</option>';
     return;
@@ -51548,17 +51567,22 @@ async function dsZoneChanged() {
   dsEl('ds-save').disabled = true;
   dsEl('ds-save').textContent = '上傳並儲存頁碼標記';
   if (!zoneId) {
-    dsBom = []; dsDrawingGroups = []; dsFiles = []; dsPageDrawings = []; dsRenderAll();
+    dsBom = []; dsDrawingGroups = []; dsFiles = []; dsPageDrawings = []; dsSheet = null; dsRenderSheetStatus(); dsRenderAll();
     return;
   }
   dsEl('ds-bom-status').textContent = '載入 BOM 圖號與圖面頁碼…';
-  const [bomResult, fileResult, pageResult] = await Promise.all([
+  const [bomResult, fileResult, pageResult, sheetResult] = await Promise.all([
     sbFetchAll('/rest/v1/components?select=part_no,drawing_no&zone_id=eq.' + encodeURIComponent(zoneId)),
     sbFetch('/rest/v1/drawing_files?select=*&zone_id=eq.' + encodeURIComponent(zoneId) + '&order=created_at.desc'),
-    sbFetchAll('/rest/v1/drawing_page_drawings?select=id,file_id,drawing_no,page_no&zone_id=eq.' + encodeURIComponent(zoneId))
+    sbFetchAll('/rest/v1/drawing_page_drawings?select=id,file_id,drawing_no,page_no&zone_id=eq.' + encodeURIComponent(zoneId)),
+    sbFetch('/rest/v1/app_config?select=value&key=eq.' + encodeURIComponent(dsSheetKey(zoneId)))
   ]);
+  if (zoneId !== dsZoneId()) return;   // 載入途中換了工程區
   dsBom = bomResult.ok && Array.isArray(bomResult.data) ? bomResult.data : [];
   dsBuildDrawingGroups();
+  dsSheet = null;
+  try { const raw = sheetResult.ok && sheetResult.data?.[0]?.value; const list = raw ? JSON.parse(raw) : null; if (Array.isArray(list) && list.length) dsSheet = list.map(String); } catch (_) {}
+  dsRenderSheetStatus();
   if (!fileResult.ok || !pageResult.ok) {
     dsFiles = []; dsPageDrawings = [];
     dsEl('ds-bom-status').textContent = '圖號頁碼功能尚未建立，請執行最新版 drawing_index_migration.sql。';
@@ -51593,11 +51617,11 @@ function dsRenderPending() {
   if (!dsPending) { box.innerHTML = ''; return; }
   const mapped = dsPending.pageMap.filter(Boolean).length;
   const partText = dsPending.uploadParts.length > 1 ? '；將分成 ' + dsPending.uploadParts.length + ' 份上傳' : '';
-  const mismatch = dsPending.pages !== dsDrawingGroups.length
-    ? '<div class="ds-map-warn">PDF 有 ' + dsPending.pages + ' 頁，BOM 有 ' + dsDrawingGroups.length + ' 個圖號；請檢查封面、缺頁或重複圖號。</div>' : '';
+  const orderLen = dsOrderList().length;
+  const mismatch = dsPending.pages !== orderLen
+    ? '<div class="ds-map-warn">PDF 有 ' + dsPending.pages + ' 頁，' + (dsSheet ? '圖號表有 ' + orderLen + ' 張圖' : 'BOM 有 ' + orderLen + ' 個圖號') + '；請檢查封面、缺頁或重複圖號。</div>' : '';
   const rows = dsPending.pageMap.map((drawingNo, index) => {
-    const group = dsGroupForDrawing(drawingNo);
-    const detail = group ? group.parts.length + ' 個構件：' + group.parts.slice(0, 6).map(dsEsc).join('、') + (group.parts.length > 6 ? '…' : '') : '此頁不建立搜尋索引';
+    const detail = dsPendingDetailHtml(index);
     return '<div class="ds-map-row"><div class="ds-map-page">第 ' + (index + 1) + ' 頁</div>' +
       '<select class="filter-select ds-map-select" onchange="dsSetPageDrawing(' + index + ',this.value)">' + dsPageOptions(drawingNo) + '</select>' +
       '<div class="ds-map-detail" id="ds-map-detail-' + index + '">' + detail + '</div>' +
@@ -51606,24 +51630,42 @@ function dsRenderPending() {
       '<button class="btn" onclick="dsSequenceFromPage(' + index + ')">從此順排</button></div>';
   }).join('');
   box.innerHTML = '<div class="ds-map-head"><div><strong>' + dsEsc(dsPending.file.name) + '</strong><div class="ds-meta">' + dsPending.pages + ' 頁' + partText + '；目前標記 ' + mapped + ' 頁</div></div>' +
-    '<div class="ds-row"><label class="ds-meta">第一個圖號從第</label><input id="ds-start-page" class="ds-page-input" type="number" min="1" max="' + dsPending.pages + '" value="' + dsPending.startPage + '"><span class="ds-meta">頁開始</span><button class="btn btn-gen" onclick="dsApplyDefaultMapping()">依圖號順序重排</button></div></div>' +
+    '<div class="ds-row"><label class="ds-meta">第一個圖號從第</label><input id="ds-start-page" class="ds-page-input" type="number" min="1" max="' + dsPending.pages + '" value="' + dsPending.startPage + '"><span class="ds-meta">頁開始</span><button class="btn btn-gen" onclick="dsApplyDefaultMapping()">' + (dsSheet ? '依圖號表順序重排' : '依 BOM 圖號順序重排') + '</button></div></div>' +
     mismatch + '<div class="ds-map-list">' + rows + '</div>';
 }
 
 function dsSetPageDrawing(index, drawingNo) {
   if (!dsPending || index < 0 || index >= dsPending.pageMap.length) return;
   dsPending.pageMap[index] = drawingNo;
-  const group = dsGroupForDrawing(drawingNo);
+  if (dsPending.labels) dsPending.labels[index] = '';   // 手動改了就不再顯示圖號表的分頁名稱
   const detail = dsEl('ds-map-detail-' + index);
-  if (detail) detail.textContent = group ? group.parts.length + ' 個構件：' + group.parts.slice(0, 6).join('、') + (group.parts.length > 6 ? '…' : '') : '此頁不建立搜尋索引';
+  if (detail) detail.innerHTML = dsPendingDetailHtml(index);
   dsEl('ds-save').disabled = !dsPending.pageMap.some(Boolean);
 }
 
-function dsSequentialPageMap(pageCount, startPage) {
-  return Array.from({ length: pageCount }, (_, index) => {
-    const groupIndex = index - startPage + 1;
-    return groupIndex >= 0 && groupIndex < dsDrawingGroups.length ? dsDrawingGroups[groupIndex].drawing_no : '';
-  });
+function dsPendingDetailHtml(index) {
+  const label = dsPending?.labels?.[index] || '';
+  const group = dsGroupForDrawing(dsPending?.pageMap[index]);
+  const head = label ? '<span class="ds-sheet-label">' + dsEsc(label) + '</span> → ' : '';
+  if (group) return head + group.parts.length + ' 個構件：' + group.parts.slice(0, 6).map(dsEsc).join('、') + (group.parts.length > 6 ? '…' : '');
+  return head + (label ? 'BOM 沒有這個圖號，此頁略過' : '此頁不建立搜尋索引');
+}
+
+// 預填順序:有圖號表照圖號表(一張圖可能 (1/2)、(2/2) 兩頁,都對到同一個 BOM 圖號),沒有就照 BOM 圖號排序
+function dsOrderList() {
+  if (dsSheet?.length) return dsSheet.map(label => ({ label, drawing_no: dsSheetMatch(label) }));
+  return dsDrawingGroups.map(group => ({ label: '', drawing_no: group.drawing_no }));
+}
+
+function dsSequentialAssign(pageCount, startPage) {
+  const list = dsOrderList();
+  const pageMap = [], labels = [];
+  for (let index = 0; index < pageCount; index++) {
+    const item = list[index - startPage + 1];
+    pageMap.push(item?.drawing_no || '');
+    labels.push(item?.label || '');
+  }
+  return { pageMap, labels };
 }
 
 function dsApplyDefaultMapping() {
@@ -51631,7 +51673,7 @@ function dsApplyDefaultMapping() {
   const input = dsEl('ds-start-page');
   const startPage = Math.max(1, Math.min(dsPending.pages, Number(input?.value || 1)));
   dsPending.startPage = startPage;
-  dsPending.pageMap = dsSequentialPageMap(dsPending.pages, startPage);
+  Object.assign(dsPending, dsSequentialAssign(dsPending.pages, startPage));
   dsRenderPending();
   dsEl('ds-save').disabled = !dsPending.pageMap.some(Boolean);
 }
@@ -51639,17 +51681,122 @@ function dsApplyDefaultMapping() {
 function dsCopyPreviousDrawing(index) {
   if (!dsPending || index < 1) return;
   dsPending.pageMap[index] = dsPending.pageMap[index - 1] || '';
+  if (dsPending.labels) dsPending.labels[index] = '';
   dsRenderPending();
 }
 
 function dsSequenceFromPage(index) {
   if (!dsPending || index < 0 || index >= dsPending.pages) return;
+  const list = dsOrderList();
+  const label = dsPending.labels?.[index] || '';
   const selectedKey = dsNorm(dsPending.pageMap[index]);
-  const startGroup = Math.max(0, dsDrawingGroups.findIndex(group => group.key === selectedKey));
+  let start = label ? list.findIndex(item => item.label === label) : -1;
+  if (start < 0) start = list.findIndex(item => item.drawing_no && dsNorm(item.drawing_no) === selectedKey);
+  start = Math.max(0, start);
+  if (!dsPending.labels) dsPending.labels = Array(dsPending.pages).fill('');
   for (let pageIndex = index; pageIndex < dsPending.pages; pageIndex++) {
-    dsPending.pageMap[pageIndex] = dsDrawingGroups[startGroup + pageIndex - index]?.drawing_no || '';
+    const item = list[start + pageIndex - index];
+    dsPending.pageMap[pageIndex] = item?.drawing_no || '';
+    dsPending.labels[pageIndex] = item?.label || '';
   }
   dsRenderPending();
+}
+
+/* 圖號表:從 Excel 整張複製貼上、或選 xlsx/csv。找「圖號」標題那一欄;沒有標題就挑最多格對得上 BOM 圖號的那一欄 */
+const dsSheetKey = zoneId => 'ds_sheet_' + zoneId;
+const dsSheetBase = label => String(label || '').replace(/[（(]\s*\d+\s*[/／]\s*\d+\s*[)）]\s*$/, '').trim();
+
+function dsSheetMatch(label) {
+  return (dsGroupForDrawing(label) || dsGroupForDrawing(dsSheetBase(label)))?.drawing_no || '';
+}
+
+function dsSheetParseRows(rows) {
+  rows = rows.map(row => (row || []).map(cell => String(cell ?? '').trim()));
+  let headerRow = -1, col = -1;
+  for (let r = 0; r < rows.length && col < 0; r++) {
+    const c = rows[r].findIndex(cell => cell.replace(/\s/g, '') === '圖號');
+    if (c >= 0) { headerRow = r; col = c; }
+  }
+  if (col < 0) {
+    const width = Math.max(0, ...rows.map(row => row.length));
+    let best = 0;
+    for (let c = 0; c < width; c++) {
+      const hits = rows.filter(row => row[c] && dsSheetMatch(row[c])).length;
+      if (hits > best) { best = hits; col = c; }
+    }
+    if (col < 0 && width === 1) col = 0;
+  }
+  if (col < 0) return [];
+  return rows.slice(headerRow + 1).map(row => row[col] || '')
+    .filter(cell => cell && /\d/.test(cell) && cell.replace(/\s/g, '') !== '圖號' && cell.length <= 60);
+}
+
+async function dsSheetSet(labels, sourceText) {
+  if (!dsZoneId()) { alert('請先選擇工程與工程區。'); return; }
+  if (!labels.length) { alert('讀不到圖號。請確認有「圖號」標題那一欄，或一行貼一個圖號。'); return; }
+  const matched = labels.filter(dsSheetMatch).length;
+  if (dsDrawingGroups.length && !matched) { alert('圖號表的 ' + labels.length + ' 個圖號都對不到這個工程區 BOM 的圖號，請確認工程區有沒有選對。'); return; }
+  dsSheet = labels;
+  const result = await sbFetch('/rest/v1/app_config?on_conflict=key', {
+    method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ key: dsSheetKey(dsZoneId()), value: JSON.stringify(labels) })
+  });
+  dsEl('ds-sheet-paste').hidden = true;
+  dsRenderSheetStatus(result.ok ? '' : '（雲端儲存失敗，只在這次畫面有效）');
+  if (dsPending) dsApplyDefaultMapping();
+  dsSetProgress(0, '已套用圖號表（' + sourceText + '）：' + labels.length + ' 張圖，' + matched + ' 張對得到 BOM 圖號。' + (dsPending ? '已依圖號表重新預填，請預覽確認。' : '選擇 PDF 後會依圖號表順序預填。'));
+}
+
+function dsRenderSheetStatus(extra = '') {
+  const status = dsEl('ds-sheet-status');
+  if (!status) return;
+  dsEl('ds-sheet-clear').hidden = !dsSheet;
+  if (!dsSheet) { status.textContent = dsZoneId() ? '本區沒有圖號表，照 BOM 圖號順序' : ''; return; }
+  const missing = dsSheet.filter(label => !dsSheetMatch(label));
+  status.textContent = '本區已有圖號表：' + dsSheet.length + ' 張圖' + (missing.length ? '，' + missing.length + ' 張 BOM 沒有（例：' + missing.slice(0, 3).join('、') + '）' : '，全部對得到 BOM') + extra;
+}
+
+function dsSheetTogglePaste() {
+  const box = dsEl('ds-sheet-paste');
+  box.hidden = !box.hidden;
+  if (!box.hidden) dsEl('ds-sheet-text').focus();
+}
+
+function dsSheetApplyText() {
+  const text = dsEl('ds-sheet-text').value;
+  const rows = text.split(/\r?\n/).map(line => line.split(line.includes('\t') ? '\t' : ','));
+  dsSheetSet(dsSheetParseRows(rows), '貼上').then(() => { if (dsSheet) dsEl('ds-sheet-text').value = ''; });
+}
+
+async function dsSheetFileSelected(input) {
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  try {
+    let labels = [];
+    if (/\.(csv|txt)$/i.test(file.name)) {
+      const text = await file.text();
+      labels = dsSheetParseRows(text.split(/\r?\n/).map(line => line.split(line.includes('\t') ? '\t' : ',')));
+    } else {
+      if (typeof XLSX === 'undefined') throw new Error('Excel 函式庫尚未載入');
+      const book = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      for (const name of book.SheetNames) {   // 多個工作表就接著讀(一區分好幾頁籤的情況)
+        labels = labels.concat(dsSheetParseRows(XLSX.utils.sheet_to_json(book.Sheets[name], { header: 1, raw: false, defval: '' })));
+      }
+    }
+    await dsSheetSet(labels, file.name);
+  } catch (error) {
+    console.error(error);
+    alert('讀取圖號表失敗：' + error.message);
+  }
+}
+
+async function dsSheetClear() {
+  if (!dsSheet || !await uiConfirm('清除本工程區的圖號表？之後上傳會改回照 BOM 圖號順序。（已上傳圖面的頁碼標記不受影響）')) return;
+  dsSheet = null;
+  await sbFetch('/rest/v1/app_config?key=eq.' + encodeURIComponent(dsSheetKey(dsZoneId())), { method: 'DELETE' });
+  dsRenderSheetStatus();
+  if (dsPending && !dsPending.existingFile) dsApplyDefaultMapping();
 }
 
 function dsOpenUploadPanel() {
@@ -51700,11 +51847,12 @@ async function dsFileSelected(input) {
       uploadParts,
       pages: totalPages,
       startPage: 1,
-      pageMap: Array(totalPages).fill('')
+      pageMap: Array(totalPages).fill(''),
+      labels: Array(totalPages).fill('')
     };
     dsEl('ds-save').textContent = '上傳並儲存頁碼標記';
     dsApplyDefaultMapping();
-    dsSetProgress(100, 'PDF 準備完成，已依 BOM 圖號順序預填；請預覽並修正後按「上傳並儲存頁碼標記」。');
+    dsSetProgress(100, 'PDF 準備完成，已依' + (dsSheet ? '圖號表' : ' BOM 圖號') + '順序預填；請預覽並修正後按「上傳並儲存頁碼標記」。');
     input.value = '';
   } catch (error) {
     console.error(error);
@@ -51749,7 +51897,8 @@ function dsEditFileMappings(id) {
     const index = Number(row.page_no) - 1;
     if (index >= 0 && index < pageMap.length) pageMap[index] = row.drawing_no || '';
   });
-  if (!pageMap.some(Boolean)) pageMap = dsSequentialPageMap(pageMap.length, 1);
+  let labels = Array(pageMap.length).fill('');
+  if (!pageMap.some(Boolean)) ({ pageMap, labels } = dsSequentialAssign(pageMap.length, 1));
   dsPending = {
     id: file.id,
     file: { name: file.original_name, size: file.size_bytes },
@@ -51757,6 +51906,7 @@ function dsEditFileMappings(id) {
     pages: pageMap.length,
     startPage: 1,
     pageMap,
+    labels,
     existingFile: file
   };
   dsRenderPending();
@@ -52025,7 +52175,16 @@ function dsSearch() {
       results.push({ part_no: component.part_no, drawing_no: component.drawing_no, file_id: page.file_id, page_no: page.page_no });
     }
   }
-  results.sort((a, b) => Number(dsNorm(b.part_no) === query) - Number(dsNorm(a.part_no) === query) || dsDrawingCollator.compare(a.part_no, b.part_no));
+  results.sort((a, b) => Number(dsNorm(b.part_no) === query) - Number(dsNorm(a.part_no) === query) || dsDrawingCollator.compare(a.part_no, b.part_no) || String(a.file_id).localeCompare(String(b.file_id)) || a.page_no - b.page_no);
+  // 同一張圖在同一份 PDF 有好幾頁(圖號表的 (1/2)、(2/2)),卡片標示第幾張
+  const drawingPages = new Map();
+  for (const page of dsPageDrawings) {
+    const key = page.file_id + '|' + dsNorm(page.drawing_no);
+    if (!drawingPages.has(key)) drawingPages.set(key, []);
+    drawingPages.get(key).push(Number(page.page_no));
+  }
+  drawingPages.forEach(list => list.sort((a, b) => a - b));
+  const sheetNo = row => { const list = drawingPages.get(row.file_id + '|' + dsNorm(row.drawing_no)) || []; return list.length > 1 ? '（' + (list.indexOf(Number(row.page_no)) + 1) + '/' + list.length + '）' : ''; };
   if (!results.length) {
     dsSearchResults = [];
     box.innerHTML = '<div class="ds-empty">' + (query ? '找不到「' + dsEsc(rawQuery) + '」的已標記圖面。' : (dsActiveFileId ? '此圖面尚無已標記的構件。' : '本區尚無已標記圖面的構件。')) + '</div>';
@@ -52040,7 +52199,7 @@ function dsSearch() {
     const key = row.file_id + '|' + row.page_no;
     return '<div class="ds-card-item" role="button" tabindex="0" data-part-no="' + dsEsc(row.part_no) + '" title="點卡片以原始畫質開啟（手機可雙指縮放）" onclick="dsResultCardOpen(event,\'' + row.file_id + '\',' + row.page_no + ')" onkeydown="dsResultCardKey(event,\'' + row.file_id + '\',' + row.page_no + ')">' +
       '<div class="ds-code">' + dsEsc(row.part_no) + '</div>' +
-      '<div class="ds-meta">圖號 ' + dsEsc(row.drawing_no) + '</div>' +
+      '<div class="ds-meta">圖號 ' + dsEsc(row.drawing_no) + sheetNo(row) + '</div>' +
       '<div class="ds-meta">' + dsEsc(file?.original_name || 'PDF') + ' · 第 ' + row.page_no + ' 頁</div>' +
       '<div class="ds-card-actions"><label class="ds-print-check" title="勾選可一次開啟／列印多張"><input type="checkbox" data-ds-print-key="' + dsEsc(key) + '"' + (dsPrintQueue.has(key) ? ' checked' : '') + ' onchange="dsTogglePrint(\'' + key + '\',this.checked)"><span>選取</span></label>' +
       '<button class="btn" onclick="dsPrintOne(\'' + key + '\')">列印</button></div></div>';
