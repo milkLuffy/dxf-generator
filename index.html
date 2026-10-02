@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.02.4"/>
+<meta name="sc-version" content="2026.10.02.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -4647,7 +4647,7 @@ window.normalizeFullWidth=function(value){
       <div class="nl-card">
         <div class="section-label" style="margin-bottom:10px">姓名條格式</div>
         <div class="nl-type-grid">
-          <div class="nl-type"><label class="nl-type-pick"><input type="checkbox" name="nl-type" value="helmet" checked onchange="nlTypeChanged()"><strong>安全帽貼條</strong><small>14.94 × 2.32 cm<br>固定「鎮山」＋姓名＋血型</small></label><label class="nl-qty"><span>每人數量</span><input type="number" min="1" max="99" value="2" inputmode="numeric" aria-label="安全帽貼條每人數量" oninput="nlQtySet('helmet',this.value)" onchange="nlQtySet('helmet',this.value,this)"><span>張</span></label><div class="nl-font" data-nl-font="helmet"></div></div>
+          <div class="nl-type"><label class="nl-type-pick"><input type="checkbox" name="nl-type" value="helmet" checked onchange="nlTypeChanged()"><strong>安全帽貼條</strong><small>16.40 × 2.32 cm<br>固定「鎮山」＋姓名＋血型</small></label><label class="nl-qty"><span>每人數量</span><input type="number" min="1" max="99" value="2" inputmode="numeric" aria-label="安全帽貼條每人數量" oninput="nlQtySet('helmet',this.value)" onchange="nlQtySet('helmet',this.value,this)"><span>張</span></label><div class="nl-font" data-nl-font="helmet"></div></div>
           <div class="nl-type"><label class="nl-type-pick"><input type="checkbox" name="nl-type" value="clock" onchange="nlTypeChanged()"><strong>打卡姓名條</strong><small>4.95 × 1.23 cm<br>姓名置中</small></label><label class="nl-qty"><span>每人數量</span><input type="number" min="1" max="99" value="1" inputmode="numeric" aria-label="打卡姓名條每人數量" oninput="nlQtySet('clock',this.value)" onchange="nlQtySet('clock',this.value,this)"><span>張</span></label><div class="nl-font" data-nl-font="clock"></div></div>
           <div class="nl-type"><label class="nl-type-pick"><input type="checkbox" name="nl-type" value="locker" onchange="nlTypeChanged()"><strong>鐵櫃姓名條</strong><small>4.95 × 1.96 cm<br>大字置中</small></label><label class="nl-qty"><span>每人數量</span><input type="number" min="1" max="99" value="1" inputmode="numeric" aria-label="鐵櫃姓名條每人數量" oninput="nlQtySet('locker',this.value)" onchange="nlQtySet('locker',this.value,this)"><span>張</span></label><div class="nl-font" data-nl-font="locker"></div></div>
         </div>
@@ -54216,11 +54216,15 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   /* ── 姓名貼 Word 產生器（原檔尾截斷時一併遺失） ── */
   var nlRows=[];
   var nlSeq=0;
-  /* 尺寸依 Word 範本（twips，567 = 1 cm）：三欄 2804/2804/2863；安全帽貼條橫跨三欄，打卡、鐵櫃各佔一欄 */
+  /* 尺寸依 Word 範本（twips，567 = 1 cm）：三欄 2804/2804/2863，打卡、鐵櫃各佔一欄；安全帽貼條另用 NL_HELMET_GRID */
   var NL_GRID=[2804,2804,2863];
+  /* 安全帽貼條加寬到 16.40 cm（原 14.94），加了血型也能維持 41pt；格寬跟打卡/鐵櫃不同，所以自己一張表 */
+  var NL_HELMET_GRID=[9300];
+  function nlGrid(type){return type==='helmet'?NL_HELMET_GRID:NL_GRID;}
+  function nlSum(a){return a.reduce(function(x,y){return x+y;},0);}
   var NL_PAGE={h:16838,margin:567,indent:40,cellMar:40};
   var NL_TYPES={
-    helmet:{label:'安全帽貼條',span:3,h:1316,font:41,qty:2},
+    helmet:{label:'安全帽貼條',span:1,h:1316,font:41,qty:2},
     clock:{label:'打卡姓名條',span:1,h:696,font:24,qty:1},
     locker:{label:'鐵櫃姓名條',span:1,h:1109,font:36,qty:1}  /* 列高依安全帽(原 42pt→1316)與打卡(24pt→696)按字級比例推算 */
   };
@@ -54297,17 +54301,18 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   }
   function nlLabelText(row,type){
     var blood=String(row.blood||'').trim().toUpperCase();
-    var text=type==='helmet'?'鎮山　'+row.zh+(blood?' 血型：'+blood:''):row.zh,en=row.en.trim();  /* 血型只印在安全帽貼條 */
+    var gap='  ';  /* 鎮山、姓名、血型之間都用 2 個半形空白，間距才一樣 */
+    var text=type==='helmet'?'鎮山'+gap+row.zh+(blood?gap+'血型：'+blood:''):row.zh,en=row.en.trim();  /* 血型只印在安全帽貼條 */
     return en?text+'\n'+en:text;  /* 英文姓名排第二行 */
   }
   function nlMm(tw){return (tw*25.4/1440).toFixed(2)+'mm';}
   /* 該格實際字級：設定的字級放不下（例如安全帽加了血型）就依格寬自動縮小。
      全形字算 1 個字寬、半形約 0.6，Word 沒辦法量字寬，所以預覽、列印、Word 都用同一個估算 */
   function nlCellFont(text,type){
-    var cfg=NL_TYPES[type],w=NL_GRID.slice(0,cfg.span).reduce(function(a,b){return a+b;},0);
+    var cfg=NL_TYPES[type],w=nlSum(nlGrid(type).slice(0,cfg.span));
     var avail=(w-NL_PAGE.cellMar*2-20)/20;  /* twips → pt，再扣左右留白 */
     var units=Math.max.apply(null,String(text).split('\n').map(function(line){
-      return Array.from(line).reduce(function(n,c){return n+(/[\u2E80-\u9FFF\u3000-\u303F\uF900-\uFAFF\uFF00-\uFF60]/.test(c)?1:0.6);},0);
+      return Array.from(line).reduce(function(n,c){return n+(/[\u2E80-\u9FFF\u3000-\u303F\uF900-\uFAFF\uFF00-\uFF60]/.test(c)?1:c===' '?0.5:0.6);},0);
     }));
     if(!units)return cfg.font;
     return Math.min(cfg.font,Math.floor(avail/units*2)/2);
@@ -54318,7 +54323,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var types=nlSelectedTypes(),valid=nlRows.filter(function(r){return r.zh.trim();}),rows=[];
     NL_ORDER.forEach(function(type){
       if(types.indexOf(type)<0)return;
-      var cfg=NL_TYPES[type],per=Math.max(1,Math.floor(NL_GRID.length/cfg.span)),cur=null;
+      var cfg=NL_TYPES[type],per=Math.max(1,Math.floor(nlGrid(type).length/cfg.span)),cur=null;
       valid.forEach(function(r){
         var text=nlLabelText(r,type),lines=text.split('\n').length;
         for(var n=0;n<cfg.qty;n++){
@@ -54338,7 +54343,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   /* 依 A4 可用高度分頁；Word 的列設為不可跨頁，排不下的列會整列移到下一頁 */
   function nlPaginate(rows){
     var usable=NL_PAGE.h-NL_PAGE.margin*2,pages=[],cur=[],used=0;
-    rows.forEach(function(row){var h=row.h;if(cur.length&&used+h>usable){pages.push(cur);cur=[];used=0;}cur.push(row);used+=h;});
+    rows.forEach(function(row){var h=row.h,prev=cur[cur.length-1];if(prev&&nlGrid(prev.type)!==nlGrid(row.type))h+=NL_TABLE_GAP;if(cur.length&&used+h>usable){pages.push(cur);cur=[];used=0;h=row.h;}cur.push(row);used+=h;});
     if(cur.length)pages.push(cur);
     return pages;
   }
@@ -54346,20 +54351,30 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   var NL_SHEET_CSS=
     '.nl-a4{box-sizing:border-box;width:210mm;height:297mm;padding:10mm;background:#fff;color:#000;overflow:hidden}'+
     /* 表格寬度固定為三欄總寬，長名字才不會把格子撐寬（Word 固定欄寬，超出會被裁掉） */
-    '.nl-a4-table{border-collapse:collapse;table-layout:fixed;width:'+nlMm(NL_GRID.reduce(function(a,b){return a+b;},0))+';margin:0 0 0 '+nlMm(NL_PAGE.indent)+';font-family:DFKai-SB,"標楷體",BiauKai,"Kaiti TC",serif;font-weight:bold}'+
+    '.nl-a4-table{border-collapse:collapse;table-layout:fixed;margin:0 0 0 '+nlMm(NL_PAGE.indent)+';font-family:DFKai-SB,"標楷體",BiauKai,"Kaiti TC",serif;font-weight:bold}'+
     '.nl-a4-table td{padding:0;border:.5pt solid #000;background:#fff;overflow:hidden}'+
-    '.nl-a4-cell{box-sizing:border-box;width:100%;min-width:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:'+nlMm(NL_PAGE.cellMar)+';overflow:hidden;white-space:nowrap;line-height:1.1}'+
+    '.nl-a4-cell{box-sizing:border-box;width:100%;min-width:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:'+nlMm(NL_PAGE.cellMar)+';overflow:hidden;white-space:pre;line-height:1.1}'+
     '.nl-a4-cell>span{flex:none}';
   function nlEnsureSheetCss(){
     if(document.getElementById('nl-sheet-css'))return;
     var s=document.createElement('style');s.id='nl-sheet-css';s.textContent=NL_SHEET_CSS;document.head.appendChild(s);
   }
+  /* 連續、格寬相同的列排成同一張表；安全帽與打卡/鐵櫃格寬不同，各自一張表，中間隔 1pt（同 Word 的分隔段落） */
+  function nlGroupRows(rows){
+    var groups=[];
+    rows.forEach(function(row){var g=nlGrid(row.type),last=groups[groups.length-1];if(last&&last.grid===g)last.rows.push(row);else groups.push({grid:g,rows:[row]});});
+    return groups;
+  }
+  var NL_TABLE_GAP=20;  /* twips，表格之間的分隔段落高度 */
   function nlPageHtml(page){
-    return '<div class="nl-a4"><table class="nl-a4-table"><colgroup>'+NL_GRID.map(function(w){return '<col style="width:'+nlMm(w)+'">';}).join('')+'</colgroup>'
-      +page.map(function(row){
+    return '<div class="nl-a4">'+nlGroupRows(page).map(function(g,gi){return nlTableHtml(g.grid,g.rows,gi);}).join('')+'</div>';
+  }
+  function nlTableHtml(grid,rows,gi){
+    return '<table class="nl-a4-table" style="width:'+nlMm(nlSum(grid))+(gi?';margin-top:'+nlMm(NL_TABLE_GAP):'')+'"><colgroup>'+grid.map(function(w){return '<col style="width:'+nlMm(w)+'">';}).join('')+'</colgroup>'
+      +rows.map(function(row){
         var cfg=NL_TYPES[row.type],style='height:calc('+nlMm(row.h)+' - .5pt)';  /* 扣掉一條框線，格線間距才等於 Word 固定列高 */
         return '<tr>'+row.texts.map(function(t){return '<td'+(cfg.span>1?' colspan="'+cfg.span+'"':'')+'><div class="nl-a4-cell" data-nl-type="'+row.type+'" style="'+style+';font-size:'+nlCellFont(t,row.type)+'pt"><span>'+nlEsc(t).replace(/\n/g,'<br>')+'</span></div></td>';}).join('')+'</tr>';
-      }).join('')+'</table></div>';
+      }).join('')+'</table>';
   }
   var nlPreviewObserved=false;
   function nlFitPreview(){
@@ -54410,15 +54425,19 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   window.nlTypeChanged=function(){nlRender();nlSetStatus('尚未產生','');};
   function nlCellXml(text,type,col){
     var cfg=NL_TYPES[type],sz=Math.round(nlCellFont(text,type)*2),m=NL_PAGE.cellMar;
-    var w=NL_GRID.slice(col,col+cfg.span).reduce(function(a,b){return a+b;},0);
+    var w=nlSum(nlGrid(type).slice(col,col+cfg.span));
     var runs=String(text).split(/\n/).map(function(line,i){return (i?'<w:r><w:br/></w:r>':'')+'<w:r><w:rPr><w:rFonts w:ascii="DFKai-SB" w:eastAsia="標楷體" w:hAnsi="DFKai-SB"/><w:b/><w:sz w:val="'+sz+'"/><w:szCs w:val="'+sz+'"/></w:rPr><w:t xml:space="preserve">'+nlXml(line)+'</w:t></w:r>';}).join('');
     return '<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/>'+(cfg.span>1?'<w:gridSpan w:val="'+cfg.span+'"/>':'')+'<w:tcMar><w:top w:w="'+m+'" w:type="dxa"/><w:left w:w="'+m+'" w:type="dxa"/><w:bottom w:w="'+m+'" w:type="dxa"/><w:right w:w="'+m+'" w:type="dxa"/></w:tcMar><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>'+runs+'</w:p></w:tc>';
   }
-  /* 所有格式排在同一個表格，共用三欄格線（同 Word 範本） */
+  /* 打卡、鐵櫃共用三欄格線（同 Word 範本）；安全帽較寬，自己一張表，兩表之間用極小段落隔開（不然 Word 會併成一張） */
   function nlTableXml(rows){
+    var gap='<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="'+NL_TABLE_GAP+'" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr></w:p>';
+    return nlGroupRows(rows).map(function(g){return nlOneTableXml(g.grid,g.rows);}).join(gap);
+  }
+  function nlOneTableXml(grid,rows){
     var border=function(side){return '<w:'+side+' w:val="single" w:sz="4" w:space="0" w:color="000000"/>';};
     return '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblInd w:w="'+NL_PAGE.indent+'" w:type="dxa"/><w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(border).join('')+'</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="10" w:type="dxa"/><w:right w:w="10" w:type="dxa"/></w:tblCellMar></w:tblPr>'
-      +'<w:tblGrid>'+NL_GRID.map(function(w){return '<w:gridCol w:w="'+w+'"/>';}).join('')+'</w:tblGrid>'
+      +'<w:tblGrid>'+grid.map(function(w){return '<w:gridCol w:w="'+w+'"/>';}).join('')+'</w:tblGrid>'
       +rows.map(function(row){var cfg=NL_TYPES[row.type];return '<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="'+row.h+'" w:hRule="exact"/></w:trPr>'+row.texts.map(function(t,i){return nlCellXml(t,row.type,i*cfg.span);}).join('')+'</w:tr>';}).join('')
       +'</w:tbl>';
   }
