@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.05.1"/>
+<meta name="sc-version" content="2026.10.05.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -8708,7 +8708,7 @@ window.normalizeFullWidth=function(value){
       </style>
       <div id="spc-view-list">
         <div class="page-title">SP清點</div>
-        <div class="section-label" style="margin-bottom:10px">選一個工程區開始清點；要兩區一起點，就勾選卡片上的「合併」再按「合併清點」。資料來自「多階資料分析」最新一次儲存的第一層零件（E 開頭的零件不用點）；點完會自動連動 CP 看板的 SP 狀態。</div>
+        <div class="section-label" style="margin-bottom:10px">選一個工程區開始清點；要兩區一起點，就勾選卡片上的「合併」再按「合併清點」。資料來自「多階資料分析」最新一次儲存的第一層零件（E 開頭的零件不用點；水電 H／帷幕 Q 改點底下的鋼管、鋼板、剪力釘）；點完會自動連動 CP 看板的 SP 狀態。</div>
         <div class="spc-toolbar">
           <input type="search" class="search-input" placeholder="搜尋工程編號／工程區…" oninput="spcListSearch(this.value)"/>
         </div>
@@ -53271,7 +53271,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var parent=stack[depth-1]||null;
     stack.length=depth;stack[depth]=item;
     if(parent){
-      item.parentNo=parent.partNo;
+      item.parentNo=parent.partNo;item.parentRef=parent;
       var pq=Number(parent.quantity),q=Number(item.quantity);
       if(item.quantity!==''&&parent.quantity!==''&&!isNaN(pq)&&!isNaN(q))item.quantity=maQtyFmt(q*pq);
       if(parent.code==='Q'||parent.code==='H')item.code=parent.code;
@@ -54238,8 +54238,17 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   window.maFlatParts=function(raw){
     var p=maParseRaw(String(raw||'').replace(/^\uFEFF/,''));if(!p)return null;
     var items=[];
-    // 只給第一層:子件加進來會讓已點完的工程區突然變成未完成
-    p.components.forEach(function(c){maPartItems(c).forEach(function(i){if(i.level>2)return;items.push({componentNo:c.componentNo,partNo:i.partNo,description:i.description,specification:i.specification,material:i.material,unit:i.unit,quantity:i.quantity,category:maPartCategory(i)});});});
+    // 第一層零件為主;水電 H／帷幕 Q 有子件的只是組件名稱(例 H540),改點底下的子件(PH 鋼管、SH 鋼板、剪力釘),
+    // 子件還有下一階的只點最末端。其他子件(F/W 板等)不點,BH 小件(例 H9595)照點本身。
+    p.components.forEach(function(c){
+      var list=maPartItems(c),hasKid=new Set();
+      list.forEach(function(i){if(i.parentRef)hasKid.add(i.parentRef);});
+      list.forEach(function(i){
+        var hq=i.code==='H'||i.code==='Q';
+        if(i.level>2?!(hq&&!hasKid.has(i)):(hq&&hasKid.has(i)))return;
+        items.push({componentNo:c.componentNo,partNo:i.partNo,description:i.description,specification:i.specification,material:i.material,unit:i.unit,quantity:i.quantity,category:maPartCategory(i)});
+      });
+    });
     return {project:p.project,items:items};
   };
   window.MA_CAT_INFO={order:MA_PART_ORDER,label:{BH:'BH',RH:'RH',BOX:'BOX',BT:'BT',FW:'F/W板',U:'槽鐵 U',Q:'帷幕 Q',H:'水電 H',FB:'FB',L:'角鐵 L','成品材':'成品材',SP:'SP'}};
@@ -56903,7 +56912,7 @@ async function ldDashPlan(){
 <script>
 /* ── SP清點:現場用 iPad 依多階資料逐項點實際片數(資料表 sp_counts) ──
    資料來源:該工程區最新一次儲存的多階資料分析(raw_text 重新解析,與多階頁同一套分類);
-   零件編號 E 開頭的不用點。同一零件(零件編號＋規格)多支構件的數量合併成一列。
+   零件編號 E 開頭的不用點。水電 H／帷幕 Q 有子件的改點子件(maFlatParts)。同一零件(零件編號＋規格)多支構件的數量合併成一列。
    合併清點:同工程編號的多個工程區一起點,應有數量相加;存檔時把實點片數依勾選順序分回各區
    (先勾的區先分滿,缺的算在後面的區),所以資料庫永遠是一區一筆。
    點完會連動 CP 看板的 SP 狀態(各區各自算):開始點 → 清點中;全部點完且沒有缺料 → 完成(OK);已送工地／轉包不動。 */
