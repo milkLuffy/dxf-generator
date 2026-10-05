@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.02.5"/>
+<meta name="sc-version" content="2026.10.05.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -4345,6 +4345,8 @@ window.normalizeFullWidth=function(value){
 .ma-table th{background:var(--bg3);color:var(--text2);font-family:var(--mono);font-weight:500;text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
 .ma-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top}
 .ma-table td.code{font-family:var(--mono);color:var(--text)}
+.ma-table tr.ma-sub-row td{color:var(--text2);font-size:.95em}
+.ma-sub-mark{color:var(--text3);font-family:var(--mono)}
 .ma-tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-family:var(--mono);font-size:10px;font-weight:600}
 .ma-tag.q{background:rgba(191,90,242,.14);color:var(--purple);border:1px solid rgba(191,90,242,.35)}
 .ma-tag.h{background:rgba(64,200,224,.12);color:var(--accent3);border:1px solid rgba(64,200,224,.35)}
@@ -4421,7 +4423,7 @@ window.normalizeFullWidth=function(value){
       <div class="ma-intro ma-no-print ma-entry-only">
         <div>
           <div class="ma-intro-title">構件零件、帷幕與水電，一次整理</div>
-          <p>貼入 MDB0R070 多階資料後，系統會以單星號辨識構件、保留雙星號第一層零件、忽略三星號拆解列，再依最右側代碼將 Q 分為帷幕、H 分為水電，並產生可搭配 PDF 或 CAD 圖面的 Word 匯出 Prompt。原始報表文字檔，或別人整理成 Tab 分欄（貼過 Excel）的版本，都會自動辨識，換頁重複出現的頁首與表頭會直接略過。</p>
+          <p>貼入 MDB0R070 多階資料後，系統會以單星號辨識構件、保留雙星號第一層零件，三星號以下的拆解列（水電套管的鋼管、鋼板、剪力釘，BH 的翼腹板等）掛在上一階零件底下、數量乘上母件數，BH／RH／BT／BOX 的 F／W 板另歸「F/W板」不算 SP，再依最右側代碼將 Q 分為帷幕、H 分為水電，並產生可搭配 PDF 或 CAD 圖面的 Word 匯出 Prompt。原始報表文字檔，或別人整理成 Tab 分欄（貼過 Excel）的版本，都會自動辨識，換頁重複出現的頁首與表頭會直接略過。</p>
         </div>
         <div class="ma-local-badge">分析在本機 · 按儲存才上傳</div>
       </div>
@@ -4442,7 +4444,7 @@ window.normalizeFullWidth=function(value){
             <button class="btn btn-add-row" onclick="maDownloadExcel()" id="ma-excel-btn" disabled>⬇ 下載分析 Excel</button>
             <button class="btn btn-add-row" onclick="maClearAll()">清除資料</button>
             <div class="ma-save-status" id="ma-save-status"></div>
-            <div class="ma-rule-box"><b>分析規則</b><br>* = 構件編號，列尾 = 圖號<br>** = 第一層零件<br>*** = 忽略<br>代碼 Q = 帷幕；代碼 H = 水電</div>
+            <div class="ma-rule-box"><b>分析規則</b><br>* = 構件編號，列尾 = 圖號<br>** = 第一層零件<br>*** 以下 = 子件（掛在上一階底下，數量乘母件數）<br>BH 的 F／W 板 = F/W板（不算 SP）<br>代碼 Q = 帷幕；代碼 H = 水電</div>
           </div>
         </div>
       </div>
@@ -4478,7 +4480,7 @@ window.normalizeFullWidth=function(value){
         <div class="ma-stat"><div class="ma-stat-label">工程編號</div><div class="ma-stat-value" id="ma-stat-project">—</div></div>
         <div class="ma-stat"><div class="ma-stat-label">工程區</div><div class="ma-stat-value" id="ma-stat-zone">—</div></div>
         <div class="ma-stat"><div class="ma-stat-label">構件</div><div class="ma-stat-value" id="ma-stat-components">0</div></div>
-        <div class="ma-stat"><div class="ma-stat-label">第一層零件</div><div class="ma-stat-value" id="ma-stat-parts">0</div></div>
+        <div class="ma-stat"><div class="ma-stat-label">零件（含子件）</div><div class="ma-stat-value" id="ma-stat-parts">0</div></div>
         <div class="ma-stat q"><div class="ma-stat-label">帷幕 Q</div><div class="ma-stat-value" id="ma-stat-q">0</div></div>
         <div class="ma-stat h"><div class="ma-stat-label">水電 H</div><div class="ma-stat-value" id="ma-stat-h">0</div></div>
       </div>
@@ -4486,7 +4488,7 @@ window.normalizeFullWidth=function(value){
       <div id="ma-workspace" style="display:none">
         <div class="ma-results-nav ma-no-print" id="ma-results-nav">
           <div class="ma-tabs">
-            <button class="ma-tab active" data-ma-tab="parts" onclick="maSwitchTab('parts')">第一層零件表 <span class="ma-tab-count" id="ma-tab-parts-count">0 支構件</span></button>
+            <button class="ma-tab active" data-ma-tab="parts" onclick="maSwitchTab('parts')">零件表 <span class="ma-tab-count" id="ma-tab-parts-count">0 支構件</span></button>
             <button class="ma-tab" data-ma-tab="curtain" onclick="maSwitchTab('curtain')">帷幕明細 Q <span class="ma-tab-count" id="ma-tab-curtain-count">0 支構件</span></button>
             <button class="ma-tab" data-ma-tab="mep" onclick="maSwitchTab('mep')">水電明細 H <span class="ma-tab-count" id="ma-tab-mep-count">0 支構件</span></button>
             <button class="ma-tab" data-ma-tab="wordprompt" onclick="maSwitchTab('wordprompt')">帷幕／水電 Word Prompt</button>
@@ -53164,6 +53166,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     {key:'BHRH',label:'托樑BH&RH'},
     {key:'BOX',label:'BOX'},
     {key:'BT',label:'BT'},
+    {key:'FW',label:'F/W板'},
     {key:'U',label:'槽鐵 U'},
     {key:'Q',label:'帷幕 Q'},
     {key:'H',label:'水電 H'},
@@ -53172,8 +53175,8 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     {key:'成品材',label:'成品材'},
     {key:'SP',label:'SP'}
   ];
-  var MA_PART_ORDER=['BH','RH','BOX','BT','U','Q','H','FB','L','成品材','SP'];
-  var MA_PART_SHEET={BH:'BH',RH:'RH',BOX:'BOX',BT:'BT',U:'槽鐵U',Q:'帷幕Q',H:'水電H',FB:'FB',L:'角鐵L','成品材':'成品材',SP:'SP'};
+  var MA_PART_ORDER=['BH','RH','BOX','BT','FW','U','Q','H','FB','L','成品材','SP'];
+  var MA_PART_SHEET={BH:'BH',RH:'RH',BOX:'BOX',BT:'BT',FW:'FW板',U:'槽鐵U',Q:'帷幕Q',H:'水電H',FB:'FB',L:'角鐵L','成品材':'成品材',SP:'SP'};
   // 複合分頁:不是 maPartCategory 會回傳的分類,只是把數個分類併在同一個分頁看
   var MA_CAT_GROUP={BHRH:['BH','RH']};
   var maPartsCat='ALL',maPartsMode='grouped',maSearchQuery='';
@@ -53208,6 +53211,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   function maPartCategory(item){
     if(item.code==='Q')return 'Q';
     if(item.code==='H')return 'H';
+    if(item.fw)return 'FW';
     var s=String(item.specification||'').trim().toUpperCase();
     if(s.indexOf('BOX')===0)return 'BOX';
     if(s.indexOf('BH')===0)return 'BH';
@@ -53246,6 +53250,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var cs=String(c&&c.componentSpec!=null?c.componentSpec:'').trim();
     var csSec=maSpecSection(cs),bodyTaken=false;
     return c.items.filter(function(i){
+      if(i.level>2)return true;
       var s=String(i.specification==null?'':i.specification).trim();
       if(s==='')return true;
       if(cs!==''&&s===cs)return false;
@@ -53257,6 +53262,25 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       bodyTaken=true;
       return false;
     });
+  }
+  // 三星號以下的拆解列掛在上一階零件底下:記階層與母件,數量換算成整支構件的總數(報表上印的是「每一個母件」的數量)。
+  // 水電 H／帷幕 Q 的子件跟著母件歸類;BH/RH/BT/BOX 的翼腹板(母件編號+F 或 +W)歸 F/W 板,不算 SP。
+  function maPushItem(current,stack,depth,item){
+    item.level=depth;item.perQty=item.quantity;item.parentNo='';
+    if(depth<=2){stack.length=0;stack[2]=item;current.items.push(item);return;}
+    var parent=stack[depth-1]||null;
+    stack.length=depth;stack[depth]=item;
+    if(parent){
+      item.parentNo=parent.partNo;
+      var pq=Number(parent.quantity),q=Number(item.quantity);
+      if(item.quantity!==''&&parent.quantity!==''&&!isNaN(pq)&&!isNaN(q))item.quantity=maQtyFmt(q*pq);
+      if(parent.code==='Q'||parent.code==='H')item.code=parent.code;
+      else{
+        var pn=String(parent.partNo||'').trim().toUpperCase(),cn=String(item.partNo||'').trim().toUpperCase();
+        if(['BH','RH','BT','BOX'].indexOf(maPartCategory(parent))>=0&&(cn===pn+'F'||cn===pn+'W'))item.fw=true;
+      }
+    }
+    current.items.push(item);
   }
   function maSumQty(items){return items.reduce(function(s,i){var q=Number(i.quantity);return s+(isNaN(q)?0:q);},0);}
   // 成品材依規格加總（不同規格分開加總）
@@ -53304,7 +53328,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     return base||'第一層零件明細';
   }
   function maPartCount(){return maComponents.reduce(function(n,c){return n+maPartItems(c).length;},0);}
-  function maCodeCount(code){return maComponents.reduce(function(n,c){return n+c.items.filter(function(i){return i.code===code;}).length;},0);}
+  function maCodeCount(code){return maComponents.reduce(function(n,c){return n+c.items.filter(function(i){return i.code===code&&!(i.level>2);}).length;},0);}
   function maSearchTokens(){return String(maSearchQuery||'').toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);}
   function maSearchText(c,item){
     return [maProject.工程編號,maProject.工程區,maProject.母件編號,c.zone,c.componentNo,c.drawingNo,c.componentSpec,
@@ -53404,7 +53428,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     function col(name){return headers.indexOf(name);}
     var hi=col('階層'),pi=col('工程'),ci=col('構件編號'),coi=col('共通編號'),si=col('規格'),qi=col('BOM數量'),di=col('圖號');
     var ni=col('品名'); if(ni<0)ni=col('零件名稱'); if(ni<0)ni=col('名稱');
-    var components=[],current=null,seq=0,projectNo='',zoneCode='',zi=col('分區');
+    var components=[],current=null,seq=0,projectNo='',zoneCode='',zi=col('分區'),stack=[];
     for(var n=headerIndex+1;n<lines.length;n++){
       if(!lines[n].trim())continue;
       var row=lines[n].split('\t'),get=function(idx){return idx>=0?String(row[idx]||'').trim():'';};
@@ -53415,11 +53439,10 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       if(level==='*'){
         if(!number)continue;
         current={componentNo:number,drawingNo:drawing,componentSpec:spec,items:[]};
-        components.push(current);seq=0;
-      }else if(level==='**'&&current&&number){
-        current.items.push({sequence:++seq,partNo:number,description:name,specification:spec,material:'',unit:'',quantity:qty===''?'':Number(qty),code:''});
+        components.push(current);seq=0;stack.length=0;
+      }else if(current&&number){
+        maPushItem(current,stack,level.length,{sequence:level.length===2?++seq:'',partNo:number,description:name,specification:spec,material:'',unit:'',quantity:qty===''?'':Number(qty),code:''});
       }
-      // *** 及更深階層不是第一層零件，依既有分析規則忽略。
     }
     return {components:components,projectNo:projectNo,zoneCode:zoneCode};
   }
@@ -53439,7 +53462,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       if(c.level===0&&c.no>0&&c.spec>c.no&&c.qty>c.spec&&c.code>c.qty)cols=c;
     }
     if(!cols)return null;
-    var components=[],current=null;
+    var components=[],current=null,stack=[];
     lines.forEach(function(line){
       if(line.indexOf('\t')<0)return;
       var cells=line.split('\t');
@@ -53456,18 +53479,17 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
         var drawing=cell(cols.draw);
         if(!drawing)for(var k=cells.length-1;k>cols.code;k--){if(cell(k)){drawing=cell(k);break;}}
         current={componentNo:partNo,drawingNo:drawing,componentSpec:cell(cols.spec),items:[]};
-        components.push(current);
+        components.push(current);stack.length=0;
         return;
       }
-      // *** 及更深階層不是第一層零件，依既有分析規則忽略。
-      if(level!=='**'||!current)return;
+      if(!current)return;
       var name=first.trim();
       for(var m=cols.no+2;m<cols.spec;m++)name+=cell(m);
       // 材質欄寬不夠時尾巴會擠到單位欄，形如「A108GR10」+「18 ST」
       var mat=cell(cols.mat),unit=cell(cols.unit),split=unit.match(/^(\S+)\s+(\S+)$/);
       if(split){mat+=split[1];unit=split[2];}
       var qty=cell(cols.qty),code=cell(cols.code);
-      current.items.push({
+      maPushItem(current,stack,level.length,{
         sequence:Number(cell(cols.seq))||0,
         partNo:partNo,
         description:name,
@@ -53491,7 +53513,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   };
   // 純解析(不動畫面):回傳 {components,project};合併開啟多個工程區時逐筆呼叫
   function maParseRaw(raw){
-    var components=[],current=null;
+    var components=[],current=null,stack=[];
     var tabular=maParseTabular(raw);
     var mdbTab=tabular?null:maParseMdbTab(raw);
     if(tabular){components=tabular.components;}
@@ -53502,14 +53524,15 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
         if(root){
           var tail=line.trim().match(/(\S+)$/);
           current={componentNo:root[1],drawingNo:tail?tail[1]:'',componentSpec:maFixedField(line,68,98),items:[]};
-          components.push(current);
+          components.push(current);stack.length=0;
           return;
         }
-        if(!current||!/^\*\*(?!\*)\s+\d+\s+\S+/.test(line))return;
+        var lv=line.match(/^(\*{2,})\s+(\d+)\s+\S+/);
+        if(!current||!lv)return;
         var codeMatch=line.trimEnd().match(/\s([QH])$/);
         var qtyText=maFixedField(line,116,122);
-        current.items.push({
-          sequence:Number(maFixedField(line,2,18))||0,
+        maPushItem(current,stack,lv[1].length,{
+          sequence:Number(lv[2])||0,
           partNo:maFixedField(line,18,37),
           description:maFixedField(line,37,68),
           specification:maFixedField(line,68,98),
@@ -53553,10 +53576,14 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     maShowResultsView();
   };
 
+  // 子件列:零件編號前加「└」縮排,數量滑過顯示「每個母件幾個 × 母件數」
+  function maSubMark(i){return i.level>2?'<span class="ma-sub-mark" style="padding-left:'+((i.level-3)*12)+'px" title="母件 '+maEsc(i.parentNo||'—')+' 的子件">└ </span>':'';}
+  function maQtyTip(i){return i.level>2&&i.perQty!==''&&i.perQty!=null?' title="每個 '+maEsc(i.parentNo||'母件')+' 用 '+maEsc(i.perQty)+'，此構件合計 '+maEsc(i.quantity)+'"':'';}
   function maRowsTable(items,showCategory,c){
     if(!items.length)return '<div class="ma-empty">沒有符合資料</div>';
     return '<div class="ma-table-wrap"><table class="ma-table"><thead><tr><th>項次</th><th>零件編號</th><th class="ma-m-only">數量</th><th class="ma-m-hide">品名</th><th>規格</th><th class="ma-m-hide">材質</th><th>單位</th><th class="ma-m-hide">數量</th>'+(showCategory?'<th>分類</th>':'')+'</tr></thead><tbody>'+items.map(function(i){
-      return '<tr><td>'+maEsc(i.sequence)+'</td><td class="code">'+maEsc(i.partNo)+'</td><td class="ma-m-only ma-m-qty">'+maEsc(i.quantity)+'</td><td class="ma-m-hide">'+maEsc(i.description)+'</td><td class="code">'+maEsc(maSpecDisplay(i,c))+'</td><td class="ma-m-hide">'+maEsc(i.material)+'</td><td>'+maEsc(i.unit)+'</td><td class="ma-m-hide">'+maEsc(i.quantity)+'</td>'+(showCategory?'<td>'+maCatTag(maPartCategory(i))+'</td>':'')+'</tr>';
+      var qt=maQtyTip(i);
+      return '<tr'+(i.level>2?' class="ma-sub-row"':'')+'><td>'+maEsc(i.sequence)+'</td><td class="code">'+maSubMark(i)+maEsc(i.partNo)+'</td><td class="ma-m-only ma-m-qty"'+qt+'>'+maEsc(i.quantity)+'</td><td class="ma-m-hide">'+maEsc(i.description)+'</td><td class="code">'+maEsc(maSpecDisplay(i,c))+'</td><td class="ma-m-hide">'+maEsc(i.material)+'</td><td>'+maEsc(i.unit)+'</td><td class="ma-m-hide"'+qt+'>'+maEsc(i.quantity)+'</td>'+(showCategory?'<td>'+maCatTag(maPartCategory(i))+'</td>':'')+'</tr>';
     }).join('')+'</tbody><tfoot><tr class="ma-total-row"><td colspan="2">數量加總</td><td class="ma-m-only ma-m-qty">'+maSumQty(items)+'</td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide">'+maSumQty(items)+'</td>'+(showCategory?'<td></td>':'')+'</tr></tfoot></table></div>';
   }
   function maComponentBlock(c,items,showCategory,open){
@@ -53591,7 +53618,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     document.querySelectorAll('#ma-parts-toolbar [data-ma-mode]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-ma-mode')===maPartsMode);});
     var controls=document.getElementById('ma-parts-group-controls');if(controls)controls.style.display=maPartsMode==='grouped'?'flex':'none';
     var body=document.getElementById('ma-parts-body');if(!body)return;
-    if(!groups.length){body.innerHTML='<div class="ma-empty">沒有第一層零件資料</div>';return;}
+    if(!groups.length){body.innerHTML='<div class="ma-empty">沒有零件資料</div>';return;}
     var allItems=[];groups.forEach(function(g){g.items.forEach(function(item){allItems.push({c:g.c,item:item});});});
     var totalQty=maSumQty(allItems.map(function(r){return r.item;}));
     if(maPartsCat==='成品材'&&maPartsMode==='flat'){
@@ -53602,7 +53629,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     if(maPartsMode==='grouped'){
       body.innerHTML=groups.map(function(g){return maComponentBlock(g.c,g.items,maPartsCat==='ALL'||!!MA_CAT_GROUP[maPartsCat],false);}).join('')+'<div class="ma-total-line">數量加總：'+totalQty+'</div>';
     }else{
-      body.innerHTML=maMergedTable('第一層零件完整明細',maMergeParts(allItems.map(function(r){return r.item;})),allItems.length,maPartsCat==='ALL'||!!MA_CAT_GROUP[maPartsCat]);
+      body.innerHTML=maMergedTable('零件完整明細',maMergeParts(allItems.map(function(r){return r.item;})),allItems.length,maPartsCat==='ALL'||!!MA_CAT_GROUP[maPartsCat]);
     }
   }
   window.maSetPartsCat=function(key){maPartsCat=key;maRenderPartsView();};
@@ -53615,15 +53642,19 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var detailCount=document.getElementById('ma-'+kind+'-detail-count');if(detailCount)detailCount.textContent=componentCount+' 支構件 · '+groups.reduce(function(sum,g){return sum+g.items.length;},0)+' 筆明細';
     document.getElementById(targetId).innerHTML=groups.length?groups.map(function(g){return maComponentBlock(g.c,g.items,false,false);}).join(''):'<div class="ma-empty">沒有 '+maEsc(label)+'（代碼 '+code+'）資料</div>';
     var flatId=code==='Q'?'ma-curtain-flat-result':'ma-mep-flat-result';
-    var rows=[];
-    groups.forEach(function(g){g.items.forEach(function(item){rows.push(item);});});
-    document.getElementById(flatId).innerHTML=rows.length?maMergedTable(label+'完整明細',maMergeParts(rows),rows.length,false):'<div class="ma-empty">沒有 '+maEsc(label)+'（代碼 '+code+'）資料</div>';
+    var tops=[],subs=[];
+    groups.forEach(function(g){g.items.forEach(function(item){(item.level>2?subs:tops).push(item);});});
+    // 子件(套管的鋼管、鋼板、剪力釘…)另一張表依零件加總,數量已乘上母件數,備料直接看這張
+    document.getElementById(flatId).innerHTML=tops.length||subs.length?
+      (tops.length?maMergedTable(label+'完整明細',maMergeParts(tops),tops.length,false):'')+
+      (subs.length?'<div style="height:14px"></div>'+maMergedTable(label+'子件統計（數量已乘上母件數）',maMergeParts(subs),subs.length,false):'')
+      :'<div class="ma-empty">沒有 '+maEsc(label)+'（代碼 '+code+'）資料</div>';
     if(code==='H')maRenderMepHoleSizes();
   }
   function maGetMepHoleSizes(){
     var values=[],seen={};
     maComponents.forEach(function(c){
-      c.items.filter(function(i){return i.code==='H';}).forEach(function(item){
+      c.items.filter(function(i){return i.code==='H'&&!(i.level>2);}).forEach(function(item){
         var spec=String(item.specification||''),re=/[#＃]\s*(\d+(?:\.\d+)?)\s*[xXｘＸ×＊*]\s*(\d+(?:\.\d+)?)/g,match;
         while((match=re.exec(spec))){
           var value=String(Number(match[1]))+'X'+String(Number(match[2]));
@@ -53678,7 +53709,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   function maPromptRows(code){
     var rows=[];
     maComponents.forEach(function(c){
-      var hits=c.items.filter(function(i){return i.code===code&&i.partNo;});
+      var hits=c.items.filter(function(i){return i.code===code&&i.partNo&&!(i.level>2);});   // 子件不用找詳圖
       if(!hits.length)return;
       var nums=[],seen={},specs={};
       hits.forEach(function(i){
@@ -53855,7 +53886,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var rows=[];
     maComponents.forEach(function(c){c.items.forEach(function(i){
       if(filterCode&&i.code!==filterCode)return;
-      rows.push({'工程編號':maProject.工程編號,'工程區':c.zone||maProject.工程區,'構件編號':c.componentNo,'圖號':c.drawingNo,'項次':i.sequence,'零件編號':i.partNo,'品名':i.description,'規格':i.specification,'材質':i.material,'單位':i.unit,'數量':i.quantity,'分類':maPartCategory(i)});
+      rows.push({'工程編號':maProject.工程編號,'工程區':c.zone||maProject.工程區,'構件編號':c.componentNo,'圖號':c.drawingNo,'階層':'*'.repeat(i.level||2),'母件零件':i.parentNo||'','項次':i.sequence,'零件編號':i.partNo,'品名':i.description,'規格':i.specification,'材質':i.material,'單位':i.unit,'每個母件數量':i.level>2?i.perQty:'','數量':i.quantity,'分類':maPartCategory(i)});
     });});
     return rows;
   }
@@ -53869,13 +53900,13 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
 
   window.maDownloadExcel=function(){
     if(!maComponents.length){alert('請先開始分析');return;}
-    maSaveWorkbook(maFileBaseZoneFirst()+'多階.xlsx',[{name:'全部第一層零件',rows:maExportRows('')},{name:'帷幕Q',rows:maExportRows('Q')},{name:'水電H',rows:maExportRows('H')}]);
+    maSaveWorkbook(maFileBaseZoneFirst()+'多階.xlsx',[{name:'全部零件',rows:maExportRows('')},{name:'帷幕Q',rows:maExportRows('Q')},{name:'水電H',rows:maExportRows('H')}]);
   };
   window.maDownloadParts=function(){
     if(!maComponents.length){alert('請先開始分析');return;}
     // 第一張是逐筆明細;之後依網頁分類各一張統計表,同一種零件(零件編號/品名/規格/材質/單位相同)數量累計
     var all=[];maComponents.forEach(function(c){all=all.concat(maPartItems(c));});
-    var sheets=[{name:'第一層零件',rows:maExportRows('')}];
+    var sheets=[{name:'全部零件',rows:maExportRows('')}];
     MA_PART_ORDER.forEach(function(cat){
       var merged=maMergeParts(all.filter(function(i){return maPartCategory(i)===cat;}));
       if(!merged.length)return;
@@ -53939,9 +53970,19 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var pr=await sbFetch('/rest/v1/multilevel_analyses',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(parent)});
     if(!pr.ok||!pr.data||!pr.data[0]){maSetSaveDisabled(false);maSetSaveStatus('儲存失敗：'+maDbError(pr)+'（請確認已執行 migration）',true);return;}
     var id=pr.data[0].id,items=[];
-    maComponents.forEach(function(c){maPartItems(c).forEach(function(i){items.push({analysis_id:id,component_no:c.componentNo,drawing_no:c.drawingNo,component_spec:c.componentSpec,sequence_no:i.sequence,part_no:i.partNo,description:i.description,specification:i.specification,material:i.material,unit:i.unit,quantity:i.quantity===''?null:Number(i.quantity),category:maPartCategory(i),code:i.code||''});});});
-    if(items.length){var ir=await sbFetch('/rest/v1/multilevel_analysis_items',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(items)});if(!ir.ok){await sbFetch('/rest/v1/multilevel_analyses?id=eq.'+id,{method:'DELETE'});maSetSaveDisabled(false);maSetSaveStatus('明細儲存失敗：'+maDbError(ir),true);return;}}
-    maCurrentAnalysisId=id;maHistoryLoaded=false;maSetSaveStatus('✓ 已儲存分析紀錄 #'+id);maSetSaveDisabled(false);await window.maLoadHistory(true);
+    maComponents.forEach(function(c){maPartItems(c).forEach(function(i){items.push({analysis_id:id,component_no:c.componentNo,drawing_no:c.drawingNo,component_spec:c.componentSpec,sequence_no:Number(i.sequence)||0,part_no:i.partNo,description:i.description,specification:i.specification,material:i.material,unit:i.unit,quantity:i.quantity===''?null:Number(i.quantity),category:maPartCategory(i),code:i.code||'',part_level:i.level||2,parent_part_no:i.parentNo||''});});});
+    var lite=false;
+    if(items.length){
+      var ir=await sbFetch('/rest/v1/multilevel_analysis_items',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(items)});
+      // 還沒執行 multilevel_part_level_migration.sql:欄位不存在 → 只存第一層(與舊版相同),畫面上的子件仍會從原始文字重新解析出來
+      if(!ir.ok&&/part_level|parent_part_no/.test(maDbError(ir))){
+        lite=true;
+        var top=items.filter(function(x){return x.part_level<=2;}).map(function(x){var y=Object.assign({},x);delete y.part_level;delete y.parent_part_no;return y;});
+        ir=top.length?await sbFetch('/rest/v1/multilevel_analysis_items',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(top)}):{ok:true};
+      }
+      if(!ir.ok){await sbFetch('/rest/v1/multilevel_analyses?id=eq.'+id,{method:'DELETE'});maSetSaveDisabled(false);maSetSaveStatus('明細儲存失敗：'+maDbError(ir),true);return;}
+    }
+    maCurrentAnalysisId=id;maHistoryLoaded=false;maSetSaveStatus('✓ 已儲存分析紀錄 #'+id+(lite?'（子件未寫入明細表：請執行 multilevel_part_level_migration.sql）':''),lite);maSetSaveDisabled(false);await window.maLoadHistory(true);
   };
   window.maOpenAnalysis=async function(id,query){
     var r=await sbFetch('/rest/v1/multilevel_analyses?id=eq.'+encodeURIComponent(id)+'&select=id,raw_text&limit=1');
@@ -54076,7 +54117,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   // 規則:排除母件本體後,第一層零件只要還有「不是成品材、不是 FB、不是水電 H、不是帷幕 Q、零件編號不是 E 開頭(工地用)」的,就算有板。
   // 亦即 SP、角鐵 L,以及本體以外額外的 BH/RH/BOX/BT/U(托樑、補強 H)都算有板。
   // H(水電)、Q(帷幕)暫定不算板:圖面有時沒畫、多階表卻有,先當不算;要改規則只動這個陣列。
-  var MA_BOARD_NOT=['成品材','FB','H','Q'];
+  var MA_BOARD_NOT=['成品材','FB','H','Q','FW'];
   var MA_BOARD_FIRST=['SP','L'];
   // 分類優先用存檔時寫進資料庫的 category,畫面看到什麼分類就用什麼判定;現場解析出來的才即時算
   function maItemCat(i){return (i&&i.category)?i.category:maPartCategory(i);}
@@ -54111,10 +54152,11 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var list=(Array.isArray(ar.data)?ar.data:[]).filter(function(a){return maBoardUp(a.project_no)===maBoardUp(projNum);});
     var hit=list.find(function(a){return maBoardUp(a.zone_code)===maBoardUp(zoneCode);})||list.find(function(a){return maBoardUp(a.mother_no)===maBoardUp(zoneCode);})||null;
     if(!hit)return {ok:true,hit:null,map:{}};
-    var ir=await sbFetchAll('/rest/v1/multilevel_analysis_items?select=component_no,component_spec,part_no,specification,quantity,category&analysis_id=eq.'+hit.id);
+    var ir=await sbFetchAll('/rest/v1/multilevel_analysis_items?select=*&analysis_id=eq.'+hit.id);
     if(!ir||!ir.ok||!Array.isArray(ir.data))return {ok:false,err:maDbError(ir)};
     var byComp={};
     ir.data.forEach(function(r){
+      if(Number(r.part_level)>2)return;   // 子件(翼腹板、套管鋼管…)不參與有無板判定
       var k=maBoardUp(r.component_no);if(!k)return;
       if(!byComp[k])byComp[k]={componentSpec:'',items:[]};
       if(!byComp[k].componentSpec&&r.component_spec)byComp[k].componentSpec=r.component_spec;
@@ -54196,10 +54238,11 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   window.maFlatParts=function(raw){
     var p=maParseRaw(String(raw||'').replace(/^\uFEFF/,''));if(!p)return null;
     var items=[];
-    p.components.forEach(function(c){maPartItems(c).forEach(function(i){items.push({componentNo:c.componentNo,partNo:i.partNo,description:i.description,specification:i.specification,material:i.material,unit:i.unit,quantity:i.quantity,category:maPartCategory(i)});});});
+    // 只給第一層:子件加進來會讓已點完的工程區突然變成未完成
+    p.components.forEach(function(c){maPartItems(c).forEach(function(i){if(i.level>2)return;items.push({componentNo:c.componentNo,partNo:i.partNo,description:i.description,specification:i.specification,material:i.material,unit:i.unit,quantity:i.quantity,category:maPartCategory(i)});});});
     return {project:p.project,items:items};
   };
-  window.MA_CAT_INFO={order:MA_PART_ORDER,label:{BH:'BH',RH:'RH',BOX:'BOX',BT:'BT',U:'槽鐵 U',Q:'帷幕 Q',H:'水電 H',FB:'FB',L:'角鐵 L','成品材':'成品材',SP:'SP'}};
+  window.MA_CAT_INFO={order:MA_PART_ORDER,label:{BH:'BH',RH:'RH',BOX:'BOX',BT:'BT',FW:'F/W板',U:'槽鐵 U',Q:'帷幕 Q',H:'水電 H',FB:'FB',L:'角鐵 L','成品材':'成品材',SP:'SP'}};
   window.maClearAll=function(){
     maComponents=[];maProject={工程編號:'',工程區:'',母件編號:''};maPartsCat='ALL';maPartsMode='grouped';maSearchQuery='';
     var raw=document.getElementById('ma-raw-input');if(raw)raw.value='';
