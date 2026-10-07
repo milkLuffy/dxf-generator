@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.07.5"/>
+<meta name="sc-version" content="2026.10.07.6"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -8716,7 +8716,7 @@ window.normalizeFullWidth=function(value){
       </style>
       <div id="spc-view-list">
         <div class="page-title">SP清點</div>
-        <div class="section-label" style="margin-bottom:10px">選一個工程區開始清點；要兩區一起點，就勾選卡片上的「合併」再按「合併清點」。資料來自「多階資料分析」最新一次儲存的第一層零件（E 開頭的零件不用點；水電 H／帷幕 Q 改點底下的鋼管、鋼板、剪力釘）；點完會自動連動 CP 看板的 SP 狀態。</div>
+        <div class="section-label" style="margin-bottom:10px">選一個工程區開始清點；要兩區一起點，就勾選卡片上的「合併」再按「合併清點」。資料來自「多階資料分析」最新一次儲存的第一層零件（工地用的不用點：E 開頭零件、ZBJK 高張力螺栓、ZSH 剪力釘；水電 H／帷幕 Q 改點底下的鋼管、鋼板、剪力釘）；點完會自動連動 CP 看板的 SP 狀態。</div>
         <div class="spc-toolbar">
           <input type="search" class="search-input" placeholder="搜尋工程編號／工程區…" oninput="spcListSearch(this.value)"/>
         </div>
@@ -53334,8 +53334,9 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   function maPartCategory(item){
     if(item.code==='Q')return 'Q';
     if(item.code==='H')return 'H';
-    // 零件編號 E 開頭＝工地用(不論是板、FB 或螺栓),跟廠內無關,另歸一類;SP清點、有無板判定也都不算
-    if(/^E/i.test(String(item.partNo!=null?item.partNo:(item.part_no||'')).trim()))return 'E';
+    // 工地用(不是我們的,不用點):多階行尾代碼 E,或零件編號 E 開頭(板/FB)、ZBJK(高張力圓頭鎖斷螺栓)、ZSH(剪力釘)開頭
+    // (有些螺栓/剪力釘行尾漏標 E,所以也看編號);水電 H 底下的剪力釘上面已先歸 H,照點。另歸一類,SP清點、有無板判定也都不算
+    if(item.code==='E'||/^(E|ZBJK|ZSH)/i.test(String(item.partNo!=null?item.partNo:(item.part_no||'')).trim()))return 'E';
     if(item.fw)return 'FW';
     var s=String(item.specification||'').trim().toUpperCase();
     if(s.indexOf('BOX')===0)return 'BOX';
@@ -53623,7 +53624,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
         material:mat,
         unit:unit,
         quantity:qty===''?'':Number(qty),
-        code:code==='Q'||code==='H'?code:''
+        code:code==='Q'||code==='H'||code==='E'?code:''
       });
     });
     return components.length?components:null;
@@ -53655,7 +53656,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
         }
         var lv=line.match(/^(\*{2,})\s+(\d+)\s+\S+/);
         if(!current||!lv)return;
-        var codeMatch=line.trimEnd().match(/\s([QH])$/);
+        var codeMatch=line.trimEnd().match(/\s([QHE])$/);   // 行尾代碼:Q 帷幕、H 水電、E 工地用
         var qtyText=maFixedField(line,116,122);
         maPushItem(current,stack,lv[1].length,{
           sequence:Number(lv[2])||0,
@@ -57136,7 +57137,7 @@ async function ldDashPlan(){
       var flat=row&&typeof window.maFlatParts==='function'?window.maFlatParts(row.raw_text||''):null;
       if(!flat){bad.push(f.z);return;}
       flat.items.forEach(function(i){
-        var pn=String(i.partNo||'').trim();if(!pn||/^E/i.test(pn))return;   // E 開頭不用點
+        var pn=String(i.partNo||'').trim();if(!pn||/^E/i.test(pn)||i.category==='E')return;   // 工地用(E 開頭、行尾代碼 E 的 ZBJK 螺栓／ZSH 剪力釘)不用點
         var k=key(pn,i.specification),it=map[k];
         if(!it){it=map[k]={key:k,partNo:pn,spec:String(i.specification||'').trim(),desc:i.description||'',material:i.material||'',unit:i.unit||'',cat:i.category,need:0,zneed:{},comps:{},compOrder:[]};items.push(it);}
         var q=num(i.quantity)||0,cn=(multi()?f.z+' ':'')+i.componentNo;
