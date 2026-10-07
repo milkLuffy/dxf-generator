@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.07.2"/>
+<meta name="sc-version" content="2026.10.07.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -52430,14 +52430,31 @@ function dsRowsTitle(rows) {
 /* 圖面一律是橫向 A3/A4；尺寸一律保留原樣，只把直向的頁面順時針轉 90° */
 /* 自檢表產生器 ↺↻ 轉正的角度(drawing_files.page_rot),圖面快搜、報驗附圖一起吃 */
 function dsPageRot(file, pageNo) { return scRotNorm(((file && file.page_rot) || {})[Number(pageNo)]); }
-function dsForceLandscape(page) {
-  const { width, height } = page.getSize();
-  const angle = ((page.getRotation().angle % 360) + 360) % 360;
-  const sideways = angle === 90 || angle === 270;
-  const shownWidth = sideways ? height : width;
-  const shownHeight = sideways ? width : height;
-  if (shownWidth >= shownHeight) return;
-  page.setRotation(PDFLib.degrees((angle + 90) % 360));
+
+/* 印表機四周有印不到的區域(約 3~5mm),原圖滿版的話用「預設」縮放列印會切到外框;
+   存 PDF 沒這問題。所以每頁都把原圖當 XObject 縮小、置中貼在同尺寸的新頁上,四周留白邊,
+   向量/掃描畫質都不變。原頁的旋轉(含 ↺↻ 轉正、直向轉橫向)在這裡一併畫進去,新頁本身不帶 /Rotate */
+const DS_PRINT_MARGIN = 0.022;   // 白邊＝長邊的 2.2%(A4 約 6.5mm、A3 約 9mm,縮到 A4 紙一樣約 6.5mm)
+async function dsAddPrintSafePage(output, srcPage, userRot) {
+  const crop = srcPage.getCropBox();
+  let angle = ((srcPage.getRotation().angle + (userRot || 0)) % 360 + 360) % 360;
+  if (angle % 90) angle = 0;
+  const sidewaysOf = a => a === 90 || a === 270;
+  // 圖面一律橫向:轉完還是直的就再順時針轉 90°
+  if ((sidewaysOf(angle) ? crop.height : crop.width) < (sidewaysOf(angle) ? crop.width : crop.height)) angle = (angle + 90) % 360;
+  const sideways = sidewaysOf(angle);
+  const rawW = sideways ? crop.height : crop.width;
+  const rawH = sideways ? crop.width : crop.height;
+  const margin = Math.max(rawW, rawH) * DS_PRINT_MARGIN;
+  const scale = Math.min((rawW - 2 * margin) / rawW, (rawH - 2 * margin) / rawH);
+  const embedded = await output.embedPage(srcPage, { left: crop.x, bottom: crop.y, right: crop.x + crop.width, top: crop.y + crop.height });
+  const sw = crop.width * scale, sh = crop.height * scale;
+  const dw = sideways ? sh : sw, dh = sideways ? sw : sh;
+  const bx = (rawW - dw) / 2, by = (rawH - dh) / 2;
+  // PDF /Rotate 是順時針;drawPage 的 rotate 是繞左下角逆時針,所以用 -angle 再把錨點移回框內
+  const anchor = { 0: [bx, by], 90: [bx, by + sw], 180: [bx + sw, by + sh], 270: [bx + sh, by] }[angle];
+  const page = output.addPage([rawW, rawH]);
+  page.drawPage(embedded, { x: anchor[0], y: anchor[1], width: sw, height: sh, rotate: PDFLib.degrees(-angle) });
 }
 
 /* 存檔名＝工程編號-工程區-構件編號（例：B820-8BG-B21B01.B21B02） */
@@ -52482,11 +52499,7 @@ async function dsMergeRowsToPdf(uniqueRows, onProgress, title = '', files = null
       source = await PDFLib.PDFDocument.load(await response.arrayBuffer(), { ignoreEncryption: true });
       sourceDocuments.set(part.storage_key, source);
     }
-    const copied = await output.copyPages(source, [Number(row.page_no) - part.page_start]);
-    const userRot = dsPageRot(file, row.page_no);
-    if (userRot) copied[0].setRotation(PDFLib.degrees((copied[0].getRotation().angle + userRot) % 360));
-    dsForceLandscape(copied[0]);
-    output.addPage(copied[0]);
+    await dsAddPrintSafePage(output, source.getPage(Number(row.page_no) - part.page_start), dsPageRot(file, row.page_no));
     if (onProgress) onProgress(index + 1, uniqueRows.length);
   }
   return await output.save({ useObjectStreams: true, addDefaultPage: false, objectsPerTick: 50 });
