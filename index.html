@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.07.4"/>
+<meta name="sc-version" content="2026.10.07.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -4351,6 +4351,7 @@ window.normalizeFullWidth=function(value){
 .ma-tag.q{background:rgba(191,90,242,.14);color:var(--purple);border:1px solid rgba(191,90,242,.35)}
 .ma-tag.h{background:rgba(64,200,224,.12);color:var(--accent3);border:1px solid rgba(64,200,224,.35)}
 .ma-tag.sp{background:rgba(255,255,255,.08);color:var(--text2);border:1px solid var(--border)}
+.ma-tag.e{background:rgba(255,159,10,.12);color:var(--yellow);border:1px dashed rgba(255,159,10,.45)}
 /* ── 有／無板全區試算(報驗頁按鈕開啟的彈窗) ── */
 .ibt-sum{display:flex;flex-wrap:wrap;gap:14px;font-family:var(--mono);font-size:11px;color:var(--text2)}
 .ibt-wrap{overflow:auto;max-height:60vh;border:1px solid var(--border);border-radius:var(--rad)}
@@ -53294,10 +53295,11 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     {key:'FB',label:'FB'},
     {key:'L',label:'角鐵 L'},
     {key:'成品材',label:'成品材'},
-    {key:'SP',label:'SP'}
+    {key:'SP',label:'SP'},
+    {key:'E',label:'工地用 E'}
   ];
-  var MA_PART_ORDER=['BH','RH','BOX','BT','FW','U','Q','H','FB','L','成品材','SP'];
-  var MA_PART_SHEET={BH:'BH',RH:'RH',BOX:'BOX',BT:'BT',FW:'FW板',U:'槽鐵U',Q:'帷幕Q',H:'水電H',FB:'FB',L:'角鐵L','成品材':'成品材',SP:'SP'};
+  var MA_PART_ORDER=['BH','RH','BOX','BT','FW','U','Q','H','FB','L','成品材','SP','E'];
+  var MA_PART_SHEET={BH:'BH',RH:'RH',BOX:'BOX',BT:'BT',FW:'FW板',U:'槽鐵U',Q:'帷幕Q',H:'水電H',FB:'FB',L:'角鐵L','成品材':'成品材',SP:'SP',E:'工地用E'};
   // 複合分頁:不是 maPartCategory 會回傳的分類,只是把數個分類併在同一個分頁看
   var MA_CAT_GROUP={BHRH:['BH','RH']};
   var maPartsCat='ALL',maPartsMode='grouped',maSearchQuery='';
@@ -53332,6 +53334,8 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   function maPartCategory(item){
     if(item.code==='Q')return 'Q';
     if(item.code==='H')return 'H';
+    // 零件編號 E 開頭＝工地用(不論是板、FB 或螺栓),跟廠內無關,另歸一類;SP清點、有無板判定也都不算
+    if(/^E/i.test(String(item.partNo!=null?item.partNo:(item.part_no||'')).trim()))return 'E';
     if(item.fw)return 'FW';
     var s=String(item.specification||'').trim().toUpperCase();
     if(s.indexOf('BOX')===0)return 'BOX';
@@ -53441,6 +53445,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   function maCatTag(cat){
     if(cat==='Q')return '<span class="ma-tag q">帷幕 Q</span>';
     if(cat==='H')return '<span class="ma-tag h">水電 H</span>';
+    if(cat==='E')return '<span class="ma-tag e">工地用 E</span>';
     return '<span class="ma-tag sp">'+maEsc(cat)+'</span>';
   }
   function maProjectFileBase(){
@@ -54238,7 +54243,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   // 規則:排除母件本體後,第一層零件只要還有「不是成品材、不是 FB、不是水電 H、不是帷幕 Q、零件編號不是 E 開頭(工地用)」的,就算有板。
   // 亦即 SP、角鐵 L,以及本體以外額外的 BH/RH/BOX/BT/U(托樑、補強 H)都算有板。
   // H(水電)、Q(帷幕)暫定不算板:圖面有時沒畫、多階表卻有,先當不算;要改規則只動這個陣列。
-  var MA_BOARD_NOT=['成品材','FB','H','Q','FW'];
+  var MA_BOARD_NOT=['成品材','FB','H','Q','FW','E'];
   var MA_BOARD_FIRST=['SP','L'];
   // 分類優先用存檔時寫進資料庫的 category,畫面看到什麼分類就用什麼判定;現場解析出來的才即時算
   function maItemCat(i){return (i&&i.category)?i.category:maPartCategory(i);}
@@ -54372,7 +54377,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     });
     return {project:p.project,items:items};
   };
-  window.MA_CAT_INFO={order:MA_PART_ORDER,label:{BH:'BH',RH:'RH',BOX:'BOX',BT:'BT',FW:'F/W板',U:'槽鐵 U',Q:'帷幕 Q',H:'水電 H',FB:'FB',L:'角鐵 L','成品材':'成品材',SP:'SP'}};
+  window.MA_CAT_INFO={order:MA_PART_ORDER,label:{BH:'BH',RH:'RH',BOX:'BOX',BT:'BT',FW:'F/W板',U:'槽鐵 U',Q:'帷幕 Q',H:'水電 H',FB:'FB',L:'角鐵 L','成品材':'成品材',SP:'SP',E:'工地用 E'}};
   window.maClearAll=function(){
     maComponents=[];maProject={工程編號:'',工程區:'',母件編號:''};maPartsCat='ALL';maPartsMode='grouped';maSearchQuery='';
     var raw=document.getElementById('ma-raw-input');if(raw)raw.value='';
