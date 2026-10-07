@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.07.3"/>
+<meta name="sc-version" content="2026.10.07.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -52431,10 +52431,12 @@ function dsRowsTitle(rows) {
 /* 自檢表產生器 ↺↻ 轉正的角度(drawing_files.page_rot),圖面快搜、報驗附圖一起吃 */
 function dsPageRot(file, pageNo) { return scRotNorm(((file && file.page_rot) || {})[Number(pageNo)]); }
 
-/* 印表機四周有印不到的區域(約 3~5mm),原圖滿版的話用「預設」縮放列印會切到外框;
-   存 PDF 沒這問題。所以每頁都把原圖當 XObject 縮小、置中貼在同尺寸的新頁上,四周留白邊,
+/* 製造圖多半是 A3(甚至更大),Chrome 列印 PDF 的「縮放比例：預設」是照實際尺寸 100% 印,
+   A3 放到 A4 紙上右邊、下面就被切掉;存 PDF 則跟著原圖尺寸所以完整。
+   所以每頁一律做成 A4 橫向,把原圖當 XObject 等比縮進去、置中,四周留白邊(避開印表機印不到的區域),
    向量/掃描畫質都不變。原頁的旋轉(含 ↺↻ 轉正、直向轉橫向)在這裡一併畫進去,新頁本身不帶 /Rotate */
-const DS_PRINT_MARGIN = 0.022;   // 白邊＝長邊的 2.2%(A4 約 6.5mm、A3 約 9mm,縮到 A4 紙一樣約 6.5mm)
+const DS_PRINT_PAGE = [841.89, 595.28];   // A4 橫向(pt)
+const DS_PRINT_MARGIN = 17;               // 白邊 6mm
 async function dsAddPrintSafePage(output, srcPage, userRot) {
   const crop = srcPage.getCropBox();
   let angle = ((srcPage.getRotation().angle + (userRot || 0)) % 360 + 360) % 360;
@@ -52445,15 +52447,15 @@ async function dsAddPrintSafePage(output, srcPage, userRot) {
   const sideways = sidewaysOf(angle);
   const rawW = sideways ? crop.height : crop.width;
   const rawH = sideways ? crop.width : crop.height;
-  const margin = Math.max(rawW, rawH) * DS_PRINT_MARGIN;
-  const scale = Math.min((rawW - 2 * margin) / rawW, (rawH - 2 * margin) / rawH);
+  const [pageW, pageH] = DS_PRINT_PAGE;
+  const scale = Math.min((pageW - 2 * DS_PRINT_MARGIN) / rawW, (pageH - 2 * DS_PRINT_MARGIN) / rawH);
   const embedded = await output.embedPage(srcPage, { left: crop.x, bottom: crop.y, right: crop.x + crop.width, top: crop.y + crop.height });
   const sw = crop.width * scale, sh = crop.height * scale;
   const dw = sideways ? sh : sw, dh = sideways ? sw : sh;
-  const bx = (rawW - dw) / 2, by = (rawH - dh) / 2;
+  const bx = (pageW - dw) / 2, by = (pageH - dh) / 2;
   // PDF /Rotate 是順時針;drawPage 的 rotate 是繞左下角逆時針,所以用 -angle 再把錨點移回框內
   const anchor = { 0: [bx, by], 90: [bx, by + sw], 180: [bx + sw, by + sh], 270: [bx + sh, by] }[angle];
-  const page = output.addPage([rawW, rawH]);
+  const page = output.addPage([pageW, pageH]);
   page.drawPage(embedded, { x: anchor[0], y: anchor[1], width: sw, height: sh, rotate: PDFLib.degrees(-angle) });
 }
 
