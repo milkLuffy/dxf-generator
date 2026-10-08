@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.07.8"/>
+<meta name="sc-version" content="2026.10.08.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -42748,7 +42748,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     const isOffice=emp.emp_type==='office';
     // 每日加班明細:先算出「原本會有多少加班」,再看當天是否被標記「不算加班」(ot_excluded)決定是否計入。
     // ot_excluded 由薪資頁「加班費 / 假日加班費」欄點入逐日勾選,存於 payroll_run.adjustments[sid].ot_exclude。
-    // 分類規則(與原邏輯相同):外勞週日=sunday、外勞週六/國定=holiday(固定金額);本工假日出勤已納入出勤天不另計;
+    // 分類規則(與原邏輯相同):外勞週日=sunday、外勞週六/國定=holiday(固定金額);本工假日出勤已納入出勤天不另計金額(週日/國定仍列天數);
     //                        其餘依打卡下班時刻分 t1(17:30~20:30) / t2(17:30~23:00)。
     const otItems=monthAtt.map(a=>{
       const wd=a.weekday!=null?a.weekday:(a.work_date?new Date(a.work_date).getDay():-1);
@@ -42761,7 +42761,10 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       let cat=null,qty=0,catPay=0;
       if(isForeign&&worked&&wd===0){ cat='sunday'; qty=1; catPay=num(fr.sunday); }
       else if(isForeign&&worked&&(a.is_holiday||wd===6)){ cat='holiday'; qty=1; catPay=num(fr.holiday); }
-      else if(!isForeign&&!isOffice&&worked&&isSpecial){ /* 本工假日出勤已計入出勤天,不另計加班 */ }
+      else if(!isForeign&&!isOffice&&worked&&isSpecial){
+        // 本工假日出勤已計入出勤天,不另計加班費;但星期日/國定假日仍列天數(金額 0),表格、明細單、Excel 才看得到
+        if(a.is_holiday){ cat='holiday'; qty=1; } else if(wd===0){ cat='sunday'; qty=1; }
+      }
       else {
         if(a.is_holiday&&worked)cat='holiday'; else if(wd===0&&worked)cat='sunday';
         else if(tier===2)cat='t2'; else if(tier===1)cat='t1';
