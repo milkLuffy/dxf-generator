@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.09.1"/>
+<meta name="sc-version" content="2026.10.09.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -19902,6 +19902,10 @@ let zoneMatQty = {};                 // 進料批次:每支這次要登記的數
 async function loadComponents(zoneId) {
   // 切換工程區前,先把托樑零件表尚未寫入的編輯存完(此時 currentZoneId 仍是舊區,存回正確的區)
   if (_beamSaveTimer || zoneBeamRows.some(r => r._dirty)) { clearTimeout(_beamSaveTimer); _beamSaveTimer = null; await beamFlushDirty(); }
+  // 構件總表的欄位篩選(含「篩選 A201 空白」)只屬於當下工程區:切區時先存起來,換成新區自己的篩選
+  if (currentZoneId != null) compFiltersByZone[String(currentZoneId)] = colFilterState.comp;
+  colFilterState.comp = compFiltersByZone[String(zoneId)] || {};
+  closeColFilter();
   currentZoneId = zoneId;
   pagerReset('comp');
   const r=await sbFetch(`/rest/v1/components?select=*&zone_id=eq.${zoneId}&order=seq`);
@@ -20242,6 +20246,7 @@ async function saveOnePartExt(part) {
 }
 
 let compSearchText = '';
+const compFiltersByZone = {};   // 工程區 id → 該區構件總表的 colFilterState.comp
 let compVisibleParts = [];   // 主表目前顯示(已套用搜尋/篩選)的 part_no,供全選用
 function compSearchInput(v) { compSearchText = v.trim().toLowerCase(); pagerReset('comp'); renderCompTable(); }
 function clearCompFilters() {
@@ -46145,6 +46150,15 @@ async function cprDelete(id){
   const res=await sbFetch('/rest/v1/cp_receipts?id=eq.'+id,{method:'DELETE',headers:{Prefer:'return=minimal'}});if(!res.ok){alert('刪除失敗（HTTP '+res.status+'）');return;}
   prodReceipts=prodReceipts.filter(x=>String(x.id)!==String(id));if(String(cprEditDraft?.id)===String(id))cprEditDraft=null;cprHistoryPush(before);cprRender();prodRenderBoard();cprSyncZoneDetail();
 }
+// SP狀態表按 ✕ 移除過的收圖(sp_hidden)→ 重新帶進 SP狀態表/總表看板
+async function cprRestoreSP(id){
+  const r=prodReceipts.find(x=>String(x.id)===String(id));if(!r||!r.sp_hidden)return;
+  if(!await uiConfirm('把 '+(r.project_no||'')+' / '+(r.cp_no||'')+' 重新帶回 SP狀態表？'))return;
+  cprRecordSnapshot(r.project_no);
+  const res=await sbFetch('/rest/v1/cp_receipts?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({sp_hidden:false})});
+  if(!res.ok){alert('復原失敗（HTTP '+res.status+'）');return;}
+  r.sp_hidden=false;prodMemoReset();cprRender();prodRenderBoard();if(typeof spTrackRenderCurrentList==='function')spTrackRenderCurrentList();prodReadinessChanged(true);
+}
 function cprBlankInlineDraft(){return{cp_no:'',zones:[],items:new Set(),received_date:cprToday(),is_subcontract:false};}
 function cprEnsureInlineDraft(){if(!cprNewDraft)cprNewDraft=cprBlankInlineDraft();return cprNewDraft;}
 function cprInlineDraft(kind){if(kind==='detail')return cprZoneDetailDraft||(cprZoneDetailDraft=cprBlankZoneDetailDraft());return kind==='edit'?cprEditDraft:cprEnsureInlineDraft();}
@@ -46336,10 +46350,11 @@ function cprClearFilters(){['cprFilterCategory','cprFilterFrom','cprFilterTo','c
 function cprPageMove(delta){const rows=cprFilteredRows(),pages=Math.max(1,Math.ceil(rows.length/CPR_PAGE_SIZE));cprPage=Math.min(pages,Math.max(1,cprPage+delta));cprRender();}
 function cprReceiptRowHtml(r,canEdit,prefix='cpr'){
     const zoneValues=r.zone_scope==='all'||r.zone_text==='全區'?['全區']:cprNormalizeZone(r.zone_text).split('.').filter(Boolean),zones=zoneValues.length?'<span class="sp-notion-tags">'+zoneValues.map(z=>'<span class="sp-zone-tag">'+esc(z)+'</span>').join('')+'</span>':'<span class="cpr-muted">—</span>';
-    const items=(r.categories||[]).map(cprItemTag).join('')||'<span class="cpr-muted">—</span>';
+    const items=((r.categories||[]).map(cprItemTag).join('')||'<span class="cpr-muted">—</span>')+(r.sp_hidden?'<span class="chip st-sub" title="已從 SP狀態表移除，不會帶進 SP狀態表／總表看板">SP已移除</span>':'');
+    const spBtn=r.sp_hidden?'<button type="button" class="btn-sm btn-gen" title="重新帶進 SP狀態表／總表看板" onclick="cprRestoreSP('+r.id+')">↺ 復原SP</button>':'';
     const revBtn=cprRevisionEligible(r)?'<button type="button" class="btn-sm btn-gen" title="將這張 A16 登記到 BOM 構件版次欄" onclick="cprOpenRevision('+r.id+')">BOM修訂</button>':'';
     if(!canEdit)return '<tr><td class="cpr-code">'+esc(r.cp_no||'—')+'</td><td class="cpr-code">'+esc(r.project_no||'—')+'</td><td>'+zones+'</td><td><div class="sp-notion-tags">'+items+'</div></td><td class="cpr-code">'+esc(String(r.received_date||'').slice(0,10)||'—')+'</td><td></td></tr>';
-    return '<tr><td><input class="lt-edit cpr-direct-input cpr-code" value="'+esc(r.cp_no||'')+'" placeholder="CP單號" oninput="this.value=this.value.toUpperCase()" onchange="cprDirectSetCP('+r.id+',this.value,this)"></td><td class="cpr-code">'+esc(r.project_no||'—')+'</td><td><button type="button" id="'+prefix+'-row-zone-'+r.id+'" class="spx-detail-btn cpr-direct-picker" onclick="cprOpenRowPicker(event,'+r.id+',\'zone\')" onkeydown="cprPickerButtonKeydown(event,null,\'zone\','+r.id+')" title="可直接輸入工程區；不存在時按 Enter 建立">'+zones+'</button></td><td><button type="button" id="'+prefix+'-row-item-'+r.id+'" class="spx-detail-btn cpr-direct-picker" style="white-space:normal" onclick="cprOpenRowPicker(event,'+r.id+',\'item\')" onkeydown="cprPickerButtonKeydown(event,null,\'item\','+r.id+')" title="可直接輸入項目後按 Enter 選取"><span class="sp-notion-tags">'+items+'</span></button></td><td><input class="lt-edit cpr-direct-input cpr-code" type="date" value="'+esc(String(r.received_date||'').slice(0,10))+'" onchange="cprDirectSet('+r.id+',\'received_date\',this.value,true)"></td><td class="del-col" style="white-space:nowrap">'+revBtn+'<button type="button" class="btn-del-row" title="刪除這筆收圖" onclick="cprDelete('+r.id+')">✕</button></td></tr>';
+    return '<tr><td><input class="lt-edit cpr-direct-input cpr-code" value="'+esc(r.cp_no||'')+'" placeholder="CP單號" oninput="this.value=this.value.toUpperCase()" onchange="cprDirectSetCP('+r.id+',this.value,this)"></td><td class="cpr-code">'+esc(r.project_no||'—')+'</td><td><button type="button" id="'+prefix+'-row-zone-'+r.id+'" class="spx-detail-btn cpr-direct-picker" onclick="cprOpenRowPicker(event,'+r.id+',\'zone\')" onkeydown="cprPickerButtonKeydown(event,null,\'zone\','+r.id+')" title="可直接輸入工程區；不存在時按 Enter 建立">'+zones+'</button></td><td><button type="button" id="'+prefix+'-row-item-'+r.id+'" class="spx-detail-btn cpr-direct-picker" style="white-space:normal" onclick="cprOpenRowPicker(event,'+r.id+',\'item\')" onkeydown="cprPickerButtonKeydown(event,null,\'item\','+r.id+')" title="可直接輸入項目後按 Enter 選取"><span class="sp-notion-tags">'+items+'</span></button></td><td><input class="lt-edit cpr-direct-input cpr-code" type="date" value="'+esc(String(r.received_date||'').slice(0,10))+'" onchange="cprDirectSet('+r.id+',\'received_date\',this.value,true)"></td><td class="del-col" style="white-space:nowrap">'+spBtn+revBtn+'<button type="button" class="btn-del-row" title="刪除這筆收圖" onclick="cprDelete('+r.id+')">✕</button></td></tr>';
 }
 function cprRender(){
   prodMemoReset();
@@ -46377,7 +46392,7 @@ function cprMobileListHtml(rows,canEdit){
     return '<div class="sp-l-card cpr-m-card" role="button" tabindex="0" onclick="'+open+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+open+'}">'+
       '<div class="sp-l-top"><span class="sp-l-cp">'+esc(r.cp_no||'（未填 CP 單號）')+'</span><span class="cpr-m-date">'+esc(dateSlash(String(r.received_date||'').slice(0,10))||'—')+'</span></div>'+
       '<div class="cpr-m-tags">'+(zones||'<span class="prod-no">未選工程區</span>')+'</div>'+
-      '<div class="cpr-m-tags">'+(items||'<span class="prod-no">未選項目</span>')+(r.is_subcontract?'<span class="chip st-sub">轉包</span>':'')+'</div>'+
+      '<div class="cpr-m-tags">'+(items||'<span class="prod-no">未選項目</span>')+(r.is_subcontract?'<span class="chip st-sub">轉包</span>':'')+(r.sp_hidden?'<span class="chip st-sub">SP已移除</span>':'')+'</div>'+
       '<span class="sp-l-go" aria-hidden="true">›</span></div>';
   }).join('')+'</div>';
 }
@@ -46397,7 +46412,7 @@ function cprOpenMobileSheet(id){
       '<label class="spx-m-field wide"><span>收圖日期</span><input type="date" value="'+esc(String(r.received_date||'').slice(0,10))+'"'+dis+' onchange="cprDirectSet('+r.id+',\'received_date\',this.value,true)"></label>'+
       '<div class="spx-m-field wide"><span>工程區</span><button type="button" id="cpr-row-zone-'+r.id+'" class="cpr-m-pick"'+dis+' onclick="cprOpenRowPicker(event,'+r.id+',\'zone\')">'+cprInlineZoneTags({zones:cprDirectZoneValues(r)})+'</button></div>'+
       '<div class="spx-m-field wide"><span>項目</span><button type="button" id="cpr-row-item-'+r.id+'" class="cpr-m-pick"'+dis+' onclick="cprOpenRowPicker(event,'+r.id+',\'item\')">'+cprInlineItemTags({items:new Set(r.categories||[]),is_subcontract:!!r.is_subcontract})+'</button></div>'+
-      (canEdit?'<div class="cpr-m-actions">'+(cprRevisionEligible(r)?'<button type="button" class="cpr-m-ghost" onclick="cprCloseMobileSheet(false);cprOpenRevision('+r.id+')">BOM 修訂</button>':'')+'<button type="button" class="cpr-m-danger" onclick="cprMobileDelete('+r.id+')">刪除這筆</button></div>':'');
+      (canEdit?'<div class="cpr-m-actions">'+(r.sp_hidden?'<button type="button" class="cpr-m-ghost" onclick="cprCloseMobileSheet(false);cprRestoreSP('+r.id+')">↺ 復原SP</button>':'')+(cprRevisionEligible(r)?'<button type="button" class="cpr-m-ghost" onclick="cprCloseMobileSheet(false);cprOpenRevision('+r.id+')">BOM 修訂</button>':'')+'<button type="button" class="cpr-m-danger" onclick="cprMobileDelete('+r.id+')">刪除這筆</button></div>':'');
   }
   const sheet=document.createElement('div');sheet.className='sp-sheet spx-m-sheet';sheet.id='cprMobileSheet';
   sheet.innerHTML='<div class="sp-sheet-panel" role="dialog" aria-modal="true" aria-label="'+(isNew?'新增收圖':'編輯收圖')+'"><div class="sp-sheet-grip"></div>'+
