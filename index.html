@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.08.1"/>
+<meta name="sc-version" content="2026.10.09.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -45999,7 +45999,7 @@ function cprHistoryPush(snapshot){if(cprHistoryApplying||!snapshot?.projectNo)re
 function cprRecordSnapshot(projectNo){if(cprHistoryApplying||cprHistoryGate)return;cprHistoryPush(cprHistoryCapture(projectNo));cprHistoryGate=setTimeout(()=>{cprHistoryGate=null;},450);}
 function cprResetHistory(){clearTimeout(cprHistoryGate);cprHistoryGate=null;cprUndoStack=[];cprRedoStack=[];cprUpdateHistoryButtons();}
 function cprUpdateHistoryButtons(){const u=cprEl('cprUndo'),r=cprEl('cprRedo');if(u)u.disabled=!cprUndoStack.length||cprHistoryApplying;if(r)r.disabled=!cprRedoStack.length||cprHistoryApplying;}
-function cprHistoryPayload(r,withId){const p=cprDirectPayload(r);['note','project_status_override'].forEach(k=>{if(Object.prototype.hasOwnProperty.call(r,k))p[k]=r[k];});if(withId){['source_notion_id','created_by','created_at'].forEach(k=>{if(Object.prototype.hasOwnProperty.call(r,k))p[k]=r[k];});p.id=r.id;}return p;}
+function cprHistoryPayload(r,withId){const p=cprDirectPayload(r);['note','project_status_override','sp_hidden'].forEach(k=>{if(Object.prototype.hasOwnProperty.call(r,k))p[k]=r[k];});if(withId){['source_notion_id','created_by','created_at'].forEach(k=>{if(Object.prototype.hasOwnProperty.call(r,k))p[k]=r[k];});p.id=r.id;}return p;}
 async function cprApplyHistory(snapshot){
   const no=snapshot.projectNo,current=cprRowsForProject(no).filter(r=>r.id!=null),target=snapshot.rows||[],curMap=new Map(current.map(r=>[String(r.id),r])),tarMap=new Map(target.map(r=>[String(r.id),r]));
   const remove=current.filter(r=>!tarMap.has(String(r.id))).map(r=>r.id);if(remove.length){const d=await sbFetch('/rest/v1/cp_receipts?id=in.('+remove.map(encodeURIComponent).join(',')+')',{method:'DELETE'});if(!d.ok)throw new Error('刪除回復失敗 HTTP '+d.status);}
@@ -48289,7 +48289,7 @@ function spTrackBomZoneCompleted(projectNo,zone){const code=String(zone||'').tri
 function spTrackActiveZones(projectNo,value){return prodMemo('activeZones:'+String(projectNo||'').trim()+'\u0001'+String(value||''),()=>spTrackZones(value).filter(zone=>!spTrackBomZoneCompleted(projectNo,zone)));}
 function spTrackReceiptMetaMap(){ return prodMemo('receiptMeta',spTrackBuildReceiptMetaMap); }
 function spTrackBuildReceiptMetaMap(){
-  const map=new Map();(prodReceipts||[]).forEach(receipt=>{const proj=String(receipt.project_no||'').trim().toUpperCase(),cp=String(receipt.cp_no||'').trim();if(!proj||!cp||receipt.is_subcontract||spTrackReceiptProjectHidden(proj))return;const temp={};spxSetCombo(temp,SPX.track.cols.find(c=>c.combo),cp);const probe={proj_no:proj,dwg_no:temp.dwg_no||'',order_no:temp.order_no||''},key=spTrackGroupKey(probe),items=(receipt.categories||[]).map(x=>CPR_TO_SP_ITEM[String(x||'').trim()]).filter(x=>PROD_ITEMS.includes(x));if(!items.length)return;let zones=receipt.zone_scope==='all'||receipt.zone_text==='全區'?(typeof cprBomZoneCodes==='function'?cprBomZoneCodes(proj):[]):spTrackZones(receipt.zone_text);if(!zones.length&&receipt.zone_text==='全區')zones=['全區'];zones=zones.filter(zone=>!spTrackBomZoneCompleted(proj,zone));if(!zones.length)return;if(!map.has(key))map.set(key,{key,proj,dwg:probe.dwg_no,ord:probe.order_no,cp,rows:[],zones:new Set(),items:new Set(),itemReceiptIds:{},newest:0});const meta=map.get(key);meta.rows.push(receipt);zones.forEach(z=>meta.zones.add(z));items.forEach(item=>{meta.items.add(item);if(meta.itemReceiptIds[item]==null&&receipt.id!=null)meta.itemReceiptIds[item]=receipt.id;});meta.newest=Math.max(meta.newest,Date.parse(String(receipt.created_at||receipt.received_date||''))||Number(receipt.id)||0);});return map;
+  const map=new Map();(prodReceipts||[]).forEach(receipt=>{const proj=String(receipt.project_no||'').trim().toUpperCase(),cp=String(receipt.cp_no||'').trim();if(!proj||!cp||receipt.is_subcontract||receipt.sp_hidden||spTrackReceiptProjectHidden(proj))return;const temp={};spxSetCombo(temp,SPX.track.cols.find(c=>c.combo),cp);const probe={proj_no:proj,dwg_no:temp.dwg_no||'',order_no:temp.order_no||''},key=spTrackGroupKey(probe),items=(receipt.categories||[]).map(x=>CPR_TO_SP_ITEM[String(x||'').trim()]).filter(x=>PROD_ITEMS.includes(x));if(!items.length)return;let zones=receipt.zone_scope==='all'||receipt.zone_text==='全區'?(typeof cprBomZoneCodes==='function'?cprBomZoneCodes(proj):[]):spTrackZones(receipt.zone_text);if(!zones.length&&receipt.zone_text==='全區')zones=['全區'];zones=zones.filter(zone=>!spTrackBomZoneCompleted(proj,zone));if(!zones.length)return;if(!map.has(key))map.set(key,{key,proj,dwg:probe.dwg_no,ord:probe.order_no,cp,rows:[],zones:new Set(),items:new Set(),itemReceiptIds:{},newest:0});const meta=map.get(key);meta.rows.push(receipt);zones.forEach(z=>meta.zones.add(z));items.forEach(item=>{meta.items.add(item);if(meta.itemReceiptIds[item]==null&&receipt.id!=null)meta.itemReceiptIds[item]=receipt.id;});meta.newest=Math.max(meta.newest,Date.parse(String(receipt.created_at||receipt.received_date||''))||Number(receipt.id)||0);});return map;
 }
 function spTrackRowsWithReceipts(){ return prodMemo('rowsWithReceipts',spTrackBuildRowsWithReceipts); }
 function spTrackBuildRowsWithReceipts(){
@@ -48396,7 +48396,7 @@ function spTrackRenderOuter(){
     return '<tr><td><button class="sp-cp-link" onclick="spTrackOpenCP('+i+')">'+esc(g.cp||'（未填）')+'</button></td><td>'+esc(g.proj)+'</td><td style="text-align:left"><button class="spx-detail-btn" style="border:0;background:none;padding-left:0" onclick="spTrackOpenCPField(event,'+i+',\'modal-zone\')">'+spTrackZoneTags(g.zones)+'</button></td><td class="sp-track-schedule">'+(g._priority.parts.length?spTrackPriorityHtml(g._priority):'—')+'</td>'+ 
       '<td style="text-align:left"><button class="spx-detail-btn" style="text-align:left;white-space:normal;border:0;background:none;padding-left:0" onclick="'+itemAction+'">'+chips+'</button></td><td class="cpr-code">'+esc(spTrackReceivedDate(g)||'—')+'</td>'+ 
       '<td><span class="chip '+g.overall.cls+'">'+esc(g.overall.label)+'</span></td><td style="text-align:left"><input class="lt-edit" style="text-align:left" value="'+esc(notes)+'" placeholder="'+(hasReal?'備註':'配置後可填備註')+'" title="'+(hasReal?'備註':'請先點擊 CP 編號配置工程區項目，配置完成後即可填寫備註')+'" '+(hasReal?'oninput="spTrackGroupRemarkEdit('+i+',this.value)"':'readonly')+'></td>'+ 
-      '<td class="del-col">'+(g.receiptMeta?'':'<button class="btn-del-row" title="刪除整個 CP" onclick="spTrackDeleteCP('+i+')">✕</button>')+'</td></tr>';
+      '<td class="del-col">'+'<button class="btn-del-row" title="'+(g.receiptMeta?'從 SP狀態表移除（收圖登記保留）':'刪除整個 CP')+'" onclick="spTrackDeleteCP('+i+')">✕</button>'+'</td></tr>';
   }).join(''):(spTrackDraft?'':'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:24px">尚無資料</td></tr>');
   body.innerHTML=spTrackDraftRowHtml(false)+dataHtml;
 }
@@ -48418,7 +48418,7 @@ function spTrackRenderDetailOuter(){
   if(mobile){head.innerHTML='';body.innerHTML='<tr><td>'+spTrackMobileCardsHtml(spTrackOuterGroups,true)+'</td></tr>';const cnt=document.getElementById('spxCount-detail');if(cnt)cnt.textContent=spTrackOuterGroups.length+' 個 CP';return;}
   const dataHtml=spTrackOuterGroups.length?spTrackOuterGroups.map((g,i)=>{
     const items=[...new Set(g.rows.map(r=>String(r.item||'').trim()).filter(x=>x&&x!=='-'))],chips=items.length?prodItemTags(g.rows):'<span class="prod-no">尚未選擇</span>',notes=[...new Set(g.rows.filter(r=>!r._receiptVirtual).map(r=>String(r.remark||'').trim()).filter(Boolean))].join(' / '),hasReal=g.rows.some(r=>!r._receiptVirtual),itemAction=g.receiptMeta?'spTrackOpenCPField(event,'+i+',\'modal-item\')':'spTrackOpenItemDropdown(event,'+i+')';
-    return '<tr><td><button class="sp-cp-link" onclick="spTrackOpenCP('+i+')">'+esc(g.cp||'（未填）')+'</button></td><td style="text-align:left"><button class="spx-detail-btn" style="border:0;background:none;padding-left:0" onclick="spTrackOpenCPField(event,'+i+',\'modal-zone\')">'+spTrackZoneTags(g.zones)+'</button></td><td style="text-align:left"><button class="spx-detail-btn" style="text-align:left;white-space:normal;border:0;background:none;padding-left:0" onclick="'+itemAction+'">'+chips+'</button></td><td class="cpr-code">'+esc(spTrackReceivedDate(g)||'—')+'</td><td><span class="chip '+g.overall.cls+'">'+esc(g.overall.label)+'</span></td><td style="text-align:left"><input class="lt-edit" style="text-align:left" value="'+esc(notes)+'" placeholder="'+(hasReal?'備註':'配置後可填備註')+'" title="'+(hasReal?'備註':'請先點擊 CP 編號配置工程區項目，配置完成後即可填寫備註')+'" '+(hasReal?'oninput="spTrackGroupRemarkEdit('+i+',this.value)"':'readonly')+'></td><td class="del-col">'+(g.receiptMeta?'':'<button class="btn-del-row" title="刪除整個 CP" onclick="spTrackDeleteCP('+i+')">✕</button>')+'</td></tr>';
+    return '<tr><td><button class="sp-cp-link" onclick="spTrackOpenCP('+i+')">'+esc(g.cp||'（未填）')+'</button></td><td style="text-align:left"><button class="spx-detail-btn" style="border:0;background:none;padding-left:0" onclick="spTrackOpenCPField(event,'+i+',\'modal-zone\')">'+spTrackZoneTags(g.zones)+'</button></td><td style="text-align:left"><button class="spx-detail-btn" style="text-align:left;white-space:normal;border:0;background:none;padding-left:0" onclick="'+itemAction+'">'+chips+'</button></td><td class="cpr-code">'+esc(spTrackReceivedDate(g)||'—')+'</td><td><span class="chip '+g.overall.cls+'">'+esc(g.overall.label)+'</span></td><td style="text-align:left"><input class="lt-edit" style="text-align:left" value="'+esc(notes)+'" placeholder="'+(hasReal?'備註':'配置後可填備註')+'" title="'+(hasReal?'備註':'請先點擊 CP 編號配置工程區項目，配置完成後即可填寫備註')+'" '+(hasReal?'oninput="spTrackGroupRemarkEdit('+i+',this.value)"':'readonly')+'></td><td class="del-col">'+'<button class="btn-del-row" title="'+(g.receiptMeta?'從 SP狀態表移除（收圖登記保留）':'刪除整個 CP')+'" onclick="spTrackDeleteCP('+i+')">✕</button>'+'</td></tr>';
   }).join(''):(spTrackDraft?'':'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">此工程區尚無 CP 資料</td></tr>');
   body.innerHTML=spTrackDraftRowHtml(true)+dataHtml;
   const cnt=document.getElementById('spxCount-detail');if(cnt)cnt.textContent=spTrackOuterGroups.length+' 個 CP';
@@ -48658,7 +48658,27 @@ function spTrackChildEdit(identity,field,value){
   },250);
 }
 function spTrackCloseCP(){spTrackModalGroup=null;spTrackCloseStatusSheet();pmCloseDetails();const d=document.getElementById('prodview-detail');if(d&&d.style.display!=='none')spTrackRenderDetailOuter();else spTrackRenderOuter();}
-async function spTrackDeleteCP(i){const g=spTrackOuterGroups[i];if(!g||!await uiConfirm('確定刪除 CP「'+g.cp+'」及其全部 '+g.rows.length+' 個項目？'))return;const ids=g.rows.map(r=>r.id).filter(Boolean);if(ids.length){const res=await sbFetch('/rest/v1/sp_track?id=in.('+ids.join(',')+')',{method:'DELETE'});if(!res.ok){spxHint('刪除失敗',true);return;}}const gone=new Set(g.rows);prodTrack=prodTrack.filter(r=>!gone.has(r));spTrackRenderOuter();prodRenderBoard();}
+async function spTrackDeleteCP(i){
+  const g=spTrackOuterGroups[i];if(!g)return;
+  // 從「CP收圖」帶進來的 CP:只刪 SP 明細會被收圖登記再長回來 → 在收圖登記標 sp_hidden,
+  // 之後不再帶進 SP狀態表;收圖登記本身保留
+  const receipts=g.receiptMeta?.rows||[],receiptIds=receipts.map(r=>r.id).filter(id=>id!=null),receiptIdSet=new Set(receiptIds.map(String));
+  const rows=receipts.length?prodTrack.filter(r=>spTrackGroupKey(r)===g.key||(r.cp_receipt_id!=null&&receiptIdSet.has(String(r.cp_receipt_id)))):g.rows.filter(r=>!r._receiptVirtual);
+  const msg=receipts.length
+    ?'確定把 CP「'+g.cp+'」從 SP狀態表移除？\n\n・刪除 SP 明細 '+rows.length+' 筆\n・CP收圖登記保留，但不再帶進 SP狀態表'
+    :'確定刪除 CP「'+g.cp+'」及其全部 '+rows.length+' 個項目？';
+  if(!await uiConfirm(msg))return;
+  if(receiptIds.length){
+    const res=await sbFetch('/rest/v1/cp_receipts?id=in.('+receiptIds.map(encodeURIComponent).join(',')+')',{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({sp_hidden:true})});
+    if(!res.ok){spxHint(res.status===400?'移除失敗：資料庫還沒有 sp_hidden 欄位，請先執行 cp_receipts_sp_hidden_migration.sql':'移除失敗（HTTP '+res.status+'）',true);return;}
+    prodReceipts.forEach(r=>{if(receiptIdSet.has(String(r.id)))r.sp_hidden=true;});
+  }
+  const ids=rows.map(r=>r.id).filter(id=>id!=null);
+  if(ids.length){const res=await sbFetch('/rest/v1/sp_track?id=in.('+ids.map(encodeURIComponent).join(',')+')',{method:'DELETE'});if(!res.ok){prodMemoReset();spTrackRenderCurrentList();prodRenderBoard();spxHint('刪除 SP 明細失敗（HTTP '+res.status+'）',true);return;}}
+  const gone=new Set(rows);prodTrack=prodTrack.filter(r=>!gone.has(r));
+  prodMemoReset();spTrackRenderCurrentList();prodRenderBoard();prodReadinessChanged(true);
+  spxHint('✓ 已從 SP狀態表移除 CP「'+g.cp+'」');
+}
 function spTrackNewCP(defaultProj,defaultZone){
   const proj=String(defaultProj||'').trim().toUpperCase(),zone=String(defaultZone||'').trim().toUpperCase();
   if(proj||zone){const key=proj+'\u0001'+zone;if(!spTrackDraft||spTrackDraft._detailKey!==key)spTrackDraft={proj,zone,cp:'',items:new Set(),remark:'',_detailKey:key};}
