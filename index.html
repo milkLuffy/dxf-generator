@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.09.2"/>
+<meta name="sc-version" content="2026.10.09.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -13890,14 +13890,16 @@ async function sbFetchAll(path, chunk=1000) {
     const paths = [];
     for (let off = chunk; off < total; off += chunk) paths.push(build(off));
     const parts = await _sbFetchPool(paths);
-    for (const p of parts) { if (p && p.ok && Array.isArray(p.data)) all.push(...p.data); }
-    return { ok:true, data:all };
+    let partial = false;
+    for (const p of parts) { if (p && p.ok && Array.isArray(p.data)) all.push(...p.data); else partial = true; }
+    // 有分頁抓失敗:仍回傳已抓到的(維持舊行為),但標 partial,要靠完整資料推算的地方(如 BOM 狀態重算)要看這個
+    return partial ? { ok:true, data:all, partial:true } : { ok:true, data:all };
   }
   // 未取得總數(少見)→ 退回序列補抓,行為與舊版一致
   let offset = chunk;
   while (true) {
     const r = await _sbFetchPage(build(offset), false);
-    if (!r.ok || !Array.isArray(r.data)) break;
+    if (!r.ok || !Array.isArray(r.data)) return { ok:true, data:all, partial:true };
     all.push(...r.data);
     if (r.data.length < chunk) break;
     offset += chunk;
@@ -18741,6 +18743,12 @@ async function syncBOMProjectStatusFromLayout() {
     sbFetchAll('/rest/v1/layout_items?select=proj_num,zone_code,part_no,work_date'),
     sbFetchAll('/rest/v1/daily_output?select=proj_num,zone_code,part_no')
   ]);
+  // 任一份抓失敗或只抓到一部分(手機網路不穩常見)→ 這次不重算:否則缺資料會被當成「沒構件／沒上線」,
+  // 已完成的工程區被改成未開始/進行中並寫回資料庫,BOM 列表就會突然把已完成的工程全部列出來
+  if ([zr, cr, er, lr, dr].some(r => !r || !r.ok || !Array.isArray(r.data) || r.partial)) {
+    console.warn('syncBOMProjectStatusFromLayout: 資料沒抓完整,略過這次狀態重算');
+    return;
+  }
   const zones = Array.isArray(zr.data) ? zr.data : [];
   const comps = Array.isArray(cr.data) ? cr.data : [];
   const exts  = Array.isArray(er.data) ? er.data : [];
@@ -57103,8 +57111,18 @@ async function ldDashPlan(){
     if(spc.list&&!force)return spc.list;
     var r=await sbFetchAll('/rest/v1/multilevel_analyses?select=id,project_no,zone_code,mother_no,created_at&order=created_at.desc,id.desc');
     if(!r.ok)throw new Error(dbErr(r));
+    // BOM 工程總表標「已完成」的工程區不用再點 → 清單不列(抓不到 BOM 資料就照舊全列)
+    var done={};
+    try{
+      var dz=await sbFetchAll('/rest/v1/zones?select=project_id,zone_code&status=eq.'+encodeURIComponent('已完成'));
+      var dp=await sbFetchAll('/rest/v1/projects?select=id,proj_num');
+      if(dz.ok&&dp.ok&&Array.isArray(dz.data)&&Array.isArray(dp.data)){
+        var pn={};dp.data.forEach(function(p){pn[p.id]=up(p.proj_num);});
+        dz.data.forEach(function(z){if(pn[z.project_id])done[pn[z.project_id]+'|'+up(z.zone_code)]=1;});
+      }
+    }catch(e){console.warn('SP清點:讀 BOM 完成狀態失敗',e);}
     var seen={},list=[];
-    (r.data||[]).forEach(function(a){var k=up(a.project_no)+'|'+up(a.zone_code||a.mother_no);if(seen[k])return;seen[k]=1;list.push(a);});
+    (r.data||[]).forEach(function(a){var k=up(a.project_no)+'|'+up(a.zone_code||a.mother_no);if(seen[k]||done[k])return;seen[k]=1;list.push(a);});
     spc.list=list;
     if(skipCounts)return list;
     var c=await sbFetchAll('/rest/v1/sp_counts?select=project_no,zone_code,actual_qty,need_qty');
