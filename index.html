@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.13.1"/>
+<meta name="sc-version" content="2026.10.13.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -48005,10 +48005,12 @@ function pmCloseDetails(){const modal=document.getElementById('pmDetailModal');i
 let PM_PRICING_CTX=null;
 const PM_PRICING_MIGRATION_MSG='計價核對資料表尚未建立。請先在 Supabase SQL Editor 執行 pricing_import_migration.sql，再重試。';
 const PM_PRICING_ITEMS=['剪力釘數5-10元','剪力釘數(/支)','續接器(/顆)','扭斷螺絲','繫桿(/支)(含鑽孔*2)'];
-// 品名分類 → 預設計價項目(柱區 C 結尾的剪力釘走柱子表)。瓷罩跟剪力釘同數量,預設不帶。
+// 品名分類 → 預設計價項目(柱區 C 結尾的剪力釘走柱子表)。瓷罩、普通六角螺栓不計價,回傳 null 直接不列。
 function pmPricingKind(item){
   const s=String(item||'');
-  if(/瓷罩|磁罩/.test(s)&&!/剪力釘/.test(s)) return {kind:'瓷罩',target:'',use:false};
+  if(/瓷罩|磁罩/.test(s)&&!/剪力釘/.test(s)) return null;
+  if(/六角螺栓/.test(s)) return null;
+  if(/防爆拉桿/.test(s)) return {kind:'防爆拉桿',target:'繫桿(/支)(含鑽孔*2)',use:true};
   if(/剪力釘/.test(s)) return {kind:'剪力釘',target:zone=>/C$/i.test(zone)?'剪力釘數(/支)':'剪力釘數5-10元',use:true};
   if(/續接器/.test(s)) return {kind:'續接器',target:'續接器(/顆)',use:true};
   if(/鎖斷螺栓|扭斷/.test(s)) return {kind:'扭斷螺栓',target:'扭斷螺絲',use:true};
@@ -48047,7 +48049,7 @@ async function pmRenderPricingReview(){
   const projOpts=pmPricingProjects().map(p=>'<option value="'+esc(p)+'"'+(p===projNo?' selected':'')+'>'+esc(p)+'</option>').join('');
   const head='<div class="sp-review-head"><div><div class="sp-review-title">成品材送至計價核對 · '+
       '<select onchange="PM_PRICING_CTX.proj=this.value;pmRenderPricingReview()">'+projOpts+'</select></div>'+
-    '<div class="sp-review-note">依工程區、品名加總所有成品材通知單細項(焊材不算)。數量可修改、可取消勾選或改計價項目;只有按「確認並帶入計價」才會更新正式數量,同工程區同項目會改成這次的累計數量。</div>'+
+    '<div class="sp-review-note">依工程區、品名加總所有成品材通知單細項(焊材、瓷罩、普通六角螺栓不計價,不列出)。數量可修改、可取消勾選或改計價項目;只有按「確認並帶入計價」才會更新正式數量,同工程區同項目會改成這次的累計數量。</div>'+
     '<label style="font-size:12px;display:inline-flex;gap:5px;align-items:center;margin-top:4px"><input type="checkbox" '+(ctx.pickedOnly?'checked':'')+' onchange="PM_PRICING_CTX.pickedOnly=this.checked;pmRenderPricingReview()">只算已勾「是否領料」的通知單</label></div>'+
     '<button class="btn" onclick="pmClosePricingReview()">關閉</button></div>';
   panel.innerHTML='<div class="sp-review">'+head+'<div class="sp-review-status">正在核對工程與工程區…</div></div>';
@@ -48061,7 +48063,8 @@ async function pmRenderPricingReview(){
     details.forEach(d=>{
       const zone=String(d.area||'').trim().toUpperCase()||(rowZones.length===1?rowZones[0]:'');
       if(!zone) return;
-      const k=pmPricingKind(d.item), key=zone+'\u0001'+k.kind;
+      const k=pmPricingKind(d.item); if(!k) return;
+      const key=zone+'\u0001'+k.kind;
       if(!agg.has(key)) agg.set(key,{zone,kind:k.kind,qty:0,specs:new Set(),notes:new Set(),def:k});
       const g=agg.get(key); g.qty+=Number(d.qty)||0; if(d.spec) g.specs.add(String(d.spec)); g.notes.add(d.full_serial||meta.full_serial||row.serial||'');
     });
