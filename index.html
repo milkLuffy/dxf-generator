@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.13.2"/>
+<meta name="sc-version" content="2026.10.13.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -36636,6 +36636,24 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     });
     return items;
   }
+  // 已存過的計價表打開時,把已核對數量(S/P 剖析、成品材領料送來的)補進「數量還是空的/0」的項目;
+  // 手改過的數量不動。該側沒單價(顯示「—」)的項目補上參考單價,不然數量帶進去也看不到。
+  function fillImportedQty(g,items){
+    var n=0;
+    items.forEach(function(it){
+      if(it.cat||!it.name) return;
+      (g.sides||[]).forEach(function(side){
+        var q=importedQty(side,it.name);
+        if(!(q>0)||num(it[side.qtyF])) return;
+        if(it[side.priceF]==null||it[side.priceF]===''){
+          var ref=(typeof piRefPrice==='function')?piRefPrice(g,side,it.name):null;
+          it[side.priceF]=ref!=null?ref:0;
+        }
+        it[side.qtyF]=q; n++;
+      });
+    });
+    return n;
+  }
   function curGroup(){
     var k=PICK[CAT]; if(!k) return null;
     if(CAT==='misc') return MISC_GROUP;
@@ -37016,6 +37034,7 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
             if(it[side.qtyF]==null) it[side.qtyF]=0;
           });
         });
+        if(!PR_VIEW_ONLY){ ensureImportedRows(g,saved.items,true); fillImportedQty(g,saved.items); }
       }
       return saved;
     }
@@ -37316,7 +37335,12 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
       if(it.cat||!it.name) return;
       (g.sides||[]).forEach(function(side){
         var q=importedQty(side,it.name);
-        if(q>0) it[side.qtyF]=q;
+        if(!(q>0)) return;
+        if(it[side.priceF]==null||it[side.priceF]===''){
+          var ref=(typeof piRefPrice==='function')?piRefPrice(g,side,it.name):null;
+          it[side.priceF]=ref!=null?ref:0;
+        }
+        it[side.qtyF]=q;
       });
     });
     if(g.cat==='beam'&&st.util){
