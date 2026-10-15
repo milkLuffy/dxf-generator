@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.15.1"/>
+<meta name="sc-version" content="2026.10.15.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5053,7 +5053,7 @@ window.normalizeFullWidth=function(value){
       </div>
       <section class="ds-card ds-search-card">
         <div class="ds-title">搜尋構件編號</div>
-        <input id="ds-search" class="ds-input" autocomplete="off" placeholder="打字即時篩選，例如：B6B01" oninput="dsSearch()">
+        <input id="ds-search" class="ds-input" autocomplete="off" placeholder="打字即時篩選，例如：B6B01" oninput="dsSearchInput()" oncompositionend="dsSearchInput()">
         <div class="ds-status">已列出本區所有可查閱構件（BOM 白名單）；在上方輸入即可即時篩選。點卡片可單張開圖；勾選多張後按「開啟」，會合併成同一個分頁，依下方清單順序翻頁（手機可雙指縮放）。</div>
         <div id="ds-print-tray" class="ds-print-tray" hidden></div>
         <div id="ds-results" class="ds-list"><div class="ds-empty">請先選擇工程與區域</div></div>
@@ -52507,7 +52507,16 @@ function dsRenderFiles() {
   }).join('');
 }
 
+// 打字防抖:手機每打一字就整區重算+重畫 300 張卡片會卡住;注音/拼音組字中不搜
+let dsSearchTimer = null;
+function dsSearchInput(ev) {
+  const e = ev || window.event;
+  if (e && e.isComposing) return;
+  clearTimeout(dsSearchTimer);
+  dsSearchTimer = setTimeout(dsSearch, 200);
+}
 function dsSearch() {
+  clearTimeout(dsSearchTimer);
   const box = dsEl('ds-results');
   if (!box) return;
   if (!dsZoneId()) { dsSearchResults = []; box.innerHTML = '<div class="ds-empty">請先選擇工程與工程區。</div>'; dsUpdatePrintControls(); return; }
@@ -52515,20 +52524,28 @@ function dsSearch() {
   const query = dsNorm(rawQuery);
   const filesById = new Map(dsFiles.map(file => [file.id, file]));
   const matchingBom = dsBom.filter(row => dsNorm(row.part_no).includes(query) && dsNorm(row.drawing_no));
+  // 原本每個構件都掃一遍全部頁面(構件數×頁數次正規化),大區手機會當;先依圖號建索引
+  const pagesByDrawing = new Map();
+  for (const page of dsPageDrawings) {
+    if (dsActiveFileId && page.file_id !== dsActiveFileId) continue;
+    const k = dsNorm(page.drawing_no);
+    if (!pagesByDrawing.has(k)) pagesByDrawing.set(k, []);
+    pagesByDrawing.get(k).push(page);
+  }
   const results = [];
   const seen = new Set();
   for (const component of matchingBom) {
     const drawingKey = dsNorm(component.drawing_no);
-    for (const page of dsPageDrawings) {
-      if (dsActiveFileId && page.file_id !== dsActiveFileId) continue;
-      if (dsNorm(page.drawing_no) !== drawingKey) continue;
-      const key = dsNorm(component.part_no) + '|' + page.file_id + '|' + page.page_no;
+    const partKey = dsNorm(component.part_no);
+    for (const page of pagesByDrawing.get(drawingKey) || []) {
+      const key = partKey + '|' + page.file_id + '|' + page.page_no;
       if (seen.has(key)) continue;
       seen.add(key);
       results.push({ part_no: component.part_no, drawing_no: component.drawing_no, file_id: page.file_id, page_no: page.page_no });
     }
   }
-  results.sort((a, b) => Number(dsNorm(b.part_no) === query) - Number(dsNorm(a.part_no) === query) || dsDrawingCollator.compare(a.part_no, b.part_no) || String(a.file_id).localeCompare(String(b.file_id)) || a.page_no - b.page_no);
+  results.forEach(r => { r._exact = dsNorm(r.part_no) === query; });
+  results.sort((a, b) => Number(b._exact) - Number(a._exact) || dsDrawingCollator.compare(a.part_no, b.part_no) || String(a.file_id).localeCompare(String(b.file_id)) || a.page_no - b.page_no);
   // 同一張圖在同一份 PDF 有好幾頁(圖號表的 (1/2)、(2/2)),卡片標示第幾張
   const drawingPages = new Map();
   for (const page of dsPageDrawings) {
