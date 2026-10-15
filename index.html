@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.13.4"/>
+<meta name="sc-version" content="2026.10.15.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -4416,6 +4416,8 @@ window.normalizeFullWidth=function(value){
 @media(max-width:620px){.ma-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.ma-result-topbar{align-items:flex-start;flex-wrap:wrap}.ma-result-heading{flex-basis:calc(100% - 130px)}.ma-result-title{white-space:normal}.ma-result-help{display:none}.ma-results-nav{margin-left:-8px;margin-right:-8px}.ma-results-nav .ma-tab{flex:1 1 calc(50% - 6px);text-align:center}.ma-result-search{flex-wrap:wrap}.ma-result-search .search-input{flex-basis:100%}}
 @media print{#page-multilevel .ma-no-print,.sidebar,.appbar{display:none!important}#page-multilevel{padding:0!important}.ma-sheet{grid-template-columns:repeat(3,1fr)}.ma-drawing-card{break-inside:avoid}}
 #page-multilevel.perm-ro input,#page-multilevel.perm-ro textarea,#page-multilevel.perm-ro select{pointer-events:auto!important;opacity:1!important}
+/* 圖面查詢唯讀也要能查:搜尋構件、篩檔名、勾選列印、翻頁(上傳/對照表仍鎖) */
+#page-drawingsearch.perm-ro #ds-search,#page-drawingsearch.perm-ro #ds-file-filter,#page-drawingsearch.perm-ro #ds-viewer-page,#page-drawingsearch.perm-ro .ds-print-check input{pointer-events:auto!important;opacity:1!important}
     </style>
 
     <!-- 多階資料分析 -->
@@ -52877,7 +52879,7 @@ async function dsLoadPreviewImage(file, pageNo) {
 }
 let dsPreviewBusy = false;
 async function dsEnsurePreviews(files) {
-  if (dsPreviewBusy || dsTouchTab() || isGuest || !currentSession) return;
+  if (dsPreviewBusy || dsTouchTab() || isGuest || !currentSession || window._roActive) return;   // 唯讀帳號不寫預覽圖,免得跳唯讀警告
   const todo = (files || dsAllFiles).filter(file => !file.preview_w && file.storage_key && Number(file.page_count) > 0);
   if (!todo.length) return;
   dsPreviewBusy = true;
