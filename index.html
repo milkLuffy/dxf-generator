@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.15.2"/>
+<meta name="sc-version" content="2026.10.16.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -13146,7 +13146,7 @@ async function applyView(v) {
   _applyingPop = true;
   try {
     if (v && v.proj) {                  // 工程詳細 / 工程區詳細
-      if (!allBOM.length) await loadBOM();
+      if (!allBOM.length) await loadBOM({noSync:true});
       await showProjectDetail(v.proj);
       if (v.zone) await showZoneDetail(v.zone);
     } else if (v && (v.approve || v.notice)) {   // 只是打開彈窗/通知清單,停在原本的頁面(剛開 App 還沒進任何頁才進主頁)
@@ -18658,9 +18658,11 @@ function calcProjectStatus(zoneStatuses) {
   return '未開始';
 }
 // 依目前載入的工程區資料(構件總表)即時計算並更新狀態
+let zoneStatusDataOk = false;   // loadComponents 是否完整抓到構件/進度/產量
 async function applyCurrentZoneStatus() {
   const zoneObj = allZones.find(x => x.id === currentZoneId);
   if (!zoneObj) return;
+  if (!zoneStatusDataOk) { console.warn('applyCurrentZoneStatus: 工程區資料沒抓完整,略過狀態重算'); return; }
   // 非本公司製作構件不列入統計
   const statComps = zoneComponents.filter(c => !((zoneCompExt[c.part_no]||{})[NONCO_KEY] === '1' || (zoneCompExt[c.part_no]||{})[NONCO_KEY] === true));
   const total = statComps.length;
@@ -18820,11 +18822,30 @@ async function syncBOMProjectStatusFromLayout() {
   }
 }
 
-async function loadBOM() {
+// 先畫列表,再於背景重算狀態:重算要下載全公司構件/進度/產量(4 萬多筆),
+// 原本等它跑完才畫,手機網路慢就一直停在「載入中...」,中途出錯就永遠不畫。
+let _bomSyncAt=0, _bomSyncing=null;
+async function loadBOM(opts={}) {
   const r=await sbFetchAll('/rest/v1/projects?select=*&order=created_at.desc');
-  allBOM=Array.isArray(r.data)?r.data:[];
-  await syncBOMProjectStatusFromLayout();
+  if(!r.ok||!Array.isArray(r.data)){
+    if(!allBOM.length){
+      const msg='<div class="empty-state" style="grid-column:1/-1">工程列表載入失敗（網路不穩？）<br><button class="btn" style="margin-top:8px" onclick="loadBOM()">重新載入</button></div>';
+      const tb=document.getElementById('bom-table-body'); if(tb) tb.innerHTML='<tr><td colspan="9">'+msg+'</td></tr>';
+      const cw=document.getElementById('bom-card-wrap'); if(cw) cw.innerHTML=msg;
+    }
+    return;
+  }
+  allBOM=r.data;
   setBomView(bomView);   // 手機首次預設小卡；使用者切換後保留選擇
+  if(opts.noSync) return;
+  // 狀態平常由各頁即時更新,這裡只是保險重算:10 分鐘內做過就不重做,同時只跑一份
+  if(_bomSyncing || Date.now()-_bomSyncAt<600000) return;
+  _bomSyncing=(async()=>{
+    try{ await syncBOMProjectStatusFromLayout(); _bomSyncAt=Date.now(); }
+    catch(e){ console.warn('BOM 狀態重算失敗',e); }
+    finally{ _bomSyncing=null; }
+    if(document.getElementById('page-bom')?.classList.contains('active')) filterBOM();
+  })();
 }
 // 狀態排序:進行中 > 未開始 > 已完成
 const BOM_STATUS_ORDER={ '進行中':0, '未開始':1, '已完成':2, '異常':5 };   // 異常排最下(未完成清單中)
@@ -19342,7 +19363,7 @@ async function deleteBOM(id) {
 let currentProjectId=null, allZones=[], editZoneId=null, zoneModalOrigStatus='';
 
 async function showProjectDetail(id) {
-  if(!allBOM.length){ try{ await loadBOM(); }catch(e){} }   // 未預載時自載,確保能查到工程
+  if(!allBOM.length){ try{ await loadBOM({noSync:true}); }catch(e){} }   // 未預載時只抓工程清單(不等狀態重算,主頁點工程才不會卡)
   const p=allBOM.find(x=>x.id===id);
   if(!p) return;
   currentProjectId=id;
@@ -19956,6 +19977,8 @@ async function loadComponents(zoneId) {
   zoneSerialMap = {};
   const proj = allBOM.find(x => x.id === currentProjectId);
   const zoneObj = allZones.find(x => x.id === zoneId);
+  // 任一份沒抓到(手機網路不穩)就不重算工程區狀態,否則已完成的區會被當成沒產量改回進行中並寫回資料庫
+  zoneStatusDataOk = !!(r.ok && Array.isArray(r.data) && er.ok && proj && zoneObj);
   if (proj && zoneObj) {
     const lr = await sbFetchAll('/rest/v1/layout_items?select=part_no,work_date,ship_date,qty&proj_num=eq.' + encodeURIComponent(proj.proj_num) + '&zone_code=eq.' + encodeURIComponent(zoneObj.zone_code));
     if (Array.isArray(lr.data)) {
@@ -19973,6 +19996,7 @@ async function loadComponents(zoneId) {
       });
     }
     const dr = await sbFetchAll('/rest/v1/daily_output?select=part_no,date,serial_no&proj_num=eq.' + encodeURIComponent(proj.proj_num) + '&zone_code=eq.' + encodeURIComponent(zoneObj.zone_code));
+    if (!lr.ok || lr.partial || !dr.ok || dr.partial) zoneStatusDataOk = false;
     if (Array.isArray(dr.data)) {
       dr.data.forEach(it => {
         if (!it.part_no || !it.date) return;
@@ -30206,7 +30230,7 @@ async function dxfFillZones(projNum){
 // 工程編號下拉(模糊查詢)：資料來源 BOM 工程編號
 async function dxfFillProjNums() {
   const dl=document.getElementById('dxf-projnum-list'); if(!dl) return;
-  if(!allBOM.length){ try{ await loadBOM(); }catch(e){} }
+  if(!allBOM.length){ try{ await loadBOM({noSync:true}); }catch(e){} }
   const nums=[...new Set((allBOM||[]).map(p=>String(p.proj_num||'').trim()).filter(Boolean))]
     .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
   dl.innerHTML=nums.map(n=>'<option value="'+n.replace(/"/g,'&quot;')+'"></option>').join('');
@@ -50888,7 +50912,7 @@ async function selfcheckInit(){
     if(e.key==='PageDown'||e.key==='ArrowRight'){ e.preventDefault(); scShowPage(scPi+1); }
     if(e.key==='PageUp'||e.key==='ArrowLeft'){ e.preventDefault(); scShowPage(scPi-1); }
   });
-  if(!allBOM.length){ try{ await loadBOM(); }catch(e){} }
+  if(!allBOM.length){ try{ await loadBOM({noSync:true}); }catch(e){} }
   // 已完成的工程不列入(比照 BOM 列表預設隱藏已完成)
   scEl('sc-proj').innerHTML='<option value="">— 選擇工程 —</option>'+
     allBOM.filter(p=>String(p.status||'').trim()!=='已完成')
@@ -51873,7 +51897,7 @@ async function drawingSearchInit() {
   if (dsBusy) return;
   dsBusy = true;
   try {
-    if (!allBOM.length) await loadBOM();
+    if (!allBOM.length) await loadBOM({noSync:true});
     dsProjects = allBOM.filter(project => String(project.status || '').trim() !== '已完成');
     const select = dsEl('ds-project');
     const oldValue = select.value;
