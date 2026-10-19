@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.19.2"/>
+<meta name="sc-version" content="2026.10.19.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -40036,10 +40036,11 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       sbFetchAll('/rest/v1/daily_output?select=date,proj_num,zone_code,net_weight,company'),
       sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,sub_code,proc_code,unit_price,util_price,util_weight_kg,util_proc_code,price_note,status'),
       sbFetchAll('/rest/v1/projects?select=id,proj_num,company'),
-      sbFetchAll('/rest/v1/components?select=zone_id,qty'),
+      sbFetchAll('/rest/v1/components?select=zone_id,part_no,qty'),
       sbFetchAll('/rest/v1/labor_orders?select=id,proj_num,doc_no,work_date,content,bill_date,actual_amount,retention,has_retention'),
       sbFetchAll('/rest/v1/billing_records?select=zone_id,ym,round,util_bill_price,bill_date'),
-      sbFetchAll('/rest/v1/billing_archive?select=zone_id,ym,round,util_bill_price,bill_date')
+      sbFetchAll('/rest/v1/billing_archive?select=zone_id,ym,round,util_bill_price,bill_date'),
+      sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no&extra->>'+NONCO_KEY+'=in.(1,true)')
     ]);
     blUtilPaid={};
     (Array.isArray(res[5].data)?res[5].data:[]).forEach(utilPaidTake);
@@ -40061,8 +40062,15 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         unit_price:z.unit_price, util_price:z.util_price, util_weight_kg:z.util_weight_kg, util_proc_code:z.util_proc_code||'', price_note:z.price_note||'' };
     });
     // 單一工程區完成判斷：該區累計完成/報驗支數 >= 該區 BOM 總支數。
+    // 「非本公司製作」的構件不算(比照 BOM 工程區狀態):原本有算進去,像 B821-D5G 48 支裡 42 支非本公司,
+    // 做完 6 支永遠不到 48,水電一直卡在「待全區完成」請不了。
+    var nonco={};
+    (Array.isArray(res[7]&&res[7].data)?res[7].data:[]).forEach(function(e){ nonco[e.zone_id+'|'+String(e.part_no||'').trim().toUpperCase()]=1; });
     var zoneNeed={};
-    (Array.isArray(res[3].data)?res[3].data:[]).forEach(function(c){ var id=String(c.zone_id); zoneNeed[id]=(zoneNeed[id]||0)+Math.max(0,parseInt(c.qty)||0); });
+    (Array.isArray(res[3].data)?res[3].data:[]).forEach(function(c){
+      if(nonco[c.zone_id+'|'+String(c.part_no||'').trim().toUpperCase()]) return;
+      var id=String(c.zone_id); zoneNeed[id]=(zoneNeed[id]||0)+Math.max(0,parseInt(c.qty)||0);
+    });
     Object.keys(zoneKeyById).forEach(function(id){
       blZoneNeed[zoneKeyById[id]]=zoneNeed[id]||0;
     });
