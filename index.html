@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.19.1"/>
+<meta name="sc-version" content="2026.10.19.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -13913,20 +13913,42 @@ async function sbFetchAll(path, chunk=1000) {
   return { ok:true, data:all };
 }
 
-async function refreshAccessToken() {
-  try {
-    const rf = await fetch(SUPA_URL + '/auth/v1/token?grant_type=refresh_token', {
-      method:'POST', headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
-      body: JSON.stringify({ refresh_token: currentSession.refresh_token })
-    });
-    if (rf.ok) {
-      const d = await rf.json();
-      currentSession = d;
-      saveSession();
-      return true;
-    }
-  } catch(e) {}
-  return false;
+// 多分頁(複製分頁、同時開兩個視窗)共用 localStorage 裡的登入,但各自在記憶體留一份。
+// refresh token 用過一次就作廢:A 分頁先換新,B 分頁拿舊的去換會失敗 → 之後每個請求都 401、資料全空
+// (看板就把 BOM 已完成的區全列出來)。換之前先看 localStorage 有沒有別的分頁換好的新 token,有就直接沿用。
+function adoptStoredSession() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch(e) {}
+  if (!currentSession || !saved || !saved.access_token || !saved.refresh_token) return false;
+  if (saved.refresh_token === currentSession.refresh_token && saved.access_token === currentSession.access_token) return false;
+  // 只沿用同一個帳號的 token(別的分頁換登入別人時不要套過來)
+  const sub = t => { try { return JSON.parse(atob(String(t).split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub || ''; } catch(e) { return ''; } };
+  if (sub(saved.access_token) !== sub(currentSession.access_token)) return false;
+  currentSession = Object.assign({}, currentSession, { access_token: saved.access_token, refresh_token: saved.refresh_token });
+  return true;
+}
+window.addEventListener('storage', e => { if (e.key === SESSION_KEY && !isGuest) adoptStoredSession(); });
+let _refreshInflight = null;
+function refreshAccessToken() {
+  // 同一分頁很多請求同時 401 時只換一次,其餘等同一個結果
+  if (_refreshInflight) return _refreshInflight;
+  _refreshInflight = (async () => {
+    if (adoptStoredSession()) return true;
+    try {
+      const rf = await fetch(SUPA_URL + '/auth/v1/token?grant_type=refresh_token', {
+        method:'POST', headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+        body: JSON.stringify({ refresh_token: currentSession.refresh_token })
+      });
+      if (rf.ok) {
+        const d = await rf.json();
+        currentSession = d;
+        saveSession();
+        return true;
+      }
+    } catch(e) {}
+    return adoptStoredSession();   // 剛好別的分頁同時換好了
+  })().finally(() => { _refreshInflight = null; });
+  return _refreshInflight;
 }
 async function sbAuth(path, body) {
   const res = await fetch(SUPA_URL+'/auth/v1/'+path, {
