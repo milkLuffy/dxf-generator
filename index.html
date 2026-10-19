@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.16.1"/>
+<meta name="sc-version" content="2026.10.19.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -8367,6 +8367,7 @@ window.normalizeFullWidth=function(value){
 
       <!-- ── 生產看板 ── -->
       <div class="prod-view" id="prodview-board" style="display:none">
+        <div id="prodLoadWarn" class="prod-filter-banner" style="display:none;border-color:#ef4444;color:#ef4444"></div>
         <div class="prod-metrics" id="prodMetrics"></div>
         <div class="prod-toolbar">
           <select id="prodViewMode" onchange="prodRenderBoard()" title="顯示方式">
@@ -46581,6 +46582,13 @@ function prodRenderAfterReload(){
   if(!typing){ prodRenderAll(); return; }
   el.addEventListener('blur',()=>setTimeout(prodRenderAfterReload,50),{once:true});
 }
+let prodLoadFailed=[];
+function prodLoadWarnUpdate(){
+  const el=document.getElementById('prodLoadWarn'); if(!el) return;
+  if(!prodLoadFailed.length){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='';
+  el.innerHTML='⚠ 這次有資料沒載入完整（'+esc(prodLoadFailed.join('、'))+'），看板可能列出已完成的工程區或少列資料。 <button class="btn" onclick="prodInit()">重新載入</button>';
+}
 async function prodInit(){
   if(prodBusy) return;
   prodTab(prodCurTab||'receipt');
@@ -46605,17 +46613,22 @@ async function prodInit(){
       sbFetch('/rest/v1/sp_online?select=*')
     ]);
     cprSchemaOk   = !!rc.ok;
-    prodReceipts = (rc.ok&&Array.isArray(rc.data))?rc.data.map(r=>({...r,categories:cprNormalizeCategories(r.categories)})):[];
-    prodReceiptProjects = (rpj.ok&&Array.isArray(rpj.data))?rpj.data:[];
-    prodReceiptZones = (rz.ok&&Array.isArray(rz.data))?rz.data:[];
-    prodTrack    = (rt.ok&&Array.isArray(rt.data))?rt.data:[];
+    // 任一份沒抓到/只抓到一部分(手機網路不穩):沿用上次抓到的資料,不要換成空的。
+    // 尤其 BOM 工程/工程區沒抓到時,看板會把「BOM 已完成」的工程區全部當成沒完成列出來。
+    const got=r=>!!(r&&r.ok&&Array.isArray(r.data)&&!r.partial), failed=[];
+    const take=(r,label,prev)=>{ if(got(r)) return r.data; failed.push(label); return warm?prev:((r&&Array.isArray(r.data))?r.data:[]); };
+    prodReceipts = take(rc,'收圖登記',prodReceipts).map(r=>({...r,categories:cprNormalizeCategories(r.categories)}));
+    prodReceiptProjects = take(rpj,'BOM 工程',prodReceiptProjects);
+    prodReceiptZones = take(rz,'BOM 工程區',prodReceiptZones);
+    prodTrack    = take(rt,'SP狀態表',prodTrack);
     // SP 項目彈窗需要穩定的畫面 key；舊資料由 DB 載入時原本沒有 _key，會全部誤認成同一列。
     if(typeof spxKeyRows==='function')spxKeyRows('track');
-    prodReserved = (rr.ok&&Array.isArray(rr.data))?rr.data:[];
-    prodProduct  = (rp.ok&&Array.isArray(rp.data))?rp.data:[];
-    await prodClearWeldingProjectNumbers();
-    prodManual   = (rm.ok&&Array.isArray(rm.data))?rm.data:[];
-    prodOnline   = (ro.ok&&Array.isArray(ro.data))?ro.data:[];
+    prodReserved = take(rr,'保留料',prodReserved);
+    prodProduct  = take(rp,'成品材',prodProduct);
+    if(got(rp)) await prodClearWeldingProjectNumbers();
+    prodManual   = take(rm,'手工單',prodManual);
+    prodOnline   = take(ro,'上線狀態',prodOnline);
+    prodLoadFailed=failed;
     if(typeof spxDetectOptional==='function') spxDetectOptional();
     prodRebuildOnline();
     prodDataLoaded=true;
@@ -46729,6 +46742,7 @@ function prodBuildUnits(){
   prodManual.forEach(r=>{
     const proj=(r.proj_no||'').trim();
     prodManualZones(r).forEach(zone=>{
+      if(typeof spTrackBomZoneCompleted==='function'&&spTrackBomZoneCompleted(proj,zone)) return;   // BOM 已完成的工程區不列(比照 SP 列)
       const zk=proj+'|'+zone, existing=unitByZone.get(zk);
       if(!existing){ const u={proj,zone,dwg:'',ord:'',doc:'',manualOnly:true,items:[{status:r.completed?'OK':'-'}]}; map.set(zk+'|__manual__',u); unitByZone.set(zk,u); }
       else if(existing.manualOnly) existing.items.push({status:r.completed?'OK':'-'});
@@ -47508,6 +47522,7 @@ function prodGroupZones(units){
 
 function prodRenderBoard(){
   prodMemoReset();
+  prodLoadWarnUpdate();
   cprZoneDetailPending=true;cprRefreshZoneDetail();
   const body=document.getElementById('prodBoardBody'); if(!body) return;
   prodRenderBoardHead();
