@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.19.3"/>
+<meta name="sc-version" content="2026.10.21.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -7503,6 +7503,17 @@ window.normalizeFullWidth=function(value){
     .spx-m-field.wide{grid-column:1/-1}
     .spx-m-field>input,.spx-m-field>select{box-sizing:border-box;width:100%;height:42px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font:16px var(--sans);outline:none}
     .spx-m-field>input:focus,.spx-m-field>select:focus{border-color:var(--accent2)}
+    /* iPhone 的日期欄有內建最小寬度、不會跟格子縮,會撐出去壓到隔壁欄(線上進度表上線日期蓋到數量、出貨日期超出畫面) */
+    .spx-m-field>input[type=date],.spx-m-field>input[type=time],.spx-m-field>input[type=datetime-local]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;line-height:28px;text-align:left}
+    .spx-m-field>input[type=date]::-webkit-date-and-time-value,.spx-m-field>input[type=time]::-webkit-date-and-time-value,.spx-m-field>input[type=datetime-local]::-webkit-date-and-time-value{text-align:left;margin:0}
+    .spx-m-field>select{width:100%!important;min-width:0}
+    #page-deductions.ded-m #ded-cat-tabs{display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    #page-deductions.ded-m #ded-cat-tabs .layout-tab{flex:none;white-space:nowrap}
+    #page-deductions.ded-m .card>.section-label:last-child{display:none}   /* Excel 鍵盤操作說明,手機用不到 */
+    #page-deductions.ded-m .layout-toolbar button[onclick^="GridXL.addRow"]{display:none}   /* 改用卡片列表上方的「＋ 新增一筆」 */
+    .ded-m-add{display:block;width:100%;margin:0 0 10px;min-height:42px}
+    #page-deductions.ded-m #gx-ded,#page-deductions.ded-m #gx-ded td{min-width:0!important;width:100%!important;max-width:none!important;table-layout:auto!important}
+    .ded-m-reason{margin:4px 0 2px;font-size:14px;color:var(--text);overflow-wrap:anywhere}
     .spx-m-field>input[readonly]{background:var(--bg);color:var(--text2)}
     .spx-m-field>textarea{box-sizing:border-box;width:100%;min-height:74px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font:16px/1.4 var(--sans);resize:vertical}
     .spx-m-field.lab-m-chk>div{display:flex;align-items:center;gap:8px;height:42px;font-size:15px;color:var(--text2)}
@@ -25686,7 +25697,7 @@ function specLength(spec) {
 }
 
 let layoutRefLoaded = false;   // 參考資料(每日產量鍵、BOM/元件/工程區)是否已載入;切走再回來沿用,不重抓
-let layoutLoading = false;
+let layoutLoading = false, layoutRefBg = null;
 async function layoutInit() {
   layoutLoading = true;
   // 重抓前先把尚未寫入的編輯送出並等它落地,否則下方 sbFetchAll 抓回的舊資料
@@ -25700,7 +25711,12 @@ async function layoutInit() {
     sbFetchAll('/rest/v1/layout_items?select=*&ship_date=is.null&order=id.desc'),
     sbCount('/rest/v1/layout_items?select=id&ship_date=not.is.null')
   ];
-  if (!layoutRefLoaded) jobs.push(layoutLoadDailyOutputKeys(), layoutLoadBOM(), layoutLoadOnlineKeys());
+  // 每日產量鍵決定列的狀態(待出貨/預報),要等;BOM 構件(1 萬多筆)與已出貨支數只給建議清單/剩餘數量用,
+  // 改在背景抓 —— 原本全部等完才畫,手機第一次進頁要等很久、配置圖一直「床位資料載入中」。
+  if (!layoutRefLoaded) {
+    jobs.push(layoutLoadDailyOutputKeys());
+    if (!layoutRefBg) layoutRefBg = Promise.all([layoutLoadBOM(), layoutLoadOnlineKeys()]).catch(e => console.warn('layout ref', e)).finally(() => { layoutRefBg = null; });
+  }
   jobs.push(layoutLoadPreInspKeys());   // 預報構件鍵每次都重抓(表極小),補報後狀態即時回落
   const [r, shippedCount] = await Promise.all(jobs);
   layoutRefLoaded = true;
@@ -25787,7 +25803,7 @@ async function layoutLoadBOM() {
   layoutBOMCache = [];
   const projById = {};
   (allBOM||[]).forEach(p => { projById[p.id] = p; });   // 先建索引,避免每個構件都 find 一次整份工程清單
-  const cr = await sbFetchAll('/rest/v1/components?select=*');
+  const cr = await sbFetchAll('/rest/v1/components?select=id,zone_id,part_no,spec,qty,net_weight,drawing_no');
   if (Array.isArray(cr.data)) {
     layoutBOMCache = cr.data.map(c => {
       const zinfo = layoutZoneMap[c.zone_id] || {};
@@ -31758,14 +31774,18 @@ function shipLoadRows(){
   shipBoardLoading=(async()=>{
     const lay=await sbFetchAll('/rest/v1/layout_items?select=id,proj_num,zone_code,part_no,bed,qty,status,work_date&ship_date=is.null');
     const layRows=(Array.isArray(lay.data)?lay.data:[]).filter(r=>String(r.part_no||'').trim()&&r.status!=='HOLD'&&r.status!=='已出貨');
-    const fallback=(()=>{ const d=new Date(); d.setDate(d.getDate()-365); return d.toISOString().slice(0,10); })();
-    const wds=layRows.map(r=>String(r.work_date||'').slice(0,10)).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x)).sort();
-    const since=(wds.length&&layRows.every(r=>r.work_date))?wds[0]:fallback;   // 有沒填上線日的就放寬到一年
-    const [dly,pre]=await Promise.all([
-      sbFetchAll('/rest/v1/daily_output?select=date,proj_num,part_no,serial_no&date=gte.'+since),
-      sbFetchAll('/rest/v1/pre_inspections?select=proj_num,part_no'),
-      dailyLoadRecv(since)
+    // 原本抓「最早未出貨上線日」之後的全部每日產量+報驗單;只要有一支很久以前上線沒出貨(目前有 2025-10 的),
+    // 每次「車到了」就要抓一整年,手機要等很久。改成只抓待出貨這幾十支構件的產量,受檢時間只抓用得到的日期之後。
+    const parts=[...new Set(layRows.map(r=>String(r.part_no).trim()))];
+    const q=v=>'"'+String(v).replace(/"/g,'\\"')+'"';
+    const chunks=[]; for(let i=0;i<parts.length;i+=80) chunks.push(parts.slice(i,i+80));
+    const [dlyParts,pre]=await Promise.all([
+      Promise.all(chunks.map(c=>sbFetchAll('/rest/v1/daily_output?select=date,proj_num,part_no,serial_no&part_no=in.('+encodeURIComponent(c.map(q).join(','))+')'))),
+      sbFetchAll('/rest/v1/pre_inspections?select=proj_num,part_no')
     ]);
+    const dly={ok:dlyParts.every(x=>x&&x.ok), data:[].concat(...dlyParts.map(x=>Array.isArray(x&&x.data)?x.data:[]))};
+    const dds=dly.data.map(x=>String(x.date||'').slice(0,10)).filter(Boolean).sort();
+    await dailyLoadRecv(dds[0]||new Date().toISOString().slice(0,10));
     const K=(a,b)=>String(a||'').trim().toUpperCase()+'|'+String(b||'').trim().toUpperCase();
     const preKeys=new Set((Array.isArray(pre.data)?pre.data:[]).map(x=>K(x.proj_num,x.part_no)));
     const lastInsp=new Map();   // 構件 → 最近一次報驗(取受檢時間)
@@ -49748,8 +49768,75 @@ GridXL.register('ded',{
   // dedLastVisible 存的是 dedRows 內同一批物件的參照,打字後值已是新的,
   // 重算摘要不必重畫表格(重畫會讓正在輸入的格子失焦)。
   afterChange:()=>{dedPersistLocal();dedRenderTabs();dedSummary(dedLastVisible);},
-  afterRender:(k,rows)=>{dedLastVisible=rows;dedSummary(rows);},
+  afterRender:(k,rows)=>{dedLastVisible=rows;dedSummary(rows);dedMobileRender(rows);},
 });
+// ── 手機／平板:扣款明細改卡片,點卡片從底部面板編輯(沿用 GridXL.edit:自動儲存、可復原、扣款日期自動帶入)──
+function dedMobileRender(rows){
+  const body=document.getElementById('gxBody-ded'),wrap=body&&body.closest('.layout-table-wrap');if(!body)return;
+  const on=spTrackIsMobile();if(wrap)wrap.classList.toggle('lt-m-mode',on);
+  document.getElementById('page-deductions')?.classList.toggle('ded-m',on);
+  if(!on)return;
+  const list=rows.filter(r=>GridXL.rowHasData('ded',r));
+  const money=v=>v==null||v===''?'':xNum(v).toLocaleString();
+  const cards=list.map(r=>{
+    const i=dedRows.indexOf(r),open='dedOpenMobileSheet('+i+')';
+    const st=r.voided===true?['作廢','lt-m-HOLD']:r.deduction_date?['已扣款','lt-m-已出貨']:['未扣款','lt-m-上線中'];
+    const meta=[!dedCat&&r.category,r.record_date?dateSlash(r.record_date):'',r.zone_code].filter(Boolean).map(xEsc).join(' · ');
+    const lines=[['編號',r.seq_no],['工數',r.expected_work],['金額',money(r.expected_amount)],['扣款',r.voided===true?'-':money(r.actual_amount)],['扣款日',r.deduction_date?dateSlash(r.deduction_date):''],['備註',r.note]]
+      .filter(x=>x[1]!=null&&x[1]!=='').map(([k,v])=>'<span><b>'+k+'</b>'+xEsc(v)+'</span>').join('');
+    return '<div class="sp-l-card" role="button" tabindex="0" onclick="'+open+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+open+'}">'+
+      '<div class="sp-l-top"><span class="sp-l-cp">'+xEsc(r.doc_no||'（未填編號）')+'</span><span class="lt-m-chip '+st[1]+'">'+st[0]+'</span></div>'+
+      (meta?'<div class="sp-l-meta">'+meta+'</div>':'')+(r.reason?'<div class="ded-m-reason">'+xEsc(r.reason)+'</div>':'')+
+      (lines?'<div class="spx-m-lines">'+lines+'</div>':'')+'<span class="sp-l-go" aria-hidden="true">›</span></div>';
+  }).join('');
+  body.innerHTML='<tr><td><button type="button" class="btn-sm btn-gen ded-m-add" onclick="dedMobileAdd()">＋ 新增一筆</button>'+
+    (cards?'<div class="sp-l-list">'+cards+'</div>':'<div class="sp-m-empty">🔍 查無符合的資料</div>')+'</td></tr>';
+}
+function dedOpenMobileSheet(i,refresh){
+  const r=dedRows[i];if(!r)return;
+  const old=document.getElementById('dedMobileSheet'),keepTop=refresh&&old?old.querySelector('.sp-sheet-panel').scrollTop:0;if(old)old.remove();
+  const again='setTimeout(()=>dedOpenMobileSheet('+i+',true),0)';
+  const fields=GridXL._cfg.ded.cols.map(c=>{
+    const ch='GridXL.edit(\'ded\','+i+',\''+c.k+'\',this.value)';
+    let inp;
+    if(c.sel){
+      const cur=c.bool?(r[c.k]===true?'是':r[c.k]===false?'否':''):(r[c.k]??'');
+      inp='<select onchange="'+ch+';'+again+'">'+c.sel.map(o=>'<option value="'+xEsc(o)+'"'+(String(cur)===o?' selected':'')+'>'+xEsc(o||'—')+'</option>').join('')+'</select>';
+    } else if(c.date){
+      // 日期選擇器關閉(blur)後才重畫,免得手機選擇器一開就被重畫關掉
+      inp='<input type="date" value="'+xEsc(String(r[c.k]||'').slice(0,10))+'" onchange="'+ch+'" onblur="'+again+'">';
+    } else if(c.num){
+      inp='<input type="number" inputmode="decimal" value="'+xEsc(r[c.k]??'')+'" onchange="'+ch+';'+again+'">';
+    } else {
+      inp='<input type="text" autocomplete="off" value="'+xEsc(r[c.k]??'')+'" onchange="'+ch+';'+again+'">';
+    }
+    const wide=c.wide||c.k==='reason'||c.k==='note';
+    // 全部分類時「點工單編號」與「編號」表頭都叫「編號」,面板上分開標
+    const h=c.h==='編號'?(c.k==='doc_no'?'單據編號':'扣款編號'):c.h;
+    return '<label class="spx-m-field'+(wide?' wide':'')+'"><span>'+xEsc(h)+'</span>'+inp+'</label>';
+  }).join('');
+  const sheet=document.createElement('div');sheet.className='sp-sheet spx-m-sheet'+(refresh?' no-anim':'');sheet.id='dedMobileSheet';
+  sheet.innerHTML='<div class="sp-sheet-panel" role="dialog" aria-modal="true" aria-label="編輯扣款明細"><div class="sp-sheet-grip"></div>'+
+    '<div class="spx-m-head"><div class="sp-sheet-title">'+xEsc(r.doc_no||r.category||dedCat||'扣款明細')+'</div><button type="button" class="spx-m-close" aria-label="關閉" onclick="dedCloseMobileSheet()">✕</button></div>'+
+    '<div class="spx-m-form">'+fields+'<div class="cpr-m-actions"><button type="button" class="cpr-m-danger" onclick="dedMobileDelete('+i+')">刪除這筆</button></div></div><div class="spx-m-note">修改會自動儲存</div></div>';
+  sheet.addEventListener('click',e=>{if(e.target===sheet)dedCloseMobileSheet();});
+  document.body.appendChild(sheet);if(keepTop)sheet.querySelector('.sp-sheet-panel').scrollTop=keepTop;
+}
+function dedCloseMobileSheet(){const s=document.getElementById('dedMobileSheet');if(!s)return;s.remove();GridXL.render('ded');}
+async function dedMobileDelete(i){
+  const r=dedRows[i];if(!r)return;
+  if(!await uiConfirm('確定刪除這筆扣款明細？'))return;
+  const s=document.getElementById('dedMobileSheet');if(s)s.remove();
+  GridXL.delRow('ded',i);
+}
+// 新增:沿用表格最上方那列空白輸入列(GridXL 一定會留一列),直接開面板填
+function dedMobileAdd(){
+  GridXL.addRow('ded');
+  const cfg=GridXL._cfg.ded,i=dedRows.findIndex(r=>GridXL.rowIsBlank('ded',r));
+  if(i<0)return;
+  if(!dedRows[i].category&&dedCat)dedRows[i].category=dedCat;
+  dedOpenMobileSheet(i);
+}
 async function deductionsInit(){
   if(!dedReady){const r=await sbFetchAll('/rest/v1/deduction_details?select=*&order=record_date.desc,created_at.desc');dedLocal=!!(r&&r.ok===false);dedRows=dedLocal?xLocalRead(dedStore):(Array.isArray(r.data)?r.data:[]);dedReady=true;}
   deductionsCat(dedCat);
