@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.21.1"/>
+<meta name="sc-version" content="2026.10.26.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1369,10 +1369,6 @@ html.dtv-open,html.dtv-open body{overflow:hidden}
 #ds-touch-view .dtv-pg{position:relative;margin:0 0 8px;background:#fff;overflow:hidden}
 #ds-touch-view .dtv-pg img{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #ds-touch-view .dtv-no{position:absolute;right:6px;top:6px;background:rgba(0,0,0,.55);color:#fff;border-radius:4px;padding:2px 7px;font-size:11px}
-.hw-scan-modal{width:min(420px,calc(100vw - 20px))!important}
-.hw-scan-box{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:1/1;margin-bottom:8px}
-.hw-scan-box video{width:100%;height:100%;object-fit:cover;display:block}
-.hw-scan-box i{position:absolute;inset:18%;border:3px solid rgba(255,255,255,.85);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
 .hw-hist-modal{width:min(520px,calc(100vw - 20px))!important;max-height:86vh;display:flex;flex-direction:column}
 .hw-hist-sum{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--text2);margin:4px 0 10px}
 .hw-hist-list{overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;flex:1;border-top:1px solid var(--border)}
@@ -9296,7 +9292,6 @@ window.normalizeFullWidth=function(value){
             <input id="hw-us-unit" class="search-input" placeholder="單位" style="width:70px"/>
             <select id="hw-us-person" class="search-input" style="width:220px"></select>
             <button class="btn-sm btn-gen" id="hw-us-btn" onclick="hwAddUsage()">＋ 新增領用</button>
-            <button class="btn-sm" id="hw-us-scan" onclick="hwScanOpen()" title="掃品項上的 QR 標籤,自動帶入種類與品名">📷 掃 QR</button>
           </div>
           <div class="hw-tblbox">
           <div class="layout-toolbar">
@@ -13252,14 +13247,22 @@ async function sbFetch(path, opts={}, _retried) {
   const headers = {'apikey': SUPA_KEY, 'Content-Type': 'application/json'};
   if (currentSession) headers['Authorization'] = 'Bearer ' + currentSession.access_token;
   Object.assign(headers, opts.headers||{});
-  const res = await fetch(SUPA_URL+path, {...opts, headers});
+  let res, text;
+  if ((_m === 'GET' || _m === 'HEAD') && !opts.signal) {
+    // 讀取:逾時中斷+重試一次(見 sbGetRetry);寫入不中斷,免得重送造成重複寫入
+    const got = await sbGetRetry(SUPA_URL+path, {...opts, headers});
+    if (!got) return {ok:false, status:0, data:null};
+    res = got.res; text = got.text;
+  } else {
+    res = await fetch(SUPA_URL+path, {...opts, headers});
+  }
   // token expired -> refresh once and retry
   if (res.status === 401 && !_retried && !isGuest && currentSession && currentSession.refresh_token) {
     const ok = await refreshAccessToken();
     if (ok) return sbFetch(path, opts, true);   // 由重試那一次寫紀錄,避免同一動作記兩筆
   }
   auditCapture(_m, path, opts.body, res.ok);   // 所有寫入都經過這裡 → 一處攔截,全站留痕
-  const text = await res.text();
+  if (text === undefined) text = await res.text();
   let data=null; try{data=JSON.parse(text);}catch(e){}
   if(!res.ok) errlogHttp(res.status, _m, path, data!=null?data:text.slice(0,200));
   // 工程/工程區完成後，DB trigger 會建立圖面清理佇列；由已核准的線上使用者立即執行 Storage 刪除。
@@ -13847,11 +13850,29 @@ async function presenceClear(){
 
 // 單頁抓取(含 401 自動更新 token)。wantCount=true 時附帶 Prefer: count=exact,
 // 從 Content-Range 標頭取回「資料總筆數」,供 sbFetchAll 據以並行抓取其餘分頁。
+// 讀取用的 fetch:逾時就中斷。手機 App 切到背景再回來時,進行中的請求常常卡住永遠不回,
+// 而派車/BOM 等載入都是「同時只跑一份、後來的等它」→ 一個卡住就一直「載入中」直到整個重開。
+// 逾時含讀完內容(卡住常發生在讀 body);網路錯誤/逾時自動重試一次,仍失敗回 {ok:false,status:0}。只用在 GET。
+const SB_GET_TIMEOUT = 25000;
+async function sbGetText(url, init, ms) {
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms || SB_GET_TIMEOUT);
+  try { const res = await fetch(url, Object.assign({}, init, {signal: ac.signal})); const text = await res.text(); return {res, text}; }
+  finally { clearTimeout(t); }
+}
+async function sbGetRetry(url, init) {
+  try { return await sbGetText(url, init); }
+  catch (e) {
+    try { return await sbGetText(url, init); }
+    catch (e2) { console.warn('GET 失敗/逾時', url.replace(SUPA_URL, '').slice(0, 80), e2 && e2.name); return null; }
+  }
+}
 async function _sbFetchPage(path, wantCount, _retried) {
   const headers = {'apikey': SUPA_KEY, 'Content-Type':'application/json'};
   if (currentSession) headers['Authorization'] = 'Bearer ' + currentSession.access_token;
   if (wantCount) headers['Prefer'] = 'count=exact';
-  const res = await fetch(SUPA_URL + path, {headers});
+  const got = await sbGetRetry(SUPA_URL + path, {headers});
+  if (!got) return { ok:false, status:0, data:null, total:null };
+  const res = got.res;
   if (res.status === 401 && !_retried && !isGuest && currentSession && currentSession.refresh_token) {
     const ok = await refreshAccessToken();
     if (ok) return _sbFetchPage(path, wantCount, true);
@@ -13860,7 +13881,7 @@ async function _sbFetchPage(path, wantCount, _retried) {
   const cr = res.headers.get('content-range') || '';
   const m = cr.match(/\/(\d+)\s*$/);        // 形如 0-999/12345 → 取 12345
   if (m) total = parseInt(m[1], 10);
-  const text = await res.text();
+  const text = got.text;
   let data = null; try { data = JSON.parse(text); } catch(e) {}
   return { ok:res.ok, status:res.status, data, total };
 }
@@ -15199,42 +15220,6 @@ async function hwPrintQR(){
     +'.tx{min-width:0}.c{font-size:9pt;color:#555}.n{font-size:12pt;font-weight:700;line-height:1.2;overflow-wrap:anywhere}.u{font-size:9pt;color:#555}.h{font-size:7pt;color:#888;margin-top:1mm}'
     +'</style></head><body><div class="bar"><button onclick="print()">列印</button> 共 '+rows.length+' 張・建議用貼紙紙或印好護貝</div><div class="grid">'+cards+'</div></body></html>');
   w.document.close();
-}
-// 掃描:優先用瀏覽器內建 BarcodeDetector,沒有(iPhone Safari)就載入 jsQR 逐格解
-let hwScanStream=null, hwScanTimer=null;
-async function hwScanOpen(){
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ alert('這個瀏覽器不支援相機。iPhone 請用 Safari 或加入主畫面的 App 開啟。'); return; }
-  const ov=document.createElement('div'); ov.className='input-modal-overlay'; ov.id='hw-scan';
-  ov.innerHTML='<div class="input-modal hw-scan-modal"><div class="input-modal-title">📷 掃描品項 QR</div><div class="hw-scan-box"><video playsinline muted autoplay></video><i></i></div><div class="layout-hint" id="hw-scan-msg">把標籤上的 QR 對準框內</div><div class="input-modal-actions"><button class="input-modal-btn cancel">關閉</button></div></div>';
-  document.body.appendChild(ov);
-  ov.querySelector('.cancel').onclick=hwScanClose; ov.onclick=e=>{ if(e.target===ov) hwScanClose(); };
-  const msg=t=>{ const m=document.getElementById('hw-scan-msg'); if(m) m.textContent=t; };
-  try{ hwScanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false}); }
-  catch(e){ msg('無法開啟相機:請到設定允許相機權限'); return; }
-  if(!document.getElementById('hw-scan')){ hwScanClose(); return; }
-  const v=ov.querySelector('video'); v.srcObject=hwScanStream; try{ await v.play(); }catch(e){}
-  let detect=null;
-  if('BarcodeDetector' in window){ try{ const bd=new BarcodeDetector({formats:['qr_code']}); detect=async()=>{ const r=await bd.detect(v); return r[0]&&r[0].rawValue; }; }catch(e){} }
-  if(!detect){
-    try{ await hwLoadScript('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',()=>typeof window.jsQR==='function'); }
-    catch(e){ msg('掃描元件載入失敗,請確認網路'); return; }
-    const cv=document.createElement('canvas'), cx=cv.getContext('2d',{willReadFrequently:true});
-    detect=async()=>{ if(!v.videoWidth) return null; const s=Math.min(1,480/v.videoWidth); cv.width=v.videoWidth*s|0; cv.height=v.videoHeight*s|0; cx.drawImage(v,0,0,cv.width,cv.height); const r=jsQR(cx.getImageData(0,0,cv.width,cv.height).data,cv.width,cv.height,{inversionAttempts:'dontInvert'}); return r&&r.data; };
-  }
-  const tick=async()=>{
-    if(!document.getElementById('hw-scan')) return;
-    let txt=null; try{ txt=await detect(); }catch(e){}
-    const m=txt&&String(txt).match(/#\/hardware\/use\/(\d+)/);
-    if(m){ hwScanClose(); hwQuickUse(Number(m[1])); return; }
-    if(txt) msg('這不是五金品項的 QR 標籤');
-    hwScanTimer=setTimeout(tick,220);
-  };
-  tick();
-}
-function hwScanClose(){
-  clearTimeout(hwScanTimer); hwScanTimer=null;
-  if(hwScanStream){ hwScanStream.getTracks().forEach(t=>t.stop()); hwScanStream=null; }
-  const ov=document.getElementById('hw-scan'); if(ov) ov.remove();
 }
 // 帶入領用表單:切到領用紀錄、選好種類與品名,游標停在數量
 function hwQuickUse(id){
@@ -18774,9 +18759,20 @@ async function refreshZoneStatusByCode(projNum, zoneCode) {
   await applyProjectStatus(proj.id);
 }
 
-async function syncBOMProjectStatusFromLayout() {
-  // 由來源資料完整重算每個工程區/工程狀態 (5 次查詢, 不逐區)
-  const [zr, cr, er, lr, dr] = await Promise.all([
+let _statusSyncing = null;
+function syncBOMProjectStatusFromLayout() {
+  // 同時只跑一份(BOM、線上進度表、派車可能同時觸發)
+  if (_statusSyncing) return _statusSyncing;
+  _statusSyncing = _syncBOMProjectStatusFromLayout().finally(() => { _statusSyncing = null; });
+  return _statusSyncing;
+}
+async function _syncBOMProjectStatusFromLayout() {
+  // 由來源資料完整重算每個工程區/工程狀態 (6 次查詢, 不逐區)
+  // 工程清單一定要自己抓:原本用記憶體裡的 allBOM,但主頁派車「車到了」、線上進度表也會呼叫這裡,
+  // 那時 allBOM 常常是空的 → 每個工程區都對不到工程編號、產量全算 0 → 已完成的區被大量改成「未開始」寫回資料庫
+  // (10 月操作紀錄:主頁上一次改掉幾十到三百多區),之後電腦開 BOM 再改回來,BOM 才會一直「已完成的又跑出來」。
+  const [pr, zr, cr, er, lr, dr] = await Promise.all([
+    sbFetchAll('/rest/v1/projects?select=id,proj_num,status'),
     sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,status'),
     sbFetchAll('/rest/v1/components?select=zone_id,part_no'),
     sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no,extra'),
@@ -18785,7 +18781,7 @@ async function syncBOMProjectStatusFromLayout() {
   ]);
   // 任一份抓失敗或只抓到一部分(手機網路不穩常見)→ 這次不重算:否則缺資料會被當成「沒構件／沒上線」,
   // 已完成的工程區被改成未開始/進行中並寫回資料庫,BOM 列表就會突然把已完成的工程全部列出來
-  if ([zr, cr, er, lr, dr].some(r => !r || !r.ok || !Array.isArray(r.data) || r.partial)) {
+  if ([pr, zr, cr, er, lr, dr].some(r => !r || !r.ok || !Array.isArray(r.data) || r.partial)) {
     console.warn('syncBOMProjectStatusFromLayout: 資料沒抓完整,略過這次狀態重算');
     return;
   }
@@ -18794,8 +18790,9 @@ async function syncBOMProjectStatusFromLayout() {
   const exts  = Array.isArray(er.data) ? er.data : [];
   const lays  = Array.isArray(lr.data) ? lr.data : [];
   const dailys = Array.isArray(dr.data) ? dr.data : [];
-  // index
-  const projById = {}; allBOM.forEach(p => projById[p.id] = p);
+  // index(工程以剛抓的為準;allBOM 有載入時同步更新它的狀態,畫面才跟得上)
+  const projById = {}; pr.data.forEach(p => projById[p.id] = p);
+  const bomById = {}; (allBOM || []).forEach(p => bomById[p.id] = p);
   const compByZone = {}; comps.forEach(c => { (compByZone[c.zone_id] = compByZone[c.zone_id] || []).push(c.part_no); });
   const extByZone = {}; exts.forEach(e => { (extByZone[e.zone_id] = extByZone[e.zone_id] || {})[e.part_no] = e.extra || {}; });
   // online by proj_num(UPPER)+zone_code
@@ -18819,7 +18816,8 @@ async function syncBOMProjectStatusFromLayout() {
   const projZoneStatuses = {};
   zones.forEach(z => {
     const proj = projById[z.project_id];
-    const projNum = proj ? String(proj.proj_num||'').trim().toUpperCase() : '';
+    if (!proj || !String(proj.proj_num||'').trim()) return;   // 對不到工程就不動,絕不當成沒產量
+    const projNum = String(proj.proj_num).trim().toUpperCase();
     const parts = compByZone[z.id] || [];
     const ext = extByZone[z.id] || {};
     const online = onlineKey[projNum + '||' + String(z.zone_code||'').trim()] || {};
@@ -18844,11 +18842,12 @@ async function syncBOMProjectStatusFromLayout() {
     await sbFetch('/rest/v1/zones?id=eq.' + u.id, {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({status:u.status})});
   }
   // compute project status
-  for (const p of allBOM) {
+  for (const p of pr.data) {
     if (p.status === '異常') continue;   // 「異常」為手動狀態,保留不覆寫
     const zs = projZoneStatuses[p.id];
     if (!zs || !zs.length) continue;     // 沒有工程區=無生產資料可推導,保留手動狀態
     const st = calcProjectStatus(zs);
+    if (bomById[p.id]) bomById[p.id].status = st;
     if (p.status !== st) {
       p.status = st;
       await sbFetch('/rest/v1/projects?id=eq.' + p.id, {method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({status:st})});
@@ -31773,6 +31772,7 @@ function shipLoadRows(){
   if(shipBoardLoading) return shipBoardLoading;
   shipBoardLoading=(async()=>{
     const lay=await sbFetchAll('/rest/v1/layout_items?select=id,proj_num,zone_code,part_no,bed,qty,status,work_date&ship_date=is.null');
+    if(!lay.ok||!Array.isArray(lay.data)) throw new Error('待出貨構件載入失敗');   // 別當成「沒有待出貨」
     const layRows=(Array.isArray(lay.data)?lay.data:[]).filter(r=>String(r.part_no||'').trim()&&r.status!=='HOLD'&&r.status!=='已出貨');
     // 原本抓「最早未出貨上線日」之後的全部每日產量+報驗單;只要有一支很久以前上線沒出貨(目前有 2025-10 的),
     // 每次「車到了」就要抓一整年,手機要等很久。改成只抓待出貨這幾十支構件的產量,受檢時間只抓用得到的日期之後。
@@ -31784,6 +31784,7 @@ function shipLoadRows(){
       sbFetchAll('/rest/v1/pre_inspections?select=proj_num,part_no')
     ]);
     const dly={ok:dlyParts.every(x=>x&&x.ok), data:[].concat(...dlyParts.map(x=>Array.isArray(x&&x.data)?x.data:[]))};
+    if(!dly.ok) throw new Error('每日產量載入失敗');
     const dds=dly.data.map(x=>String(x.date||'').slice(0,10)).filter(Boolean).sort();
     await dailyLoadRecv(dds[0]||new Date().toISOString().slice(0,10));
     const K=(a,b)=>String(a||'').trim().toUpperCase()+'|'+String(b||'').trim().toUpperCase();
@@ -31823,7 +31824,7 @@ async function openShipBoard(reload, pickKey){
     body.innerHTML='<div class="empty-state">載入中...</div>';
     shipBoardSel={}; shipCars=1;
     try{ await shipLoadRows(); }
-    catch(e){ console.warn('ship board',e); body.innerHTML='<div class="empty-state" style="color:var(--danger)">載入失敗</div>'; return; }
+    catch(e){ console.warn('ship board',e); body.innerHTML='<div class="empty-state" style="color:var(--danger)">載入失敗（網路不穩？）<br><button class="btn-sm" style="margin-top:8px" onclick="openShipBoard(true)">↻ 重試</button></div>'; return; }
     if(typeof shipDashRender==='function') shipDashRender();
   }
   if(pickKey && shipGroupBed(pickKey)!=='未排柱位' && shipBoardRows.some(r=>shipGroupKey(r)===pickKey)){ shipBoardSel={}; shipToggleBed(pickKey,true); }
