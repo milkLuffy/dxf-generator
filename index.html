@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.26.2"/>
+<meta name="sc-version" content="2026.10.27.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -69,7 +69,6 @@
 <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.6/dist/pizzip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.6/dist/pizzip-utils.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.50.0/build/docxtemplater.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -3517,6 +3516,8 @@ window.normalizeFullWidth=function(value){
 (function(){
   var imeStarts=new WeakMap();
   function editableTarget(t){
+    // 選檔案/勾選/日期等欄位不能改 value(檔案欄會丟 InvalidStateError,點工單上傳照片時發生過)
+    if(t&&t.tagName==='INPUT'&&/^(file|checkbox|radio|button|submit|reset|image|range|color|date|time|datetime-local|month|week|hidden)$/i.test(t.type||'')) return false;
     return !!t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable);
   }
   // 直接改 value 會把游標丟到最後(在文字中間補字時很明顯);全形轉半形是一字換一字,原位置可直接還原
@@ -9207,7 +9208,6 @@ window.normalizeFullWidth=function(value){
             <div style="display:flex;gap:8px">
               <button class="btn-sm btn-export" onclick="hwToggleAddItem()">＋ 新增品項</button>
               <button class="btn-sm btn-export" onclick="hwClearFilters('stock')">清除篩選</button>
-              <button class="btn-sm btn-export" onclick="hwPrintQR()" title="依目前篩選的品項印 QR 標籤,貼在櫃位上,手機掃了直接登記領用">🏷️ QR 標籤</button>
               <button class="btn-sm btn-export" onclick="hwExportStock()">⬇ 匯出 Excel</button>
             </div>
           </div>
@@ -13129,7 +13129,6 @@ function hashToView(h) {
     return v;
   }
   if (p[0] === 'layout' && p[1] === 'chart') return { page:'layout', tab:'chart' };
-  if (p[0] === 'hardware' && p[1] === 'use' && /^\d+$/.test(p[2]||'')) return { page:'hardware', hwuse:Number(p[2]) };   // 五金 QR 標籤
 
   if (p[0] === 'layout' && p[1] === 'ship') return { page:'layout', tab:'ship' };   // 推播「報驗完成」點開 → 待出貨看板
   if (p[0] === 'multilevel' && p[1] === 'results') return { page:'multilevel', ma:'results' };
@@ -13167,7 +13166,6 @@ async function applyView(v) {
       if(!onProd){ navTo('prod'); _prodPendingView=v; prodMaybeApplyPending(); }   // 從別頁回來:載入後套用
       else { prodApplyViewNow(v); }                                                // 已在 SP 頁:直接套用,不重載
     } else {
-      if (v && v.hwuse) { window._hwPendingUse = v.hwuse; v = { page:'hardware' }; if (document.getElementById('page-hardware')?.classList.contains('active') && hwItems.length) { hwQuickUse(window._hwPendingUse); window._hwPendingUse = null; } }
       navTo((v && v.page) ? v.page : 'dashboard', v || null);
       if (v && v.page === 'layout' && v.tab === 'chart') layoutSwitchTab('chart', false);
       if (v && v.page === 'layout' && v.tab === 'ship' && typeof openShipBoard === 'function') openShipBoard();
@@ -13217,19 +13215,33 @@ async function restoreSession() {
     return true;
   }
   // Access token expired — try refresh
+  // 網路不穩(逾時/斷線)時不可把登入清掉:原本開 App 剛好沒訊號就被登出、要重打密碼。
+  // 只有伺服器明確拒絕(4xx)才清;網路問題保留登入,登入頁顯示「網路不穩,重新整理即可」。
+  let netFail = r.status === 0;
   if (saved.refresh_token) {
-    const rf = await fetch(SUPA_URL + '/auth/v1/token?grant_type=refresh_token', {
-      method:'POST', headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
-      body: JSON.stringify({ refresh_token: saved.refresh_token })
-    });
-    if (rf.ok) {
-      const d = await rf.json();
+    let rf = null, d = null;
+    const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 20000);
+    try {
+      rf = await fetch(SUPA_URL + '/auth/v1/token?grant_type=refresh_token', {
+        method:'POST', headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+        body: JSON.stringify({ refresh_token: saved.refresh_token }), signal: ac.signal
+      });
+      if (rf.ok) d = await rf.json();
+    } catch (e) { netFail = true; }
+    finally { clearTimeout(tm); }
+    if (rf && rf.ok && d) {
       currentSession = d;
       isGuest = false;
       saveSession();
       await loadProfile();
       return true;
     }
+    if (rf && rf.status >= 400 && rf.status < 500) netFail = false;   // 伺服器說 token 失效 → 真的要重新登入
+  }
+  if (netFail) {
+    currentSession = null;
+    setTimeout(() => { try { setLoginMsg('網路不穩，暫時連不上伺服器。登入沒有被登出，請稍後重新整理。'); } catch (e) {} }, 0);
+    return false;
   }
   clearSavedSession();
   return false;
@@ -13967,12 +13979,17 @@ function refreshAccessToken() {
   _refreshInflight = (async () => {
     if (adoptStoredSession()) return true;
     try {
-      const rf = await fetch(SUPA_URL + '/auth/v1/token?grant_type=refresh_token', {
-        method:'POST', headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
-        body: JSON.stringify({ refresh_token: currentSession.refresh_token })
-      });
+      // 換證也要逾時:它卡住的話,所有等它的請求會一起卡住
+      const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 20000);
+      let rf, d;
+      try {
+        rf = await fetch(SUPA_URL + '/auth/v1/token?grant_type=refresh_token', {
+          method:'POST', headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+          body: JSON.stringify({ refresh_token: currentSession.refresh_token }), signal: ac.signal
+        });
+        if (rf.ok) d = await rf.json();
+      } finally { clearTimeout(tm); }
       if (rf.ok) {
-        const d = await rf.json();
         currentSession = d;
         saveSession();
         return true;
@@ -14013,7 +14030,8 @@ async function doLogin() {
   if(!r.ok){setLoginMsg(r.data?.error_description||r.data?.msg||'登入失敗');return;}
   currentSession=r.data; isGuest=false;
   saveSession();
-  await loadProfile(); enterApp();
+  try{ await loadProfile(); }catch(e){ setLoginMsg('網路不穩，帳號資料載入失敗，請再按一次登入'); return; }
+  enterApp();
 }
 async function doRegister() {
   const name=document.getElementById('reg-name').value.trim();
@@ -14047,6 +14065,8 @@ async function loadProfile() {
   if(!currentSession) return;
   const uid=currentSession.user?.id; if(!uid) return;
   const r=await sbFetch(`/rest/v1/profiles?id=eq.${uid}&select=*`);   // 同上:select=* 避免新欄位未建立時登入整個壞掉
+  // 讀不到(網路不穩/逾時)不可當成「全新帳號」:原本會去新增帳號資料並把狀態設成待審核,老帳號被卡在「審核中」畫面
+  if(!r.ok||!Array.isArray(r.data)) throw new Error('帳號資料載入失敗(HTTP '+(r.status||0)+')');
   let name=r.data?.[0]?.name||'', account=r.data?.[0]?.account||currentSession.user?.email||'';
   let isAdmin=r.data?.[0]?.is_admin||false;
   const perms=r.data?.[0]?.perms||null, disabled=!!r.data?.[0]?.disabled;
@@ -14132,7 +14152,8 @@ async function checkOAuthCallback() {
   if(!r.ok||!r.data){setLoginMsg('Google 登入失敗');return;}
   currentSession.user=r.data; isGuest=false;
   saveSession();
-  await loadProfile(); enterApp();
+  try{ await loadProfile(); }catch(e){ document.getElementById('login-screen').style.display='flex'; setLoginMsg('網路不穩，帳號資料載入失敗，請重新整理'); return; }
+  enterApp();
 }
 async function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整理);登入/登出後重新登入一律進主頁
   if(!isGuest && currentUser && currentUser.status==='pending'){   // 新帳號審核中:顯示等待畫面,不放行
@@ -14806,7 +14827,6 @@ async function hwInit(){
     hwVendors.sort(byName);
     hwEquip.sort((a,b)=> (a.owner===b.owner? hwNum(a.seq)-hwNum(b.seq) : String(a.owner||'').localeCompare(String(b.owner||''))));
     hwPopulateSelects(); hwRender();
-    if(window._hwPendingUse){ const u=window._hwPendingUse; window._hwPendingUse=null; hwQuickUse(u); }
   }catch(e){ console.error('hwInit',e); }
   finally{ hwBusy=false; }
 }
@@ -15189,50 +15209,6 @@ function hwRenderStock(){
     <td style="text-align:center;white-space:nowrap"><button class="hw-act" onclick="hwItemHistory(${i.id})">歷程</button> <button class="hw-act" onclick="hwEditItem(${i.id})">編輯</button> <button class="hw-act del" onclick="hwDeleteItem(${i.id})">刪除</button></td>
   </tr>`).join('');
   const stkTbl=document.getElementById('hw-stock-table'); if(stkTbl) tblInitSelection(stkTbl);
-}
-// ── QR 標籤:印出品項 QR(內容=系統網址 #/hardware/use/品項id),手機相機或頁內「掃 QR」掃了直接帶入領用 ──
-const HW_QR_BASE_FALLBACK='https://milkluffy.github.io/dxf-generator/';
-function hwQrUrl(id){
-  const local=/^(localhost|127\.|192\.168\.)/.test(location.hostname);
-  return (local? HW_QR_BASE_FALLBACK : location.origin+location.pathname)+'#/hardware/use/'+id;
-}
-function hwLoadScript(src,test){
-  if(test()) return Promise.resolve();
-  return new Promise((ok,bad)=>{ const s=document.createElement('script'); s.src=src; s.onload=()=>test()?ok():bad(new Error('load')); s.onerror=()=>bad(new Error('load')); document.head.appendChild(s); });
-}
-async function hwPrintQR(){
-  const rows=hwStockRows();
-  if(!rows.length){ alert('目前篩選沒有品項'); return; }
-  if(rows.length>200 && !await uiConfirm('要印 '+rows.length+' 張標籤,確定?(可先用上方種類/搜尋篩選)')) return;
-  const w=window.open('','_blank'); if(!w){ alert('請允許彈出視窗後再試一次'); return; }
-  w.document.write('<p style="font:16px sans-serif;padding:20px">產生標籤中…</p>');
-  try{ await hwLoadScript('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js',()=>typeof window.qrcode==='function'); }
-  catch(e){ w.close(); alert('QR 產生器載入失敗,請確認網路後再試'); return; }
-  const svg=text=>{ const q=qrcode(0,'M'); q.addData(text); q.make(); return q.createSvgTag({cellSize:4,margin:0,scalable:true}); };
-  const cards=rows.map(i=>'<div class="lb"><div class="qr">'+svg(hwQrUrl(i.id))+'</div><div class="tx"><div class="c">'+esc(i.category)+'</div><div class="n">'+esc(i.name)+'</div><div class="u">'+esc(i.unit||'')+'</div><div class="h">掃描登記領用</div></div></div>').join('');
-  w.document.open();
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>五金 QR 標籤</title><style>'
-    +'@page{size:A4;margin:8mm}body{margin:0;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;color:#000}'
-    +'.bar{padding:10px;text-align:center}.bar button{font-size:16px;padding:8px 20px}@media print{.bar{display:none}}'
-    +'.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm}'
-    +'.lb{display:flex;gap:3mm;align-items:center;border:1px dashed #999;border-radius:2mm;padding:3mm;break-inside:avoid;height:30mm;box-sizing:border-box}'
-    +'.qr{width:24mm;height:24mm;flex:none}.qr svg{width:100%;height:100%}'
-    +'.tx{min-width:0}.c{font-size:9pt;color:#555}.n{font-size:12pt;font-weight:700;line-height:1.2;overflow-wrap:anywhere}.u{font-size:9pt;color:#555}.h{font-size:7pt;color:#888;margin-top:1mm}'
-    +'</style></head><body><div class="bar"><button onclick="print()">列印</button> 共 '+rows.length+' 張・建議用貼紙紙或印好護貝</div><div class="grid">'+cards+'</div></body></html>');
-  w.document.close();
-}
-// 帶入領用表單:切到領用紀錄、選好種類與品名,游標停在數量
-function hwQuickUse(id){
-  const it=hwItems.find(x=>x.id===id);
-  if(!it){ alert('找不到這個品項(可能已刪除),請到庫存總表確認'); return; }
-  hwSwitchTab('usage');
-  const ty=document.getElementById('hw-us-type'); if(ty){ ty.value='領用'; hwUsTypeSync(); }
-  const cat=document.getElementById('hw-us-cat'); cat.value=it.category; hwSyncUnit('us');
-  document.getElementById('hw-us-name').value=it.name;
-  const un=document.getElementById('hw-us-unit'); un.value=it.unit||'';
-  const q=document.getElementById('hw-us-qty'); q.value='';
-  q.scrollIntoView({block:'center'}); setTimeout(()=>q.focus(),60);
-  if(window.showToast) showToast('已帶入「'+it.name+'」,目前庫存 '+hwFmt(hwNum(it.stock))+(it.unit?' '+it.unit:''),'success');
 }
 // 品項異動歷程:進貨(+)、領用(−)、退回(+)、盤點(差額),由新到舊;結存從目前庫存往回推
 function hwItemHistory(id){
@@ -16612,6 +16588,7 @@ async function loadDashboard() {
     sbFetchAll('/rest/v1/att_report?select=staff_name,work_date,work_hours,ot_hours&work_date=gte.'+attMonth+'-01&work_date=lt.'+dashMonthNextFirst(attMonth))
   ]);
   const projects=Array.isArray(pRes.data)?pRes.data:[];
+  if(pRes.ok && projects.length && !allBOM.length) allBOM=projects.slice();   // 同一份查詢,給「主頁點工程」等直接用,不必再抓
   const staff=Array.isArray(sRes.data)?sRes.data:[];
   const active=projects.filter(p=>p.status==='進行中');
   document.getElementById('stat-staff').textContent=staff.filter(s=>s.status!=='離職').length;  // 只算在職
@@ -18013,16 +17990,48 @@ function dashClassifySpec(spec) {
   return '其他';
 }
 
+// 主頁原本每次都把每日產量、上線、構件、構件附加、進料五張表整張抓下來(約 5 萬筆),手機開主頁很慢。
+// 線上進度統計只需要「未完成工程」(已完成的區本來就會被隱藏);每日產量/柱樑比/長榮結算只看近幾個月。
+// → 構件/上線/進料只抓未完成工程;每日產量抓「近 6 個月 + 未完成工程的全部」,選更早的日期時再補(dashEnsureDailySince)。
+let dashDailyFrom = '', dashActiveProjs = [], dashDailyFullLoaded = false;
+function dashMonthsBackStart(n) { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - n); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-01'; }
+const DASH_DAILY_COLS = 'date,part_no,proj_num,zone_code,net_weight,spec';
+async function dashEnsureDailySince(dateStr) {
+  if (dashDailyFullLoaded || !dateStr || !dashDailyFrom || dateStr >= dashDailyFrom) return false;
+  const from = String(dateStr).slice(0,7) + '-01';
+  const inq = dashActiveProjs.map(p => '"' + p + '"').join(',');
+  const r = await sbFetchAll('/rest/v1/daily_output?select=' + DASH_DAILY_COLS + '&date=gte.' + from + '&date=lt.' + dashDailyFrom
+    + (inq ? '&proj_num=not.in.(' + encodeURIComponent(inq) + ')' : ''));   // 未完成工程的全部已經在手上,別重複
+  if (!r.ok || !Array.isArray(r.data)) return false;
+  dashDailyRows = dashDailyRows.concat(r.data); dashDailyFrom = from;
+  return true;
+}
 async function dashLoadStats() {
-  const [dRes, lRes, cRes, eRes, zRes, pRes, mRes] = await Promise.all([
-    sbFetchAll('/rest/v1/daily_output?select=date,part_no,proj_num,zone_code,net_weight,spec'),
-    sbFetchAll('/rest/v1/layout_items?select=proj_num,zone_code,part_no,work_date,qty'),
-    sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,qty'),
-    sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no,extra'),
+  const [zRes, pRes] = await Promise.all([
     sbFetchAll('/rest/v1/zones?select=id,zone_code,project_id'),
-    sbFetchAll('/rest/v1/projects?select=id,proj_num,status'),
-    sbFetchAll('/rest/v1/material_receipts?select=zone_id,part_no,date,qty')
+    sbFetchAll('/rest/v1/projects?select=id,proj_num,status')
   ]);
+  const projOk = pRes.ok && Array.isArray(pRes.data) && zRes.ok && Array.isArray(zRes.data);
+  const actProj = projOk ? pRes.data.filter(p => String(p.status||'').trim() !== '已完成' && String(p.proj_num||'').trim()) : [];
+  const actIds = new Set(actProj.map(p => p.id));
+  const actZoneIds = projOk ? zRes.data.filter(z => actIds.has(z.project_id)).map(z => z.id) : [];
+  dashActiveProjs = actProj.map(p => String(p.proj_num).trim());
+  const inProj = encodeURIComponent(dashActiveProjs.map(p => '"' + p + '"').join(','));
+  const inZone = actZoneIds.join(',');
+  const since = dashMonthsBackStart(6);
+  // 工程清單沒抓到就退回原本的全抓(慢但正確)
+  const daily = projOk
+    ? '/rest/v1/daily_output?select=' + DASH_DAILY_COLS + (dashActiveProjs.length ? '&or=(date.gte.' + since + ',proj_num.in.(' + inProj + '))' : '&date=gte.' + since)
+    : '/rest/v1/daily_output?select=' + DASH_DAILY_COLS;
+  const none = Promise.resolve({ ok:true, data:[] });
+  const [dRes, lRes, cRes, eRes, mRes] = await Promise.all([
+    sbFetchAll(daily),
+    projOk ? (dashActiveProjs.length ? sbFetchAll('/rest/v1/layout_items?select=proj_num,zone_code,part_no,work_date,qty&proj_num=in.(' + inProj + ')') : none) : sbFetchAll('/rest/v1/layout_items?select=proj_num,zone_code,part_no,work_date,qty'),
+    projOk ? (inZone ? sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,qty&zone_id=in.(' + inZone + ')') : none) : sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,qty'),
+    projOk ? (inZone ? sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no,extra&zone_id=in.(' + inZone + ')') : none) : sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no,extra'),
+    projOk ? (inZone ? sbFetchAll('/rest/v1/material_receipts?select=zone_id,part_no,date,qty&zone_id=in.(' + inZone + ')') : none) : sbFetchAll('/rest/v1/material_receipts?select=zone_id,part_no,date,qty')
+  ]);
+  dashDailyFullLoaded = !projOk; dashDailyFrom = projOk ? since : '';
   dashDailyRows = Array.isArray(dRes.data) ? dRes.data : [];
   dashLayoutRows = Array.isArray(lRes.data) ? lRes.data : [];
   dashComponents = Array.isArray(cRes.data) ? cRes.data : [];
@@ -18132,7 +18141,13 @@ function dateSlash(v){ const s=String(v==null?'':v); return s.replace(/^(\d{4})-
 })();
 document.addEventListener('change', function(e){ const t=e.target; if(t && t.matches && t.matches('input.date-wk[data-wk]')) setDateWk(t); });
 
-function dashOnDateChange() { refreshDateWk(); dashRenderDaily(); dashRenderProgress(); }
+function dashOnDateChange() {
+  refreshDateWk(); dashRenderDaily(); dashRenderProgress();
+  // 選到半年以前:補抓那段的每日產量再畫一次(柱樑比趨勢要往前 6 個月)
+  const d = dashSelectedDate(), m = new Date(d + 'T00:00:00'); m.setDate(1); m.setMonth(m.getMonth() - 5);
+  const need = m.getFullYear() + '-' + String(m.getMonth()+1).padStart(2,'0') + '-01';
+  dashEnsureDailySince(need).then(ch => { if (ch) { dashRenderDaily(); dashRenderProgress(); } }).catch(() => {});
+}
 
 function dashSelectedDate() {
   const dp = document.getElementById('dash-shared-date');
@@ -18652,6 +18667,7 @@ function dashEvergreenInit() {
 function dashEvergreenRecalc() {
   const s = (document.getElementById('dash-ev-start')||{}).value || '';
   const e = (document.getElementById('dash-ev-end')||{}).value || '';
+  if (s) dashEnsureDailySince(s).then(ch => { if (ch) dashEvergreenRecalc(); }).catch(() => {});
   let qty = 0, w = 0;
   if (s && e) dashDailyRows.forEach(r => {
     const d = r.date || '';
@@ -18740,6 +18756,8 @@ async function refreshZoneStatusByCode(projNum, zoneCode) {
   const online = {}; if (Array.isArray(lr.data)) lr.data.forEach(it => { if (it.part_no && it.work_date && String(it.work_date).trim()) online[it.part_no] = 1; });
   const dr = await sbFetchAll('/rest/v1/daily_output?select=part_no&proj_num=eq.' + encodeURIComponent(projNum) + '&zone_code=eq.' + encodeURIComponent(zoneCode));
   const dailyDone = {}; if (Array.isArray(dr.data)) dr.data.forEach(it => { if (it.part_no) dailyDone[it.part_no] = 1; });
+  // 任一份沒抓完整就不重算(否則會把已完成的區當成沒產量改回去並寫入資料庫)
+  if ([cr, er, lr, dr].some(r => !r || !r.ok || !Array.isArray(r.data) || r.partial)) return;
   // 非本公司製作構件不列入統計
   const statComps = comps.filter(c => { const e = ext[c.part_no] || {}; return !(e[NONCO_KEY] === '1' || e[NONCO_KEY] === true); });
   const total = statComps.length;
@@ -23069,7 +23087,7 @@ async function saveAccountRow(id, el){
     await loadStaff();
   }
   if(currentUser && String(currentUser.id)===String(id)){
-    await loadProfile();
+    try{ await loadProfile(); }catch(e){ console.warn('loadProfile',e); }
     document.getElementById('sidebar-name').textContent=currentUser.name;
     renderUserAvatar(currentUser);
   }
@@ -23162,6 +23180,7 @@ async function auditResolveNames(){
   const need={};
   const add=(tbl,id)=>{
     if(!tbl||id==null||id===''||AUDIT_SKIP_TABLES.has(tbl)||AUDIT_NAME_BADTBL.has(tbl)) return;
+    if(!/^[0-9A-Za-z_-]+$/.test(String(id))) return;   // 摘要裡的「(空)」之類不是編號,送出去整批查詢會 400
     if(AUDIT_NAME_CACHE.hasOwnProperty(tbl+'|'+id)) return;
     (need[tbl]=need[tbl]||new Set()).add(String(id));
   };
@@ -23972,8 +23991,13 @@ async function deviceCheck(){
   deviceErr='';
   if(isGuest || !currentSession) return {ok:true, off:true};
   await deviceLoadCfg().catch(()=>{});
-  const r=await sbFetch('/rest/v1/rpc/sc_device_check',{method:'POST',
-    body:JSON.stringify({p_key:deviceKey(), p_ua:String(navigator.userAgent||'').slice(0,300)})});
+  // 開 App 時要等它才進主畫面:卡住就整個停在開啟畫面,所以 15 秒逾時(逾時=放行,比照檢查失敗)
+  const ac=new AbortController(), tm=setTimeout(()=>ac.abort(),15000);
+  let r;
+  try{ r=await sbFetch('/rest/v1/rpc/sc_device_check',{method:'POST',signal:ac.signal,
+    body:JSON.stringify({p_key:deviceKey(), p_ua:String(navigator.userAgent||'').slice(0,300)})}); }
+  catch(e){ r={ok:false,status:0}; }
+  finally{ clearTimeout(tm); }
   if(!r.ok){
     deviceErr=(r.status===404) ? '尚未啟用(請先執行 device_lock_migration.sql)' : ('裝置檢查失敗('+(r.status||'?')+')');
     return {ok:true, err:deviceErr};
@@ -24505,6 +24529,7 @@ async function healthRunCheck(){
   try{
     // 1. 外部程式庫
     st.textContent='檢查外部程式庫…';
+    try{ await loadFaceApi(); }catch(e){}   // 人臉辨識改成用到才載,檢查前先載一次
     sections.push({title:'外部程式庫(CDN)', items:HEALTH_LIBS.map(([g,label])=>
       typeof window[g]!=='undefined' ? row('ok',label,'已載入') : row('bad',label,'沒有載入:相關功能會失效(網路擋住 cdn.jsdelivr.net 或 CDN 暫時故障)'))});
 
@@ -24592,10 +24617,24 @@ let attendStream=null, attendTimer=null, attendBusy=false; // 打卡機
 let attendLastPunch={};               // {staffId: timestamp} 防連點
 let attendMatcher=null;               // 快取比對器，避免每輪重建
 
+// face-api.js 有 1MB 多,原本放在網頁最前面同步載入,所有人每次開 App 都要等它;只有人臉打卡用得到 → 用到才載
+const FACE_API_SRC = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js';
+let faceApiLoading = null;
+function loadFaceApi() {
+  if (typeof faceapi !== 'undefined') return Promise.resolve(true);
+  if (faceApiLoading) return faceApiLoading;
+  faceApiLoading = new Promise(res => {
+    const s = document.createElement('script'); s.src = FACE_API_SRC; s.async = true;
+    s.onload = () => res(typeof faceapi !== 'undefined');
+    s.onerror = () => { faceApiLoading = null; res(false); };
+    document.head.appendChild(s);
+  });
+  return faceApiLoading;
+}
 async function ensureFaceModels() {
   if(faceModelsReady) return true;
   if(faceModelsLoading) return faceModelsLoading;
-  if(typeof faceapi==='undefined'){ alert('人臉辨識元件尚未載入，請檢查網路後重新整理'); return false; }
+  if(typeof faceapi==='undefined' && !(await loadFaceApi())){ alert('人臉辨識元件載入失敗，請檢查網路後重新整理'); return false; }
   faceModelsLoading=(async()=>{
     await faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODEL_URL);
     await faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_URL);
@@ -27305,21 +27344,23 @@ function lcMove(e) {
 }
 // 目前指標下的落點：哪個柱位、插在第幾格（上半格＝插在它前面，下半格＝插在它後面）
 function lcHover(x, y) {
+  // 自動捲動的計時器可能在放開之後還跑一次,那時 _lcDrag 已清空(手機回報過 null 的 keys/drop 錯誤)
+  const d = _lcDrag; if (!d || !d.keys) return;
   document.querySelectorAll('#layout-chart .lc-ins-before,#layout-chart .lc-ins-after')
     .forEach(el => el.classList.remove('lc-ins-before','lc-ins-after'));
   const el = document.elementFromPoint(x, y);
   const cell = el && el.closest ? el.closest('#layout-chart td.lc-td,#layout-chart th.lc-th') : null;
-  if (!cell) { _lcDrag.drop = null; return; }
+  if (!cell) { d.drop = null; return; }
   const bed = cell.dataset.bed;
-  const list = (layoutChartBed[bed] || []).filter(r => _lcDrag.keys.indexOf(r._key) < 0);
-  if (cell.tagName === 'TH') { _lcDrag.drop = {bed, index: list.length}; return; }   // 丟在標題＝排到最後
+  const list = (layoutChartBed[bed] || []).filter(r => d.keys.indexOf(r._key) < 0);
+  if (cell.tagName === 'TH') { d.drop = {bed, index: list.length}; return; }   // 丟在標題＝排到最後
   const key = cell.dataset.key ? parseInt(cell.dataset.key) : null;
-  if (key == null) { _lcDrag.drop = {bed, index: list.length}; return; }             // 空格＝排到最後
+  if (key == null) { d.drop = {bed, index: list.length}; return; }             // 空格＝排到最後
   const rc = cell.getBoundingClientRect();
   const after = (y - rc.top) > rc.height / 2;
   let idx = list.findIndex(r => r._key === key);
   if (idx < 0) idx = list.length; else idx = after ? idx + 1 : idx;
-  _lcDrag.drop = {bed, index: idx};
+  d.drop = {bed, index: idx};
   cell.classList.add(after ? 'lc-ins-after' : 'lc-ins-before');
 }
 function lcScrollParent(el) {
@@ -30800,9 +30841,11 @@ document.addEventListener('mousedown',function(e){
 },true);
 
 function cellRC(td) {
-  const tr = td.closest('tr');
-  const tbody = tr.closest('tbody');
-  const rows = Array.from(tbody.children);
+  // 表頭/表尾的格子沒有 tbody(出勤回報拖選時常滑過),原本會丟錯;一律退回所在的區塊
+  const tr = td && td.closest ? td.closest('tr') : null;
+  if (!tr) return { r: -1, c: -1 };
+  const tbody = tr.closest('tbody') || tr.parentElement;
+  const rows = Array.from(tbody ? tbody.children : [tr]);
   const r = rows.indexOf(tr);
   const c = Array.from(tr.children).indexOf(td);
   return { r, c };
@@ -30878,6 +30921,7 @@ function tblExtendToPoint() {
   const td = tblCellAtPoint(tblSel.table, tblAuto.x, tblAuto.y);
   if (!td) return;
   const rc = cellRC(td);
+  if (rc.r < 0) return;
   if (rc.r !== tblSel.focus.r || rc.c !== tblSel.focus.c) {
     tblSel.focus = rc;
     tblApplySel();
@@ -30952,8 +30996,9 @@ function tblInitSelection(table) {
   table.addEventListener('mousemove', e => {
     if (!tblSel.selecting || tblSel.table !== table) return;
     const td = e.target.closest('td');
-    if (!td) return;
+    if (!td || !table.contains(td) || !tblSel.focus) return;
     const rc = cellRC(td);
+    if (rc.r < 0) return;
     if (rc.r !== tblSel.focus.r || rc.c !== tblSel.focus.c) {
       tblSel.focus = rc;
       tblApplySel();
@@ -31015,9 +31060,10 @@ function tblInitSelection(table) {
     tblAuto.x = touch.clientX; tblAuto.y = touch.clientY;
     const hit = document.elementFromPoint(touch.clientX, touch.clientY);
     const td = hit && hit.closest ? hit.closest('td') : null;
-    if (!td || !table.contains(td)) return;
+    if (!td || !table.contains(td) || !tblSel.focus) return;
     e.preventDefault();
     const rc = cellRC(td);
+    if (rc.r < 0) return;
     if (rc.r !== tblSel.focus.r || rc.c !== tblSel.focus.c) {
       tblSel.focus = rc;
       tblApplySel();
