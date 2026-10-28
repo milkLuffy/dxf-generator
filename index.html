@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.28.3"/>
+<meta name="sc-version" content="2026.10.28.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -969,6 +969,23 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 #dash-progress-table th:nth-child(8),#dash-progress-table td:nth-child(8){text-align:left}
 /* 分層:預設收合「支數明細」欄(進料/上線/已完成/BOM/差異),按鈕可展開 */
 #dash-progress-table.dash-prog-collapsed .dash-prog-sec{display:none}
+/* 手機:線上進度統計 11 欄塞不下(表頭變直排字),改成每個工程區一張卡片 */
+#dash-progress-cards{display:none}
+@media (max-width:768px),(pointer:coarse) and (max-width:1100px){
+  #dash-progress-table{display:none}
+  #dash-progress-cards{display:flex;flex-direction:column;gap:8px}
+  .dpc{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+  .dpc-top{display:flex;align-items:baseline;gap:8px}
+  .dpc-top b{font-size:15px}
+  .dpc-zone{color:var(--text2);font-family:var(--mono)}
+  .dpc-pct{margin-left:auto;font-family:var(--mono);font-weight:600}
+  .dpc .dash-prog{width:100%;margin:8px 0}
+  .dpc-nums{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text3)}
+  .dpc-nums b{font-family:var(--mono);font-weight:600;color:var(--text)}
+  .dpc-cnt{margin-top:6px}
+  #dash-progress-cards.dash-prog-collapsed .dpc-cnt{display:none}
+  .dpc-empty{text-align:center;color:var(--text3);padding:20px}
+}
 .dash-ev{width:118px}
 .dash-ev-num{width:90px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:12px;padding:3px 6px}
 .dash-ev-num:focus{border-color:var(--accent2);outline:none}
@@ -1151,14 +1168,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .proj-row input[type=text]::placeholder{color:var(--text3)}
 .fname-preview{margin-top:4px;font-family:var(--mono);font-size:12px;color:var(--text2)}
 .fname-preview span{color:var(--accent3)}
-.global-r-bar{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border-hi);border-radius:var(--rad-lg);padding:12px 18px;margin-bottom:20px}
+.global-r-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg2);border:1px solid var(--border-hi);border-radius:var(--rad-lg);padding:12px 18px;margin-bottom:20px}
 .global-r-bar label{font-family:var(--mono);font-size:12px;color:var(--text2);white-space:nowrap}
 .global-r-bar input{width:110px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:14px;padding:7px 10px;outline:none;-moz-appearance:textfield}
 .global-r-bar input::-webkit-inner-spin-button,.global-r-bar input::-webkit-outer-spin-button{-webkit-appearance:none}
 .global-r-bar input:focus{border-color:var(--accent2)}
 .btn-apply{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:var(--rad);font-family:var(--mono);font-size:12px;cursor:pointer;background:none;border:1px solid var(--border-hi);color:var(--text2);transition:all .15s;white-space:nowrap}
 .btn-apply:hover{border-color:var(--accent3);color:var(--accent3)}
-.global-r-bar .hint{font-family:var(--mono);font-size:11px;color:var(--text3);flex:1}
+.global-r-bar .hint{font-family:var(--mono);font-size:11px;color:var(--text3);flex:1 1 160px}
 .dxf-table-wrap{overflow-x:auto}
 .table-header{display:grid;grid-template-columns:28px 1fr 1fr 1fr 130px 130px 32px;gap:8px;padding:0 4px 8px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:8px;min-width:640px}
 .dxf-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;min-width:640px}
@@ -1224,6 +1241,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .log-title{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--text3);text-transform:uppercase}
 .log-count{font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:2px 8px}
 .log-actions-bar{display:flex;gap:8px;align-items:center}
+@media(max-width:768px){.log-actions-bar{flex-wrap:wrap}.log-actions-bar .log-ord-filter{flex:1 1 100%}.log-actions-bar .log-filter{flex:1 1 140px;min-width:0}}
 .log-filter{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rad);color:var(--text2);font-family:var(--mono);font-size:12px;padding:5px 10px;outline:none;width:180px}
 .log-filter:focus{border-color:var(--accent2)}
 .btn-sm{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--rad);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;border:1px solid}
@@ -4082,6 +4100,7 @@ window.normalizeFullWidth=function(value){
             </tr></thead>
             <tbody id="dash-progress-body"><tr><td colspan="11" style="text-align:center;color:var(--text3);padding:20px">—</td></tr></tbody>
           </table>
+          <div id="dash-progress-cards"></div>
         </div>
 
       </div>
@@ -4261,6 +4280,7 @@ window.normalizeFullWidth=function(value){
 .ma-intro-title{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px}
 .ma-intro p{font-size:12px;line-height:1.75;color:var(--text2);max-width:760px}
 .ma-local-badge{white-space:nowrap;padding:6px 10px;border-radius:999px;background:rgba(50,215,75,.12);border:1px solid rgba(50,215,75,.35);color:var(--green);font-family:var(--mono);font-size:11px}
+@media(max-width:768px){.ma-intro{flex-direction:column;gap:10px;padding:14px 16px}}
 .ma-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);padding:16px;margin-bottom:16px}
 .ma-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .ma-panel-title{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text)}
@@ -6525,8 +6545,8 @@ window.normalizeFullWidth=function(value){
     <div class="page" id="page-payrollcfg">
       <div class="page-header">
         <div class="page-title" style="margin-bottom:0">費率設定</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <label style="font-size:12px;color:var(--text3)">生效日</label>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label style="font-size:12px;color:var(--text3);white-space:nowrap">生效日</label>
           <input type="date" id="pcfg-eff" class="date-wk" data-wk="pcfg-eff-show" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text);font-family:var(--mono)"/>
           <span class="date-wk-show" id="pcfg-eff-show" style="font-size:12px;color:var(--text3)"></span>
           <button class="btn" id="pcfg-policy-btn" onclick="pcfgApplyPolicy()" title="一鍵帶入最新年度官方費率、基本工資與投保薪資分級表(來源:勞保局/健保署公告)" style="padding:8px 12px;border:1px solid var(--accent2);border-radius:var(--rad);background:transparent;color:var(--accent2);cursor:pointer;font-weight:600">🔄 套用2026政策</button>
@@ -18435,6 +18455,17 @@ function dashRenderProgress() {
       <td>${r.planT.toFixed(2)}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:20px">尚無明細輸入資料</td></tr>';
+  // 手機卡片(同一份資料;CSS 決定顯示表格或卡片)
+  const cardsEl = document.getElementById('dash-progress-cards');
+  if (cardsEl) cardsEl.innerHTML = rows.length ? rows.map(r => {
+    const diffColor = r.diff < 0 ? 'var(--red)' : (r.diff > 0 ? 'var(--purple)' : 'var(--green)');
+    return `<div class="dpc">
+      <div class="dpc-top"><b>${r.proj||'—'}</b><span class="dpc-zone">${r.zone||'—'}</span><span class="dpc-pct">${r.pct.toFixed(1)}%</span></div>
+      <div class="dash-prog"><div class="dash-prog-bar" style="width:${Math.min(100,r.pct).toFixed(1)}%"></div></div>
+      <div class="dpc-nums"><span>已完成 <b style="color:var(--yellow)">${r.doneT.toFixed(2)}</b> t</span><span>未完成 <b style="color:var(--red)">${r.leftT.toFixed(2)}</b> t</span><span>預計 <b>${r.planT.toFixed(2)}</b> t</span></div>
+      <div class="dpc-nums dpc-cnt"><span>進料 <b>${r.feed}${r.needQty?'/'+r.needQty:''}</b></span><span>上線 <b>${r.online}</b></span><span>已完成 <b>${r.done}${r.extraDone?' ⚠':''}</b></span><span>BOM <b>${r.bom}</b></span><span>差異 <b style="color:${diffColor}">${r.diff>0?'+':''}${r.diff}</b></span></div>
+    </div>`;
+  }).join('') : '<div class="dpc-empty">尚無明細輸入資料</div>';
 }
 
 // 線上進度統計:切換「支數明細」欄(進料/上線/已完成/BOM/差異)的展開/收合
@@ -18443,6 +18474,7 @@ function dashToggleProgCols() {
   const b = document.getElementById('dash-prog-toggle');
   if (!t) return;
   const collapsed = t.classList.toggle('dash-prog-collapsed');
+  document.getElementById('dash-progress-cards')?.classList.toggle('dash-prog-collapsed', collapsed);
   if (b) b.textContent = collapsed ? '顯示支數明細 ▼' : '收合支數明細 ▲';
 }
 
