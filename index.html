@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.28.5"/>
+<meta name="sc-version" content="2026.10.28.6"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2094,6 +2094,45 @@ body.lc-dragging *{cursor:grabbing!important}
 .ship-hist-op.del:hover{border-color:var(--danger,#e0555b);color:var(--danger,#e0555b)}
 .ship-hist-op.warn{border-color:var(--yellow,#f5b83d);color:var(--yellow,#f5b83d)}
 .ship-hist-bar label{display:inline-flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap}
+.ship-hist-out{margin-left:auto;display:inline-flex;gap:6px}
+/* 截圖用的完整表格:畫面外排版,寬度依內容,畫完就移除 */
+#ship-hist-shot{position:fixed;left:0;top:0;z-index:-1;width:max-content;min-width:640px;padding:4px;background:var(--bg);color:var(--text);pointer-events:none}
+#ship-hist-shot .shs-title{font-size:18px;font-weight:700;margin-bottom:6px}
+#ship-hist-shot .shs-title span{font-size:14px;font-weight:400;color:var(--text2)}
+#ship-hist-shot .shs-stat{font-size:13px;color:var(--text2);margin-bottom:10px}
+#ship-hist-shot .shs-stat b{color:var(--text)}
+#ship-hist-shot .ship-hist-tbl{width:auto;border:1px solid var(--border)}
+#ship-hist-shot .ship-hist-tbl th{position:static}
+#ship-hist-shot .shs-foot{font-size:11px;color:var(--text3);margin-top:8px}
+/* 手機:派車紀錄卡片 */
+.shc-list{display:flex;flex-direction:column;gap:8px}
+.shc{border:1px solid var(--border);border-radius:10px;background:var(--bg2);padding:10px 12px}
+.shc.late{border-left:4px solid var(--danger,#e0555b)}
+.shc.cancel{opacity:.6}
+.shc.cancel .shc-label,.shc.cancel .shc-times{text-decoration:line-through}
+.shc-top{display:flex;align-items:center;gap:8px}
+.shc-date{font:700 15px var(--mono)}
+.shc-kind{padding:1px 8px;border-radius:999px;font-size:12px;background:rgba(10,132,255,.15);color:var(--accent2)}
+.shc-kind.in{background:rgba(50,215,75,.14);color:var(--green)}
+.shc-wait{margin-left:auto;font-weight:700;font-size:14px}
+.shc.late .shc-wait{color:var(--danger,#e0555b)}
+.shc-label{margin-top:6px;font-size:14px;overflow-wrap:anywhere}
+.shc-times{margin-top:4px;font:13px var(--mono);color:var(--text2)}
+.shc-times b{color:var(--text)}
+.shc-meta{margin-top:4px;font-size:12px;color:var(--text3)}
+.shc-meta:empty{display:none}
+.shc-ops{display:flex;gap:6px;margin-top:8px;justify-content:flex-end}
+.shc-ops .ship-hist-op{min-height:34px;padding:4px 12px;font-size:13px;margin:0}
+@media(max-width:768px),(pointer:coarse) and (max-width:1100px){
+  .ship-hist-bar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .ship-hist-bar input:not([type=checkbox]),.ship-hist-bar select{min-width:0;width:100%;min-height:38px;font-size:15px}
+  .ship-hist-bar input[type=checkbox]{width:18px;height:18px;margin:0}
+  .ship-hist-bar label{white-space:normal;font-size:13px}
+  .ship-hist-bar>.btn-sm{min-height:38px}
+  .ship-hist-bar #ship-hist-stat-txt{grid-column:1/-1}
+  .ship-hist-out{grid-column:1/-1;margin-left:0}
+  .ship-hist-out .btn-sm{flex:1;min-height:40px;font-size:14px}
+}
 .ship-hist-edit{display:flex;flex-direction:column;gap:10px;font-size:13px}
 .ship-hist-edit label{display:flex;flex-direction:column;gap:3px;color:var(--text2);min-width:0}
 .ship-hist-edit input,.ship-hist-edit textarea{box-sizing:border-box;width:100%;padding:6px 8px;font-size:15px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);color:var(--text);font-family:inherit}
@@ -32682,7 +32721,8 @@ async function shipHistLoad(){
     +'<select id="ship-hist-stat" onchange="shipHistSetStat(this.value)">'+opt('all','到達不拘',shipHistStat)+opt('open','還沒記車到',shipHistStat)+opt('done','已記車到',shipHistStat)+opt('cancel','不用了(取消)',shipHistStat)+'</select>'
     +'<label title="等車超過 '+SHIP_LATE_MIN+' 分鐘的,也就是表上紅字那幾趟"><input type="checkbox"'+(shipHistLate?' checked':'')+' onchange="shipHistSetLate(this.checked)"> 只看超過 '+SHIP_LATE_MIN+' 分</label>'
     +'<button class="btn-sm" onclick="shipHistClearFilter()">清除篩選</button><span id="ship-hist-stat-txt"></span>'
-    +'<button class="btn-sm btn-export" style="margin-left:auto" onclick="shipHistExport()">⬇ 匯出 Excel</button></div><div id="ship-hist-list"><div class="empty-state">載入中...</div></div>';
+    +'<span class="ship-hist-out"><button class="btn-sm btn-export" id="ship-hist-shot-btn" onclick="shipHistShot()" title="把目前篩選的整份紀錄(全部欄位)畫成一張圖,可分享到 LINE、複製或下載">📷 截圖分享</button>'
+    +'<button class="btn-sm btn-export" onclick="shipHistExport()">⬇ 匯出 Excel</button></span></div><div id="ship-hist-list"><div class="empty-state">載入中...</div></div>';
   const y=+ym.slice(0,4), mo=+ym.slice(5,7);
   const from=new Date(y,mo-1,1).toISOString(), to=new Date(y,mo,1).toISOString();
   const r=await sbFetch('/rest/v1/ship_dispatches?select=*&dispatched_at=gte.'+encodeURIComponent(from)+'&dispatched_at=lt.'+encodeURIComponent(to)+'&order=dispatched_at.desc');
@@ -32732,6 +32772,21 @@ function shipHistRender(){
   const stat=document.getElementById('ship-hist-stat-txt');
   if(stat) stat.innerHTML=(shipHistDay?esc(shipHistDay.slice(5).replace('-','/'))+' ':'本月 ')+'<b>'+act.length+'</b> 趟 · 平均等 <b>'+shipDurTxt(avg)+'</b> · 超過 '+SHIP_LATE_MIN+' 分 <b'+(late?' style="color:var(--danger)"':'')+'>'+late+'</b> 趟'+(open?' · 還沒記車到 <b>'+open+'</b> 趟':'')+(cancel?' · 不用了 <b>'+cancel+'</b> 車':'');
   if(!rows.length){ list.innerHTML='<div class="empty-state">沒有符合篩選條件的派車紀錄</div>'; return; }
+  const opsHtml=d=>(d.arrived_at||d.cancelled_at?'':'<button class="ship-hist-op warn" title="忘了按車到了?在這裡補記到達時間" onclick="shipHistEdit('+Number(d.id)+',1)">補記車到</button>');
+  // 手機:一趟一張卡片(表格 10 欄在手機上只看得到前 4 欄)
+  if(spTrackIsMobile()){
+    list.innerHTML='<div class="shc-list">'+rows.map(d=>{
+      const f=shipHistFields(d), cls=d.cancelled_at?' cancel':(shipIsLate(d)?' late':'');
+      return '<div class="shc'+cls+'"><div class="shc-top"><span class="shc-date">'+f.date+'</span><span class="shc-kind'+(shipIsIn(d)?' in':'')+'">'+f.kind+'</span><span class="shc-wait">'+f.wait+'</span></div>'
+        +'<div class="shc-label">'+esc(f.label)+'</div>'
+        +'<div class="shc-times">派車 <b>'+f.disp+'</b> → 到達 <b>'+f.arr+'</b></div>'
+        +'<div class="shc-meta">'+[f.by?'派車 '+esc(f.by):'',f.arrBy?'記錄車到 '+esc(f.arrBy):'',f.shipped!=='—'?'標記出貨 '+f.shipped:''].filter(Boolean).join(' · ')+'</div>'
+        +'<div class="shc-ops">'+opsHtml(d)
+        +'<button class="ship-hist-op" onclick="shipHistEdit('+Number(d.id)+')">✏ 編輯</button>'
+        +'<button class="ship-hist-op del" onclick="shipHistDel('+Number(d.id)+')">✕ 刪除</button></div></div>';
+    }).join('')+'</div>';
+    return;
+  }
   list.innerHTML='<div class="ship-hist-wrap"><table class="ship-hist-tbl"><thead><tr><th>日期</th><th>派車</th><th>到達</th><th>等了</th><th>類別</th><th>內容</th><th>派車人</th><th>記錄車到</th><th>標記出貨</th><th>修改</th></tr></thead><tbody>'
     +rows.map(d=>{
       const dd=new Date(d.dispatched_at), min=d.arrived_at?shipMinBetween(d.dispatched_at,d.arrived_at):null;
@@ -32749,6 +32804,41 @@ function shipHistRender(){
     }).join('')+'</tbody></table></div>';
 }
 window.shipHistLoad=shipHistLoad;
+// 一趟的顯示文字(手機卡片與截圖共用,跟表格同一套判斷)
+function shipHistFields(d){
+  const dd=new Date(d.dispatched_at), cx=!!d.cancelled_at, min=d.arrived_at?shipMinBetween(d.dispatched_at,d.arrived_at):null, ex=shipExtraShipped(d);
+  return { date:String(dd.getMonth()+1).padStart(2,'0')+'/'+String(dd.getDate()).padStart(2,'0'), disp:shipHm(d.dispatched_at),
+    arr:cx?'不用了':(d.arrived_at?shipHm(d.arrived_at):'(未到)'),
+    wait:cx?'取消':(d.arrived_at?shipDurTxt(min):'等 '+shipWaitTxt(d.dispatched_at)),
+    kind:shipIsIn(d)?'進料':'出貨', label:shipDispatchLabel(d), by:d.created_by_name||'', arrBy:d.arrived_by_name||'',
+    shipped:(d.shipped_ids||[]).length?(d.shipped_ids.length+' 項'+(ex?'（補勾 '+ex+'）':'')):'—' };
+}
+// 截圖分享:不管手機或平板,都把「目前篩選」的整份紀錄以完整表格(不含修改鈕)畫成一張圖
+window.shipHistShot=async function(){
+  if(scShotBusy) return;
+  const rows=shipHistFiltered();
+  if(!rows.length){ alert('沒有符合篩選條件的派車紀錄'); return; }
+  const ym=(document.getElementById('ship-hist-ym')||{}).value||'';
+  const dirTxt={all:'',out:'出貨',in:'進料'}[shipHistDir]||'', statTxt={all:'',open:'還沒記車到',done:'已記車到',cancel:'不用了'}[shipHistStat]||'';
+  const cond=[shipHistDay?shipHistDay.replace(/-/g,'/'):'',dirTxt,statTxt,shipHistLate?'超過 '+SHIP_LATE_MIN+' 分':''].filter(Boolean).join(' · ');
+  const statEl=document.getElementById('ship-hist-stat-txt');
+  const box=document.createElement('div'); box.id='ship-hist-shot';
+  box.innerHTML='<div class="shs-title">🚛 派車紀錄 '+esc(ym.replace('-','年'))+'月'+(cond?'<span>（'+esc(cond)+'）</span>':'')+'</div>'
+    +'<div class="shs-stat">'+(statEl?statEl.innerHTML:'')+'</div>'
+    +'<table class="ship-hist-tbl"><thead><tr><th>日期</th><th>派車</th><th>到達</th><th>等了</th><th>類別</th><th>內容</th><th>派車人</th><th>記錄車到</th><th>標記出貨</th></tr></thead><tbody>'
+    +rows.map(d=>{ const f=shipHistFields(d), cls=d.cancelled_at?' class="cancel"':(shipIsLate(d)?' class="late"':'');
+      return '<tr'+cls+'><td>'+f.date+'</td><td>'+f.disp+'</td><td>'+f.arr+'</td><td class="num">'+f.wait+'</td><td>'+f.kind+'</td><td class="txt">'+esc(f.label)+'</td><td>'+esc(f.by)+'</td><td>'+esc(f.arrBy)+'</td><td class="num">'+f.shipped+'</td></tr>'; }).join('')
+    +'</tbody></table><div class="shs-foot">共 '+rows.length+' 筆 · 紅字=等車超過 '+SHIP_LATE_MIN+' 分 · 產生於 '+esc(new Date().toLocaleString('zh-TW',{hour12:false}))+'</div>';
+  document.body.appendChild(box);
+  const btn=document.getElementById('ship-hist-shot-btn');
+  scShotBusy=true; if(btn) btn.disabled=true;
+  showToast('截圖產生中…','info');
+  try{
+    const blob=await scShotBlob('ship-hist-shot');
+    scShotPreview([{ name:'派車紀錄_'+(shipHistDay||ym)+'.png', label:'派車紀錄', blob }], '派車紀錄截圖 · '+(shipHistDay||ym));
+  }catch(err){ console.error('[派車紀錄截圖]',err); showToast('截圖失敗:'+((err&&err.message)||err)); }
+  finally{ box.remove(); scShotBusy=false; if(btn) btn.disabled=false; }
+};
 // ── 派車紀錄的編輯／刪除:忘了按「車到了」、時間打錯、派錯車,都在這裡補救 ──
 // 只改這筆紀錄本身,不會去動構件的出貨狀態(那要到線上進度表改)。
 let shipHistEditId=null;
@@ -32838,7 +32928,15 @@ window.shipHistExport=function(){
       d.cars||'',shipTripTxt(d),d.cancelled_at?fmt(d.cancelled_at)+(d.cancelled_by_name?' '+d.cancelled_by_name:''):'',d.col_qty||'',d.created_by_name||'',d.arrived_by_name||'',(d.shipped_ids||[]).length||'',shipExtraShipped(d)||'']));
   const ws=XLSX.utils.aoa_to_sheet(aoa), wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'派車紀錄');
-  XLSX.writeFile(wb,'派車紀錄_'+((document.getElementById('ship-hist-ym')||{}).value||'')+'.xlsx');
+  const fname='派車紀錄_'+((document.getElementById('ship-hist-ym')||{}).value||'')+'.xlsx';
+  // iPhone/iPad 主畫面 App 不能直接下載檔案 → 用系統分享(可存到「檔案」、傳 LINE、AirDrop)
+  if(spTrackIsMobile()&&navigator.share&&navigator.canShare){
+    try{
+      const file=new File([XLSX.write(wb,{bookType:'xlsx',type:'array'})],fname,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      if(navigator.canShare({files:[file]})){ navigator.share({files:[file],title:fname}).catch(()=>{}); return; }
+    }catch(e){}
+  }
+  XLSX.writeFile(wb,fname);
 };
 // 等車時間每分鐘自己跳
 setInterval(()=>{ document.querySelectorAll('.ship-wait-t[data-at]').forEach(el=>{
