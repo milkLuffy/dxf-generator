@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.28.2"/>
+<meta name="sc-version" content="2026.10.28.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1899,6 +1899,13 @@ body.lc-dragging *{cursor:grabbing!important}
 .dedup-desc b{color:var(--text)}
 .page-title#zone-detail-title{display:flex;align-items:center}
 .zone-build-date{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--text3);font-weight:400}
+@media(max-width:768px){
+  /* 手機:工程區標題、狀態、建立日期分兩行,不擠成直排字 */
+  .page-title#zone-detail-title{flex-wrap:wrap;row-gap:8px;column-gap:8px}
+  #zone-detail-title>span:first-child{flex:1 1 100%;min-width:0;word-break:break-word}
+  #zone-detail-title .status-badge{margin-left:0!important;white-space:nowrap;flex:none}
+  #zone-detail-title .zone-build-date{white-space:nowrap;letter-spacing:0;font-size:12px}
+}
 #layout-input-table th:nth-child(1), #layout-input-table td:nth-child(1){width:118px}
 #layout-input-table th:nth-child(2), #layout-input-table td:nth-child(2){width:104px}
 #layout-input-table th:nth-child(3), #layout-input-table td:nth-child(3){width:112px}
@@ -5982,6 +5989,16 @@ window.normalizeFullWidth=function(value){
       #page-labor .labor-project-nav{margin-bottom:12px}
       #page-labor .labor-project-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--text3)}
       #page-labor .labor-project-back{border:0;background:none;color:var(--accent2);cursor:pointer;padding:2px 0;font:inherit}
+      @media(max-width:768px){
+        /* 手機:返回/工程/列出未請款一行,外勞支援、顯示已完成換到下一行平分 */
+        #page-labor .labor-project-head{flex-wrap:wrap;row-gap:8px}
+        #page-labor .labor-project-head>*{white-space:nowrap;flex:none}
+        #page-labor .labor-project-head>span:first-child{white-space:normal;flex:1 1 100%}
+        #page-labor .labor-project-head>.btn{flex:1 1 40%;margin-left:0!important;min-width:0;padding:8px 10px!important;font-size:13px}
+        #page-labor .labor-project-head>.labor-project-back+span+b{flex:none}
+        #page-labor .labor-project-head>.labor-ub-list-btn{margin-left:auto!important;padding:6px 12px!important}
+        #page-labor .labor-project-head>.labor-ub-sum{white-space:normal;flex:1 1 100%}
+      }
       #page-labor .labor-project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px}
       #page-labor .labor-project-card{appearance:none;text-align:left;padding:11px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);cursor:pointer;transition:.15s}
       #page-labor .labor-project-card:hover{border-color:var(--accent2);transform:translateY(-1px)}
