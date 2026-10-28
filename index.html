@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.28.4"/>
+<meta name="sc-version" content="2026.10.28.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -141,6 +141,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .modal-title{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--text)}
 .modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .modal-grid .full{grid-column:1/-1}
+/* 兩欄平分且可縮(內容較寬的日期欄不會把整張卡撐出畫面) */
+#notify-form-card .modal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:768px){#notify-form-card .modal-grid{grid-template-columns:minmax(0,1fr)}}
+#notify-form-card .modal-grid input,#notify-form-card .modal-grid textarea,#notify-form-card .modal-grid select{width:100%;min-width:0;box-sizing:border-box}
+#notify-form-card .date-wk-show{white-space:normal}
 .modal-actions{display:flex;gap:8px;margin-top:4px}
 /* 手機版彈窗：四周留邊、輸入框 16px（iPhone 點了才不會自動放大）、底部按鈕固定不跟著捲走（iPad 等觸控平板同樣適用） */
 @media(max-width:768px),(pointer:coarse) and (max-width:1100px){
@@ -6880,7 +6885,7 @@ window.normalizeFullWidth=function(value){
 
     <div class="page" id="page-notify">
       <div class="page-title">通知管理</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;align-items:start">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px;align-items:start">
         <div class="card">
           <div class="section-label" style="margin-bottom:4px">自動通知規則</div>
           <div class="notif-setting-row" style="border-top:none">
@@ -7524,6 +7529,8 @@ window.normalizeFullWidth=function(value){
       #page-egstaff .page-header .btn-add-new{min-height:42px;white-space:nowrap}
     }
     .sp-l-list{display:flex;flex-direction:column;gap:10px}
+    /* iPad:名冊/長榮人員卡片一排兩張、等高 */
+    @media(min-width:700px){#staff-grid .sp-l-list,#page-egstaff .sp-l-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}}
     .sp-l-card{position:relative;display:block;text-align:left;padding:12px 34px 12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent}
     .sp-l-card:active{background:var(--bg3)}
     .sp-l-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
