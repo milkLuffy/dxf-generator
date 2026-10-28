@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.27.3"/>
+<meta name="sc-version" content="2026.10.28.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1757,6 +1757,7 @@ html.dtv-open,html.dtv-open body{overflow:hidden}
   .mobile-bottom-nav button .mbn-icon svg{width:22px;height:22px;display:block;margin:0 auto}
   .mobile-bottom-nav button.active{background:var(--nav-active);color:var(--nav-green-text)}
   .mobile-bottom-nav button:focus-visible{box-shadow:inset 0 0 0 2px var(--nav-green)}
+  .mobile-bottom-nav.mbn-hide{display:none!important}
 }
 
 /* ── 配置圖:選取與拖曳換位置 ── */
@@ -7459,6 +7460,30 @@ window.normalizeFullWidth=function(value){
     @keyframes spSheetUp{from{transform:translateY(100%)}to{transform:none}}
     /* 手機版 CP 收圖與追蹤：頂部精簡、分頁單列滑動、工具列次要按鈕收進「更多」、SP 清單改卡片 */
     .prod-m-more{display:none}
+    .staff-m-more{display:none!important}
+    .staff-m-sum{margin:2px 2px 10px;font-size:12px;color:var(--text3)}
+    #staff-grid .spx-m-lines a{color:var(--accent2);text-decoration:none}
+    .staff-m-name{font-size:17px;font-weight:700;overflow-wrap:anywhere}
+    .staff-m-name small{font-size:12px;font-weight:400;color:var(--text3);margin-left:4px}
+    .egst-m-unit{margin:16px 2px 8px;font-size:13px;font-weight:700;color:var(--accent2)}
+    .egst-m-unit:first-of-type{margin-top:4px}
+    .egst-m-unit span{font-weight:400;color:var(--text3);margin-left:4px}
+    .egst-m-rank{flex:none;padding:3px 10px;border-radius:999px;background:var(--bg3);color:var(--text2);font-size:12px}
+    @media(max-width:768px),(pointer:coarse) and (max-width:1100px){
+      /* 公司名冊/長榮人員手機版:標題一列、工具整理成「在職/離職 ＋ 新增」,少用的收進「⋯ 更多」 */
+      #page-staff .page-header,#page-egstaff .page-header{flex-direction:column;align-items:stretch;gap:10px}
+      #page-staff .staff-head-tools{display:grid!important;grid-template-columns:1fr auto auto;gap:8px!important}
+      #page-staff .staff-viewmode-toggle{display:none}
+      #page-staff .staff-status-toggle{display:flex}
+      #page-staff .staff-status-toggle button{flex:1;min-height:42px;font-size:14px}
+      #page-staff .staff-head-tools .btn-add-new{min-height:42px;padding:8px 12px;white-space:nowrap;writing-mode:horizontal-tb}
+      #page-staff .staff-m-more{display:inline-flex!important;align-items:center;justify-content:center}
+      #page-staff .staff-head-tools .staff-sec{display:none;grid-column:1/-1;order:2}
+      #page-staff .staff-head-tools.m-open .staff-sec{display:block}
+      #page-staff .search-bar .search-input,#page-egstaff .search-bar .search-input{width:100%;max-width:none}
+      #page-egstaff .page-header>div:last-child{display:grid!important;grid-template-columns:1fr 1fr;gap:8px}
+      #page-egstaff .page-header .btn-add-new{min-height:42px;white-space:nowrap}
+    }
     .sp-l-list{display:flex;flex-direction:column;gap:10px}
     .sp-l-card{position:relative;display:block;text-align:left;padding:12px 34px 12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent}
     .sp-l-card:active{background:var(--bg3)}
@@ -7834,7 +7859,8 @@ window.normalizeFullWidth=function(value){
     .lt-m-pager button:disabled{opacity:.4;cursor:default}
     .spx-m-field>select[style]{width:100%!important;color:var(--text)!important}   /* 數量下拉原本寫死 56px */
     @media(max-width:768px),(pointer:coarse) and (max-width:1100px){
-      .layout-table-wrap.lt-m-mode{max-height:none;overflow:visible;border:0;background:transparent}
+      /* max-height 要 !important:像 #layout-input-wrap 用 ID 設了高度上限,會蓋過這裡 → 卡片超出容器、頁面算不到高度,最後一筆被底部導覽列擋住捲不上來 */
+      .layout-table-wrap.lt-m-mode{max-height:none!important;overflow:visible;border:0;background:transparent}
       .layout-table-wrap.lt-m-mode :is(table,tbody,tr,td){display:block;width:100%;min-width:0;padding:0;border:0;background:transparent!important;white-space:normal;text-align:left}
       .layout-table-wrap.lt-m-mode :is(thead,tfoot){display:none}
       /* 線上進度表原本以 ID 寫死 min-width:1160px 與各欄寬，卡片模式要蓋掉，否則整頁被撐到 1160px、卡片被壓在第一欄 */
@@ -8864,19 +8890,20 @@ window.normalizeFullWidth=function(value){
     <div class="page" id="page-staff">
       <div class="page-header">
         <div class="page-title" style="margin-bottom:0">公司名冊</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <div class="staff-view-toggle">
+        <div class="staff-head-tools" style="display:flex;gap:8px;align-items:center">
+          <div class="staff-view-toggle staff-status-toggle">
             <button id="staff-status-active" class="active" onclick="setStaffStatusView('在職')">在職</button>
             <button id="staff-status-left" onclick="setStaffStatusView('離職')">離職</button>
           </div>
-          <div class="staff-view-toggle">
+          <div class="staff-view-toggle staff-viewmode-toggle">
             <button id="staff-view-card" onclick="setStaffView('card')" title="卡片檢視">▦ 卡片</button>
             <button id="staff-view-list" class="active" onclick="setStaffView('list')" title="列表檢視">☰ 列表</button>
           </div>
-          <button class="btn-add-new" style="background:none;border:1px solid var(--border-hi);color:var(--text2)" onclick="staffClearSortFilter()" title="清除排序與欄位篩選">⟲ 清除排序/篩選</button>
-          <button class="btn-add-new" style="background:none;border:1px solid var(--border-hi);color:var(--text2)" onclick="openStaffBatchModal()">⎘ 批次輸入</button>
-          <button class="btn-add-new" style="background:none;border:1px solid var(--border-hi);color:var(--text2)" onclick="openStaffSeniorityModal()">📋 匯入年資表</button>
-          <button class="btn-add-new" onclick="openStaffModal()">＋ 新增員工</button>
+          <button class="btn-add-new staff-sec" style="background:none;border:1px solid var(--border-hi);color:var(--text2)" onclick="staffClearSortFilter()" title="清除排序與欄位篩選">⟲ 清除排序/篩選</button>
+          <button class="btn-add-new staff-sec" style="background:none;border:1px solid var(--border-hi);color:var(--text2)" onclick="openStaffBatchModal()">⎘ 批次輸入</button>
+          <button class="btn-add-new staff-sec" style="background:none;border:1px solid var(--border-hi);color:var(--text2)" onclick="openStaffSeniorityModal()">📋 匯入年資表</button>
+          <button class="btn-add-new staff-m-more" type="button" style="background:none;border:1px solid var(--border-hi);color:var(--text2)" onclick="this.closest('.staff-head-tools').classList.toggle('m-open')">⋯ 更多</button>
+          <button class="btn-add-new staff-add" onclick="openStaffModal()">＋ 新增員工</button>
         </div>
       </div>
       <div class="search-bar">
@@ -14616,6 +14643,33 @@ function openMobileMore(){
   toggleNav();
 }
 // 放大回桌機尺寸時自動清掉抽屜開啟狀態
+// ── 手機底部導覽列「飄到畫面中間」:iPhone 從主畫面開的 App,鍵盤收起/網址列伸縮後可視範圍沒歸位,
+// position:fixed 的導覽列就停在半空中(要再捲一下才回去)。依 visualViewport 把它推回真正的底部;
+// 打字(鍵盤開著)時先收起來,不擋輸入框;鍵盤收起後輕推一下捲動讓 iOS 重算位置。
+(function(){
+  const vv=window.visualViewport; if(!vv) return;
+  const nav=()=>document.querySelector('.mobile-bottom-nav');
+  const typing=()=>{ const a=document.activeElement; return !!(a&&(a.tagName==='TEXTAREA'||a.isContentEditable||(a.tagName==='INPUT'&&!/^(checkbox|radio|button|submit|file|range|color)$/i.test(a.type||'')))); };
+  let raf=0;
+  function fix(){
+    raf=0; const n=nav(); if(!n||window.innerWidth>768) return;
+    if(typing()&&vv.height<window.innerHeight-120){ n.classList.add('mbn-hide'); n.style.transform=''; return; }   // 鍵盤開著
+    n.classList.remove('mbn-hide');
+    const off=Math.round(vv.offsetTop+vv.height-window.innerHeight);   // 可視範圍底部 − 版面底部
+    n.style.transform=(Math.abs(off)>2&&vv.scale<=1.01)?'translateY('+off+'px)':'';
+  }
+  const later=()=>{ if(!raf) raf=requestAnimationFrame(fix); };
+  vv.addEventListener('resize',later); vv.addEventListener('scroll',later);
+  window.addEventListener('scroll',later,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(fix,300));
+  document.addEventListener('focusin',()=>setTimeout(fix,350));
+  document.addEventListener('focusout',()=>setTimeout(()=>{
+    if(typing()) return;
+    window.scrollTo(window.scrollX, window.scrollY+1); window.scrollTo(window.scrollX, window.scrollY-1);   // 讓 iOS 重算固定元素位置
+    fix();
+  },350));
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) setTimeout(fix,200); });
+})();
 window.addEventListener('resize', ()=>{
   if(window.innerWidth>768) closeNav();
   if(currentUser) applyPermsUI();
@@ -22412,6 +22466,24 @@ function renderStaff() {
     });
   }
   if(!list.length){grid.style.display='';grid.innerHTML='<div class="empty-state">無'+staffStatusView+'員工資料</div>';return;}
+
+  // 手機:一律卡片(列表的 9 欄表格在手機上只看得到前幾欄),點卡片開編輯
+  if(spTrackIsMobile()){
+    grid.style.display='block';
+    grid.innerHTML='<div class="staff-m-sum">共 '+list.length+' 人</div><div class="sp-l-list">'+list.map(s=>{
+      const sub=[s.role,s.department].filter(Boolean).map(esc).join(' · ');
+      const lines=[
+        s.hire_date?['到職',esc(String(s.hire_date).slice(0,10).replace(/-/g,'/'))+'（'+esc(staffSeniority(s.hire_date,s.resign_date))+'）']:null,
+        s.resign_date?['離職',esc(String(s.resign_date).slice(0,10).replace(/-/g,'/'))]:null,
+        s.phone?['電話','<a href="tel:'+esc(String(s.phone).replace(/[^0-9+]/g,''))+'" onclick="event.stopPropagation()">'+esc(s.phone)+'</a>']:null
+      ].filter(Boolean).map(([k,v])=>'<span><b>'+k+'</b>'+v+'</span>').join('');
+      return '<div class="sp-l-card" role="button" tabindex="0" onclick="editStaff('+s.id+')">'+
+        '<div class="sp-l-top"><span class="staff-m-name">'+esc(s.name||'—')+(s.name_en?' <small>'+esc(s.name_en)+'</small>':'')+'</span>'+staffStatusBadge(s.status)+'</div>'+
+        (sub?'<div class="sp-l-meta">'+sub+'</div>':'')+(lines?'<div class="spx-m-lines">'+lines+'</div>':'')+
+        '<span class="sp-l-go" aria-hidden="true">›</span></div>';
+    }).join('')+'</div>';
+    return;
+  }
 
   if(staffView==='list'){
     grid.style.display='block';
@@ -42388,6 +42460,22 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     });
     if(!rows.length){ tbl.style.display=''; tbl.innerHTML='<div class="empty-state">目前沒有資料,按右上角「＋ 新增人員」</div>'; return; }
     tbl.style.display='block';
+    // 手機:依單位分組的卡片(表格在手機上「辦公室位置」被切掉),點卡片開編輯
+    if(spTrackIsMobile()){
+      var html='<div class="staff-m-sum">共 '+rows.length+' 人</div>', cur=null;
+      rows.forEach(function(r){
+        var u=r.unit||'（未填單位）';
+        if(u!==cur){ if(cur!==null) html+='</div>'; cur=u;
+          var n=rows.filter(function(x){ return (x.unit||'（未填單位）')===u; }).length;
+          html+='<div class="egst-m-unit">'+esc(u)+' <span>'+n+'</span></div><div class="sp-l-list">'; }
+        html+='<div class="sp-l-card" role="button" tabindex="0" onclick="egstOpenModal('+r.id+')">'
+          +'<div class="sp-l-top"><span class="staff-m-name">'+esc(r.name||'—')+'</span>'+(r.rank?'<span class="egst-m-rank">'+esc(r.rank)+'</span>':'')+'</div>'
+          +(r.office?'<div class="sp-l-meta">📍 '+esc(r.office)+'</div>':'')
+          +'<span class="sp-l-go" aria-hidden="true">›</span></div>';
+      });
+      tbl.innerHTML=html+'</div>';
+      return;
+    }
     var body=rows.map(function(r){
       return '<tr>'
         +'<td>'+esc(r.name||'—')+'</td><td>'+esc(r.unit||'—')+'</td><td>'+esc(r.rank||'—')+'</td><td>'+esc(r.office||'—')+'</td>'
