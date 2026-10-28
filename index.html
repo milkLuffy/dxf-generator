@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.28.1"/>
+<meta name="sc-version" content="2026.10.28.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2898,6 +2898,7 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
       <div class="lf"><label>辦公室位置</label><input type="text" id="egst-f-office" placeholder="辦公室位置"/></div>
     </div>
     <div class="modal-actions">
+      <button class="btn-modal-cancel" id="btn-del-egst" style="margin-right:auto;color:var(--red);border-color:rgba(255,69,58,.45)" onclick="egstDeleteFromModal()">🗑 刪除</button>
       <button class="btn-modal-cancel" onclick="closeModal('egst-modal')">取消</button>
       <button class="btn-modal-ok" onclick="egstSaveModal()" id="btn-save-egst">儲存</button>
     </div>
@@ -3160,6 +3161,7 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
       </div>
     </div>
     <div class="modal-actions">
+      <button class="btn-modal-cancel" id="btn-del-staff" style="margin-right:auto;color:var(--red);border-color:rgba(255,69,58,.45)" onclick="deleteStaffFromModal()">🗑 刪除</button>
       <button class="btn-modal-cancel" onclick="closeModal('staff-modal')">取消</button>
       <button class="btn-modal-ok" onclick="saveStaff()" id="btn-save-staff">儲存</button>
     </div>
@@ -22534,6 +22536,7 @@ function renderStaff() {
 function filterStaff() { renderStaff(); }
 function openStaffModal(s=null) {
   editStaffId=s?s.id:null;
+  const _del=document.getElementById('btn-del-staff'); if(_del) _del.style.display=s?'':'none';   // 新增時沒東西可刪
   document.getElementById('staff-modal-title').textContent=s?'編輯員工':'新增員工';
   document.getElementById('staff-name').value=s?.name||'';
   document.getElementById('staff-name-en').value=s?.name_en||'';
@@ -22600,9 +22603,17 @@ async function saveStaff() {
   closeModal('staff-modal'); await loadStaff();
 }
 async function deleteStaff(id) {
-  if(!await uiConfirm('確定要刪除這位員工？')) return;
-  await sbFetch(`/rest/v1/staff?id=eq.${id}`,{method:'DELETE'});
+  const s=allStaff.find(x=>x.id===id);
+  if(!await uiConfirm('確定要刪除'+(s&&s.name?'「'+s.name+'」':'這位員工')+'？')) return false;
+  const r=await sbFetch(`/rest/v1/staff?id=eq.${id}`,{method:'DELETE'});
+  if(!r.ok){ alert('刪除失敗'+(r.data&&r.data.message?'：'+r.data.message:'（'+(r.status||'網路')+'）')); return false; }
   await loadStaff();
+  return true;
+}
+// 編輯視窗裡的刪除(手機卡片沒有刪除鈕,從這裡刪)
+async function deleteStaffFromModal(){
+  if(editStaffId==null) return;
+  if(await deleteStaff(editStaffId)) closeModal('staff-modal');
 }
 
 // ── 公司名冊 批次輸入 ──
@@ -42492,6 +42503,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   window.egstOpenModal=function(id){
     var r=(id==null)?null:egstRows.filter(function(x){ return x.id===id; })[0];
     egstEditId=r?r.id:null;
+    var del=document.getElementById('btn-del-egst'); if(del) del.style.display=r?'':'none';   // 新增時沒東西可刪
     document.getElementById('egst-modal-title').textContent=r?'編輯長榮人員':'新增長榮人員';
     document.getElementById('egst-f-name').value=r?(r.name||''):'';
     document.getElementById('egst-f-office').value=r?(r.office||''):'';
@@ -42628,6 +42640,12 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     egstRows=egstRows.filter(function(x){ return x.id!==id; });
     if(typeof window.__invalidateEgStaff==='function') window.__invalidateEgStaff();
     egstRender();
+    return true;
+  };
+  // 編輯視窗裡的刪除(手機卡片沒有刪除鈕,從這裡刪)
+  window.egstDeleteFromModal=async function(){
+    if(egstEditId==null) return;
+    if(await window.egstDelete(egstEditId)) closeModal('egst-modal');
   };
 })();
 </script>
