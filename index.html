@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.29.3"/>
+<meta name="sc-version" content="2026.10.29.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -53427,7 +53427,8 @@ async function dsEnsurePreviews(files) {
           for (let pageNo = part.page_start; pageNo <= part.page_end; pageNo++) {
             if (have.has(pageNo)) continue;
             dsSetProgress(Math.round((pageNo - 1) / total * 100), '正在產生手機預覽圖「' + (file.original_name || '') + '」' + pageNo + ' / ' + total + '（可繼續使用，不用等）');
-            // 單頁卡住(8DG 第 31 頁曾卡死整個流程)就跳過、記錄,其他頁照做;沒全部做完不標記完成,下次再試失敗的頁
+            // 單頁卡住就跳過、記錄,其他頁照做;沒全部做完不標記完成,下次再試失敗的頁。
+            // 8DG 這種大掃描檔一頁要 1~2 分鐘(90 秒限制時一半以上被誤判失敗),所以給到 5 分鐘
             let blob = null;
             try {
               const page = await doc.getPage(pageNo - part.page_start + 1);
@@ -53436,8 +53437,8 @@ async function dsEnsurePreviews(files) {
               const canvas = document.createElement('canvas');
               canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
               const task = page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport, background: '#ffffff' });
-              const done = await Promise.race([task.promise.then(() => true), new Promise(resolve => setTimeout(() => resolve(false), 90000))]);
-              if (!done) { try { task.cancel(); } catch (_) {} throw new Error('轉檔超過 90 秒'); }
+              const done = await Promise.race([task.promise.then(() => true), new Promise(resolve => setTimeout(() => resolve(false), 300000))]);
+              if (!done) { try { task.cancel(); } catch (_) {} throw new Error('轉檔超過 5 分鐘'); }
               blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
               canvas.width = canvas.height = 0; try { page.cleanup(); } catch (_) {}
               if (!blob) throw new Error('預覽圖轉檔失敗');
