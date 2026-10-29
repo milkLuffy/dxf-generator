@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.28.7"/>
+<meta name="sc-version" content="2026.10.29.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5112,7 +5112,7 @@ window.normalizeFullWidth=function(value){
           <li><b>誰能刪除：</b>管理員可以刪全部圖面；上傳者可以刪自己上傳的（電腦、手機都可以）；其他人只能看。刪除前會再確認一次，<span class="warn">刪了無法復原</span>。</li>
           <li><b>自動刪除：</b>工程區或工程的狀態變成「已完成」時（工程區所有構件都登記每日產量後，系統會自動改成已完成），該區圖面會在下次有人打開圖面快搜時<span class="warn">自動刪除、無法復原</span>。</li>
           <li><b>上傳：</b>只能用電腦上傳（手機不顯示上傳區），而且只能上傳到「進行中」的工程區。</li>
-          <li><b>手機看圖：</b>手機看的是預覽圖（不是原始 PDF，才不會當機）。電腦上傳完、或用電腦打開圖面快搜時會自動產生；還沒產生前手機會提示「先用電腦開一次」。可兩指縮放、點兩下放大，直向橫向都能看。</li>
+          <li><b>手機看圖：</b>手機看的是預覽圖（不是原始 PDF，才不會當機）。電腦上傳完、或任何人用電腦登入系統時會在背景自動產生（中斷了下次會從停下的那頁接著做）；還沒產生的頁手機會提示「還在產生中」。可兩指縮放、點兩下放大，直向橫向都能看。</li>
           <li><b>原始畫質、列印、合併多張：</b>請用電腦。</li>
         </ul>
       </details>
@@ -14298,6 +14298,7 @@ async function enterApp(restore) {   // restore=true 才還原上次頁面 (重�
   }
   _notifPopped=false;   // 每次登入都可重新彈通知
   window.errlogFlushSoon();   // 登入前(啟動時)收集到的錯誤,登入後補送
+  setTimeout(dsAutoPreviews, 30000);   // 電腦登入後背景補產生手機預覽圖,不用特地開圖面快搜
   document.getElementById('pending-screen').style.display='none';
   document.getElementById('rejected-screen').style.display='none';
   document.getElementById('login-screen').style.display='none';
@@ -53359,6 +53360,22 @@ async function dsLoadPreviewImage(file, pageNo) {
   } catch (_) { URL.revokeObjectURL(url); return null; }
 }
 let dsPreviewBusy = false;
+/* 已存在的預覽頁(中斷後接著做,不從第 1 頁重來) */
+async function dsExistingPreviewPages(file) {
+  const seg = String(file.storage_key || '').split('/');
+  const res = await fetch(SUPA_URL + '/storage/v1/object/list/' + DS_BUCKET, {
+    method: 'POST', headers: dsStorageHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ prefix: seg[0] + '/' + seg[1] + '/' + file.id + '/', limit: 1000 }) });
+  if (!res.ok) return new Set();
+  const list = await res.json().catch(() => []);
+  return new Set((Array.isArray(list) ? list : []).map(o => (String(o.name || '').match(/^preview-p(\d+)\.jpg$/) || [])[1]).filter(Boolean).map(Number));
+}
+/* 登入後(電腦)自動補:只抓還沒完成的檔案,不載整份圖面清單 */
+async function dsAutoPreviews() {
+  if (dsPreviewBusy || dsTouchTab() || isGuest || !currentSession || window._roActive) return;
+  const r = await sbFetchAll('/rest/v1/drawing_files?select=*&preview_w=is.null');
+  if (r.ok && Array.isArray(r.data) && r.data.length) dsEnsurePreviews(r.data);
+}
 async function dsEnsurePreviews(files) {
   if (dsPreviewBusy || dsTouchTab() || isGuest || !currentSession || window._roActive) return;   // 唯讀帳號不寫預覽圖,免得跳唯讀警告
   const todo = (files || dsAllFiles).filter(file => !file.preview_w && file.storage_key && Number(file.page_count) > 0);
@@ -53368,10 +53385,15 @@ async function dsEnsurePreviews(files) {
     await scEnsurePdfjs();
     for (const file of todo) {
       const total = Number(file.page_count);
+      const have = await dsExistingPreviewPages(file);
       for (const part of dsPartsForFile(file)) {
+        let need = false;
+        for (let pageNo = part.page_start; pageNo <= part.page_end; pageNo++) if (!have.has(pageNo)) need = true;
+        if (!need) continue;   // 這一段都產生過了,連 PDF 都不用下載
         const doc = await dsOpenRangePdf(part);
         try {
           for (let pageNo = part.page_start; pageNo <= part.page_end; pageNo++) {
+            if (have.has(pageNo)) continue;
             const page = await doc.getPage(pageNo - part.page_start + 1);
             const base = page.getViewport({ scale: 1 });
             const viewport = page.getViewport({ scale: DS_PREVIEW_W / Math.max(base.width, base.height) });
@@ -53393,7 +53415,7 @@ async function dsEnsurePreviews(files) {
     }
     dsSetProgress(0, '手機預覽圖已產生完成。');
   } catch (error) {
-    console.warn('手機預覽圖產生中斷，下次開圖面快搜會再接著做：', error);
+    console.error('手機預覽圖產生中斷，下次登入電腦會再接著做：', error);
   } finally {
     dsPreviewBusy = false;
   }
@@ -53419,7 +53441,7 @@ async function dsRowsToImagesLite(rows, onProgress) {
       let preview = await dsLoadPreviewImage(file, Number(row.page_no));
       if (preview && dsPageRot(file, row.page_no)) preview = await dsRotatePreview(preview, dsPageRot(file, row.page_no));
       if (preview) { images.push(preview); if (onProgress) onProgress(index + 1, rows.length); continue; }
-      if (dsTouchTab()) throw new Error('這份圖面還沒有手機預覽圖。請先用電腦打開一次「圖面快搜」，系統會自動產生，完成後手機就能看。');
+      if (dsTouchTab()) throw new Error('這份圖面（' + (file.original_name || '') + ' 第 ' + row.page_no + ' 頁）的手機預覽圖還在產生中。有人用電腦登入系統時會在背景自動補完，之後手機就能看。');
       const part = dsPartsForFile(file).find(item => Number(row.page_no) >= item.page_start && Number(row.page_no) <= item.page_end);
       if (!part) throw new Error('找不到第 ' + row.page_no + ' 頁的儲存分段。');
       let doc = docs.get(part.storage_key);
