@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.29.1"/>
+<meta name="sc-version" content="2026.10.29.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -53029,15 +53029,27 @@ function dsSearch() {
   const cap = 300;
   const truncated = results.length > cap;
   dsSearchResults = results.slice(0, cap);
-  const cardsHtml = dsSearchResults.map(row => {
+  // 同一構件、同一張圖的 (1/2)、(2/2) 合成一張卡片:點開兩頁一起看,列印/選取也一起
+  const groups = [];
+  const groupByKey = new Map();
+  for (const row of dsSearchResults) {
+    const gk = dsNorm(row.part_no) + '|' + row.file_id + '|' + dsNorm(row.drawing_no);
+    if (!groupByKey.has(gk)) { const g = { rows: [] }; groupByKey.set(gk, g); groups.push(g); }
+    groupByKey.get(gk).rows.push(row);
+  }
+  dsResultGroups = groups.map(g => g.rows);
+  const cardsHtml = groups.map((g, gi) => {
+    const row = g.rows[0];
     const file = filesById.get(row.file_id);
-    const key = row.file_id + '|' + row.page_no;
-    return '<div class="ds-card-item" role="button" tabindex="0" data-part-no="' + dsEsc(row.part_no) + '" title="點卡片以原始畫質開啟（手機可雙指縮放）" onclick="dsResultCardOpen(event,\'' + row.file_id + '\',' + row.page_no + ')" onkeydown="dsResultCardKey(event,\'' + row.file_id + '\',' + row.page_no + ')">' +
+    const keys = g.rows.map(dsPrintKey);
+    const sheet = g.rows.length > 1 ? '（共 ' + g.rows.length + ' 張）' : sheetNo(row);
+    const pagesText = g.rows.map(r => r.page_no).join('、');
+    return '<div class="ds-card-item" role="button" tabindex="0" title="點卡片以原始畫質開啟（手機可雙指縮放）" onclick="dsResultCardOpen(event,' + gi + ')" onkeydown="dsResultCardKey(event,' + gi + ')">' +
       '<div class="ds-code">' + dsEsc(row.part_no) + '</div>' +
-      '<div class="ds-meta">圖號 ' + dsEsc(row.drawing_no) + sheetNo(row) + '</div>' +
-      '<div class="ds-meta">' + dsEsc(file?.original_name || 'PDF') + ' · 第 ' + row.page_no + ' 頁</div>' +
-      '<div class="ds-card-actions"><label class="ds-print-check" title="勾選可一次開啟／列印多張"><input type="checkbox" data-ds-print-key="' + dsEsc(key) + '"' + (dsPrintQueue.has(key) ? ' checked' : '') + ' onchange="dsTogglePrint(\'' + key + '\',this.checked)"><span>選取</span></label>' +
-      '<button class="btn" onclick="dsPrintOne(\'' + key + '\')">列印</button></div></div>';
+      '<div class="ds-meta">圖號 ' + dsEsc(row.drawing_no) + sheet + '</div>' +
+      '<div class="ds-meta">' + dsEsc(file?.original_name || 'PDF') + ' · 第 ' + pagesText + ' 頁</div>' +
+      '<div class="ds-card-actions"><label class="ds-print-check" title="勾選可一次開啟／列印多張"><input type="checkbox" data-ds-group="' + gi + '"' + (keys.every(k => dsPrintQueue.has(k)) ? ' checked' : '') + ' onchange="dsToggleGroupPrint(' + gi + ',this.checked)"><span>選取</span></label>' +
+      '<button class="btn" onclick="dsPrintGroup(' + gi + ')">列印</button></div></div>';
   }).join('');
   const countText = (query ? '符合 ' : '本區共 ') + results.length + ' 筆' + (truncated ? '（僅顯示前 ' + cap + ' 筆，請輸入關鍵字縮小範圍）' : '');
   box.innerHTML = '<div class="ds-search-actions"><span class="ds-results-count">' + countText + '</span><label class="ds-print-check"><input id="ds-print-all" type="checkbox" onchange="dsToggleAllPrint(this.checked)">全選</label><button id="ds-open-selected" class="btn btn-gen" onclick="dsOpenSelected()" disabled>開啟（0）</button><button id="ds-print-selected" class="btn" onclick="dsPrintSelected()" disabled>下載列印檔（0）</button></div><div class="ds-cards">' + cardsHtml + '</div>';
@@ -53046,6 +53058,20 @@ function dsSearch() {
 
 function dsPrintKey(row) {
   return row.file_id + '|' + row.page_no;
+}
+
+let dsResultGroups = [];   // 搜尋結果卡片 → 該卡片包含的頁(同一張圖多頁合一張)
+function dsToggleGroupPrint(index, checked) {
+  for (const row of dsResultGroups[index] || []) {
+    const key = dsPrintKey(row);
+    if (checked) { dsPrintSelection.add(key); dsPrintQueue.set(key, row); }
+    else { dsPrintSelection.delete(key); dsPrintQueue.delete(key); }
+  }
+  dsUpdatePrintControls();
+}
+function dsPrintGroup(index) {
+  const rows = dsResultGroups[index];
+  if (rows && rows.length) dsPrintPages(rows);
 }
 
 function dsTogglePrint(key, checked) {
@@ -53084,6 +53110,10 @@ function dsUpdatePrintControls() {
   if (button) { button.disabled = !uniqueCount || busy; button.textContent = dsPrintBusy ? '正在建立列印檔…' : '下載列印檔（' + uniqueCount + '）'; }
   const all = dsEl('ds-print-all');
   if (all) all.checked = dsSearchResults.length > 0 && dsSearchResults.every(row => dsPrintQueue.has(dsPrintKey(row)));
+  document.querySelectorAll('[data-ds-group]').forEach(input => {
+    const rows = dsResultGroups[Number(input.dataset.dsGroup)] || [];
+    input.checked = rows.length > 0 && rows.every(row => dsPrintQueue.has(dsPrintKey(row)));
+  });
   const tray = dsEl('ds-print-tray');
   if (!tray) return;
   tray.hidden = !uniqueCount;
@@ -53738,13 +53768,20 @@ async function dsPrintPages(rows) {
   }
 }
 
-function dsResultCardOpen(event, fileId, pageNo) {
-  if (event.target.closest('button,label,input')) return;
-  dsViewOriginalPage(fileId, pageNo, event.currentTarget.dataset.partNo);
+function dsOpenResultGroup(index) {
+  const rows = dsResultGroups[index];
+  if (!rows || !rows.length) return;
+  const title = String(rows[0].part_no || '圖面').trim() || '圖面';
+  dsOpenPages(rows.map(row => ({ file_id: row.file_id, page_no: Math.max(1, Number(row.page_no) || 1), part_no: title, drawing_no: row.drawing_no || '' })), title);
 }
 
-function dsResultCardKey(event, fileId, pageNo) {
-  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); dsViewOriginalPage(fileId, pageNo, event.currentTarget.dataset.partNo); }
+function dsResultCardOpen(event, index) {
+  if (event.target.closest('button,label,input')) return;
+  dsOpenResultGroup(index);
+}
+
+function dsResultCardKey(event, index) {
+  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); dsOpenResultGroup(index); }
 }
 
 async function dsViewOriginalPage(fileId, pageNo, partNo = '') {
