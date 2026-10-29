@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.10.29.2"/>
+<meta name="sc-version" content="2026.10.29.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -53411,11 +53411,13 @@ async function dsEnsurePreviews(files) {
   const todo = (files || dsAllFiles).filter(file => !file.preview_w && file.storage_key && Number(file.page_count) > 0);
   if (!todo.length) return;
   dsPreviewBusy = true;
+  const skipped = [];
   try {
     await scEnsurePdfjs();
     for (const file of todo) {
       const total = Number(file.page_count);
       const have = await dsExistingPreviewPages(file);
+      const failed = [];
       for (const part of dsPartsForFile(file)) {
         let need = false;
         for (let pageNo = part.page_start; pageNo <= part.page_end; pageNo++) if (!have.has(pageNo)) need = true;
@@ -53424,15 +53426,26 @@ async function dsEnsurePreviews(files) {
         try {
           for (let pageNo = part.page_start; pageNo <= part.page_end; pageNo++) {
             if (have.has(pageNo)) continue;
-            const page = await doc.getPage(pageNo - part.page_start + 1);
-            const base = page.getViewport({ scale: 1 });
-            const viewport = page.getViewport({ scale: DS_PREVIEW_W / Math.max(base.width, base.height) });
-            const canvas = document.createElement('canvas');
-            canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
-            await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport, background: '#ffffff' }).promise;
-            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
-            canvas.width = canvas.height = 0; try { page.cleanup(); } catch (_) {}
-            if (!blob) throw new Error('預覽圖轉檔失敗');
+            dsSetProgress(Math.round((pageNo - 1) / total * 100), '正在產生手機預覽圖「' + (file.original_name || '') + '」' + pageNo + ' / ' + total + '（可繼續使用，不用等）');
+            // 單頁卡住(8DG 第 31 頁曾卡死整個流程)就跳過、記錄,其他頁照做;沒全部做完不標記完成,下次再試失敗的頁
+            let blob = null;
+            try {
+              const page = await doc.getPage(pageNo - part.page_start + 1);
+              const base = page.getViewport({ scale: 1 });
+              const viewport = page.getViewport({ scale: DS_PREVIEW_W / Math.max(base.width, base.height) });
+              const canvas = document.createElement('canvas');
+              canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+              const task = page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport, background: '#ffffff' });
+              const done = await Promise.race([task.promise.then(() => true), new Promise(resolve => setTimeout(() => resolve(false), 90000))]);
+              if (!done) { try { task.cancel(); } catch (_) {} throw new Error('轉檔超過 90 秒'); }
+              blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+              canvas.width = canvas.height = 0; try { page.cleanup(); } catch (_) {}
+              if (!blob) throw new Error('預覽圖轉檔失敗');
+            } catch (pageError) {
+              failed.push(pageNo);
+              console.error('手機預覽圖「' + (file.original_name || '') + '」第 ' + pageNo + ' 頁產生失敗，先跳過：', pageError);
+              continue;
+            }
             const up = await fetch(SUPA_URL + '/storage/v1/object/' + DS_BUCKET + '/' + dsEncodedPath(dsPreviewPath(file, pageNo)), {
               method: 'POST', headers: dsStorageHeaders({ 'Content-Type': 'image/jpeg', 'x-upsert': 'true' }), body: blob });
             if (!up.ok) throw new Error('預覽圖上傳失敗：HTTP ' + up.status);
@@ -53440,10 +53453,11 @@ async function dsEnsurePreviews(files) {
           }
         } finally { try { await doc.destroy(); } catch (_) {} }
       }
+      if (failed.length) { skipped.push((file.original_name || '') + ' 第 ' + failed.join('、') + ' 頁'); continue; }
       const mark = await sbFetch('/rest/v1/rpc/drawing_mark_preview', { method: 'POST', body: JSON.stringify({ p_id: file.id, p_w: DS_PREVIEW_W }) });
       if (mark.ok && mark.data === true) file.preview_w = DS_PREVIEW_W;
     }
-    dsSetProgress(0, '手機預覽圖已產生完成。');
+    dsSetProgress(0, skipped.length ? '手機預覽圖有幾頁產生失敗（' + skipped.join('；') + '），下次登入會再試。' : '手機預覽圖已產生完成。');
   } catch (error) {
     console.error('手機預覽圖產生中斷，下次登入電腦會再接著做：', error);
   } finally {
