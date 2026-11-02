@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.02.4"/>
+<meta name="sc-version" content="2026.11.02.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -44504,7 +44504,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       put('C'+r,itemLabel(p,bd),'s');
       put('D'+r,daily?'日':'月','s');
       if(daily){
-        put('E'+r,num(p.work_days));
+        var payDays=num(p._perDay)>0?Math.round(num(bd.base)/num(p._perDay)*100)/100:num(p.work_days);
+        put('E'+r,payDays);   // 計薪天數(未扣遲退):E×F 要等於底薪,遲退只在 AF 扣一次;網頁「出勤天」是扣過的等值天數
         put('F'+r,Math.round(num(p._perDay)));
         formula('G'+r,'ROUND(E'+r+'*F'+r+',0)',Math.round(num(bd.base)));
       }else{
