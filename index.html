@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.02.7"/>
+<meta name="sc-version" content="2026.11.03.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5126,7 +5126,7 @@ window.normalizeFullWidth=function(value){
       </div>
       <section class="ds-card ds-search-card">
         <div class="ds-title">搜尋構件編號</div>
-        <input id="ds-search" class="ds-input" autocomplete="off" placeholder="打字即時篩選，例如：B6B01" oninput="dsSearchInput()" oncompositionend="dsSearchInput()">
+        <input id="ds-search" class="ds-input" autocomplete="off" placeholder="打字即時篩選，例如：B6B01" oninput="dsSearchInput()" oncompositionend="dsSearchInput()" onkeyup="dsSearchInput()">
         <div class="ds-status">已列出本區所有可查閱構件（BOM 白名單）；在上方輸入即可即時篩選。點卡片可單張開圖；勾選多張後按「開啟」，會合併成同一個分頁，依下方清單順序翻頁（手機可雙指縮放）。</div>
         <div id="ds-print-tray" class="ds-print-tray" hidden></div>
         <div id="ds-results" class="ds-list"><div class="ds-empty">請先選擇工程與區域</div></div>
@@ -53061,11 +53061,11 @@ function dsRenderFiles() {
   }).join('');
 }
 
-// 打字防抖:手機每打一字就整區重算+重畫 300 張卡片會卡住;注音/拼音組字中不搜
+// 打字防抖:手機每打一字就整區重算+重畫 300 張卡片會卡住。
+// 不再略過「組字中」的輸入:電腦用中文輸入法打英數時,瀏覽器可能整段都標成組字中、結束時又不一定補事件,
+// 結果停在第一個字的結果(打 D22Y 卻顯示 D 的 62 筆)。注音符號會被 dsNorm 濾掉,組字中照搜也不會亂掉。
 let dsSearchTimer = null;
-function dsSearchInput(ev) {
-  const e = ev || window.event;
-  if (e && e.isComposing) return;
+function dsSearchInput() {
   clearTimeout(dsSearchTimer);
   dsSearchTimer = setTimeout(dsSearch, 200);
 }
