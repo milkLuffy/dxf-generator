@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.04.11"/>
+<meta name="sc-version" content="2026.11.04.12"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2799,7 +2799,7 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
 <style>
 .perm-mx-modal{max-width:min(1400px,96vw);width:96vw}
 .perm-mx-legend{font-size:12px;color:var(--text2);margin:2px 0 8px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
-.perm-mx-legend .perm-mx-c{display:inline-flex;width:24px;height:22px;align-items:center;justify-content:center;border-radius:5px;margin-left:6px}
+.perm-mx-legend .perm-mx-c{display:inline-flex;width:24px;height:22px;align-items:center;justify-content:center;border-radius:5px;margin-left:6px;cursor:default}
 .perm-mx-wrap{overflow:auto;max-height:68vh;border:1px solid var(--border);border-radius:10px;-webkit-overflow-scrolling:touch}
 table.perm-mx{border-collapse:separate;border-spacing:0;font-size:12px}
 table.perm-mx th,table.perm-mx td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--bg2)}
@@ -2822,6 +2822,20 @@ table.perm-mx td.perm-mx-name small{display:block;color:var(--text3);font-size:1
 .perm-mx-c.admin{cursor:default;opacity:.55}
 .perm-mx-c.saving{opacity:.4}
 .perm-mx-dis td{opacity:.55}
+table.perm-mx .perm-mx-role{position:sticky;left:150px;z-index:1;min-width:104px;padding:4px 6px;background:var(--bg3);text-align:left}
+table.perm-mx thead .perm-mx-role{z-index:3}
+table.perm-mx .perm-mx-name{width:150px;min-width:150px;max-width:150px;box-sizing:border-box}
+table.perm-mx .perm-mx-group td.perm-mx-name{max-width:none}
+table.perm-mx .perm-mx-role{width:104px;max-width:104px;box-sizing:border-box}
+@media(max-width:600px){table.perm-mx .perm-mx-name{width:104px;min-width:104px;max-width:104px}table.perm-mx .perm-mx-role{position:static}}
+.perm-mx-rolesel{width:100%;font-size:12px;padding:3px 4px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:6px}
+.perm-mx-diff-n{display:block;font-size:10px;color:var(--warn,#d29922);margin-top:2px}
+.perm-mx-group td{background:var(--bg)!important;font-weight:700;font-size:11px;color:var(--text3);padding:5px 8px;letter-spacing:.05em}
+.perm-mx-rolerow td.perm-mx-name,.perm-mx-rolerow td.perm-mx-role{background:rgba(56,139,253,.10)}
+.perm-mx-ib{background:none;border:1px solid var(--border);color:var(--text2);border-radius:6px;width:28px;height:26px;display:inline-flex;align-items:center;justify-content:center;margin-right:4px;cursor:pointer;padding:0}
+.perm-mx-c .ic{width:14px;height:14px}
+.perm-mx-c.diff{position:relative}
+.perm-mx-c.diff::after{content:'';position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:var(--warn,#d29922)}
 @media (hover:hover){table.perm-mx td.perm-mx-c:not(.admin):hover{filter:brightness(1.25)}}
 </style>
 <div class="modal-overlay" id="perm-modal">
@@ -3740,6 +3754,7 @@ window.normalizeFullWidth=function(value){
 (function(){
   var P={
     check:'<path d="M20 6 9 17l-5-5"/>',
+    plus:'<path d="M12 5v14M5 12h14"/>',
     checkCircle:'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
     checkSquare:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="m8 12 3 3 5-6"/>',
     x:'<path d="M18 6 6 18M6 6l12 12"/>',
@@ -3914,6 +3929,8 @@ window.normalizeFullWidth=function(value){
   }
   function convertText(t){
     var s=t.data; if(!s||!TEST.test(s)) return;
+    // 下拉選項放不了 SVG → 直接拿掉 Emoji,只留文字(不然選單裡會冒出手機原生 Emoji)
+    if(t.parentNode&&t.parentNode.nodeName==='OPTION'){ RE.lastIndex=0; var ns=s.replace(RE,'').replace(/^\s+/,'').replace(/\s{2,}/g,' '); if(ns!==s) t.data=ns; return; }
     if(!t.parentNode||skipEl(t.parentNode)) return;
     var frag=document.createDocumentFragment(), last=0, m, hit=false;
     RE.lastIndex=0;
@@ -3931,6 +3948,7 @@ window.normalizeFullWidth=function(value){
     if(!root) return;
     if(root.nodeType===3){ convertText(root); return; }
     if(root.nodeType!==1&&root.nodeType!==11) return;
+    if(root.nodeType===1&&(root.nodeName==='SELECT'||root.nodeName==='OPTION')){ var ow=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null),ol=[],ox; while((ox=ow.nextNode())) if(TEST.test(ox.data)) ol.push(ox); ol.forEach(convertText); return; }
     if(root.nodeType===1&&SKIP[root.nodeName]) return;
     var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null), list=[], x;
     while((x=w.nextNode())) if(TEST.test(x.data)) list.push(x);
@@ -23300,8 +23318,11 @@ function permBulk(v){
 }
 // ── 權限總表:列=帳號、欄=頁面,一眼看出每個人實際能看/能改哪些頁;點格子循環 隱藏→唯讀→可編輯,馬上存 ──
 // 「沒設定、用預設值」的格子用虛線框標出來,點過就變成明確設定。
+// 角色範本(app_config 'perm_roles'):上方幾列是範本,帳號選一個角色就把範本的頁面權限整批套上(記在 perms._role)。
+//   帳號個別改過、跟角色不一樣的格子右上角有小點。改範本某一格時,同角色、那一格還跟範本一樣的帳號一起改;改過的(個別差異)不動。
 const PERM_HR_COLS=[{k:'hr_emp',label:'員工薪資設定',hr:true},{k:'hr_payroll',label:'薪資計算',hr:true},{k:'hr_leave',label:'請假・特休',hr:true},{k:'hr_payrollcfg',label:'費率設定',hr:true}];
-let permMxShowAll=false;
+const PERM_ROLES_KEY='perm_roles';
+let permMxShowAll=false, permRoles=[], permRolesLoaded=false;
 function permMxCols(){
   const cols=[];
   Object.keys(SECTION_TITLE).filter(sec=>sec!=='favorite').forEach(sec=>{
@@ -23310,74 +23331,215 @@ function permMxCols(){
   });
   return cols;
 }
+const permOk=v=>v==='hide'||v==='read'||v==='edit';
 // 回傳 {v:實際權限, set:是否有明確設定}
 function permMxVal(acc,c){
   if(acc.is_admin) return {v:'edit',set:true,admin:true};
-  const p=acc.perms||{}, ok=v=>v==='hide'||v==='read'||v==='edit';
-  if(c.hr){ if(ok(p[c.k])) return {v:p[c.k],set:true}; const pv=p.payroll; return {v:(pv==='read'||pv==='edit')?pv:'hide',set:ok(pv)}; }
-  if(ok(p[c.k])) return {v:p[c.k],set:true};
+  const p=acc.perms||{};
+  if(c.hr){ if(permOk(p[c.k])) return {v:p[c.k],set:true}; const pv=p.payroll; return {v:(pv==='read'||pv==='edit')?pv:'hide',set:permOk(pv)}; }
+  if(permOk(p[c.k])) return {v:p[c.k],set:true};
   return {v:permDefault(c.k),set:false};
+}
+function permRoleVal(role,c){ const v=(role.perms||{})[c.k]; return permOk(v)?v:(c.hr?'hide':permDefault(c.k)); }
+function permRoleOf(acc){ const id=acc&&acc.perms&&acc.perms._role; return id?permRoles.find(r=>r.id===id)||null:null; }
+// 資料庫 is_hr() 只認整區鍵 payroll → 回寫成四頁中最寬鬆的(同帳號權限視窗的做法)
+function permSyncHrTop(perms){
+  const RANK={hide:0,read:1,edit:2}; let top=0;
+  PERM_HR_COLS.forEach(c=>{ top=Math.max(top,RANK[perms[c.k]]||0); });
+  perms.payroll=['hide','read','edit'][top];
+}
+async function permLoadRoles(){
+  const r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+PERM_ROLES_KEY);
+  let list=[]; try{ const v=r.ok&&Array.isArray(r.data)&&r.data[0]?r.data[0].value:null; list=JSON.parse(v||'[]'); }catch(e){}
+  permRoles=Array.isArray(list)?list.filter(x=>x&&x.id&&x.name):[];
+  permRolesLoaded=!!r.ok;
+}
+async function permSaveRoles(){
+  const r=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:PERM_ROLES_KEY,value:JSON.stringify(permRoles)})});
+  if(!r.ok) alert('角色範本儲存失敗('+r.status+')');
+  return r.ok;
+}
+async function permPatchAcc(acc,perms){
+  let r; try{ r=await sbFetch('/rest/v1/profiles?id=eq.'+encodeURIComponent(acc.id),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({perms})}); }catch(e){ r={ok:false,status:'網路錯誤'}; }
+  if(!r.ok) return false;
+  acc.perms=perms;
+  if(currentUser&&String(currentUser.id)===String(acc.id)){ currentUser.perms=perms; applyPermsUI(); }
+  return true;
 }
 function permMxAccounts(){
   return (allAccounts||[]).filter(a=>(a.status||'approved')==='approved'&&(permMxShowAll||!a.disabled))
     .sort((a,b)=>(b.is_admin?1:0)-(a.is_admin?1:0)||String(a.name||a.account||'').localeCompare(String(b.name||b.account||''),'zh-Hant'));
 }
-function permMatrixOpen(){
+async function permMatrixOpen(){
   let m=document.getElementById('perm-mx-modal');
   if(!m){
     m=document.createElement('div'); m.className='modal-overlay'; m.id='perm-mx-modal';
     m.onclick=e=>{ if(e.target===m) closeModal('perm-mx-modal'); };
-    m.innerHTML='<div class="modal perm-mx-modal"><div class="modal-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">📋 權限總表'
-      +'<label style="margin-left:auto;font-size:12px;font-weight:400;display:flex;align-items:center;gap:4px"><input type="checkbox" id="perm-mx-all" onchange="permMxShowAll=this.checked;permMatrixRender()">含已停用帳號</label></div>'
-      +'<div class="perm-mx-legend"><span class="perm-mx-c edit">✏️</span>可編輯 <span class="perm-mx-c read">👁</span>唯讀 <span class="perm-mx-c hide">·</span>隱藏'
-      +' <span class="perm-mx-c edit unset">✏️</span>虛線＝沒設定、用預設值　<b>點格子</b>可切換,馬上儲存</div>'
-      +'<div class="perm-mx-wrap" id="perm-mx-body"></div>'
-      +'<div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.6">※ 薪資可視員工、機密欄位、團體待辦、產值金額等細項,仍在各帳號的「頁面權限」視窗設定。<br>※ 這次之後新增的頁面,沒設定的帳號一律<b>隱藏</b>。</div>'
+    m.innerHTML='<div class="modal perm-mx-modal"><div class="modal-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+icSvg('clipboard')+' 權限總表'
+      +'<button type="button" class="btn-sm" style="margin-left:auto" onclick="permRoleNew()">'+icSvg('plus')+' 新增角色</button>'
+      +'<label style="font-size:12px;font-weight:400;display:flex;align-items:center;gap:4px"><input type="checkbox" id="perm-mx-all" onchange="permMxShowAll=this.checked;permMatrixRender()">含已停用帳號</label></div>'
+      +'<div class="perm-mx-legend"><span class="perm-mx-c edit">'+icSvg('pencil')+'</span>可編輯 <span class="perm-mx-c read">'+icSvg('eye')+'</span>唯讀 <span class="perm-mx-c hide">·</span>隱藏'
+      +' <span class="perm-mx-c edit unset">'+icSvg('pencil')+'</span>虛線＝沒設定、用預設值 <span class="perm-mx-c edit diff">'+icSvg('pencil')+'</span>小點＝跟角色不同'
+      +'<span style="margin-left:6px"><b>點格子</b>切換,馬上儲存</span></div>'
+      +'<div class="perm-mx-wrap" id="perm-mx-body"><div class="empty-state">載入中…</div></div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.6">※ 帳號選了角色,就把角色的頁面權限整批套上;之後還是可以點格子個別調整(會標小點)。<br>'
+      +'※ 改角色範本的格子:同角色、那一格沒個別改過的帳號會一起改。<br>'
+      +'※ 薪資可視員工、機密欄位、團體待辦、產值金額等細項,仍在各帳號的「頁面權限」視窗設定。這次之後新增的頁面,沒設定的帳號一律<b>隱藏</b>。</div>'
       +'<div class="modal-actions"><button class="btn-modal-cancel" onclick="closeModal(\'perm-mx-modal\')">關閉</button></div></div>';
     document.body.appendChild(m);
   }
-  permMatrixRender();
   openModal('perm-mx-modal');
+  permMatrixRender();
+  await permLoadRoles();
+  permMatrixRender();
 }
 function permMatrixRender(){
   const box=document.getElementById('perm-mx-body'); if(!box) return;
   const cols=permMxCols(), accs=permMxAccounts();
-  const e=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const e=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const secs=[]; cols.forEach(c=>{ const l=secs[secs.length-1]; if(l&&l.sec===c.sec) l.n++; else secs.push({sec:c.sec,n:1}); });
-  const ICON={edit:'✏️',read:'👁',hide:'·'};
-  let h='<table class="perm-mx"><thead><tr><th class="perm-mx-name" rowspan="2">帳號</th>'
+  const ICON={edit:icSvg('pencil'),read:icSvg('eye'),hide:'·'};
+  const span=cols.length+2;
+  let h='<table class="perm-mx"><thead><tr><th class="perm-mx-name" rowspan="2">帳號</th><th class="perm-mx-role" rowspan="2">角色</th>'
     +secs.map(x=>'<th colspan="'+x.n+'" class="perm-mx-sec">'+e(SECTION_TITLE[x.sec]||x.sec)+'</th>').join('')+'</tr><tr>'
     +cols.map(c=>'<th class="perm-mx-h"><span>'+e(c.label)+'</span></th>').join('')+'</tr></thead><tbody>';
-  if(!accs.length) h+='<tr><td colspan="'+(cols.length+1)+'" class="empty-state">沒有帳號</td></tr>';
+  // 角色範本
+  h+='<tr class="perm-mx-group"><td class="perm-mx-name" colspan="2">角色範本</td><td colspan="'+cols.length+'"></td></tr>';
+  if(!permRoles.length) h+='<tr><td class="perm-mx-name" colspan="2" style="color:var(--text3);font-size:11px">還沒有角色,按右上「新增角色」</td><td colspan="'+cols.length+'"></td></tr>';
+  permRoles.forEach(role=>{
+    const n=accs.filter(a=>!a.is_admin&&permRoleOf(a)===role).length;
+    h+='<tr class="perm-mx-rolerow"><td class="perm-mx-name"><b>'+e(role.name)+'</b><small>'+n+' 個帳號</small></td>'
+      +'<td class="perm-mx-role"><button type="button" class="perm-mx-ib" title="改名" onclick="permRoleRename(\''+e(role.id)+'\')">'+icSvg('pencil')+'</button>'
+      +'<button type="button" class="perm-mx-ib" title="刪除角色" onclick="permRoleDelete(\''+e(role.id)+'\')">'+icSvg('trash')+'</button></td>'
+      +cols.map(c=>{ const v=permRoleVal(role,c); return '<td class="perm-mx-c '+v+'" title="'+e(role.name)+' · '+e(c.label)+'" onclick="permRoleCycle(\''+e(role.id)+'\',\''+e(c.k)+'\',this)">'+ICON[v]+'</td>'; }).join('')+'</tr>';
+  });
+  // 帳號
+  h+='<tr class="perm-mx-group"><td class="perm-mx-name" colspan="2">帳號</td><td colspan="'+cols.length+'"></td></tr>';
+  if(!accs.length) h+='<tr><td colspan="'+span+'" class="empty-state">沒有帳號</td></tr>';
   accs.forEach(a=>{
-    const vals=cols.map(c=>permMxVal(a,c));
+    const vals=cols.map(c=>permMxVal(a,c)), role=a.is_admin?null:permRoleOf(a);
     const unset=vals.filter(x=>!x.set).length, nEdit=vals.filter(x=>x.v==='edit').length, nRead=vals.filter(x=>x.v==='read').length;
+    const nDiff=role?cols.filter((c,i)=>vals[i].v!==permRoleVal(role,c)).length:0;
+    const roleCell=a.is_admin?'<span style="font-size:11px;color:var(--text3)">管理員</span>'
+      :'<select class="perm-mx-rolesel" onchange="permApplyRole(\''+e(a.id)+'\',this.value,this)"><option value="">不套用</option>'
+        +permRoles.map(r=>'<option value="'+e(r.id)+'"'+(role===r?' selected':'')+'>'+e(r.name)+'</option>').join('')+'</select>'
+        +(role&&nDiff?'<small class="perm-mx-diff-n">個別 '+nDiff+' 格</small>':'');
     h+='<tr'+(a.disabled?' class="perm-mx-dis"':'')+'><td class="perm-mx-name"><b>'+e(a.name||a.account||'')+'</b>'
       +(a.is_admin?'<span class="perm-mx-tag">管理員</span>':'')+(a.disabled?'<span class="perm-mx-tag">停用</span>':'')
       +'<small>'+(a.is_admin?'全部可編輯':('改 '+nEdit+' · 看 '+nRead+(unset?' · <span class="perm-mx-unset-n">未設定 '+unset+'</span>':'')))+'</small></td>'
-      +vals.map((x,i)=>'<td class="perm-mx-c '+x.v+(x.set?'':' unset')+(x.admin?' admin':'')+'"'
-        +(x.admin?' title="管理員一律可編輯"':' title="'+e(cols[i].label)+(x.set?'':'(沒設定,預設)')+'" onclick="permMxCycle(\''+e(a.id)+'\',\''+e(cols[i].k)+'\',this)"')+'>'+ICON[x.v]+'</td>').join('')+'</tr>';
+      +'<td class="perm-mx-role">'+roleCell+'</td>'
+      +vals.map((x,i)=>{
+        const diff=role&&x.v!==permRoleVal(role,cols[i]);
+        return '<td class="perm-mx-c '+x.v+(x.set?'':' unset')+(diff?' diff':'')+(x.admin?' admin':'')+'"'
+          +(x.admin?' title="管理員一律可編輯"':' title="'+e(cols[i].label)+(x.set?'':'(沒設定,預設)')+(diff?'(跟角色「'+e(role.name)+'」不同)':'')+'" onclick="permMxCycle(\''+e(a.id)+'\',\''+e(cols[i].k)+'\',this)"')+'>'+ICON[x.v]+'</td>';
+      }).join('')+'</tr>';
   });
+  const sc=box.scrollLeft, st=box.scrollTop;
   box.innerHTML=h+'</tbody></table>';
+  box.scrollLeft=sc; box.scrollTop=st;   // 點格子重畫時不要跳回左上角
 }
+const PERM_NEXT={hide:'read',read:'edit',edit:'hide'};
 window.permMxCycle=async function(id,k,td){
   const acc=(allAccounts||[]).find(a=>String(a.id)===String(id)); if(!acc||acc.is_admin) return;
   const col=permMxCols().find(c=>c.k===k); if(!col) return;
   if(td&&td.classList.contains('saving')) return;
-  const cur=permMxVal(acc,col).v, next={hide:'read',read:'edit',edit:'hide'}[cur];
+  const next=PERM_NEXT[permMxVal(acc,col).v];
   const perms=Object.assign({},acc.perms||{});
   if(col.hr){
-    // 四頁各自存,另外把整區鍵 payroll 回寫成四頁中最寬鬆的(資料庫 is_hr() 只認這個鍵),同帳號權限視窗的做法
-    PERM_HR_COLS.forEach(c=>{ if(!['hide','read','edit'].includes(perms[c.k])) perms[c.k]=permMxVal(acc,c).v; });
-    perms[k]=next;
-    const RANK={hide:0,read:1,edit:2}; let top=0; PERM_HR_COLS.forEach(c=>{ top=Math.max(top,RANK[perms[c.k]]||0); });
-    perms.payroll=['hide','read','edit'][top];
+    PERM_HR_COLS.forEach(c=>{ if(!permOk(perms[c.k])) perms[c.k]=permMxVal(acc,c).v; });
+    perms[k]=next; permSyncHrTop(perms);
   } else perms[k]=next;
-  if(td){ td.classList.add('saving'); }
-  let r; try{ r=await sbFetch('/rest/v1/profiles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({perms})}); }catch(e){ r={ok:false,status:'網路錯誤'}; }
-  if(!r.ok){ if(td) td.classList.remove('saving'); alert('儲存失敗('+r.status+')'); return; }
-  acc.perms=perms;
-  if(currentUser&&String(currentUser.id)===String(id)){ currentUser.perms=perms; applyPermsUI(); }
+  if(td) td.classList.add('saving');
+  if(!await permPatchAcc(acc,perms)){ if(td) td.classList.remove('saving'); alert('儲存失敗'); return; }
+  permMatrixRender();
+};
+// 帳號套用角色:頁面＋人事薪資四頁整批換成範本的值,其他細項(可視員工、機密欄位…)不動
+window.permApplyRole=async function(id,roleId,sel){
+  const acc=(allAccounts||[]).find(a=>String(a.id)===String(id)); if(!acc||acc.is_admin) return;
+  const role=permRoles.find(r=>r.id===roleId)||null, who=acc.name||acc.account||'這個帳號';
+  const perms=Object.assign({},acc.perms||{});
+  if(!role){ delete perms._role; }
+  else{
+    const cols=permMxCols(), diff=cols.filter(c=>permMxVal(acc,c).v!==permRoleVal(role,c)).length;
+    if(diff&&!await uiConfirm('把「'+who+'」套用角色「'+role.name+'」?\n有 '+diff+' 個頁面的權限會改成角色的設定。')){ permMatrixRender(); return; }
+    cols.forEach(c=>{ perms[c.k]=permRoleVal(role,c); });
+    permSyncHrTop(perms);
+    perms._role=role.id;
+  }
+  if(sel) sel.disabled=true;
+  if(!await permPatchAcc(acc,perms)){ alert('儲存失敗'); }
+  permMatrixRender();
+};
+// 改範本一格:同角色、那一格還跟範本舊值一樣的帳號一起改
+window.permRoleCycle=async function(roleId,k,td){
+  const role=permRoles.find(r=>r.id===roleId); if(!role) return;
+  const col=permMxCols().find(c=>c.k===k); if(!col) return;
+  if(td&&td.classList.contains('saving')) return;
+  const old=permRoleVal(role,col), next=PERM_NEXT[old];
+  if(td) td.classList.add('saving');
+  role.perms=Object.assign({},role.perms||{}); role.perms[k]=next;
+  if(!await permSaveRoles()){ role.perms[k]=old; permMatrixRender(); return; }
+  const targets=(allAccounts||[]).filter(a=>!a.is_admin&&permRoleOf(a)===role&&permMxVal(a,col).v===old);
+  let fail=0;
+  for(const a of targets){
+    const perms=Object.assign({},a.perms||{});
+    if(col.hr){ PERM_HR_COLS.forEach(c=>{ if(!permOk(perms[c.k])) perms[c.k]=permMxVal(a,c).v; }); perms[k]=next; permSyncHrTop(perms); }
+    else perms[k]=next;
+    if(!await permPatchAcc(a,perms)) fail++;
+  }
+  if(fail) alert('角色已更新,但有 '+fail+' 個帳號同步失敗,請重新整理後再試');
+  else if(targets.length&&typeof showToast==='function') showToast('角色「'+role.name+'」· '+col.label+' 已同步到 '+targets.length+' 個帳號','info');
+  permMatrixRender();
+};
+// 新增角色:取名＋起始內容(空白 或 照某個帳號目前的權限)
+window.permRoleNew=function(){
+  const e=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  let m=document.getElementById('perm-role-new');
+  if(m) m.remove();
+  m=document.createElement('div'); m.className='modal-overlay'; m.id='perm-role-new';
+  const accs=permMxAccounts().filter(a=>!a.is_admin);
+  m.innerHTML='<div class="modal" style="max-width:420px"><div class="modal-title">'+icSvg('users')+' 新增角色</div>'
+    +'<div class="modal-grid" style="grid-template-columns:1fr"><div class="lf"><label>角色名稱</label><input type="text" id="perm-role-name" placeholder="例如:辦公室行政、生管、現場主管"></div>'
+    +'<div class="lf"><label>起始內容</label><select id="perm-role-base">'
+    +'<option value="">空白(只開主頁、個人頁面)</option>'
+    +accs.map(a=>'<option value="'+e(a.id)+'">照「'+e(a.name||a.account||'')+'」目前的權限</option>').join('')+'</select></div></div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:6px">建好後在總表上方直接點格子調整。</div>'
+    +'<div class="modal-actions"><button class="btn-modal-cancel" onclick="closeModal(\'perm-role-new\')">取消</button><button class="btn-modal-ok" id="perm-role-ok" onclick="permRoleCreate()">建立</button></div></div>';
+  document.body.appendChild(m);
+  openModal('perm-role-new');
+  setTimeout(()=>{ const i=document.getElementById('perm-role-name'); if(i) i.focus(); },50);
+};
+window.permRoleCreate=async function(){
+  const name=(document.getElementById('perm-role-name').value||'').trim();
+  if(!name){ alert('請輸入角色名稱'); return; }
+  if(permRoles.some(r=>r.name===name)){ alert('已經有「'+name+'」這個角色'); return; }
+  const baseId=document.getElementById('perm-role-base').value, cols=permMxCols(), perms={};
+  const base=baseId?(allAccounts||[]).find(a=>String(a.id)===String(baseId)):null;
+  cols.forEach(c=>{ perms[c.k]=base?permMxVal(base,c).v:((c.k==='dashboard'||c.k==='mypage')?'edit':'hide'); });
+  const role={id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), name, perms};
+  const b=document.getElementById('perm-role-ok'); if(b) b.disabled=true;
+  permRoles.push(role);
+  if(!await permSaveRoles()){ permRoles.pop(); if(b) b.disabled=false; return; }
+  closeModal('perm-role-new');
+  permMatrixRender();
+};
+window.permRoleRename=function(roleId){
+  const role=permRoles.find(r=>r.id===roleId); if(!role) return;
+  showInputModal('角色改名','新的角色名稱',async v=>{
+    if(v===role.name) return;
+    if(permRoles.some(r=>r.name===v&&r!==role)){ alert('已經有「'+v+'」這個角色'); return; }
+    const old=role.name; role.name=v;
+    if(!await permSaveRoles()) role.name=old;
+    permMatrixRender();
+  }, role.name);
+};
+window.permRoleDelete=async function(roleId){
+  const role=permRoles.find(r=>r.id===roleId); if(!role) return;
+  const users=(allAccounts||[]).filter(a=>permRoleOf(a)===role);
+  if(!await uiConfirm('刪除角色「'+role.name+'」?'+(users.length?('\n有 '+users.length+' 個帳號用這個角色,他們目前的權限不會變,只是不再標示角色。'):''))) return;
+  const idx=permRoles.indexOf(role); permRoles.splice(idx,1);
+  if(!await permSaveRoles()){ permRoles.splice(idx,0,role); permMatrixRender(); return; }
+  for(const a of users){ const p=Object.assign({},a.perms||{}); delete p._role; await permPatchAcc(a,p); }
   permMatrixRender();
 };
 async function savePermModal(){
