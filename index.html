@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.04.2"/>
+<meta name="sc-version" content="2026.11.04.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -3007,12 +3007,14 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
         <span style="font-size:11px;color:var(--text3)">依薪資自動帶入該級距;▲▼ 或鍵盤上下鍵按勞保投保薪資分級表跳動</span>
       </div>
       <div class="lf"><label>眷屬人數 (健保)</label><input type="number" id="emp-f-dep" value="0" min="0" step="1"/></div>
-      <div class="lf"><label>外勞類別 (加班費)</label>
-        <select id="emp-f-foreign">
-          <option value="">本國 (依現有加班公式)</option>
-          <option value="普通">普通外勞 (540/1200/1500/1900)</option>
-          <option value="特定">特定外勞 (650/1300/1600/2000)</option>
+      <div class="lf"><label>薪資類別 (加班、假日怎麼算)</label>
+        <select id="emp-f-cat">
+          <option value="office">辦公室</option>
+          <option value="field">現場(本工)</option>
+          <option value="特定">特定外勞</option>
+          <option value="普通">普通外勞</option>
         </select>
+        <span style="font-size:11px;color:var(--text3)">各類的算法與金額在「費率設定 → 四類薪資規則」</span>
       </div>
       <div class="lf"><label>保障底薪 (含加班補足)</label><input type="number" id="emp-f-guarantee" placeholder="0=不保障 例 80000" min="0" step="1"/>
         <span style="font-size:11px;color:var(--text3)">含加班費未達此金額時,差額補在「職務津貼」(外勞免填)</span>
@@ -43369,6 +43371,15 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   window.hrDeptRank=function(d){ var o=['辦公人員','本工','自有外勞','長榮外勞']; var i=o.indexOf(String(d||'').trim()); return i<0?99:i; };
   // 部門分類(與 SQL dept_class 一致):含「辦公」→office,其餘→field
   window.deptClass=function(dep){ return String(dep||'').indexOf('辦公')>=0?'office':'field'; };
+  // 薪資類別(對應費率設定的四類薪資規則):薪資設定直接選的 pay_category 優先;沒選過才依外勞類別/部門判斷
+  window.PAY_CAT_LABEL={office:'辦公室',field:'現場(本工)','特定':'特定外勞','普通':'普通外勞'};
+  window.payCategoryOf=function(s,pay,legacyForeign){
+    pay=pay||{};
+    if(window.PAY_CAT_LABEL[pay.pay_category]) return pay.pay_category;
+    if(pay.foreign_type==='特定'||pay.foreign_type==='普通') return pay.foreign_type;
+    if(legacyForeign||/外勞/.test(String((s&&s.department)||''))) return '普通';
+    return window.deptClass(s&&s.department);
+  };
   // 目前登入者薪資可視範圍(與 SQL hr_scope 一致):all|office|field
   window.hrScope=function(){ try{ if(currentUser&&currentUser.isAdmin) return 'all'; var s=currentUser&&currentUser.perms&&currentUser.perms.payroll_scope; return s||'all'; }catch(e){ return 'all'; } };
   // 依範圍判斷是否可見某員工的薪資
@@ -43496,7 +43507,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(!rows.length){ body.innerHTML='<tr><td colspan="12" class="empty-state">沒有符合的員工</td></tr>'; return; }
     body.innerHTML=rows.map(function(s){
       var pay=empPayMap[s.id]||{};
-      var otRule=Payroll.empTypeFromDept(s.department)==='office'?'勞基法':'現場慣例';
+      var otRule=PAY_CAT_LABEL[payCategoryOf(s,pay)]+((pay.pay_category)?'':'<span title="還沒在薪資設定選過,依部門/外勞類別判斷" style="color:var(--text3)">(自動)</span>');
       var days=s.hire_date?Payroll.annualLeaveDays(s.hire_date, today()):'—';
       var amt = pay.pay_type==='monthly' ? money(pay.base_salary) : (pay.pay_type==='daily' ? money(pay.daily_wage)+' /日' : '—');
       var payLabel = pay.pay_type==='monthly'?'月薪':(pay.pay_type==='daily'?'日薪':'—');
@@ -43530,16 +43541,15 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(!canSeeWageOf(s)){ alert('此帳號沒有檢視/設定這位員工底薪的權限。\n(可請管理員到「帳號管理 → 🔑 設定 → 底薪‧應發實發」調整)'); return; }
     empEditSid=s.id;
     var pay=empPayMap[s.id]||{};
-    var otRule=Payroll.empTypeFromDept(s.department)==='office'?'辦公(勞基法加班)':'現場(半薪/全薪)';
     document.getElementById('emp-modal-title').textContent='薪資設定 — '+(s.name||'');
-    document.getElementById('emp-modal-sub').textContent='部門:'+(s.department||'—')+' · 加班規則:'+otRule+' · 到職:'+(s.hire_date||'—');
+    document.getElementById('emp-modal-sub').textContent='部門:'+(s.department||'—')+' · 到職:'+(s.hire_date||'—');
     document.getElementById('emp-f-paytype').value=pay.pay_type||'daily';
     document.getElementById('emp-f-daily').value=pay.daily_wage!=null?pay.daily_wage:'';
     document.getElementById('emp-f-base').value=pay.base_salary!=null?pay.base_salary:'';
     document.getElementById('emp-f-insure').value=pay.insure_via||'company';
     document.getElementById('emp-f-insured').value=pay.insured_salary!=null?pay.insured_salary:'';
     document.getElementById('emp-f-dep').value=pay.dependents!=null?pay.dependents:0;
-    document.getElementById('emp-f-foreign').value=pay.foreign_type||'';
+    document.getElementById('emp-f-cat').value=payCategoryOf(s,pay);
     document.getElementById('emp-f-guarantee').value=pay.guarantee_min!=null?pay.guarantee_min:'';
     document.getElementById('emp-f-joballow').value=pay.job_allowance!=null?pay.job_allowance:'';
     document.getElementById('emp-f-dormrent').value=pay.dorm_rent!=null?pay.dorm_rent:'';
@@ -43603,7 +43613,9 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       insure_via: document.getElementById('emp-f-insure').value,
       insured_salary: num(document.getElementById('emp-f-insured').value)||null,
       dependents: parseInt(document.getElementById('emp-f-dep').value)||0,
-      foreign_type: cleanStr(document.getElementById('emp-f-foreign').value)||null,
+      // 薪資類別:外勞類別(foreign_type)跟著同步,舊程式與報表照樣看得懂
+      pay_category: document.getElementById('emp-f-cat').value,
+      foreign_type: (function(c){ return (c==='特定'||c==='普通')?c:null; })(document.getElementById('emp-f-cat').value),
       guarantee_min: num(document.getElementById('emp-f-guarantee').value)||null,
       job_allowance: num(document.getElementById('emp-f-joballow').value)||null,
       dorm_rent: num(document.getElementById('emp-f-dormrent').value)||null,
@@ -43624,7 +43636,16 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     }else{
       res=await sbFetch('/rest/v1/employee_pay',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)});
     }
+    // 資料庫還沒有 pay_category 欄位(尚未執行 payroll_pay_category.sql)→ 先不存類別,其他設定照存
+    var catMissing=false;
+    if(!res.ok && /pay_category/.test(JSON.stringify(res.data||''))){
+      catMissing=true; delete payload.pay_category;
+      res=(exist&&exist.id)
+        ? await sbFetch('/rest/v1/employee_pay?id=eq.'+exist.id,{method:'PATCH',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)})
+        : await sbFetch('/rest/v1/employee_pay',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(payload)});
+    }
     if(btn){ btn.disabled=false; btn.textContent=old; }
+    if(res.ok && catMissing) alert('其他設定已儲存,但「薪資類別」還不能存:資料庫缺 pay_category 欄位,請先執行 payroll_pay_category.sql。\n(外勞類別已照選的存;辦公室/現場仍依部門判斷)');
     if(!res.ok){
       console.warn('emp save failed',res.status,res.data);
       var msg='儲存失敗(HTTP '+res.status+')'+(res.data&&res.data.message?(' '+res.data.message):'');
@@ -44023,9 +44044,11 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       if(!pay||!pay.pay_type){ if(s.status!=='離職') noset.push(s.name); return; }
       var staffName=String(s.name||'').trim();
       var legacyForeign=PAYROLL_FOREIGN_NAMES.indexOf(staffName)>=0;
-      var staffForeign=!!pay.foreign_type||/外勞/.test(String(s.department||''))||legacyForeign;
-      var resolvedForeignType=pay.foreign_type||(staffForeign?(staffName==='和松朋'?'特定':'普通'):null);
-      var emp={ id:s.id, emp_type:Payroll.empTypeFromDept(s.department), pay_type:pay.pay_type,
+      // 薪資類別:薪資設定有選(pay_category)就照選的;沒選過沿用舊判斷(外勞類別/部門/既有外勞名單)
+      var payCat=pay.pay_category?payCategoryOf(s,pay):null;
+      var staffForeign=payCat?(payCat==='特定'||payCat==='普通'):(!!pay.foreign_type||/外勞/.test(String(s.department||''))||legacyForeign);
+      var resolvedForeignType=payCat?(staffForeign?payCat:null):(pay.foreign_type||(staffForeign?(staffName==='和松朋'?'特定':'普通'):null));
+      var emp={ id:s.id, emp_type:payCat?(payCat==='office'?'office':'field'):Payroll.empTypeFromDept(s.department), pay_type:pay.pay_type,
                 base_salary:pay.base_salary, daily_wage:pay.daily_wage, insure_via:pay.insure_via,
                 insured_salary:pay.insured_salary, dependents:pay.dependents,
                 foreign_type:resolvedForeignType, guarantee_min:pay.guarantee_min, job_allowance:pay.job_allowance, dorm_rent:pay.dorm_rent,
@@ -44042,7 +44065,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var att=buildEffectiveAtt(baseAtt, adj.att_waive||[], adj.ot_exclude||[], adj.half_pay||[]);   // 併入免扣(個人手動+全體颱風假)與「不算加班」日期
       var ps=Payroll.calcPayslip(emp, att, prCfg, period);
       ps._name=s.name; ps._idnum=s.id_number||'';   // 補登缺卡時比對 prPunchByKey 用(員編/身分證號)
-      ps._dept=s.department; ps._role=s.role||''; ps._office=(window.deptClass(s.department)==='office');
+      ps._dept=s.department; ps._role=s.role||''; ps._office=(emp.emp_type==='office');
       ps._type=(emp.foreign_type?('外勞'+emp.foreign_type):(emp.emp_type==='office'?'辦公':'現場'))+'/'+(pay.pay_type==='monthly'?'月':'日');
       ps._netCore=ps.net;   // 未含便當代墊返還與匯款費用的實發
       ps._perDay=(pay.pay_type==='monthly')?(num(pay.base_salary)/30):num(pay.daily_wage);
