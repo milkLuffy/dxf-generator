@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.04.4"/>
+<meta name="sc-version" content="2026.11.04.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -19201,7 +19201,7 @@ function filterBOM() {
   }
 }
 // 長榮人員「單位 / 職級」固定排序(全域,長榮人員表與 BOM 主辦下拉共用)
-const EGST_UNIT_ORDER=['長榮鋼鐵營業事業本部','製造部','機材部','職安部','品管課','總務課','製造二課','製造二課(S/P)','製造一課','管料課(車管)','管料課(堆高機手)','管料課(天車手)','管料課(鋼板)','保養課','警衛室'];
+const EGST_UNIT_ORDER=['長榮鋼鐵營業事業本部','製造部','機材部','職安部','品管課','總務課','製造二課','製造二課(S/P)','製造一課','管料課','管料課(車管)','管料課(堆高機手)','管料課(天車手)','管料課(鋼板)','保養課','警衛室'];
 const EGST_RANK_ORDER=['副總','協理','經理','課長','專業工程師','助副','課員(主辦)','課員','工程員'];
 // 單位清單可在網頁上新增/改名/刪除:整份清單(含順序)存 app_config.eg_units(JSON 陣列)。
 // 還沒存過時 = 上面的預設清單 + 舊版 eg_units_extra(之前只存自行新增的單位)。
@@ -42627,6 +42627,12 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var res=(await Promise.all([sbFetchAll('/rest/v1/eg_staff?select=*'), egLoadUnits()]))[0];
       egstRows=Array.isArray(res.data)?res.data:[];
     }catch(e){ console.warn('egstInit failed',e); if(tbl) tbl.innerHTML='<div class="empty-state">載入失敗</div>'; return; }
+    // 有人用的單位卻不在清單(例:舊資料「管料課」)→ 補進清單,放在同名的「管料課(…)」前面,選單和單位管理才看得到
+    egstRows.forEach(function(r){
+      var u=String(r.unit||'').trim(); if(!u||EGST_UNIT_ORDER.indexOf(u)>=0) return;
+      var at=EGST_UNIT_ORDER.findIndex(function(x){ return x.indexOf(u+'(')===0; });
+      if(at<0) EGST_UNIT_ORDER.push(u); else EGST_UNIT_ORDER.splice(at,0,u);
+    });
     egstRender();
   };
 
