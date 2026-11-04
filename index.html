@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.04.8"/>
+<meta name="sc-version" content="2026.11.04.9"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -8897,7 +8897,7 @@ window.normalizeFullWidth=function(value){
         <div id="spc-progress" class="spc-progress"></div>
         <div class="spc-catsum" id="spc-catsum"></div>
         <div class="spc-sticky">
-          <div class="spc-search"><input type="search" class="search-input" id="spc-search" placeholder="搜尋零件編號、規格、構件…" oninput="spcSearch(this.value)"/></div>
+          <div class="spc-search"><input type="search" class="search-input" id="spc-search" placeholder="搜尋零件編號、規格、構件…" oninput="spcSearch(this.value)" onkeyup="spcSearch(this.value)"/></div>
           <div class="spc-filters" id="spc-filters">
             <button type="button" data-f="all" onclick="spcSetFilter('all')">全部</button>
             <button type="button" data-f="todo" onclick="spcSetFilter('todo')">未點</button>
@@ -58171,7 +58171,7 @@ async function ldDashPlan(){
   // ── 開啟工程區(zoneStr 可以是「1D2G+1D2B」) ─────────────────────────────
   async function openZone(proj,zoneStr){
     spc.proj=up(proj);spc.zones=String(zoneStr||'').split('+').map(up).filter(function(z,i,a){return z&&a.indexOf(z)===i;});
-    spc.items=[];spc.byKey={};spc.rows={};spc.pending={};spc.filter='all';spc.cat='ALL';spc.q='';spc.syncNote='';
+    spc.items=[];spc.byKey={};spc.rows={};spc.pending={};spc.filter='all';spc.cat='ALL';spc.q='';spc.syncNote='';clearTimeout(spcQT);
     var s=el('spc-search');if(s)s.value='';
     showView('zone');
     el('spc-zone-title').textContent=zoneLabel();
@@ -58270,6 +58270,10 @@ async function ldDashPlan(){
     el('spc-cats').innerHTML=['ALL'].concat(ORDER().filter(function(c){return cats[c];})).map(function(c){
       return '<button type="button" class="spc-chip'+(spc.cat===c?' active':'')+'" onclick="spcSetCat(\''+h(c)+'\')">'+h(c==='ALL'?'全部':LABEL(c))+' <small>'+(c==='ALL'?spc.items.length:cats[c])+'</small></button>';
     }).join('');
+    renderBody();
+  }
+  // 只重畫卡片清單(打字搜尋時用,不重算上方統計)
+  function renderBody(){
     var q=spc.q.toLowerCase().trim(),rows=spc.items.filter(function(it){
       if(spc.cat!=='ALL'&&it.cat!==spc.cat)return false;
       var st=stateOf(it).s;if(spc.filter!=='all'&&st!==spc.filter)return false;
@@ -58291,7 +58295,9 @@ async function ldDashPlan(){
   }
   window.spcSetFilter=function(f){spc.filter=f;render();};
   window.spcSetCat=function(c){spc.cat=spc.cat===c&&c!=='ALL'?'ALL':c;render();};   // 再點一次同分類 = 回全部
-  window.spcSearch=function(v){spc.q=String(v||'');render();};
+  // 打字防抖:每打一字就重畫 200 多張卡片,手機會卡;停 200ms 才只重畫清單
+  var spcQT=null;
+  window.spcSearch=function(v){spc.q=String(v||'');clearTimeout(spcQT);spcQT=setTimeout(function(){if(el('spc-body'))renderBody();},200);};
 
   // ── 寫入 ─────────────────────────────
   // 把實點片數分回各區:依 spc.zones 順序先分滿前面的區,剩下(含多出來的)都給最後一區
