@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.04.3"/>
+<meta name="sc-version" content="2026.11.04.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -14756,6 +14756,10 @@ function openMobileMore(){
     raf=0; const n=nav(); if(!n||window.innerWidth>768) return;
     if(typing()&&vv.height<window.innerHeight-120){ n.classList.add('mbn-hide'); n.style.transform=''; return; }   // 鍵盤開著
     n.classList.remove('mbn-hide');
+    // 捲到頂/底再拉的「回彈」期間 scrollY 會超出範圍、可視範圍跟著位移,這時不能推(會把導覽列推到半空中);
+    // 固定元素在回彈時本來就貼著底部,回彈結束會再收到 scroll 事件重算。
+    const sy=window.scrollY, maxY=Math.max(0,document.documentElement.scrollHeight-window.innerHeight);
+    if(sy<0||sy>maxY+1||vv.offsetTop<0||vv.pageTop<0){ n.style.transform=''; return; }
     const off=Math.round(vv.offsetTop+vv.height-window.innerHeight);   // 可視範圍底部 − 版面底部
     n.style.transform=(Math.abs(off)>2&&vv.scale<=1.01)?'translateY('+off+'px)':'';
   }
