@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.04.1"/>
+<meta name="sc-version" content="2026.11.04.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -6586,6 +6586,14 @@ window.normalizeFullWidth=function(value){
       #page-payrollcfg .pcfg-f label{font-size:11px;color:var(--text3)}
       #page-payrollcfg .pcfg-f input{padding:6px 8px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text);font-family:var(--mono);font-size:13px;outline:none}
       #page-payrollcfg .pcfg-f input:focus{border-color:var(--accent2)}
+      #page-payrollcfg .pcfg-rules-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+      #page-payrollcfg .pcfg-rules{border-collapse:collapse;min-width:760px;width:100%;font-size:12px}
+      #page-payrollcfg .pcfg-rules th,#page-payrollcfg .pcfg-rules td{border:1px solid var(--border);padding:6px 8px;vertical-align:top;text-align:left}
+      #page-payrollcfg .pcfg-rules thead th{background:var(--bg3);color:var(--text2);font-weight:600}
+      #page-payrollcfg .pcfg-rules tbody th{white-space:nowrap;color:var(--text2);font-weight:600;background:var(--bg3)}
+      #page-payrollcfg .pcfg-rules select{width:100%;padding:5px 6px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text);font-size:12px}
+      #page-payrollcfg .pcfg-rules .pr-in{display:flex;align-items:center;gap:4px;margin-top:4px;color:var(--text3);font-size:11px;white-space:nowrap}
+      #page-payrollcfg .pcfg-rules .pr-in input{width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text);font-family:var(--mono);font-size:12px;text-align:right}
       #page-payrollcfg .pcfg-grade{display:inline-flex;align-items:center;gap:4px;margin:3px}
       #page-payrollcfg .pcfg-grade input{width:80px;padding:5px 6px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text);font-family:var(--mono);font-size:13px;text-align:right}
       #page-payrollcfg .pcfg-grade button{border:1px solid var(--danger);color:var(--danger);background:transparent;border-radius:4px;cursor:pointer;width:20px;height:24px;line-height:1}
@@ -6604,30 +6612,16 @@ window.normalizeFullWidth=function(value){
       <div id="pcfg-hint" style="font-size:12px;color:var(--text3);margin-bottom:10px">載入中...</div>
 
       <div class="pcfg-card">
-        <h4>加班倍率</h4>
-        <div class="pcfg-grid">
-          <div class="pcfg-f"><label>辦公 前2小時(倍)</label><input type="number" id="pcfg-ot-first2" step="0.01"/></div>
-          <div class="pcfg-f"><label>辦公 第3小時起(倍)</label><input type="number" id="pcfg-ot-rest" step="0.01"/></div>
-          <div class="pcfg-f"><label>辦公 月加班上限(時)</label><input type="number" id="pcfg-ot-cap" step="1"/></div>
-          <div class="pcfg-f"><label>現場 17:30~20:30(日薪比)</label><input type="number" id="pcfg-ot-half" step="0.1"/></div>
-          <div class="pcfg-f"><label>現場 ~23:00(日薪比)</label><input type="number" id="pcfg-ot-full" step="0.1"/></div>
-          <div class="pcfg-f"><label>本工 星期日加給(元,單價=日薪+此金額)</label><input type="number" id="pcfg-ot-sun-bonus" step="1"/></div>
-          <div class="pcfg-f"><label>辦公 假日加班</label><input type="text" value="依法定倍率自動計算" disabled/></div>
-          <div class="pcfg-f"><label>便當補餐(元/天)</label><input type="number" id="pcfg-meal-subsidy" step="1"/></div>
-        </div>
+        <h4>四類薪資規則(每格選算法、填金額;按右上「儲存費率」才生效)</h4>
+        <div style="font-size:11px;color:var(--text3);margin:-4px 0 8px">一天同時符合多種時,優先順序:颱風 → 國定假日 → 週日 → 週六 → 平日。固定金額、日薪＋加給都依當天出勤比例算(上半天只算一半)。週六併在 Excel 的國定假日欄。</div>
+        <div class="pcfg-rules-wrap"><table class="pcfg-rules" id="pcfg-rules"></table></div>
       </div>
 
       <div class="pcfg-card">
-        <h4>外勞加班金額(元/次;填 0＝不計。週六由仲介處理,不計;颱風依勞基法休息日倍率自動計算)</h4>
+        <h4>其他</h4>
         <div class="pcfg-grid">
-          <div class="pcfg-f"><label>普通 17:30~20:30</label><input type="number" id="pcfg-fw-n-tier1" step="1"/></div>
-          <div class="pcfg-f"><label>普通 17:30~23:00</label><input type="number" id="pcfg-fw-n-tier2" step="1"/></div>
-          <div class="pcfg-f"><label>普通 國定假日</label><input type="number" id="pcfg-fw-n-holiday" step="1"/></div>
-          <div class="pcfg-f"><label>普通 星期日</label><input type="number" id="pcfg-fw-n-sunday" step="1"/></div>
-          <div class="pcfg-f"><label>特定 17:30~20:30</label><input type="number" id="pcfg-fw-s-tier1" step="1"/></div>
-          <div class="pcfg-f"><label>特定 17:30~23:00</label><input type="number" id="pcfg-fw-s-tier2" step="1"/></div>
-          <div class="pcfg-f"><label>特定 國定假日</label><input type="number" id="pcfg-fw-s-holiday" step="1"/></div>
-          <div class="pcfg-f"><label>特定 星期日</label><input type="number" id="pcfg-fw-s-sunday" step="1"/></div>
+          <div class="pcfg-f"><label>辦公 月加班上限(時)</label><input type="number" id="pcfg-ot-cap" step="1"/></div>
+          <div class="pcfg-f"><label>便當補餐(元/天)</label><input type="number" id="pcfg-meal-subsidy" step="1"/></div>
         </div>
       </div>
 
@@ -43084,6 +43078,40 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       grades:[29500,30300,31800,33300,34800,36300,38200,40100,42000,43900,45800]
     }
   };
+  // 四類薪資規則(費率設定的「四類薪資規則」表):office 辦公室、field 現場、特定/普通 外勞。
+  // 每類:wk 平日加班 {mode:law 勞基法倍率(a 前2小時倍、b 之後倍)|ratio 日薪比例(a 17:30~20:30、b ~23:00)|fixed 固定金額(a、b 元)|none}
+  //      sat 週六 / sun 週日 / nat 國定假日 {mode:weekday 當平日|none 只算出勤|fixed 固定金額 amt|wage_plus 日薪+加給 amt|law 勞基法|rest 休息日倍率}
+  //      typhoon 颱風 {mode:inherit 照當天規則|fixed|rest|law};late 遲到早退 {mode:deduct|none}
+  // 固定金額、日薪+加給都依當天出勤比例(半天一半)。沒存過 pay_rules 時,由舊的 ot_office/ot_field/ot_foreign 帶出,算法跟以前一樣。
+  const RULE_CATS=['office','field','特定','普通'], RULE_DAYS=['wk','sat','sun','nat','typhoon','late'];
+  function buildRules(of,ff,fw,saved){
+    of=of||{}; ff=ff||{};
+    const FW={'普通':{tier1:540,tier2:1200,holiday:1500,sunday:1900},'特定':{tier1:650,tier2:1300,holiday:1600,sunday:2000}};
+    const f=t=>Object.assign({},FW[t],(fw&&fw[t])||{});
+    const pick=(o,k,d)=>(o&&o[k]!=null)?Number(o[k]):d;
+    const foreignDef=t=>({wk:{mode:'fixed',a:f(t).tier1,b:f(t).tier2},sat:{mode:'none'},
+      sun:{mode:Number(f(t).sunday)>0?'fixed':'none',amt:f(t).sunday},nat:{mode:'fixed',amt:f(t).holiday},typhoon:{mode:'rest'},late:{mode:'none'}});
+    const def={
+      office:{wk:{mode:'law',a:pick(of,'first2',1.34),b:pick(of,'rest',1.67)},sat:{mode:'law'},sun:{mode:'law'},nat:{mode:'law'},typhoon:{mode:'inherit'},late:{mode:'deduct'}},
+      field:{wk:{mode:'ratio',a:pick(ff,'half_day',.5),b:pick(ff,'full_day',1)},sat:{mode:'weekday'},sun:{mode:'wage_plus',amt:pick(ff,'sunday_bonus',500)},nat:{mode:'weekday'},typhoon:{mode:'inherit'},late:{mode:'deduct'}},
+      '特定':foreignDef('特定'),'普通':foreignDef('普通')
+    };
+    const out={};
+    RULE_CATS.forEach(c=>{ out[c]={}; RULE_DAYS.forEach(d=>{ out[c][d]=Object.assign({},def[c][d],(saved&&saved[c]&&saved[c][d])||{}); }); });
+    return out;
+  }
+  function ruleKeyFor(emp){ return emp.foreign_type?(emp.foreign_type==='特定'?'特定':'普通'):(emp.emp_type==='office'?'office':'field'); }
+  function rulesFor(emp,cfg){ return (cfg&&cfg.rules&&cfg.rules[ruleKeyFor(emp)])||buildRules()[ruleKeyFor(emp)]; }
+  // 平日加班(含「當平日」的日子):依該類的平日加班算法
+  function weekdayOtPay(emp,att,wk){
+    const tier=num(att.ot_tier), A=num(wk&&wk.a), B=num(wk&&wk.b);
+    switch(wk&&wk.mode){
+      case 'law':{ const h=hourlyBase(emp),ot=num(att.ot_hours),first2=Math.min(ot,2),rest=Math.max(ot-2,0); return h*(first2*A+rest*B); }
+      case 'ratio':{ const d=dailyWage(emp); if(tier===2)return d*B; if(tier===1)return d*A*localTier1Qty(att); return 0; }
+      case 'fixed': if(tier===2)return B; if(tier===1)return A*localTier1Qty(att); return 0;
+      default: return 0;
+    }
+  }
   function policyFor(period){
     const year=Number(String(period||new Date().getFullYear()).slice(0,4));
     return POLICY_PRESETS[year]||null;
@@ -43108,6 +43136,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       occ:{rate:P?P.occ.rate:val('occ_ins',.00555)},
       foreignOcc:{rate:P?P.foreignOcc.rate:val('foreign_occ_ins',.00553)},
       meal:meta('meal',{subsidy:75}),
+      rules:buildRules(meta('ot_office',{}),meta('ot_field',{}),meta('ot_foreign',null),meta('pay_rules',null)),
       // 註:沒列到的假別在下面算薪時一律當「全額扣」,所以新增假別務必到費率設定補上比例。
       // 這裡要「合併」而不是取代:資料庫存過的設定是舊的 12 種,少了休假/國定假日,
       // 直接用它會讓這兩種變成全額扣薪。以預設打底、存過的蓋上去,才不會漏。
@@ -43192,44 +43221,42 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     const isOffice=emp.emp_type==='office';
     // 每日加班明細:先算出「原本會有多少加班」,再看當天是否被標記「不算加班」(ot_excluded)決定是否計入。
     // ot_excluded 由薪資頁「加班費 / 假日加班費」欄點入逐日勾選,存於 payroll_run.adjustments[sid].ot_exclude。
-    // 分類規則(與原邏輯相同):外勞週日=sunday、外勞週六/國定=holiday(固定金額);本工國定假日當平日算(照算平日加班)、週日=日薪+加給;外勞國定/週日固定金額依出勤比例(半天一半);
-    //                        其餘依打卡下班時刻分 t1(17:30~20:30) / t2(17:30~23:00)。
+    // 怎麼算全看四類薪資規則(R):先判斷當天是哪種日子(颱風 > 國定假日 > 週日 > 週六 > 平日),再依那一格的算法。
+    const R=rulesFor(emp,cfg);
+    const CAT_OF={sat:'holiday',sun:'sunday',nat:'holiday',typhoon:'typhoon'};   // 特殊日在明細/Excel 歸哪一欄(週六併國定假日欄)
+    const dayKind=(a,wd)=>{
+      if(a.is_typhoon&&R.typhoon&&R.typhoon.mode!=='inherit') return 'typhoon';
+      if(a.is_holiday&&!(R.nat&&R.nat.mode==='weekday'&&(wd===0||wd===6))) return 'nat';   // 國定假日「當平日」碰到週六日,照週六日的規則
+      if(wd===0) return 'sun';
+      if(wd===6) return 'sat';
+      return 'wk';
+    };
     const otItems=monthAtt.map(a=>{
       const wd=a.weekday!=null?a.weekday:(a.work_date?new Date(a.work_date).getDay():-1);
-      // 本工國定假日跟平日一樣(日薪照算、17:30 後照算平日加班,沒有加給),所以不算特殊日
-      const isSpecial=(!!a.is_holiday&&(isForeign||isOffice))||wd===0||wd===6||(isForeign&&!!a.is_typhoon);
       const worked=num(a.work_hours)>0||num(a.ot_hours)>0;
       const excluded=!!a.ot_excluded;
-      const rawPay=isSpecial?0:(isForeign?foreignOtPay(emp,a,cfg):overtimePay(emp,a,cfg));
-      const tier=isForeign?foreignOtTier(a):a.ot_tier;
-      const fr=(isForeign&&cfg.foreign&&cfg.foreign[emp.foreign_type])||{};
-      let cat=null,qty=0,catPay=0;
-      if(isForeign){
-        // 外勞算平日加班、星期日、國定假日、颱風;週六由仲介處理不計,星期日金額設 0 就不計
-        if(worked&&a.is_typhoon){ cat='typhoon'; qty=1; catPay=restDayPay(emp,num(a.work_hours)+num(a.ot_hours)); }   // 颱風比照休息日倍率
-        // 國定假日、星期日固定金額依當天出勤比例:上半天(13:00 前下班)只算一半
-        else if(worked&&a.is_holiday){ cat='holiday'; qty=num(a.work_hours)>0?dayVal(a):1; catPay=num(fr.holiday)*qty; }
-        else if(worked&&wd===0){ if(num(fr.sunday)>0){ cat='sunday'; qty=num(a.work_hours)>0?dayVal(a):1; catPay=num(fr.sunday)*qty; } }
-        else if(!isSpecial){ if(tier===2)cat='t2'; else if(tier===1)cat='t1'; if(cat){ qty=(cat==='t1')?localTier1Qty(a):1; catPay=rawPay; if(!(qty>0)) cat=null; } }
-      }
-      else if(!isOffice&&worked&&isSpecial){
-        // 本工國定假日不會進到這裡(當平日算);星期日=日薪+加給(費率設定),這天從出勤天移到「週日加班」,不重複算底薪
-        if(wd===0){
-          cat='sunday';
-          const hasDay=num(a.work_hours)>0;
-          qty=hasDay?dayVal(a):1;
-          catPay=hasDay?(dailyWage(emp)+num(cfg.field&&cfg.field.sunday_bonus))*qty:0;
+      const kind=dayKind(a,wd);
+      const rule=kind==='wk'?{mode:'weekday'}:(R[kind]||{mode:'weekday'});
+      const tier=num(a.ot_tier);
+      const tierCat=()=>{ const c=tier===2?'t2':(tier===1?'t1':null); const q=c==='t1'?localTier1Qty(a):(c?1:0); return q>0?[c,q]:[null,0]; };
+      let rawPay=0,cat=null,qty=0,catPay=0,hDays=0,hPay=0,moved=false;
+      if(rule.mode==='weekday'){
+        rawPay=weekdayOtPay(emp,a,R.wk);
+        [cat,qty]=tierCat(); catPay=cat?rawPay:0;
+      }else if(worked&&rule.mode!=='none'){
+        const hasDay=num(a.work_hours)>0, share=hasDay?dayVal(a):1, amt=num(rule.amt);
+        if(rule.mode==='fixed'){ if(amt>0){ cat=CAT_OF[kind]; qty=share; catPay=amt*share; } }
+        else if(rule.mode==='wage_plus'){ cat=CAT_OF[kind]; qty=share; catPay=hasDay?(dailyWage(emp)+amt)*share:0; moved=hasDay; }
+        else if(rule.mode==='rest'){ cat=CAT_OF[kind]; qty=1; catPay=restDayPay(emp,num(a.work_hours)+num(a.ot_hours)); }
+        else if(rule.mode==='law'){
+          // 勞基法:另計假日加班費(holiday_pay);天數依當天出勤
+          hDays=(a.work_day!=null?num(a.work_day):1);
+          hPay=kind==='typhoon'?restDayPay(emp,num(a.work_hours)+num(a.ot_hours)):statutoryHolidayPay(emp,Object.assign({},a,{weekday:wd}));
+          if(kind==='nat'||kind==='typhoon') cat='holiday'; else if(kind==='sun') cat='sunday'; else [cat]=tierCat();
+          qty=cat==='t1'?localTier1Qty(a):1;
         }
       }
-      else {
-        if(isOffice&&a.is_holiday&&worked)cat='holiday'; else if(wd===0&&worked)cat='sunday';
-        else if(tier===2)cat='t2'; else if(tier===1)cat='t1';
-        if(cat){ qty=(cat==='t1')?localTier1Qty(a):1; catPay=rawPay; if(!(qty>0)) cat=null; }
-      }
-      // 假日加班費(辦公室依法定倍率;外勞於下方由分類金額彙總,本工不計)
-      let hDays=0,hPay=0;
-      if(isOffice&&isSpecial&&worked){ hDays=(a.work_day!=null?num(a.work_day):1); hPay=statutoryHolidayPay(emp,a); }
-      return {date:a.work_date,weekday:wd,punch_in:a.punch_in||'',punch_out:a.punch_out||'',work_hours:num(a.work_hours),ot_hours:num(a.ot_hours),is_holiday:!!a.is_holiday,
+      return {date:a.work_date,weekday:wd,punch_in:a.punch_in||'',punch_out:a.punch_out||'',work_hours:num(a.work_hours),ot_hours:num(a.ot_hours),is_holiday:!!a.is_holiday,kind:kind,mode:rule.mode,moved:moved,
               excluded:excluded,pay:excluded?0:rawPay,raw_pay:rawPay,cat:cat,cat_qty:qty,cat_pay:catPay,holiday_days:hDays,holiday_pay:hPay};
     });
     const ot=otItems.reduce((s,x)=>s+x.pay,0);
@@ -43237,15 +43264,17 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     const otCat={t1:0,t2:0,holiday:0,sunday:0,typhoon:0,t1Pay:0,t2Pay:0,holidayPay:0,sundayPay:0,typhoonPay:0};
     otItems.forEach(x=>{ if(x.excluded||!x.cat)return; otCat[x.cat]+=x.cat_qty; otCat[x.cat+'Pay']+=x.cat_pay; });
     // 本工(日薪)星期日另外算,底薪與出勤天要扣掉這幾天;被勾「不算加班」的日子回到一般出勤天
-    const isLocal=!isForeign&&!isOffice;
-    const localSunDays=(isLocal&&emp.pay_type!=='monthly')?otItems.reduce((s,x)=>s+((!x.excluded&&x.cat==='sunday'&&x.work_hours>0)?x.cat_qty:0),0):0;
-    const localSunPay=isLocal?otCat.sundayPay:0;
+    // 「日薪+加給」的日子(預設:本工星期日)從出勤天/底薪移出,改在加班欄算,不重複算底薪
+    const movedItems=otItems.filter(x=>!x.excluded&&x.moved);
+    const localSunDays=emp.pay_type!=='monthly'?movedItems.reduce((s,x)=>s+x.cat_qty,0):0;
+    const localSunPay=movedItems.reduce((s,x)=>s+x.cat_pay,0);
     const base=emp.pay_type==='monthly'?num(emp.base_salary):num(emp.daily_wage)*(rawWorkDays-localSunDays);
     const otExcludedDates=otItems.filter(x=>x.excluded&&(num(x.raw_pay)>0||x.cat||num(x.holiday_pay)>0)).map(x=>x.date);
     const leaveItems=monthAtt.filter(a=>num(a.leave_hours)>0).map(a=>{const rate=cfg.leaveRate[a.leave_type]!=null?cfg.leaveRate[a.leave_type]:1;return{date:a.work_date,type:a.leave_type,hours:num(a.leave_hours),deduct:hourlyBase(emp)*num(a.leave_hours)*rate};});
     const leaveDeduct=emp.pay_type==='monthly'?leaveItems.reduce((s,x)=>s+x.deduct,0):0;
     // 外勞平日不打白天卡、只在 17:00 後打加班卡,打卡時刻不代表遲到/早退 → 一律不計遲到早退(加班仍依打卡下班判分段)
-    const lateCount=monthAtt.reduce((s,a)=>s+((a.late&&!isForeign)?1:0),0);
+    const noLate=(R.late&&R.late.mode)==='none';   // 四類規則「遲到早退:不計」(預設外勞)
+    const lateCount=monthAtt.reduce((s,a)=>s+((a.late&&!noLate)?1:0),0);
     // 遲到/早退扣款:扣時數 × 時薪(日薪、月薪都扣;僅打卡計薪有時刻可判)。
     // att_waived(颱風假等)當日不扣;early_leave_exempt(主管等)早退免計;
     // 辦公室人員周六、星期日、國定假日早退免計;外勞不計遲早退。
@@ -43253,7 +43282,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     const attItems=monthAtt.map(a=>{
       const weekday=(a.weekday!=null?a.weekday:(a.work_date?new Date(a.work_date).getDay():-1));
       const officeHolidayEarlyExempt=emp.emp_type==='office'&&(weekday===0||weekday===6||!!a.is_holiday);
-      return {date:a.work_date,weekday:weekday,punch_in:a.punch_in||'',punch_out:a.punch_out||'',work_hours:num(a.work_hours),work_day:(a.work_day!=null?num(a.work_day):(num(a.work_hours)>0?1:0)),half_day:!!a.half_day,late:isForeign?false:!!a.late,late_hours:isForeign?0:num(a.late_hours),early_hours:isForeign?0:num(a.early_hours),early_exempt:earlyExempt||officeHolidayEarlyExempt,is_foreign:isForeign,ot_hours:num(a.ot_hours),leave_type:a.leave_type||'',leave_hours:num(a.leave_hours),waived:!!a.att_waived,half_forced:!!a.half_forced};
+      return {date:a.work_date,weekday:weekday,punch_in:a.punch_in||'',punch_out:a.punch_out||'',work_hours:num(a.work_hours),work_day:(a.work_day!=null?num(a.work_day):(num(a.work_hours)>0?1:0)),half_day:!!a.half_day,late:noLate?false:!!a.late,late_hours:noLate?0:num(a.late_hours),early_hours:noLate?0:num(a.early_hours),early_exempt:earlyExempt||officeHolidayEarlyExempt,is_foreign:isForeign,ot_hours:num(a.ot_hours),leave_type:a.leave_type||'',leave_hours:num(a.leave_hours),waived:!!a.att_waived,half_forced:!!a.half_forced};
     });
     const lateHours=attItems.reduce((s,a)=>s+(a.waived?0:a.late_hours),0);
     const earlyHours=attItems.reduce((s,a)=>s+((a.waived||a.early_exempt)?0:a.early_hours),0);
@@ -43269,14 +43298,12 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     // 四種加班分開記:pay_buckets={wk 平日, sat 週六, sun 週日, nat 國定假日, typhoon 颱風}。
     let holidayDays=0,holidayPay=0;
     const buckets={wk:ot,sat:0,sun:0,nat:0,typhoon:0};
-    if(isOffice){
-      otItems.forEach(x=>{ if(x.excluded)return; holidayDays+=x.holiday_days; holidayPay+=x.holiday_pay;
-        const k=x.is_holiday?'nat':(x.weekday===0?'sun':'sat'); buckets[k]+=x.holiday_pay; });
-    }else{
-      if(isForeign) holidayDays=otCat.holiday+otCat.sunday+otCat.typhoon;
-      holidayPay=otCat.holidayPay+otCat.sundayPay+otCat.typhoonPay;
-      buckets.nat=otCat.holidayPay; buckets.sun=otCat.sundayPay; buckets.typhoon=otCat.typhoonPay;
-    }
+    otItems.forEach(x=>{
+      if(x.excluded||x.kind==='wk') return;
+      const sp=x.holiday_pay+((x.cat==='holiday'||x.cat==='sunday'||x.cat==='typhoon')?x.cat_pay:0);
+      holidayDays+=x.holiday_days; holidayPay+=sp; buckets[x.kind]+=sp;
+    });
+    if(isForeign) holidayDays+=otCat.holiday+otCat.sunday+otCat.typhoon;
     // 便當/補餐:白天有出勤一天一個(半天也算 1 個);不訂便當者補現金(非課稅伙食費,不併投保薪資)。預設:辦公不訂、其餘訂。
     // 上下班打卡都在 12:00~17:00 之間=只上下半天 → 不算。沒有打卡時間(出勤回報、缺卡)無從判斷,照算。
     const clockMin=t=>{ const m=String(t||'').match(/^(\d{1,2}):(\d{2})/); return m?(+m[1])*60+(+m[2]):null; };
@@ -43323,7 +43350,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   function unusedPayout(days,monthlyTotal){return round(days*(monthlyTotal/30));}
   function annualPeriod(hireDate,asOf){const h=new Date(hireDate),t=new Date(asOf);let anniv=new Date(h.getFullYear()+(t.getFullYear()-h.getFullYear()),h.getMonth(),h.getDate());if(anniv.getTime()>t.getTime())anniv=new Date(anniv.getFullYear()-1,anniv.getMonth(),anniv.getDate());const end=new Date(anniv.getFullYear()+1,anniv.getMonth(),anniv.getDate());const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');return{start:iso(anniv),end:iso(end)};}
   function suggestInsuredGrade(avgMonthlyWage,grades){return roundToGrade(num(avgMonthlyWage),grades);}
-  const api={buildConfig,policyFor,policies:POLICY_PRESETS,empTypeFromDept,roundToGrade,hourlyBase,dailyWage,overtimePay,calcPayslip,suggestInsuredGrade,monthsBetween,annualLeaveDays,annualPeriod,unusedPayout};
+  const api={buildConfig,buildRules,rulesFor,ruleKeyFor,RULE_CATS,policyFor,policies:POLICY_PRESETS,empTypeFromDept,roundToGrade,hourlyBase,dailyWage,overtimePay,calcPayslip,suggestInsuredGrade,monthsBetween,annualLeaveDays,annualPeriod,unusedPayout};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Payroll=api;
 })(typeof window!=='undefined'?window:globalThis);
 </script>
@@ -44526,12 +44553,14 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 
       put('H'+r,num(oc.t1)||'');
       if(num(oc.t1)&&!Number.isInteger(num(oc.t1))) cell('H'+r).z='0.00';
-      var foreignRate=(prCfg&&prCfg.foreign&&prCfg.foreign[emp.foreign_type])||{};
+      // 單價沒有實際次數可平均時,外勞用四類薪資規則的固定金額當單價
+      var rule=Payroll.rulesFor(emp,prCfg), ruleAmt=function(k){ var x=rule[k]||{}; return x.mode==='fixed'?num(x.amt):0; };
+      var foreignRate={tier1:rule.wk.mode==='fixed'?num(rule.wk.a):0, tier2:rule.wk.mode==='fixed'?num(rule.wk.b):0, holiday:ruleAmt('nat'), sunday:ruleAmt('sun')};
       var t1Rate=isOffice?'':(avg(ocp.t1,oc.t1)||(isForeign?num(foreignRate.tier1):Math.round(num(p._perDay)/2)));
       var t2Rate=isOffice?'':(avg(ocp.t2,oc.t2)||(isForeign?num(foreignRate.tier2):Math.round(num(p._perDay))));
       // 外勞固定單價直接取費率設定，不得再用假日總金額反推平均單價。本工星期日單價=日薪+加給。
-      var holidayRate=isOffice?'':(isForeign?num(foreignRate.holiday):avg(holidayAmount,holidayCount));
-      var sundayRate=isOffice?'':(isForeign?num(foreignRate.sunday):avg(ocp.sunday,oc.sunday));
+      var holidayRate=isOffice?'':(avg(holidayAmount,holidayCount)||(isForeign?num(foreignRate.holiday):0));
+      var sundayRate=isOffice?'':(avg(ocp.sunday,oc.sunday)||(isForeign?num(foreignRate.sunday):0));
       put('I'+r,t1Rate||'');
       put('J'+r,num(oc.t2)||'');
       put('K'+r,t2Rate||'');
@@ -46196,7 +46225,42 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   function setv(id,v){ var e=document.getElementById(id); if(e) e.value=(v==null?'':v); }
   function today(){ return (typeof currentDate==='string'&&currentDate)?currentDate:new Date().toISOString().slice(0,10); }
   function mv(o,k,d){ return (o&&o[k]!=null)?o[k]:d; }
-  var PCFG_FW=[['n','普通'],['s','特定']], PCFG_FW_KEYS=['tier1','tier2','holiday','sunday'];   // 外勞加班金額欄位
+  // 四類薪資規則表:pcfgRules[類別][日子]={mode,a,b,amt},算法定義在 Payroll.buildRules
+  var pcfgRules=null;
+  var PCFG_RCAT=[['office','辦公室'],['field','現場(本工)'],['特定','特定外勞'],['普通','普通外勞']];
+  var PCFG_RDAY=[['wk','平日加班'],['sat','週六'],['sun','週日'],['nat','國定假日'],['typhoon','颱風'],['late','遲到早退']];
+  var PCFG_RMODE={
+    wk:[['law','勞基法倍率'],['ratio','日薪比例'],['fixed','固定金額'],['none','不計']],
+    day:[['weekday','當平日'],['none','只算出勤,不另計'],['fixed','固定金額'],['wage_plus','日薪＋加給'],['law','勞基法倍率'],['rest','休息日倍率']],
+    typhoon:[['inherit','照當天規則'],['fixed','固定金額'],['rest','休息日倍率'],['law','勞基法倍率']],
+    late:[['deduct','扣'],['none','不計']]
+  };
+  var PCFG_RHINT={law:'前2小時 4/3、之後 5/3(國定/週日:8 小時內加發一日)',rest:'時薪 × 前2小時 4/3、3~8小時 5/3、超過 8/3',weekday:'日薪照算,17:30 後照平日加班',none:'不另外算錢',inherit:'颱風當天照國定假日/週日/週六/平日的規則'};
+  function pcfgRuleCell(ci,day){
+    var c=PCFG_RCAT[ci][0], r=(pcfgRules[c]||{})[day]||{}, opts=PCFG_RMODE[(day==='sat'||day==='sun'||day==='nat')?'day':day];
+    var id='pcfg-r-'+ci+'-'+day;
+    var h='<select onchange="pcfgRuleSet('+ci+',\''+day+'\',\'mode\',this.value)">'+opts.map(function(o){ return '<option value="'+o[0]+'"'+(r.mode===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select>';
+    var inp=function(f,label,unit,step){ return '<div class="pr-in">'+label+' <input type="number" step="'+step+'" value="'+esc(r[f]!=null?r[f]:'')+'" onchange="pcfgRuleSet('+ci+',\''+day+'\',\''+f+'\',this.value)"> '+unit+'</div>'; };
+    if(day==='wk'){
+      if(r.mode==='law') h+=inp('a','前2小時','倍','0.01')+inp('b','第3小時起','倍','0.01');
+      else if(r.mode==='ratio') h+=inp('a','17:30~20:30','×日薪','0.1')+inp('b','17:30~23:00','×日薪','0.1');
+      else if(r.mode==='fixed') h+=inp('a','17:30~20:30','元','1')+inp('b','17:30~23:00','元','1');
+    }else if(r.mode==='fixed') h+=inp('amt','每天','元','1');
+    else if(r.mode==='wage_plus') h+=inp('amt','日薪＋','元','1');
+    if(PCFG_RHINT[r.mode]&&day!=='wk'&&day!=='late') h+='<div class="pr-in" style="white-space:normal">'+PCFG_RHINT[r.mode]+'</div>';
+    return '<td id="'+id+'">'+h+'</td>';
+  }
+  function pcfgRenderRules(){
+    var t=document.getElementById('pcfg-rules'); if(!t||!pcfgRules) return;
+    t.innerHTML='<thead><tr><th></th>'+PCFG_RCAT.map(function(c){ return '<th>'+c[1]+'</th>'; }).join('')+'</tr></thead><tbody>'
+      +PCFG_RDAY.map(function(d){ return '<tr><th>'+d[1]+'</th>'+PCFG_RCAT.map(function(c,ci){ return pcfgRuleCell(ci,d[0]); }).join('')+'</tr>'; }).join('')
+      +'<tr><th>半天</th><td colspan="4" style="color:var(--text3)">一律按比例(13:00 前下班算 0.5 天);遲到早退視窗可個別勾「算半天」或「免扣」</td></tr></tbody>';
+  }
+  window.pcfgRuleSet=function(ci,day,f,v){
+    var c=PCFG_RCAT[ci][0]; pcfgRules[c]=pcfgRules[c]||{}; var r=pcfgRules[c][day]=pcfgRules[c][day]||{};
+    r[f]=(f==='mode')?v:num(v);
+    if(f==='mode'){ var cell=document.getElementById('pcfg-r-'+ci+'-'+day); if(cell) cell.outerHTML=pcfgRuleCell(ci,day); }
+  };
 
   window.pcfgInit=async function(){
     var hint=document.getElementById('pcfg-hint');
@@ -46216,10 +46280,9 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
 
   function pcfgFill(L){
     var of=(L.ot_office&&L.ot_office.meta)||{}, ff=(L.ot_field&&L.ot_field.meta)||{}, ml=(L.meal&&L.meal.meta)||{};
-    setv('pcfg-ot-first2', mv(of,'first2',1.34)); setv('pcfg-ot-rest', mv(of,'rest',1.67)); setv('pcfg-ot-cap', mv(of,'monthly_cap_hours',54));
-    setv('pcfg-ot-half', mv(ff,'half_day',0.5)); setv('pcfg-ot-full', mv(ff,'full_day',1.0)); setv('pcfg-ot-sun-bonus', mv(ff,'sunday_bonus',500));
-    var fwDef=Payroll.buildConfig([]).foreign, fw=(L.ot_foreign&&L.ot_foreign.meta)||{};
-    PCFG_FW.forEach(function(t){ PCFG_FW_KEYS.forEach(function(k){ setv('pcfg-fw-'+t[0]+'-'+k, mv(fw[t[1]],k,mv(fwDef[t[1]],k,0))); }); });
+    setv('pcfg-ot-cap', mv(of,'monthly_cap_hours',54));
+    pcfgRules=Payroll.buildRules(of, ff, (L.ot_foreign&&L.ot_foreign.meta)||null, (L.pay_rules&&L.pay_rules.meta)||null);
+    pcfgRenderRules();
     setv('pcfg-meal-subsidy', mv(ml,'subsidy',75));
     var P=pcfgLatestPolicy();   // 資料庫尚無資料時,以「最新年度政策」為預設值(單一資料來源)
     setv('pcfg-labor-rate',P.labor.rate); setv('pcfg-employment-rate',P.employment.rate); setv('pcfg-labor-emp',P.labor.emp); setv('pcfg-labor-er',P.labor.employer);
@@ -46301,12 +46364,17 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var eff=val('pcfg-eff'); if(!eff){ alert('請選生效日'); return; }
     var grades=Array.from(new Set(pcfgGrades.map(num).filter(function(x){return x>0;}))).sort(function(a,b){return a-b;});
     var n=function(id){ return num(val(id)); };
+    if(!pcfgRules){ alert('規則表尚未載入'); return; }
+    var R=function(c,d){ return (pcfgRules[c]&&pcfgRules[c][d])||{}; };
     var rows=[
-      {eff_date:eff, key:'ot_office', value:null, meta:{first2:n('pcfg-ot-first2'),rest:n('pcfg-ot-rest'),monthly_cap_hours:n('pcfg-ot-cap')}},
-      {eff_date:eff, key:'ot_field', value:null, meta:{half_day:n('pcfg-ot-half'),full_day:n('pcfg-ot-full'),sunday_bonus:n('pcfg-ot-sun-bonus')}},
+      {eff_date:eff, key:'pay_rules', value:null, meta:pcfgRules},
+      // 舊欄位照樣存一份(由規則表帶出),還沒更新的舊版網頁也算得對
+      {eff_date:eff, key:'ot_office', value:null, meta:{first2:num(R('office','wk').a)||1.34,rest:num(R('office','wk').b)||1.67,monthly_cap_hours:n('pcfg-ot-cap')}},
+      {eff_date:eff, key:'ot_field', value:null, meta:{half_day:num(R('field','wk').a),full_day:num(R('field','wk').b),sunday_bonus:num(R('field','sun').amt)}},
       {eff_date:eff, key:'ot_foreign', value:null, meta:(function(){
         var o={};
-        PCFG_FW.forEach(function(t){ o[t[1]]={}; PCFG_FW_KEYS.forEach(function(k){ o[t[1]][k]=n('pcfg-fw-'+t[0]+'-'+k); }); });
+        ['普通','特定'].forEach(function(t){ var fx=function(d){ var x=R(t,d); return x.mode==='fixed'?num(x.amt):0; };
+          o[t]={tier1:num(R(t,'wk').a),tier2:num(R(t,'wk').b),holiday:fx('nat'),sunday:fx('sun')}; });
         return o;
       })()},
       {eff_date:eff, key:'meal', value:null, meta:{subsidy:n('pcfg-meal-subsidy')}},
