@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.04.5"/>
+<meta name="sc-version" content="2026.11.04.6"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2954,6 +2954,19 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
     <div class="modal-actions">
       <button class="btn-modal-cancel" onclick="egstUnitAdd()">＋ 新增單位</button>
       <button class="btn-modal-ok" onclick="closeModal('egst-unit-modal')">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 長榮人員:設定區域主辦 ── -->
+<div class="modal-overlay" id="egst-mgr-modal">
+  <div class="modal">
+    <div class="modal-title">設定區域主辦</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">勾選目前的區域主辦(可多位)。被選的人在長榮人員名單上會標「區域主辦」;換人時回來改勾就好。</div>
+    <div id="egst-mgr-list" style="max-height:55vh;overflow:auto"></div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal('egst-mgr-modal')">取消</button>
+      <button class="btn-modal-ok" id="btn-save-egst-mgr" onclick="egstSaveAreaMgr()">儲存</button>
     </div>
   </div>
 </div>
@@ -6359,6 +6372,7 @@ window.normalizeFullWidth=function(value){
       <div class="page-header">
         <div class="page-title" style="margin-bottom:0">長榮人員</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-add-new" style="background:none;border:1px solid var(--border-hi);color:var(--text2)" onclick="egstOpenAreaMgr()">設定區域主辦</button>
           <button class="btn-add-new" style="background:none;border:1px solid var(--border-hi);color:var(--text2)" onclick="egstOpenUnits()">🏷 單位管理</button>
           <button class="btn-add-new" onclick="egstOpenModal(null)">＋ 新增人員</button>
         </div>
@@ -7563,6 +7577,10 @@ window.normalizeFullWidth=function(value){
     #staff-grid .spx-m-lines a{color:var(--accent2);text-decoration:none}
     .staff-m-name{font-size:17px;font-weight:700;overflow-wrap:anywhere}
     .staff-m-name small{font-size:12px;font-weight:400;color:var(--text3);margin-left:4px}
+    .egst-mgr-tag{display:inline-block;margin-left:4px;padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--accent2) 18%,transparent);color:var(--accent2);font-size:11px;font-weight:700;vertical-align:middle;white-space:nowrap}
+    #egst-mgr-list label{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--border);cursor:pointer;font-size:14px}
+    #egst-mgr-list label small{color:var(--text3);font-size:12px}
+    #egst-mgr-list .egst-mgr-unit{margin:12px 2px 4px;font-size:12px;font-weight:700;color:var(--accent2)}
     .egst-m-unit{margin:16px 2px 8px;font-size:13px;font-weight:700;color:var(--accent2)}
     .egst-m-unit:first-of-type{margin-top:4px}
     .egst-m-unit span{font-weight:400;color:var(--text3);margin-left:4px}
@@ -19202,7 +19220,20 @@ function filterBOM() {
 }
 // 長榮人員「單位 / 職級」固定排序(全域,長榮人員表與 BOM 主辦下拉共用)
 const EGST_UNIT_ORDER=['長榮鋼鐵營業事業本部','製造部','機材部','職安部','品管課','總務課','製造二課','製造二課(S/P)','製造一課','管料課','管料課(車管)','管料課(堆高機手)','管料課(天車手)','管料課(鋼板)','保養課','警衛室'];
-const EGST_RANK_ORDER=['副總','協理','經理','課長','專業工程師','助副','課員(主辦)','課員','工程員'];
+const EGST_RANK_ORDER=['副總','協理','經理','課長','專業工程師','助副','課員','工程員'];
+// 區域主辦:不再用職級「課員(主辦)」(主辦會換人、也不一定是課員),改在長榮人員頁按「設定區域主辦」勾選;
+// 存 app_config.eg_area_mgr(eg_staff.id 的 JSON 陣列),被設定的人在名單上加「區域主辦」標記
+const EGST_AREA_MGR_KEY='eg_area_mgr';
+let egAreaMgrIds=[];
+async function egLoadAreaMgr(){
+  try{
+    const r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+EGST_AREA_MGR_KEY);
+    const row=r.ok&&(r.data||[])[0]; const a=row?JSON.parse(row.value||'[]'):[];
+    egAreaMgrIds=Array.isArray(a)?a.map(Number).filter(Boolean):[];
+  }catch(e){ console.warn('egLoadAreaMgr',e); }
+  return egAreaMgrIds;
+}
+function egIsAreaMgr(id){ return egAreaMgrIds.indexOf(Number(id))>=0; }
 // 單位清單可在網頁上新增/改名/刪除:整份清單(含順序)存 app_config.eg_units(JSON 陣列)。
 // 還沒存過時 = 上面的預設清單 + 舊版 eg_units_extra(之前只存自行新增的單位)。
 const EGST_UNIT_KEY='eg_units', EGST_UNIT_EXTRA_KEY='eg_units_extra';
@@ -42624,7 +42655,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   window.egstInit=async function(){
     var tbl=document.getElementById('egst-table'); if(tbl) tbl.innerHTML='<div class="empty-state">載入中...</div>';
     try{
-      var res=(await Promise.all([sbFetchAll('/rest/v1/eg_staff?select=*'), egLoadUnits()]))[0];
+      var res=(await Promise.all([sbFetchAll('/rest/v1/eg_staff?select=*'), egLoadUnits(), egLoadAreaMgr()]))[0];
       egstRows=Array.isArray(res.data)?res.data:[];
     }catch(e){ console.warn('egstInit failed',e); if(tbl) tbl.innerHTML='<div class="empty-state">載入失敗</div>'; return; }
     // 有人用的單位卻不在清單(例:舊資料「管料課」)→ 補進清單,放在同名的「管料課(…)」前面,選單和單位管理才看得到
@@ -42660,7 +42691,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
           var n=rows.filter(function(x){ return (x.unit||'（未填單位）')===u; }).length;
           html+='<div class="egst-m-unit">'+esc(u)+' <span>'+n+'</span></div><div class="sp-l-list">'; }
         html+='<div class="sp-l-card" role="button" tabindex="0" onclick="egstOpenModal('+r.id+')">'
-          +'<div class="sp-l-top"><span class="staff-m-name">'+esc(r.name||'—')+'</span>'+(r.rank?'<span class="egst-m-rank">'+esc(r.rank)+'</span>':'')+'</div>'
+          +'<div class="sp-l-top"><span class="staff-m-name">'+esc(r.name||'—')+(egIsAreaMgr(r.id)?' <span class="egst-mgr-tag">區域主辦</span>':'')+'</span>'+(r.rank?'<span class="egst-m-rank">'+esc(r.rank)+'</span>':'')+'</div>'
           +(r.office?'<div class="sp-l-meta">📍 '+esc(r.office)+'</div>':'')
           +'<span class="sp-l-go" aria-hidden="true">›</span></div>';
       });
@@ -42669,7 +42700,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     }
     var body=rows.map(function(r){
       return '<tr>'
-        +'<td>'+esc(r.name||'—')+'</td><td>'+esc(r.unit||'—')+'</td><td>'+esc(r.rank||'—')+'</td><td>'+esc(r.office||'—')+'</td>'
+        +'<td>'+esc(r.name||'—')+(egIsAreaMgr(r.id)?' <span class="egst-mgr-tag">區域主辦</span>':'')+'</td><td>'+esc(r.unit||'—')+'</td><td>'+esc(r.rank||'—')+'</td><td>'+esc(r.office||'—')+'</td>'
         +'<td><div class="staff-list-actions">'
           +'<button class="btn-icon edit" onclick="egstOpenModal('+r.id+')" style="border:1px solid var(--border)">✏️</button>'
           +'<button class="btn-icon del" onclick="egstDelete('+r.id+')" style="border:1px solid var(--border)">🗑</button>'
@@ -42730,6 +42761,34 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(typeof window.__invalidateEgStaff==='function') window.__invalidateEgStaff();
     renderUnitList(); egstRender();
   }
+  // ── 設定區域主辦 ──
+  window.egstOpenAreaMgr=async function(){
+    await egLoadAreaMgr();   // 先抓最新,避免蓋掉別人剛改的
+    var rows=egstRows.slice().sort(function(a,b){
+      return egOrderIdx(EGST_UNIT_ORDER,a.unit)-egOrderIdx(EGST_UNIT_ORDER,b.unit)
+          || egOrderIdx(EGST_RANK_ORDER,a.rank)-egOrderIdx(EGST_RANK_ORDER,b.rank)
+          || String(a.name||'').localeCompare(String(b.name||''),'zh-Hant');
+    });
+    var html='', cur=null;
+    rows.forEach(function(r){
+      var u=r.unit||'（未填單位）';
+      if(u!==cur){ cur=u; html+='<div class="egst-mgr-unit">'+esc(u)+'</div>'; }
+      html+='<label><input type="checkbox" class="egst-mgr-cb" value="'+r.id+'"'+(egIsAreaMgr(r.id)?' checked':'')+'> '+esc(r.name||'—')+(r.rank?' <small>'+esc(r.rank)+'</small>':'')+'</label>';
+    });
+    document.getElementById('egst-mgr-list').innerHTML=html||'<div class="empty-state">目前沒有長榮人員</div>';
+    openModal('egst-mgr-modal');
+  };
+  window.egstSaveAreaMgr=async function(){
+    var ids=Array.prototype.map.call(document.querySelectorAll('#egst-mgr-list .egst-mgr-cb:checked'),function(cb){ return Number(cb.value); });
+    var btn=document.getElementById('btn-save-egst-mgr'); if(btn) btn.disabled=true;
+    var w=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:EGST_AREA_MGR_KEY,value:JSON.stringify(ids)})});
+    if(btn) btn.disabled=false;
+    if(!w.ok){ alert('儲存失敗'+unitErr(w)); return; }
+    egAreaMgrIds=ids;
+    closeModal('egst-mgr-modal');
+    egstRender();
+  };
+
   window.egstOpenUnits=async function(){
     var box=document.getElementById('egst-unit-list'); if(box) box.innerHTML='<div class="empty-state">載入中...</div>';
     openModal('egst-unit-modal');
