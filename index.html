@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.04.9"/>
+<meta name="sc-version" content="2026.11.04.10"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -32049,10 +32049,17 @@ window.shipTab=function(t){
   if(t==='hist') shipHistLoad();
 };
 // 載入待出貨構件(看板與主頁分頁共用)。只抓「未出貨」的上線配置;每日產量只抓最早上線日之後的,主頁才不會變慢。
-let shipBoardLoadedAt=0, shipBoardLoading=null;
-function shipLoadRows(){
-  if(shipBoardLoading) return shipBoardLoading;
-  shipBoardLoading=(async()=>{
+let shipBoardLoadedAt=0, shipBoardLoading=null, shipLoadStage='', shipLoadGen=0;
+// fresh=true:不等前一次(可能卡住的)載入,直接重抓。每一步記時間,太慢或失敗寫進錯誤紀錄,才查得到卡在哪
+function shipLoadRows(fresh){
+  if(shipBoardLoading&&!fresh) return shipBoardLoading;
+  const gen=++shipLoadGen, t0=Date.now(), steps=[];
+  let tPrev=t0, cur='';
+  const stage=label=>{ const now=Date.now(); if(cur) steps.push(cur.replace('…','')+' '+((now-tPrev)/1000).toFixed(1)+'s'); tPrev=now; cur=label;
+    if(gen===shipLoadGen){ shipLoadStage=label; const st=document.querySelector('#ship-body .ship-load-stage'); if(st) st.textContent=label; } };
+  const p=(async()=>{
+    const dispP=shipLoadDispatches().catch(e=>console.warn('ship dispatches',e));   // 派車紀錄跟其他資料不相干,一開始就一起抓
+    stage('讀取待出貨構件…');
     const lay=await sbFetchAll('/rest/v1/layout_items?select=id,proj_num,zone_code,part_no,bed,qty,status,work_date&ship_date=is.null');
     if(!lay.ok||!Array.isArray(lay.data)) throw new Error('待出貨構件載入失敗');   // 別當成「沒有待出貨」
     const layRows=(Array.isArray(lay.data)?lay.data:[]).filter(r=>String(r.part_no||'').trim()&&r.status!=='HOLD'&&r.status!=='已出貨');
@@ -32061,6 +32068,7 @@ function shipLoadRows(){
     const parts=[...new Set(layRows.map(r=>String(r.part_no).trim()))];
     const q=v=>'"'+String(v).replace(/"/g,'\\"')+'"';
     const chunks=[]; for(let i=0;i<parts.length;i+=80) chunks.push(parts.slice(i,i+80));
+    stage('讀取每日產量…');
     const [dlyParts,pre]=await Promise.all([
       Promise.all(chunks.map(c=>sbFetchAll('/rest/v1/daily_output?select=date,proj_num,part_no,serial_no&part_no=in.('+encodeURIComponent(c.map(q).join(','))+')'))),
       sbFetchAll('/rest/v1/pre_inspections?select=proj_num,part_no')
@@ -32068,6 +32076,7 @@ function shipLoadRows(){
     const dly={ok:dlyParts.every(x=>x&&x.ok), data:[].concat(...dlyParts.map(x=>Array.isArray(x&&x.data)?x.data:[]))};
     if(!dly.ok) throw new Error('每日產量載入失敗');
     const dds=dly.data.map(x=>String(x.date||'').slice(0,10)).filter(Boolean).sort();
+    stage('讀取受檢時間…');
     await dailyLoadRecv(dds[0]||new Date().toISOString().slice(0,10));
     const K=(a,b)=>String(a||'').trim().toUpperCase()+'|'+String(b||'').trim().toUpperCase();
     const preKeys=new Set((Array.isArray(pre.data)?pre.data:[]).map(x=>K(x.proj_num,x.part_no)));
@@ -32076,19 +32085,30 @@ function shipLoadRows(){
       const k=K(x.proj_num,x.part_no), cur=lastInsp.get(k);
       if(!cur||String(x.date)>String(cur.date)) lastInsp.set(k,x);
     });
-    shipBoardRows=layRows.filter(r=>{ const k=K(r.proj_num,r.part_no); return lastInsp.has(k)&&!preKeys.has(k); })
+    const rows=layRows.filter(r=>{ const k=K(r.proj_num,r.part_no); return lastInsp.has(k)&&!preKeys.has(k); })
       .map(r=>{
         const d=lastInsp.get(K(r.proj_num,r.part_no));
         return {id:r.id, proj:String(r.proj_num||'').trim(), zone:String(r.zone_code||'').trim(), part:String(r.part_no||'').trim(),
           qty:Math.max(1,parseInt(r.qty)||1), bed:shipBedLabel(r.bed), col:shipIsColumn(r.zone_code),
           inspDate:String(d.date||''), recv:dailyRecvOf(d)};
       }).filter(r=>r.bed!=='HOLD');
-    await shipLoadDispatches();
+    stage('讀取派車紀錄…');
+    await dispP;
+    stage('');
+    if(gen!==shipLoadGen) return shipBoardRows;   // 已經有較新的一次載入,舊的結果不要蓋掉
+    shipBoardRows=rows;
     shipBoardLoadedAt=Date.now();
     return shipBoardRows;
   })();
-  shipBoardLoading.then(()=>{ shipBoardLoading=null; },()=>{ shipBoardLoading=null; });
-  return shipBoardLoading;
+  const done=err=>{
+    if(shipBoardLoading===p) shipBoardLoading=null;
+    const sec=(Date.now()-t0)/1000;
+    if(err||sec>10){ if(!err) stage(''); try{ window.errlogPush&&window.errlogPush({kind:'slow', message:'派車看板載入'+(err?'失敗':'太慢')+' '+sec.toFixed(1)+'s:'+steps.concat(err&&cur?[cur.replace('…','')+'(失敗)']:[]).join(' / ')+(err?' — '+String(err.message||err):''), source:'shipLoadRows'}); }catch(e){} }
+    if(err&&gen===shipLoadGen) shipLoadStage='';
+  };
+  p.then(()=>done(null),done);
+  shipBoardLoading=p;
+  return p;
 }
 // 分組單位=柱位＋受檢時間:同一柱位有兩個受檢時段就分兩組(派車訊息裡柱位仍只出現一次)
 function shipGroupKey(r){ return r.bed+'\u0001'+(r.recv||''); }
@@ -32103,10 +32123,16 @@ async function openShipBoard(reload, pickKey){
   shipModalEl(); openModal('ship-board-modal'); shipTab('board');
   const body=document.getElementById('ship-body');
   if(reload||!shipBoardLoadedAt||Date.now()-shipBoardLoadedAt>5*60000){
-    body.innerHTML='<div class="empty-state">載入中...</div>';
+    body.innerHTML='<div class="empty-state">載入中...<div class="ship-load-stage" style="font-size:12px;margin-top:6px">'+esc(shipLoadStage||'')+'</div>'
+      +'<div class="ship-load-slow" style="display:none;margin-top:10px;font-size:13px">網路好像比較慢…<br><button class="btn-sm" style="margin-top:8px" onclick="openShipBoard(true)">↻ 重新載入</button></div></div>';
     shipBoardSel={}; shipCars=1;
-    try{ await shipLoadRows(); }
-    catch(e){ console.warn('ship board',e); body.innerHTML='<div class="empty-state" style="color:var(--danger)">載入失敗（網路不穩？）<br><button class="btn-sm" style="margin-top:8px" onclick="openShipBoard(true)">↻ 重試</button></div>'; return; }
+    // 等超過 8 秒就給「重新載入」:手機從背景切回來時,進行中的請求常卡住,重抓通常就好
+    const slowT=setTimeout(()=>{ const x=body.querySelector('.ship-load-slow'); if(x) x.style.display=''; },8000);
+    const myLoad=shipLoadRows(!!reload), myGen=shipLoadGen;
+    try{ await myLoad; }
+    catch(e){ clearTimeout(slowT); if(myGen!==shipLoadGen) return; console.warn('ship board',e); body.innerHTML='<div class="empty-state" style="color:var(--danger)">載入失敗（網路不穩？）<br><button class="btn-sm" style="margin-top:8px" onclick="openShipBoard(true)">↻ 重試</button></div>'; return; }
+    finally{ clearTimeout(slowT); }
+    if(myGen!==shipLoadGen) return;   // 中途按了「重新載入」,交給新的那次畫
     if(typeof shipDashRender==='function') shipDashRender();
   }
   if(pickKey && shipGroupBed(pickKey)!=='未排柱位' && shipBoardRows.some(r=>shipGroupKey(r)===pickKey)){ shipBoardSel={}; shipToggleBed(pickKey,true); }
