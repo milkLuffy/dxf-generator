@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.04.10"/>
+<meta name="sc-version" content="2026.11.04.11"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -2796,6 +2796,34 @@ table.att-overview-grid tr.ov-grand td{background:var(--bg3);font-weight:700;bor
 <!-- ── 通知設定 modal ── -->
 
 <!-- ── 帳號頁面權限 modal ── -->
+<style>
+.perm-mx-modal{max-width:min(1400px,96vw);width:96vw}
+.perm-mx-legend{font-size:12px;color:var(--text2);margin:2px 0 8px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.perm-mx-legend .perm-mx-c{display:inline-flex;width:24px;height:22px;align-items:center;justify-content:center;border-radius:5px;margin-left:6px}
+.perm-mx-wrap{overflow:auto;max-height:68vh;border:1px solid var(--border);border-radius:10px;-webkit-overflow-scrolling:touch}
+table.perm-mx{border-collapse:separate;border-spacing:0;font-size:12px}
+table.perm-mx th,table.perm-mx td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--bg2)}
+table.perm-mx thead th{position:sticky;top:0;z-index:2;background:var(--bg3)}
+table.perm-mx thead tr:nth-child(2) th{top:25px}
+table.perm-mx .perm-mx-sec{padding:4px 6px;font-weight:700;text-align:center;white-space:nowrap;height:25px;box-sizing:border-box}
+table.perm-mx .perm-mx-h{vertical-align:bottom;padding:6px 2px;height:118px;min-width:30px}
+table.perm-mx .perm-mx-h span{writing-mode:vertical-rl;white-space:nowrap;font-weight:500;color:var(--text2)}
+table.perm-mx .perm-mx-name{position:sticky;left:0;z-index:1;min-width:120px;max-width:150px;padding:6px 8px;text-align:left;background:var(--bg3)}
+table.perm-mx thead .perm-mx-name{z-index:3}
+table.perm-mx td.perm-mx-name b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+table.perm-mx td.perm-mx-name small{display:block;color:var(--text3);font-size:10.5px;white-space:nowrap}
+.perm-mx-tag{display:inline-block;font-size:10px;padding:0 5px;border-radius:8px;background:var(--accent2);color:#fff;margin-left:4px;vertical-align:1px}
+.perm-mx-unset-n{color:var(--warn,#d29922)}
+.perm-mx-c{text-align:center;cursor:pointer;min-width:30px;height:30px;padding:0;user-select:none;-webkit-user-select:none}
+.perm-mx-c.edit{background:rgba(46,160,67,.18)!important}
+.perm-mx-c.read{background:rgba(56,139,253,.16)!important}
+.perm-mx-c.hide{color:var(--text3)}
+.perm-mx-c.unset{outline:1.5px dashed var(--text3);outline-offset:-4px}
+.perm-mx-c.admin{cursor:default;opacity:.55}
+.perm-mx-c.saving{opacity:.4}
+.perm-mx-dis td{opacity:.55}
+@media (hover:hover){table.perm-mx td.perm-mx-c:not(.admin):hover{filter:brightness(1.25)}}
+</style>
 <div class="modal-overlay" id="perm-modal">
   <div class="modal" style="max-width:600px">
     <div class="modal-title">頁面權限 — <span id="perm-modal-acc" style="color:var(--accent2)">—</span></div>
@@ -6725,6 +6753,7 @@ window.normalizeFullWidth=function(value){
     <div class="page" id="page-accounts">
       <div class="page-header">
         <div class="page-title" style="margin-bottom:0">帳號管理</div>
+        <button class="btn" style="margin-left:auto" onclick="permMatrixOpen()" title="所有帳號 × 所有頁面,一張表看誰能看、誰能改;點格子可以直接改">📋 權限總表</button>
         <span id="accounts-save-btn" style="font-family:var(--mono);font-size:12px;color:var(--text3)">改完自動儲存</span>
       </div>
       <div class="card ah-card" id="acc-hours-card"></div>
@@ -14473,6 +14502,14 @@ const PAGE_META=[
   {k:'health',       label:'系統健康',       sec:'admin'},
 ];
 const ADMIN_PAGES=new Set(['output','pricing','cost','projpl','accounts','notify','audit','health']);   // 一般帳號預設隱藏的管理頁
+// 2026-11 以前就有的頁面:帳號沒設定時照舊「可編輯」(不讓現有帳號突然少頁面)。
+// 之後新增的頁面「不要」加進這裡 → 沒設定的帳號一律隱藏,要給誰再到帳號管理打開。
+const PERM_LEGACY_PAGES=new Set(['dashboard','mypage','sop','todo','evergreen-sys','hardware','labor','deductions',
+  'bom','layout','daily','inspect','a201a202','prod','spcount','modparts','loading',
+  'multilevel','bomtool','sp','dxf','hazard','selfcheck','namelabels','drawingsearch',
+  'staff','egstaff','giftlist','attend','attendlog','attendance','egdaily']);
+// 帳號「沒設定」這一頁時的預設權限
+function permDefault(k){ return (ADMIN_PAGES.has(k)||!PERM_LEGACY_PAGES.has(k))?'hide':'edit'; }
 // 人事薪資專區:整區用單一 perms 鍵 'payroll' 控管(與資料庫 is_hr() 一致),未授權一律隱藏
 const HR_PAGES=new Set(['emp','leave','payroll','payslip','payrollcfg']);
 // 人事薪資四頁各自一把鑰匙;未設定時沿用舊的整區鍵 perms.payroll(舊帳號行為不變)
@@ -14666,7 +14703,7 @@ function pagePerm(k){
     return (pv==='read'||pv==='edit')?pv:'hide';
   }
   if(p[k]==='hide'||p[k]==='read'||p[k]==='edit') return p[k];   // 帳號自訂
-  return ADMIN_PAGES.has(k)?'hide':'edit';             // 未設定:管理頁隱藏、其餘可編輯
+  return permDefault(k);                                // 未設定:管理頁與新頁面隱藏、舊頁面可編輯
 }
 // 依權限顯示/隱藏 nav 項目與分類圖示;整區皆隱藏 → 連圖示一起藏
 function applyPermsUI(){
@@ -23057,7 +23094,7 @@ function openPermModal(id){
   const isAdmin=acc.is_admin;
   const rowFor=pm=>{
     // 顯示「目前實際套用值」:管理員一律 edit;未設定則帶預設
-    const cur = isAdmin ? 'edit' : (perms[pm.k]||(ADMIN_PAGES.has(pm.k)?'hide':'edit'));
+    const cur = isAdmin ? 'edit' : (perms[pm.k]||permDefault(pm.k));
     const opt=(v,t)=>`<option value="${v}"${cur===v?' selected':''}>${t}</option>`;
     return `<tr>
       <td style="padding:4px 8px">${pm.label}</td>
@@ -23261,6 +23298,88 @@ function permBulk(v){
   if(typeof permHrSummary==='function') permHrSummary();
   if(typeof showToast==='function') showToast('已全部設為「'+({edit:'可編輯',read:'唯讀',hide:'隱藏'})[v]+'」,按「儲存」才會生效','info');
 }
+// ── 權限總表:列=帳號、欄=頁面,一眼看出每個人實際能看/能改哪些頁;點格子循環 隱藏→唯讀→可編輯,馬上存 ──
+// 「沒設定、用預設值」的格子用虛線框標出來,點過就變成明確設定。
+const PERM_HR_COLS=[{k:'hr_emp',label:'員工薪資設定',hr:true},{k:'hr_payroll',label:'薪資計算',hr:true},{k:'hr_leave',label:'請假・特休',hr:true},{k:'hr_payrollcfg',label:'費率設定',hr:true}];
+let permMxShowAll=false;
+function permMxCols(){
+  const cols=[];
+  Object.keys(SECTION_TITLE).filter(sec=>sec!=='favorite').forEach(sec=>{
+    if(sec==='hr'){ PERM_HR_COLS.forEach(c=>cols.push(Object.assign({sec},c))); return; }
+    PAGE_META.filter(pm=>pm.sec===sec&&!HR_PAGES.has(pm.k)).forEach(pm=>cols.push({k:pm.k,label:pm.label.replace('(外部)',''),sec}));
+  });
+  return cols;
+}
+// 回傳 {v:實際權限, set:是否有明確設定}
+function permMxVal(acc,c){
+  if(acc.is_admin) return {v:'edit',set:true,admin:true};
+  const p=acc.perms||{}, ok=v=>v==='hide'||v==='read'||v==='edit';
+  if(c.hr){ if(ok(p[c.k])) return {v:p[c.k],set:true}; const pv=p.payroll; return {v:(pv==='read'||pv==='edit')?pv:'hide',set:ok(pv)}; }
+  if(ok(p[c.k])) return {v:p[c.k],set:true};
+  return {v:permDefault(c.k),set:false};
+}
+function permMxAccounts(){
+  return (allAccounts||[]).filter(a=>(a.status||'approved')==='approved'&&(permMxShowAll||!a.disabled))
+    .sort((a,b)=>(b.is_admin?1:0)-(a.is_admin?1:0)||String(a.name||a.account||'').localeCompare(String(b.name||b.account||''),'zh-Hant'));
+}
+function permMatrixOpen(){
+  let m=document.getElementById('perm-mx-modal');
+  if(!m){
+    m=document.createElement('div'); m.className='modal-overlay'; m.id='perm-mx-modal';
+    m.onclick=e=>{ if(e.target===m) closeModal('perm-mx-modal'); };
+    m.innerHTML='<div class="modal perm-mx-modal"><div class="modal-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">📋 權限總表'
+      +'<label style="margin-left:auto;font-size:12px;font-weight:400;display:flex;align-items:center;gap:4px"><input type="checkbox" id="perm-mx-all" onchange="permMxShowAll=this.checked;permMatrixRender()">含已停用帳號</label></div>'
+      +'<div class="perm-mx-legend"><span class="perm-mx-c edit">✏️</span>可編輯 <span class="perm-mx-c read">👁</span>唯讀 <span class="perm-mx-c hide">·</span>隱藏'
+      +' <span class="perm-mx-c edit unset">✏️</span>虛線＝沒設定、用預設值　<b>點格子</b>可切換,馬上儲存</div>'
+      +'<div class="perm-mx-wrap" id="perm-mx-body"></div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.6">※ 薪資可視員工、機密欄位、團體待辦、產值金額等細項,仍在各帳號的「頁面權限」視窗設定。<br>※ 這次之後新增的頁面,沒設定的帳號一律<b>隱藏</b>。</div>'
+      +'<div class="modal-actions"><button class="btn-modal-cancel" onclick="closeModal(\'perm-mx-modal\')">關閉</button></div></div>';
+    document.body.appendChild(m);
+  }
+  permMatrixRender();
+  openModal('perm-mx-modal');
+}
+function permMatrixRender(){
+  const box=document.getElementById('perm-mx-body'); if(!box) return;
+  const cols=permMxCols(), accs=permMxAccounts();
+  const e=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const secs=[]; cols.forEach(c=>{ const l=secs[secs.length-1]; if(l&&l.sec===c.sec) l.n++; else secs.push({sec:c.sec,n:1}); });
+  const ICON={edit:'✏️',read:'👁',hide:'·'};
+  let h='<table class="perm-mx"><thead><tr><th class="perm-mx-name" rowspan="2">帳號</th>'
+    +secs.map(x=>'<th colspan="'+x.n+'" class="perm-mx-sec">'+e(SECTION_TITLE[x.sec]||x.sec)+'</th>').join('')+'</tr><tr>'
+    +cols.map(c=>'<th class="perm-mx-h"><span>'+e(c.label)+'</span></th>').join('')+'</tr></thead><tbody>';
+  if(!accs.length) h+='<tr><td colspan="'+(cols.length+1)+'" class="empty-state">沒有帳號</td></tr>';
+  accs.forEach(a=>{
+    const vals=cols.map(c=>permMxVal(a,c));
+    const unset=vals.filter(x=>!x.set).length, nEdit=vals.filter(x=>x.v==='edit').length, nRead=vals.filter(x=>x.v==='read').length;
+    h+='<tr'+(a.disabled?' class="perm-mx-dis"':'')+'><td class="perm-mx-name"><b>'+e(a.name||a.account||'')+'</b>'
+      +(a.is_admin?'<span class="perm-mx-tag">管理員</span>':'')+(a.disabled?'<span class="perm-mx-tag">停用</span>':'')
+      +'<small>'+(a.is_admin?'全部可編輯':('改 '+nEdit+' · 看 '+nRead+(unset?' · <span class="perm-mx-unset-n">未設定 '+unset+'</span>':'')))+'</small></td>'
+      +vals.map((x,i)=>'<td class="perm-mx-c '+x.v+(x.set?'':' unset')+(x.admin?' admin':'')+'"'
+        +(x.admin?' title="管理員一律可編輯"':' title="'+e(cols[i].label)+(x.set?'':'(沒設定,預設)')+'" onclick="permMxCycle(\''+e(a.id)+'\',\''+e(cols[i].k)+'\',this)"')+'>'+ICON[x.v]+'</td>').join('')+'</tr>';
+  });
+  box.innerHTML=h+'</tbody></table>';
+}
+window.permMxCycle=async function(id,k,td){
+  const acc=(allAccounts||[]).find(a=>String(a.id)===String(id)); if(!acc||acc.is_admin) return;
+  const col=permMxCols().find(c=>c.k===k); if(!col) return;
+  if(td&&td.classList.contains('saving')) return;
+  const cur=permMxVal(acc,col).v, next={hide:'read',read:'edit',edit:'hide'}[cur];
+  const perms=Object.assign({},acc.perms||{});
+  if(col.hr){
+    // 四頁各自存,另外把整區鍵 payroll 回寫成四頁中最寬鬆的(資料庫 is_hr() 只認這個鍵),同帳號權限視窗的做法
+    PERM_HR_COLS.forEach(c=>{ if(!['hide','read','edit'].includes(perms[c.k])) perms[c.k]=permMxVal(acc,c).v; });
+    perms[k]=next;
+    const RANK={hide:0,read:1,edit:2}; let top=0; PERM_HR_COLS.forEach(c=>{ top=Math.max(top,RANK[perms[c.k]]||0); });
+    perms.payroll=['hide','read','edit'][top];
+  } else perms[k]=next;
+  if(td){ td.classList.add('saving'); }
+  let r; try{ r=await sbFetch('/rest/v1/profiles?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({perms})}); }catch(e){ r={ok:false,status:'網路錯誤'}; }
+  if(!r.ok){ if(td) td.classList.remove('saving'); alert('儲存失敗('+r.status+')'); return; }
+  acc.perms=perms;
+  if(currentUser&&String(currentUser.id)===String(id)){ currentUser.perms=perms; applyPermsUI(); }
+  permMatrixRender();
+};
 async function savePermModal(){
   const acc=allAccounts.find(a=>String(a.id)===String(_permEditId)); if(!acc){ closeModal('perm-modal'); return; }
   const perms=Object.assign({}, acc.perms||{});   // 以現有設定為基底,避免弄丟這個視窗沒呈現的鍵
