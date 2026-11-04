@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.04.6"/>
+<meta name="sc-version" content="2026.11.04.7"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -7577,6 +7577,7 @@ window.normalizeFullWidth=function(value){
     #staff-grid .spx-m-lines a{color:var(--accent2);text-decoration:none}
     .staff-m-name{font-size:17px;font-weight:700;overflow-wrap:anywhere}
     .staff-m-name small{font-size:12px;font-weight:400;color:var(--text3);margin-left:4px}
+    .egst-unit-hl{display:inline-block;padding:1px 8px;border-radius:6px;background:color-mix(in srgb,var(--yellow,#f5c518) 28%,transparent);color:var(--text);font-weight:800}
     .egst-mgr-tag{display:inline-block;margin-left:4px;padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--accent2) 18%,transparent);color:var(--accent2);font-size:11px;font-weight:700;vertical-align:middle;white-space:nowrap}
     #egst-mgr-list label{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--border);cursor:pointer;font-size:14px}
     #egst-mgr-list label small{color:var(--text3);font-size:12px}
@@ -19233,6 +19234,9 @@ async function egLoadAreaMgr(){
   }catch(e){ console.warn('egLoadAreaMgr',e); }
   return egAreaMgrIds;
 }
+// 跟我們比較有關係的單位:名單上粗體＋底色
+const EGST_UNIT_HL=['長榮鋼鐵營業事業本部','製造部','製造二課'];
+function egUnitHtml(u){ return EGST_UNIT_HL.indexOf(String(u||'').trim())>=0?'<span class="egst-unit-hl">'+esc(u)+'</span>':esc(u||'—'); }
 function egIsAreaMgr(id){ return egAreaMgrIds.indexOf(Number(id))>=0; }
 // 單位清單可在網頁上新增/改名/刪除:整份清單(含順序)存 app_config.eg_units(JSON 陣列)。
 // 還沒存過時 = 上面的預設清單 + 舊版 eg_units_extra(之前只存自行新增的單位)。
@@ -42689,7 +42693,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         var u=r.unit||'（未填單位）';
         if(u!==cur){ if(cur!==null) html+='</div>'; cur=u;
           var n=rows.filter(function(x){ return (x.unit||'（未填單位）')===u; }).length;
-          html+='<div class="egst-m-unit">'+esc(u)+' <span>'+n+'</span></div><div class="sp-l-list">'; }
+          html+='<div class="egst-m-unit">'+egUnitHtml(u)+' <span>'+n+'</span></div><div class="sp-l-list">'; }
         html+='<div class="sp-l-card" role="button" tabindex="0" onclick="egstOpenModal('+r.id+')">'
           +'<div class="sp-l-top"><span class="staff-m-name">'+esc(r.name||'—')+(egIsAreaMgr(r.id)?' <span class="egst-mgr-tag">區域主辦</span>':'')+'</span>'+(r.rank?'<span class="egst-m-rank">'+esc(r.rank)+'</span>':'')+'</div>'
           +(r.office?'<div class="sp-l-meta">📍 '+esc(r.office)+'</div>':'')
@@ -42700,7 +42704,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     }
     var body=rows.map(function(r){
       return '<tr>'
-        +'<td>'+esc(r.name||'—')+(egIsAreaMgr(r.id)?' <span class="egst-mgr-tag">區域主辦</span>':'')+'</td><td>'+esc(r.unit||'—')+'</td><td>'+esc(r.rank||'—')+'</td><td>'+esc(r.office||'—')+'</td>'
+        +'<td>'+esc(r.name||'—')+(egIsAreaMgr(r.id)?' <span class="egst-mgr-tag">區域主辦</span>':'')+'</td><td>'+egUnitHtml(r.unit)+'</td><td>'+esc(r.rank||'—')+'</td><td>'+esc(r.office||'—')+'</td>'
         +'<td><div class="staff-list-actions">'
           +'<button class="btn-icon edit" onclick="egstOpenModal('+r.id+')" style="border:1px solid var(--border)">✏️</button>'
           +'<button class="btn-icon del" onclick="egstDelete('+r.id+')" style="border:1px solid var(--border)">🗑</button>'
