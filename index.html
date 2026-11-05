@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.05.1"/>
+<meta name="sc-version" content="2026.11.05.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -49027,25 +49027,39 @@ function pmPricingUnits(row){
   });
   return [...out.values()];
 }
-// none=沒有要計價的細項 / done=全部帶入過 / part=部分工程區帶入 / todo=還沒帶入
+// 已議價的工程區(比照計價頁:單價有數字或有文字備註)→ 沒帶入也不用再送,價格已經談定
+let pmNegCache={src:null,set:null};
+function pmNegotiatedSet(){
+  const zs=prodReceiptZones||[], ps=prodReceiptProjects||[];
+  if(pmNegCache.src===zs&&pmNegCache.ps===ps) return pmNegCache.set;
+  const projNo={}; ps.forEach(p=>{ projNo[String(p.id)]=String(p.proj_num||'').trim().toUpperCase(); });
+  const set=new Set();
+  zs.forEach(z=>{ if((z.price_note&&String(z.price_note).trim()!=='')||(z.unit_price!=null&&z.unit_price!=='')){ const pn=projNo[String(z.project_id)]; if(pn) set.add(pn+'\u0001'+String(z.zone_code||'').trim().toUpperCase()); } });
+  pmNegCache={src:zs,ps,set}; return set;
+}
+const pmZoneNegotiated=(proj,zone)=>pmNegotiatedSet().has(String(proj||'').trim().toUpperCase()+'\u0001'+String(zone||'').trim().toUpperCase());
+// none=沒有要計價的細項 / done=全部帶入過 / neg=沒帶入的都在已議價工程區 / part=部分工程區帶入 / todo=還沒帶入
 function pmPricedStatus(row){
   const u=pmPricingUnits(row); if(!u.length) return 'none';
-  const n=u.filter(x=>pmPricedSet.has(x.key)).length;
-  return n===u.length?'done':n?'part':'todo';
+  const done=u.filter(x=>pmPricedSet.has(x.key)).length;
+  if(done===u.length) return 'done';
+  const left=u.filter(x=>!pmPricedSet.has(x.key)&&!pmZoneNegotiated(x.proj,x.zone)).length;
+  if(!left) return 'neg';
+  return done?'part':'todo';   // 有工程區已議價但剩下的都沒帶入,仍算未帶入
 }
-function pmPricedText(row){ if(!pmPricedLoaded||!row||!row.id) return ''; return {none:'不需計價',done:'已帶入',part:'部分帶入',todo:'未帶入'}[pmPricedStatus(row)]; }
+function pmPricedText(row){ if(!pmPricedLoaded||!row||!row.id) return ''; return {none:'不需計價',done:'已帶入',neg:'已議價',part:'部分帶入',todo:'未帶入'}[pmPricedStatus(row)]; }
 function pmPricedCell(row){
   if(!row||!row.id) return '';   // 輸入列
   if(!pmPricedLoaded) return '<span style="color:var(--text3)">—</span>';
   const st=pmPricedStatus(row), t=pmPricedText(row);
-  if(st==='none') return '<span style="color:var(--text3);font-size:12px">'+t+'</span>';
+  if(st==='none'||st==='neg') return '<span style="color:var(--text3);font-size:12px" title="'+(st==='neg'?'這個工程區已經議價,不用再送計價核對':'')+'">'+t+'</span>';
   const cls=st==='done'?'st-ok':st==='part'?'st-count':'st-none';
   return '<span class="chip '+cls+'" style="white-space:nowrap">'+t+'</span>';
 }
 // 還有工程區沒帶入的通知單 → { 工程: Set(工程區) }
 function pmPendingZones(){
   const m=new Map();
-  prodProduct.forEach(row=>{ pmPricingUnits(row).forEach(u=>{ if(pmPricedSet.has(u.key)) return; if(!m.has(u.proj)) m.set(u.proj,new Set()); m.get(u.proj).add(u.zone); }); });
+  prodProduct.forEach(row=>{ pmPricingUnits(row).forEach(u=>{ if(pmPricedSet.has(u.key)||pmZoneNegotiated(u.proj,u.zone)) return; if(!m.has(u.proj)) m.set(u.proj,new Set()); m.get(u.proj).add(u.zone); }); });
   return m;
 }
 function pmPricingProjects(){ return [...pmPendingZones().keys()].sort(); }
@@ -49077,7 +49091,7 @@ async function pmRenderPricingReview(){
     projList.map(p=>'<option value="'+esc(p)+'"'+(p===sel?' selected':'')+'>'+esc(p)+'（'+pending.get(p).size+' 區）</option>').join('');
   const head='<div class="sp-review-head"><div><div class="sp-review-title">成品材送至計價核對 · '+
       '<select onchange="PM_PRICING_CTX.proj=this.value;pmRenderPricingReview()">'+projOpts+'</select></div>'+
-    '<div class="sp-review-note">只列出還有通知單沒帶入計價的工程區（共 '+zoneTotal+' 區）。數量是該工程區所有成品材通知單的累計(焊材、瓷罩、普通六角螺栓不計價)，可修改、取消勾選或改計價項目；按「確認並帶入計價」後同工程區同項目會改成這次的累計數量，通知單在表格的「計價」欄會變成已帶入。</div></div>'+
+    '<div class="sp-review-note">只列出還有通知單沒帶入計價、且還沒議價的工程區（共 '+zoneTotal+' 區）。數量是該工程區所有成品材通知單的累計(焊材、瓷罩、普通六角螺栓不計價)，可修改、取消勾選或改計價項目；按「確認並帶入計價」後同工程區同項目會改成這次的累計數量，通知單在表格的「計價」欄會變成已帶入。</div></div>'+
     '<button class="btn" onclick="pmClosePricingReview()">關閉</button></div>';
   panel.innerHTML='<div class="sp-review">'+head+'<div class="sp-review-status">正在核對工程與工程區…</div></div>';
   // 依 工程 × 工程區 × 品名分類 加總(累計所有通知單,只留有未帶入通知單的工程區)
