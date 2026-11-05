@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.04.12"/>
+<meta name="sc-version" content="2026.11.05.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -47524,7 +47524,7 @@ async function prodInit(){
     if(cprEl('cprBody'))cprEl('cprBody').innerHTML='<tr><td colspan="6" class="cpr-empty">載入中…</td></tr>';
   }
   try{
-    const [rc,rpj,rz,rt,rr,rp,rm,ro]=await Promise.all([
+    const [rc,rpj,rz,rt,rr,rp,rm,ro,rps]=await Promise.all([
       sbFetchAll('/rest/v1/cp_receipts?select=*&order=received_date.desc,id.desc'),
       sbFetchAll('/rest/v1/projects?select=*&order=proj_num'),
       sbFetchAll('/rest/v1/zones?select=*&order=zone_code'),
@@ -47532,7 +47532,8 @@ async function prodInit(){
       sbFetchAll('/rest/v1/reserved_material?select=*'),
       sbFetchAll('/rest/v1/product_material?select=*'),
       sbFetchAll('/rest/v1/manual_order?select=*'),
-      sbFetch('/rest/v1/sp_online?select=*')
+      sbFetch('/rest/v1/sp_online?select=*'),
+      sbFetchAll('/rest/v1/pricing_import_suggestions?select=evidence&source_type=eq.product_material&status=eq.confirmed')
     ]);
     cprSchemaOk   = !!rc.ok;
     // 任一份沒抓到/只抓到一部分(手機網路不穩):沿用上次抓到的資料,不要換成空的。
@@ -47549,6 +47550,7 @@ async function prodInit(){
     prodProduct  = take(rp,'成品材',prodProduct);
     if(got(rp)) await prodClearWeldingProjectNumbers();
     prodManual   = take(rm,'手工單',prodManual);
+    if(got(rps)) pmSetPriced(rps.data);   // 計價核對表沒建或沒抓到:沿用上次的,不把整欄標成未帶入
     prodOnline   = take(ro,'上線狀態',prodOnline);
     prodLoadFailed=failed;
     if(typeof spxDetectOptional==='function') spxDetectOptional();
@@ -49003,11 +49005,50 @@ function pmPricingKind(item){
   if(/鎖斷螺栓|扭斷/.test(s)) return {kind:'扭斷螺栓',target:'扭斷螺絲',use:true};
   return {kind:pmReasonItem(s)||s||'（未命名）',target:'',use:false};
 }
-function pmPricingProjects(){
-  const set=new Set();
-  prodProduct.forEach(p=>{ if(pmIsWelding(p)) return; const b=prodProductProjBase(p.proj_no); if(b&&b!=='焊材') set.add(b); });
-  return [...set].sort();
+// 已帶入計價的紀錄:確認過的 pricing_import_suggestions.evidence 記著 工程 / 工程區 / 通知單流水號
+let pmPricedSet=new Set(), pmPricedLoaded=false;
+const pmPricedKey=(proj,zone,serial)=>String(proj||'').trim().toUpperCase()+'\u0001'+String(zone||'').trim().toUpperCase()+'\u0001'+String(serial||'').trim();
+function pmSetPriced(rows){
+  pmPricedSet=new Set(); pmPricedLoaded=true;
+  (rows||[]).forEach(r=>{ const e=r&&r.evidence||{}; (Array.isArray(e.notices)?e.notices:[]).forEach(n=>{ if(n) pmPricedSet.add(pmPricedKey(e.project_no,e.zone_code,n)); }); });
 }
+// 一張通知單裡會計價的細項:工程 × 工程區 × 流水號(跟加總時的判定一致)
+function pmPricingUnits(row){
+  if(!row||pmIsWelding(row)) return [];
+  const proj=prodProductProjBase(row.proj_no); if(!proj||proj==='焊材') return [];
+  const meta=pmMeta(row.remark), details=meta&&Array.isArray(meta.details)?meta.details:[];
+  if(!details.length) return [];
+  const rowZones=pmZonesOfRow(row), out=new Map();
+  details.forEach(d=>{
+    const zone=String(d.area||'').trim().toUpperCase()||(rowZones.length===1?rowZones[0]:'');
+    if(!zone||!pmPricingKind(d.item)) return;
+    const serial=d.full_serial||meta.full_serial||row.serial||'', k=pmPricedKey(proj,zone,serial);
+    if(!out.has(k)) out.set(k,{proj,zone,serial,key:k});
+  });
+  return [...out.values()];
+}
+// none=沒有要計價的細項 / done=全部帶入過 / part=部分工程區帶入 / todo=還沒帶入
+function pmPricedStatus(row){
+  const u=pmPricingUnits(row); if(!u.length) return 'none';
+  const n=u.filter(x=>pmPricedSet.has(x.key)).length;
+  return n===u.length?'done':n?'part':'todo';
+}
+function pmPricedText(row){ if(!pmPricedLoaded||!row||!row.id) return ''; return {none:'不需計價',done:'已帶入',part:'部分帶入',todo:'未帶入'}[pmPricedStatus(row)]; }
+function pmPricedCell(row){
+  if(!row||!row.id) return '';   // 輸入列
+  if(!pmPricedLoaded) return '<span style="color:var(--text3)">—</span>';
+  const st=pmPricedStatus(row), t=pmPricedText(row);
+  if(st==='none') return '<span style="color:var(--text3);font-size:12px">'+t+'</span>';
+  const cls=st==='done'?'st-ok':st==='part'?'st-count':'st-none';
+  return '<span class="chip '+cls+'" style="white-space:nowrap">'+t+'</span>';
+}
+// 還有工程區沒帶入的通知單 → { 工程: Set(工程區) }
+function pmPendingZones(){
+  const m=new Map();
+  prodProduct.forEach(row=>{ pmPricingUnits(row).forEach(u=>{ if(pmPricedSet.has(u.key)) return; if(!m.has(u.proj)) m.set(u.proj,new Set()); m.get(u.proj).add(u.zone); }); });
+  return m;
+}
+function pmPricingProjects(){ return [...pmPendingZones().keys()].sort(); }
 function pmPricingStatus(msg,isError){
   const el=document.getElementById('pmPricingReviewStatus');
   if(el){ el.textContent=msg||''; el.style.color=isError?'#ef4444':'var(--text3)'; }
@@ -49017,74 +49058,80 @@ function pmClosePricingReview(){
   if(el){ el.style.display='none'; el.innerHTML=''; }
   PM_PRICING_CTX=null;
 }
+const PM_PRICING_ALL='__all__';
 function pmOpenPricingReview(){
   const panel=document.getElementById('pmPricingReview'); if(!panel) return;
-  const projs=pmPricingProjects();
-  if(!projs.length){ alert('成品材領料還沒有可送計價的通知單。'); return; }
-  // 預設:上方「系統工程編號」→ 工程編號欄篩選只選一個 → 第一個
-  const pick=prodProductProjBase(document.getElementById('prodProductProj')?.value||'');
-  const f=colFilterState['product']&&colFilterState['product'].proj_no;
-  const fv=f&&f.size===1?prodProductProjBase([...f][0]):'';
-  const def=projs.includes(pick)?pick:projs.includes(fv)?fv:projs[0];
-  PM_PRICING_CTX={proj:def,pickedOnly:false};
+  if(!pmPricedLoaded){ alert('計價紀錄還沒載入完成，請稍候再試。'); return; }
+  if(!pmPricingProjects().length){ alert('所有成品材通知單都已帶入計價，沒有待送的工程。'); return; }
+  PM_PRICING_CTX={proj:PM_PRICING_ALL};
   panel.style.display='';
   pmRenderPricingReview();
 }
 async function pmRenderPricingReview(){
   const panel=document.getElementById('pmPricingReview'); if(!panel||!PM_PRICING_CTX) return;
-  const ctx=PM_PRICING_CTX, projNo=ctx.proj;
-  const projOpts=pmPricingProjects().map(p=>'<option value="'+esc(p)+'"'+(p===projNo?' selected':'')+'>'+esc(p)+'</option>').join('');
+  const ctx=PM_PRICING_CTX, pending=pmPendingZones(), projList=[...pending.keys()].sort();
+  if(ctx.proj!==PM_PRICING_ALL&&!pending.has(ctx.proj)) ctx.proj=PM_PRICING_ALL;
+  const sel=ctx.proj, all=sel===PM_PRICING_ALL, projs=all?projList:[sel];
+  const zoneTotal=projList.reduce((n,p)=>n+pending.get(p).size,0);
+  const projOpts='<option value="'+PM_PRICING_ALL+'"'+(all?' selected':'')+'>全部未帶入（'+projList.length+' 個工程）</option>'+
+    projList.map(p=>'<option value="'+esc(p)+'"'+(p===sel?' selected':'')+'>'+esc(p)+'（'+pending.get(p).size+' 區）</option>').join('');
   const head='<div class="sp-review-head"><div><div class="sp-review-title">成品材送至計價核對 · '+
       '<select onchange="PM_PRICING_CTX.proj=this.value;pmRenderPricingReview()">'+projOpts+'</select></div>'+
-    '<div class="sp-review-note">依工程區、品名加總所有成品材通知單細項(焊材、瓷罩、普通六角螺栓不計價,不列出)。數量可修改、可取消勾選或改計價項目;只有按「確認並帶入計價」才會更新正式數量,同工程區同項目會改成這次的累計數量。</div>'+
-    '<label style="font-size:12px;display:inline-flex;gap:5px;align-items:center;margin-top:4px"><input type="checkbox" '+(ctx.pickedOnly?'checked':'')+' onchange="PM_PRICING_CTX.pickedOnly=this.checked;pmRenderPricingReview()">只算已勾「是否領料」的通知單</label></div>'+
+    '<div class="sp-review-note">只列出還有通知單沒帶入計價的工程區（共 '+zoneTotal+' 區）。數量是該工程區所有成品材通知單的累計(焊材、瓷罩、普通六角螺栓不計價)，可修改、取消勾選或改計價項目；按「確認並帶入計價」後同工程區同項目會改成這次的累計數量，通知單在表格的「計價」欄會變成已帶入。</div></div>'+
     '<button class="btn" onclick="pmClosePricingReview()">關閉</button></div>';
   panel.innerHTML='<div class="sp-review">'+head+'<div class="sp-review-status">正在核對工程與工程區…</div></div>';
-  // 依工程區 × 品名分類加總
-  const notes=prodProduct.filter(p=>!pmIsWelding(p)&&prodProductProjBase(p.proj_no)===projNo&&(!ctx.pickedOnly||p.is_picked===true));
-  const agg=new Map(); let noteCount=0;
-  notes.forEach(row=>{
+  // 依 工程 × 工程區 × 品名分類 加總(累計所有通知單,只留有未帶入通知單的工程區)
+  const agg=new Map(), noteSet=new Set();
+  prodProduct.forEach(row=>{
+    if(pmIsWelding(row)) return;
+    const proj=prodProductProjBase(row.proj_no); if(!pending.has(proj)||!projs.includes(proj)) return;
     const meta=pmMeta(row.remark), details=meta&&Array.isArray(meta.details)?meta.details:[];
-    if(!details.length) return; noteCount++;
+    if(!details.length) return;
     const rowZones=pmZonesOfRow(row);
     details.forEach(d=>{
       const zone=String(d.area||'').trim().toUpperCase()||(rowZones.length===1?rowZones[0]:'');
-      if(!zone) return;
+      if(!zone||!pending.get(proj).has(zone)) return;
       const k=pmPricingKind(d.item); if(!k) return;
-      const key=zone+'\u0001'+k.kind;
-      if(!agg.has(key)) agg.set(key,{zone,kind:k.kind,qty:0,specs:new Set(),notes:new Set(),def:k});
-      const g=agg.get(key); g.qty+=Number(d.qty)||0; if(d.spec) g.specs.add(String(d.spec)); g.notes.add(d.full_serial||meta.full_serial||row.serial||'');
+      const serial=d.full_serial||meta.full_serial||row.serial||'';
+      const key=proj+'\u0001'+zone+'\u0001'+k.kind;
+      if(!agg.has(key)) agg.set(key,{proj,zone,kind:k.kind,qty:0,specs:new Set(),notes:new Set(),fresh:new Set(),def:k});
+      const g=agg.get(key); g.qty+=Number(d.qty)||0; if(d.spec) g.specs.add(String(d.spec)); g.notes.add(serial);
+      if(!pmPricedSet.has(pmPricedKey(proj,zone,serial))) g.fresh.add(serial);
+      noteSet.add(row._key!=null?row._key:row.id);
     });
   });
-  const lines=[...agg.values()].sort((a,b)=>a.zone.localeCompare(b.zone)||a.kind.localeCompare(b.kind));
-  if(PM_PRICING_CTX!==ctx||ctx.proj!==projNo) return;
-  if(!lines.length){ panel.innerHTML='<div class="sp-review">'+head+'<div class="sp-review-status">'+esc(projNo)+' 沒有可加總的成品材細項。</div></div>'; return; }
-  const pr=await sbFetch('/rest/v1/projects?select=id,proj_num&proj_num=eq.'+encodeURIComponent(projNo)+'&limit=1');
-  const project=pr.ok&&Array.isArray(pr.data)&&pr.data[0];
-  if(PM_PRICING_CTX!==ctx||ctx.proj!==projNo) return;
-  if(!project){ panel.innerHTML='<div class="sp-review">'+head+'<div class="sp-review-status" style="color:#ef4444">找不到工程編號 '+esc(projNo)+',請先在工程資料建立此工程。</div></div>'; return; }
-  const zr=await sbFetch('/rest/v1/zones?select=id,zone_code&project_id=eq.'+project.id+'&order=zone_code');
-  if(PM_PRICING_CTX!==ctx||ctx.proj!==projNo) return;
-  const zoneMap={}; (zr.ok&&Array.isArray(zr.data)?zr.data:[]).forEach(z=>{zoneMap[String(z.zone_code||'').trim().toUpperCase()]=z;});
-  lines.forEach(l=>{ l.db=zoneMap[l.zone]||null; l.qty=pmRound2(l.qty); l.target=typeof l.def.target==='function'?l.def.target(l.zone):l.def.target; });
-  ctx.project=project; ctx.lines=lines;
-  const zoneSpan={}; lines.forEach(l=>{zoneSpan[l.zone]=(zoneSpan[l.zone]||0)+1;});
+  const lines=[...agg.values()].sort((a,b)=>a.proj.localeCompare(b.proj)||a.zone.localeCompare(b.zone)||a.kind.localeCompare(b.kind));
+  if(PM_PRICING_CTX!==ctx||ctx.proj!==sel) return;
+  if(!lines.length){ panel.innerHTML='<div class="sp-review">'+head+'<div class="sp-review-status">沒有可加總的成品材細項。</div></div>'; return; }
+  const usedProjs=[...new Set(lines.map(l=>l.proj))];
+  const inList=a=>'in.('+a.map(v=>'"'+String(v).replace(/"/g,'')+'"').join(',')+')';
+  const pr=await sbFetch('/rest/v1/projects?select=id,proj_num&proj_num='+encodeURIComponent(inList(usedProjs)));
+  if(PM_PRICING_CTX!==ctx||ctx.proj!==sel) return;
+  const projMap={}; (pr.ok&&Array.isArray(pr.data)?pr.data:[]).forEach(p=>{ projMap[String(p.proj_num||'').trim().toUpperCase()]=p; });
+  const ids=Object.values(projMap).map(p=>p.id);
+  const zr=ids.length?await sbFetch('/rest/v1/zones?select=id,zone_code,project_id&project_id='+encodeURIComponent('in.('+ids.join(',')+')')+'&order=zone_code'):{ok:true,data:[]};
+  if(PM_PRICING_CTX!==ctx||ctx.proj!==sel) return;
+  const zoneMap={}; (zr.ok&&Array.isArray(zr.data)?zr.data:[]).forEach(z=>{ zoneMap[z.project_id+'\u0001'+String(z.zone_code||'').trim().toUpperCase()]=z; });
+  lines.forEach(l=>{ l.project=projMap[l.proj.toUpperCase()]||null; l.db=l.project?(zoneMap[l.project.id+'\u0001'+l.zone]||null):null; l.qty=pmRound2(l.qty); l.target=typeof l.def.target==='function'?l.def.target(l.zone):l.def.target; });
+  ctx.lines=lines;
+  const gk=l=>l.proj+'\u0001'+l.zone, zoneSpan={}; lines.forEach(l=>{zoneSpan[gk(l)]=(zoneSpan[gk(l)]||0)+1;});
   const seen={};
   const rows=lines.map((l,i)=>{
-    const missing=!l.db, first=!seen[l.zone]; seen[l.zone]=1;
+    const missing=!l.db, first=!seen[gk(l)]; seen[gk(l)]=1;
+    const why=!l.project?'找不到此工程':'資料庫無此工程區';
     return '<tr class="'+(missing?'warn':'')+'" data-line="'+i+'">'+
-      (first?'<td rowspan="'+zoneSpan[l.zone]+'"><b>'+esc(l.zone)+'</b>'+(missing?'<div style="color:#ef4444">資料庫無此工程區</div>':'')+'</td>':'')+
+      (first?'<td rowspan="'+zoneSpan[gk(l)]+'">'+(all?'<div style="color:var(--text3);font-size:11px">'+esc(l.proj)+'</div>':'')+'<b>'+esc(l.zone)+'</b>'+(missing?'<div style="color:#ef4444">'+why+'</div>':'')+'</td>':'')+
       '<td><input class="pm-pr-use" type="checkbox" '+((l.def.use&&l.qty>0&&!missing&&l.target)?'checked':'')+' '+(missing?'disabled':'')+'></td>'+
       '<td>'+esc(l.kind)+'<div style="color:var(--text3);font-size:11px">'+esc([...l.specs].join('、'))+'</div></td>'+
-      '<td class="num">'+l.notes.size+'</td>'+
+      '<td class="num">'+l.notes.size+(l.fresh.size&&l.fresh.size<l.notes.size?'<div style="color:#f59e0b;font-size:11px">新 '+l.fresh.size+'</div>':'')+'</td>'+
       '<td><input class="pm-pr-value" type="number" min="0" step="0.01" value="'+esc(l.qty)+'"></td>'+
       '<td><input class="pm-pr-target" list="pmPricingItemList" value="'+esc(l.target)+'" placeholder="輸入或選計價項目" style="min-width:200px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 7px"></td></tr>';
   }).join('');
-  const missingZones=Object.keys(zoneSpan).filter(z=>!zoneMap[z]).length;
+  const missingZones=Object.keys(zoneSpan).filter(k=>!lines.find(l=>gk(l)===k).db).length;
   panel.innerHTML='<div class="sp-review">'+head+
     '<datalist id="pmPricingItemList">'+PM_PRICING_ITEMS.map(t=>'<option value="'+esc(t)+'">').join('')+'</datalist>'+
     '<div class="sp-review-wrap"><table class="sp-review-table"><thead><tr><th>工程區</th><th>帶入</th><th>品名(規格)</th><th>通知單數</th><th>核對數量</th><th>計價位置</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
-    '<div class="sp-review-actions"><span class="sp-review-status" id="pmPricingReviewStatus">共 '+noteCount+' 張通知單'+(missingZones?','+missingZones+' 個工程區無法對應資料庫':'')+'</span>'+
+    '<div class="sp-review-actions"><span class="sp-review-status" id="pmPricingReviewStatus">'+usedProjs.length+' 個工程、'+Object.keys(zoneSpan).length+' 個工程區、共 '+noteSet.size+' 張通知單'+(missingZones?','+missingZones+' 個工程區無法對應資料庫':'')+'</span>'+
     '<button class="btn" onclick="pmSavePricingReview(false)">儲存待核對</button>'+
     '<button class="btn btn-gen" onclick="pmSavePricingReview(true)">確認並帶入計價</button></div></div>';
 }
@@ -49098,8 +49145,9 @@ function pmCollectPricingReview(){
     const enabled=!!tr.querySelector('.pm-pr-use')?.checked;
     const value=Math.max(0,Number(tr.querySelector('.pm-pr-value')?.value)||0);
     const target=String(tr.querySelector('.pm-pr-target')?.value||'').trim();
-    if(!byZone.has(l.zone)) byZone.set(l.zone,{zone:l.zone,db:l.db,parsed:{},confirmed:{},selections:{},notes:new Set()});
-    const z=byZone.get(l.zone);
+    const zk=l.proj+'\u0001'+l.zone;
+    if(!byZone.has(zk)) byZone.set(zk,{proj:l.proj,project:l.project,zone:l.zone,db:l.db,parsed:{},confirmed:{},selections:{},notes:new Set()});
+    const z=byZone.get(zk);
     z.parsed[l.kind]=l.qty; z.selections[l.kind]={enabled,target}; l.notes.forEach(n=>z.notes.add(n));
     if(enabled&&target){ z.confirmed[l.kind]=value; }
   });
@@ -49120,9 +49168,9 @@ async function pmSavePricingReview(confirm){
   pmPricingStatus(confirm?'正在寫入核對紀錄與正式計價…':'正在儲存待核對資料…');
   const u=(typeof currentUser!=='undefined'&&currentUser)||{}, now=new Date().toISOString(), batch='pm-'+Date.now();
   const payload=rows.map(r=>Object.assign({
-    batch_key:batch,project_id:ctx.project.id,zone_id:r.db.id,source_type:'product_material',
+    batch_key:batch,project_id:r.project.id,zone_id:r.db.id,source_type:'product_material',
     parsed_values:r.parsed,confirmed_values:r.confirmed,selections:r.selections,
-    evidence:{project_no:ctx.proj,zone_code:r.zone,picked_only:!!ctx.pickedOnly,notices:[...r.notes].filter(Boolean)},
+    evidence:{project_no:r.proj,zone_code:r.zone,picked_only:false,notices:[...r.notes].filter(Boolean)},
     status:confirm?'confirmed':'pending',created_by:u.id||null,created_name:u.name||u.account||''
   },confirm?{reviewed_by:u.id||null,reviewed_name:u.name||u.account||'',reviewed_at:now}:{}));
   const sr=await sbFetch('/rest/v1/pricing_import_suggestions',{method:'POST',headers:{Prefer:confirm?'return=representation':'return=minimal'},body:JSON.stringify(payload)});
@@ -49130,7 +49178,7 @@ async function pmSavePricingReview(confirm){
   if(!confirm){ pmPricingStatus('已儲存待核對資料；尚未改動正式計價。'); return; }
   const sugg=Array.isArray(sr.data)?sr.data:[], official=[];
   rows.forEach((r,i)=>{ Object.keys(r.official).forEach(name=>{
-    official.push({project_id:ctx.project.id,zone_id:r.db.id,item_name:name,qty:r.official[name],
+    official.push({project_id:r.project.id,zone_id:r.db.id,item_name:name,qty:r.official[name],
       source_type:'product_material',source_suggestion_id:sugg[i]?sugg[i].id:null,
       confirmed_by:u.id||null,confirmed_name:u.name||u.account||'',confirmed_at:now,updated_at:now});
   }); });
@@ -49138,8 +49186,11 @@ async function pmSavePricingReview(confirm){
     const ir=await sbFetch('/rest/v1/pricing_zone_items?on_conflict=zone_id,item_name',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(official)});
     if(!ir.ok){ pmPricingStatus('核對紀錄已存，但正式計價項目寫入失敗。',true); alert('正式計價項目寫入失敗，請勿重複操作並聯絡管理員。'); return; }
   }
-  pmPricingStatus('已確認並帶入正式計價；進入計價頁選取工程區後按「帶入已核對數量」即可套用。');
-  alert('已完成核對並帶入正式計價。');
+  // 表格「計價」欄馬上改成已帶入,核對清單重畫(帶入過的工程區會消失)
+  rows.forEach(r=>r.notes.forEach(n=>{ if(n) pmPricedSet.add(pmPricedKey(r.proj,r.zone,n)); }));
+  if(typeof spxRenderBody==='function') spxRenderBody('product');
+  alert('已完成核對並帶入正式計價。進入計價頁選取工程區後按「帶入已核對數量」即可套用。');
+  if(pmPricingProjects().length) pmRenderPricingReview(); else pmClosePricingReview();
 }
 
 // ── 手工單細項(SP編號／數量):沿用成品材細項的彈窗樣式,但可手動輸入,改動自動儲存。
@@ -49249,7 +49300,7 @@ const SPX={
     ]},
   product:{ tbl:'product_material', sort:spxNewestFirst,
     cols:[
-      {k:'pick_date',h:'日期',date:true,noData:true,defFn:spxToday},{k:'proj_no',h:'工程編號'},{k:'_zone',h:'工程區',virtual:true,noData:true,render:pmZoneText},{k:'serial',h:'流水編號'},{k:'reason',h:'細目',wide:true},{k:'remark',h:'備註',wide:true},{k:'is_picked',h:'是否領料',check:true,bool:true,noData:true,def:false},{k:'pickup_date',h:'領料日期',date:true,noData:true},{k:'_details',h:'細項',virtual:true,noData:true}
+      {k:'pick_date',h:'日期',date:true,noData:true,defFn:spxToday},{k:'proj_no',h:'工程編號'},{k:'_zone',h:'工程區',virtual:true,noData:true,render:pmZoneText},{k:'serial',h:'流水編號'},{k:'reason',h:'細目',wide:true},{k:'remark',h:'備註',wide:true},{k:'is_picked',h:'是否領料',check:true,bool:true,noData:true,def:false},{k:'pickup_date',h:'領料日期',date:true,noData:true},{k:'_priced',h:'計價',virtual:true,noData:true,render:pmPricedCell,str:pmPricedText},{k:'_details',h:'細項',virtual:true,noData:true}
     ]}
   // 焊材領料:同一張 product_material,僅記錄用 → 不放「是否領料/領料日期」
   ,welding:{ tbl:'product_material', sort:spxNewestFirst,
@@ -49290,7 +49341,7 @@ function prodSetArr(key,arr){ if(key==='track'||key==='detail')prodTrack=arr; el
 function spxComboStr(r,c){ return c.combo.map(f=>(r[f]==null?'':String(r[f])).trim()).filter(Boolean).join('-'); }
 function spxSetCombo(r,c,val){ const s=String(val==null?'':val).trim(), i=s.indexOf('-');
   if(i<0){ r[c.combo[0]]=s; r[c.combo[1]]=''; } else { r[c.combo[0]]=s.slice(0,i).trim(); r[c.combo[1]]=s.slice(i+1).trim(); } }
-function spxColStr(r,c){ if(c.virtual) return ''; if(c.combo) return spxComboStr(r,c);
+function spxColStr(r,c){ if(c.virtual) return c.str?c.str(r):''; if(c.combo) return spxComboStr(r,c);
   /* 欄位篩選/搜尋也用顯示名(OK→完成) */
   if(c.status){ const sv=String(r[c.k]||c.def||'-'); return SPX_STATUS_LABEL[sv]||sv; }
   if(c.check) return r[c.k]===true?'完成':'未完成'; if(c.bool) return r[c.k]===true?'是':r[c.k]===false?'否':'';
@@ -49360,7 +49411,7 @@ function spxRowVisible(key,r,kw){ const cfg=SPX[key];
   if(key==='reserved' && !prodShowCompleted.reserved && prodResDone(r)) return false;   // 已領但還沒退還的不算完成,留在清單裡
   if(key==='product' && pmIsWelding(r)) return false;    // 焊材移到「焊材領料」分頁
   if(key==='welding' && !pmIsWelding(r)) return false;   // 焊材分頁只顯示焊材紀錄
-  if(key==='product' && !prodShowCompleted.product && r.is_picked===true) return false;
+  if(key==='product' && !prodShowCompleted.product && r.is_picked===true && !['todo','part'].includes(pmPricedStatus(r))) return false;   // 領了但還沒帶入計價的仍留著
   if(key==='manual' && !prodManualShowCompleted && r.completed===true) return false;
   if(!rowPassesColFilters(key, ck=>{ const c=spxCols(key).find(x=>x.k===ck); return c?spxColStr(r,c):''; })) return false;
   if((key==='product'||key==='welding') && prodProductProjFilter && !prodProductProjMatch(r.proj_no,prodProductProjFilter)) return false;   // 成品材/焊材:工程編號寬鬆比對
@@ -49868,7 +49919,7 @@ const SPX_MOBILE={
   reserved:{title:r=>r.spec||r.mat_no||'（未填規格）', status:r=>prodResDone(r)?['完成','st-ok']:(prodResTaken(r)?['待退還','st-count']:['未領取','st-none']),
     meta:['proj_no','zone','order_no'], lines:[['mat_no','餘料'],['qty','數量'],['work_form','長度'],['comp_no','構件'],['issue_date','給單'],['take_date','領取']], note:'remark'},
   product:{title:r=>String(r.reason||'').trim()||r.serial||'（未填細目）', status:r=>r.is_picked===true?['已領料','st-ok']:['未領料','st-none'],
-    meta:['proj_no','_zone','serial'], lines:[['pick_date','日期'],['pickup_date','領料']], note:'remark', checkText:['已領料','未領料']},
+    meta:['proj_no','_zone','serial'], lines:[['pick_date','日期'],['pickup_date','領料'],['_priced','計價']], note:'remark', checkText:['已領料','未領料']},
   manual:{title:r=>r.manual_no||'（未填編號）', status:r=>r.completed===true?['完成','st-ok']:['未完成','st-none'],
     meta:['proj_no','zone'], lines:[['issue_date','開單'],['take_date','領取']], note:'content', checkText:['已完成','未完成']}
 };
@@ -49904,6 +49955,7 @@ function spxOpenMobileSheet(key,i,refresh){
     const label='<span>'+esc(c.h)+'</span>';
     if(c.virtual){
       if(c.render===pmZoneText) return '<label class="spx-m-field">'+label+'<input readonly value="'+esc(pmZonesOfRow(r).join('.'))+'"></label>';
+      if(c.render===pmPricedCell) return '<div class="spx-m-field">'+label+'<div class="spx-m-toggle" style="cursor:default">'+pmPricedCell(r)+'</div></div>';
       if(c.render===pdResReturnCheck) return '<div class="spx-m-field wide">'+label+'<div class="spx-m-toggle'+(canEdit?'':' is-locked')+'" onchange="'+refreshSoon+'">'+pdResReturnCheck(r)+'</div></div>';
       if(c.k==='_details'){
         const n=key==='manual'?moDetails(r).length:((pmMeta(r.remark)||{}).details||[]).length, fn=key==='manual'?'moOpenDetails':'pmOpenDetails';
