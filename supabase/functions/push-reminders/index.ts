@@ -7,6 +7,7 @@
 //    (也可帶 {mode:'ship', half:'am'|'pm', date:'YYYY-MM-DD'} 手動觸發)
 //  ・五金低庫存:庫存 ≤ 安全庫存(或缺貨)的品項 → 訂閱「hwlow」的人(週日不推)
 //  ・點工單未請款:每週一與每月 25 日推未請款筆數、金額與最久的一筆 → 訂閱「laborub」的人
+//  ・不推的星期:push_subscriptions.skip_days(0=日…6=六),當天這台的排程推播(每日提醒、報驗完成)全部略過;測試與待審核即時推播不受影響
 //  ・每日提醒時間:push_subscriptions.remind_time(HH:MM,30 分鐘一格,空=08:00);daily_sent_on 記錄今天送過,排程重跑也不重複
 // 另外支援:
 //  ・{mode:'test'}    登入者自己按「傳送測試通知」
@@ -32,7 +33,7 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-type Sub = { id: string; user_id: string; endpoint: string; p256dh: string; auth: string; topics: string[] | null; remind_time?: string | null; daily_sent_on?: string | null };
+type Sub = { id: string; user_id: string; endpoint: string; p256dh: string; auth: string; topics: string[] | null; remind_time?: string | null; daily_sent_on?: string | null; skip_days?: number[] | null };
 type Msg = { title: string; body: string; tag: string; url: string };
 
 async function rest(path: string, init: RequestInit = {}) {
@@ -339,7 +340,10 @@ Deno.serve(async req => {
 
   if (!CRON_SECRET || req.headers.get('x-cron-secret') !== CRON_SECRET) return json({ error: 'forbidden' }, 403);
   const today = taipeiToday();
-  const subs = await rest('push_subscriptions?select=*') as Sub[];
+  const todayDow = d(today).getUTCDay();
+  // 這台設定今天不推(手動帶 mode 測試時不看)
+  const subs = (await rest('push_subscriptions?select=*') as Sub[])
+    .filter(s => body.mode === 'daily' || body.mode === 'ship' || !(s.skip_days || []).map(Number).includes(todayDow));
   if (!subs.length) return json({ ok: true, today, subscriptions: 0 });
   const has = (s: Sub, t: string) => (s.topics || []).includes(t);
 

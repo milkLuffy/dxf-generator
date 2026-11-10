@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.10.2"/>
+<meta name="sc-version" content="2026.11.10.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -22229,6 +22229,13 @@ async function pushRegistration(){
 function pushModalEl(){
   let m=document.getElementById('push-modal');
   if(m) return m;
+  if(!document.getElementById('push-days-css')){
+    const st=document.createElement('style'); st.id='push-days-css';
+    st.textContent='.push-days{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px}.push-days label{cursor:pointer}.push-days input{position:absolute;opacity:0;pointer-events:none}'
+      +'.push-days span{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;border:1px solid var(--border);color:var(--text3);font-weight:600;user-select:none}'
+      +'.push-days input:checked+span{background:var(--accent2);border-color:var(--accent2);color:#fff}.push-days input:focus-visible+span{outline:2px solid var(--accent2);outline-offset:2px}#push-actions{flex-wrap:wrap;justify-content:flex-end}';
+    document.head.appendChild(st);
+  }
   m=document.createElement('div');
   m.className='modal-overlay'; m.id='push-modal';
   m.onclick=e=>{ if(e.target===m) m.classList.remove('show'); };
@@ -22258,12 +22265,13 @@ async function pushRenderSettings(msg){
   const reg=await Promise.race([pushRegistration(), new Promise(r=>setTimeout(()=>r(null),4000))]);
   if(!reg){ body.innerHTML='離線快取還沒啟用(本機測試網址不會啟用),無法開啟推播。請用正式網址開啟。'; act.innerHTML=close; return; }
   const sub=await reg.pushManager.getSubscription();
-  let topics=['todo','notice'], saved=false, remind=PUSH_DEFAULT_TIME;
+  let topics=['todo','notice'], saved=false, remind=PUSH_DEFAULT_TIME, skip=[];
   if(sub){
     const q='/rest/v1/push_subscriptions?endpoint=eq.'+encodeURIComponent(sub.endpoint)+'&select=';
-    let r=await sbFetch(q+'topics,remind_time');
+    let r=await sbFetch(q+'topics,remind_time,skip_days');
+    if(!r.ok) r=await sbFetch(q+'topics,remind_time');   // 還沒跑 push_skip_days_migration.sql
     if(!r.ok) r=await sbFetch(q+'topics');   // 還沒跑時間欄位 migration
-    if(r.ok&&Array.isArray(r.data)&&r.data[0]){ topics=r.data[0].topics||[]; saved=true; if(r.data[0].remind_time) remind=pushSlot(r.data[0].remind_time); }
+    if(r.ok&&Array.isArray(r.data)&&r.data[0]){ topics=r.data[0].topics||[]; saved=true; if(r.data[0].remind_time) remind=pushSlot(r.data[0].remind_time); skip=(r.data[0].skip_days||[]).map(Number); }
   }
   const denied=Notification.permission==='denied';
   const on=!!sub&&saved;
@@ -22273,6 +22281,8 @@ async function pushRenderSettings(msg){
     +(denied?'<div style="margin-top:6px;color:var(--text3);font-size:12px">請到手機「設定 → 通知」或瀏覽器網站設定裡,允許本系統的通知後再回來開啟。</div>':'')
     +'<label style="display:flex;align-items:center;gap:8px;margin:12px 0 2px;color:var(--text)">每天推送時間'
       +'<select id="push-time" class="filter-select" style="padding:5px 8px">'+pushTimeOptions(remind)+'</select></label>'
+    +'<div style="margin:10px 0 2px;color:var(--text)">哪幾天要推<span style="font-size:11px;color:var(--text3);margin-left:6px">沒勾的日子這台整天不推(含報驗完成)</span></div>'
+    +'<div class="push-days">'+[1,2,3,4,5,6,0].map(d=>'<label><input type="checkbox" class="push-day" value="'+d+'"'+(skip.includes(d)?'':' checked')+'><span>'+'日一二三四五六'[d]+'</span></label>').join('')+'</div>'
     +((currentUser&&currentUser.isAdmin&&!isGuest)
       ?'<div style="margin:8px 0 2px;padding:7px 9px;border-radius:8px;background:var(--bg3);color:var(--text2);font-size:12px">🔔 你是管理員:<b>新帳號待審核、新裝置待核准</b>會即時推到這台,不受下面的選項與時間影響(審核是職責,不是可選的提醒)。</div>'
       :'')
@@ -22298,6 +22308,8 @@ async function pushSaveTime(endpoint,time){
 async function pushSubscribe(){
   const topics=[...document.querySelectorAll('#push-modal .push-topic:checked')].map(x=>x.value);
   if(!topics.length){ await pushRenderSettings('至少要勾一種提醒;不想收的話請按「關閉這台」。'); return; }
+  const skip=[...document.querySelectorAll('#push-modal .push-day')].filter(x=>!x.checked).map(x=>+x.value);
+  if(skip.length>=7){ await pushRenderSettings('至少要勾一天;不想收的話請按「關閉這台」。'); return; }
   try{
     const perm=await Notification.requestPermission();
     if(perm!=='granted'){ await pushRenderSettings('沒有取得通知權限。'); return; }
@@ -22309,7 +22321,11 @@ async function pushSubscribe(){
     if(!r.ok){ await pushRenderSettings('儲存失敗(HTTP '+r.status+'),請確認已執行 push_notifications_migration.sql。'); return; }
     const tsel=document.getElementById('push-time'), time=tsel?tsel.value:PUSH_DEFAULT_TIME;
     const tr=await pushSaveTime(j.endpoint,time);
-    await pushRenderSettings(tr?('已儲存 ✓ 每天 '+time+' 推送。可以按「傳送測試通知」確認收得到。'):'提醒項目已儲存,但推送時間沒存到(請先執行 push_remind_time_migration.sql),目前仍為 08:00。');
+    const dr=(await sbFetch('/rest/v1/rpc/push_set_days',{method:'POST',body:JSON.stringify({p_endpoint:j.endpoint,p_skip:skip})})).ok;
+    const dayTxt=skip.length?('星期'+[1,2,3,4,5,6,0].filter(d=>!skip.includes(d)).map(d=>'日一二三四五六'[d]).join('、')+' '):'每天 ';
+    await pushRenderSettings(!tr?'提醒項目已儲存,但推送時間沒存到(請先執行 push_remind_time_migration.sql),目前仍為 08:00。'
+      :!dr?('提醒項目與時間已儲存,但「哪幾天要推」沒存到(請先執行 push_skip_days_migration.sql),目前仍是每天推。')
+      :('已儲存 ✓ '+dayTxt+time+' 推送。可以按「傳送測試通知」確認收得到。'));
   }catch(e){
     console.warn('push subscribe failed',e);
     await pushRenderSettings('開啟失敗:'+(e.message||e));
@@ -25038,6 +25054,7 @@ const HEALTH_SCHEMA=[
   ['ship_dispatches','dispatched_at,arrived_at,beds,layout_ids,shipped_ids,batch_id,trip_no,trip_of,cancelled_at','ship_dispatches_migration.sql(派車紀錄)'],
   ['drawing_files','page_rot','drawing_page_rot_migration.sql(圖面頁面旋轉)'],
   ['push_subscriptions','remind_time,daily_sent_on','push_remind_time_migration.sql(推播時間)'],
+  ['push_subscriptions','skip_days','push_skip_days_migration.sql(推播星期)'],
   ['pre_inspections','','pre_inspections_migration.sql'],
   ['sp_track','','sp_production_migration.sql'],
   ['sp_progress','','sp_progress_view.sql(檢視表)'],
