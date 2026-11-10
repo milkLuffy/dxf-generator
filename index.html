@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.10.4"/>
+<meta name="sc-version" content="2026.11.10.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -14214,6 +14214,17 @@ function adoptStoredSession() {
 }
 window.addEventListener('storage', e => { if (e.key === SESSION_KEY && !isGuest) adoptStoredSession(); });
 let _refreshInflight = null;
+// Storage(檔案)請求不走 sbFetch,登入憑證剛好過期時會被拒("exp" claim timestamp check failed)。
+// 這裡遇到憑證過期就換證後重送一次(2026-11-10 報驗單 81864 因此沒存到雲端、看板沒有受檢時間)。
+async function sbStorageFetch(url, opts = {}) {
+  const res = await fetch(url, opts);
+  if (res.ok || isGuest || !currentSession || !currentSession.refresh_token || ![400,401,403].includes(res.status)) return res;
+  const raw = await res.clone().text().catch(() => '');
+  if (!/exp|jwt|token/i.test(raw)) return res;
+  if (!(await refreshAccessToken())) return res;
+  const headers = Object.assign({}, opts.headers || {}, { Authorization: 'Bearer ' + (currentSession.access_token || '') });
+  return fetch(url, Object.assign({}, opts, { headers }));
+}
 function refreshAccessToken() {
   // 同一分頁很多請求同時 401 時只換一次,其餘等同一個結果
   if (_refreshInflight) return _refreshInflight;
@@ -30131,7 +30142,7 @@ async function inspArchiveDocx(blob, fname, checked, ctx) {
   const path = inspArchivePath(ctx.proj_no, reportDate, ctx.docNo);
   try {
     if (!currentSession || isGuest) throw new Error('需登入才能建立雲端備份');
-    const upload = await fetch(inspStorageObjectUrl(path), {
+    const upload = await sbStorageFetch(inspStorageObjectUrl(path), {
       method:'POST',
       headers:inspStorageAuthHeaders({
         'Content-Type':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -30172,7 +30183,7 @@ async function inspDownloadArchived(date, projNum, serial) {
     const meta = await sbFetch(q);
     if (!meta.ok || !Array.isArray(meta.data) || !meta.data[0]) throw new Error('找不到這筆報驗單的雲端備份');
     const row = meta.data[0];
-    const res = await fetch(inspStorageObjectUrl(row.storage_path), {headers:inspStorageAuthHeaders()});
+    const res = await sbStorageFetch(inspStorageObjectUrl(row.storage_path), {headers:inspStorageAuthHeaders()});
     if (!res.ok) throw new Error((await res.text()) || '雲端檔案下載失敗');
     const blob = await res.blob(), url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href=url; a.download=row.file_name||((projNum||'申驗單')+'_'+serial+'.docx');
@@ -52998,7 +53009,7 @@ function dsStorageHeaders(extra = {}) {
 
 async function dsStorageUpload(path, file, onProgress) {
   if (file.size < DS_RESUMABLE_THRESHOLD_BYTES) {
-    const response = await fetch(SUPA_URL + '/storage/v1/object/' + DS_BUCKET + '/' + dsEncodedPath(path), {
+    const response = await sbStorageFetch(SUPA_URL + '/storage/v1/object/' + DS_BUCKET + '/' + dsEncodedPath(path), {
       method: 'POST',
       headers: dsStorageHeaders({ 'Content-Type': 'application/pdf', 'x-upsert': 'false' }),
       body: file
@@ -53098,12 +53109,12 @@ async function dsEnsureStorageReady() {
 }
 
 async function dsStorageDownload(path) {
-  return fetch(SUPA_URL + '/storage/v1/object/authenticated/' + DS_BUCKET + '/' + dsEncodedPath(path), { headers: dsStorageHeaders() });
+  return sbStorageFetch(SUPA_URL + '/storage/v1/object/authenticated/' + DS_BUCKET + '/' + dsEncodedPath(path), { headers: dsStorageHeaders() });
 }
 
 async function dsStorageRemove(paths) {
   if (!paths.length) return new Response('[]', { status: 200 });
-  return fetch(SUPA_URL + '/storage/v1/object/' + DS_BUCKET, {
+  return sbStorageFetch(SUPA_URL + '/storage/v1/object/' + DS_BUCKET, {
     method: 'DELETE',
     headers: dsStorageHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ prefixes: paths })
@@ -54231,7 +54242,7 @@ let dsPreviewBusy = false;
 /* 已存在的預覽頁(中斷後接著做,不從第 1 頁重來) */
 async function dsExistingPreviewPages(file) {
   const seg = String(file.storage_key || '').split('/');
-  const res = await fetch(SUPA_URL + '/storage/v1/object/list/' + DS_BUCKET, {
+  const res = await sbStorageFetch(SUPA_URL + '/storage/v1/object/list/' + DS_BUCKET, {
     method: 'POST', headers: dsStorageHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ prefix: seg[0] + '/' + seg[1] + '/' + file.id + '/', limit: 1000 }) });
   if (!res.ok) return new Set();
@@ -54285,7 +54296,7 @@ async function dsEnsurePreviews(files) {
               console.error('手機預覽圖「' + (file.original_name || '') + '」第 ' + pageNo + ' 頁產生失敗，先跳過：', pageError);
               continue;
             }
-            const up = await fetch(SUPA_URL + '/storage/v1/object/' + DS_BUCKET + '/' + dsEncodedPath(dsPreviewPath(file, pageNo)), {
+            const up = await sbStorageFetch(SUPA_URL + '/storage/v1/object/' + DS_BUCKET + '/' + dsEncodedPath(dsPreviewPath(file, pageNo)), {
               method: 'POST', headers: dsStorageHeaders({ 'Content-Type': 'image/jpeg', 'x-upsert': 'true' }), body: blob });
             if (!up.ok) throw new Error('預覽圖上傳失敗：HTTP ' + up.status);
             dsSetProgress(Math.round(pageNo / total * 100), '正在產生手機預覽圖「' + (file.original_name || '') + '」' + pageNo + ' / ' + total + '（可繼續使用，不用等）');
