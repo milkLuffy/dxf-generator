@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.10.1"/>
+<meta name="sc-version" content="2026.11.10.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -45414,23 +45414,39 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var lvRows=(bd.leaveItems||[]).map(function(x){ return '<tr><td>請假 '+esc(x.date)+' '+esc(x.type||'')+' '+num(x.hours)+'時</td><td>-'+m(x.deduct)+'</td></tr>'; }).join('');
     // 打卡明細:逐日出勤記錄,遲到/早退標紅(僅打卡計薪有時刻)
     var wkn=['日','一','二','三','四','五','六'];
+    // 出勤核對結果:遲到/早退/半天的日子顯示怎麼算、有沒有核對過(與「出勤核對」同一套判斷)
+    var _rvAdj=prAdjust[String(p.emp_id)]||{}, _rvTyp=prTyphoonDates(), _rvTodo=0, _rvNeed=0;
+    var _rvCell=function(a){
+      var late=num(a.late_hours), early=a.early_exempt?0:num(a.early_hours);
+      if(!(late>0||early>0||a.half_day)) return '';
+      _rvNeed++;
+      var has=function(k){ return (_rvAdj[k]||[]).indexOf(a.date)>=0; };
+      var ok='<span style="color:#2f9e44">✓已核對</span> ';
+      if(_rvTyp.indexOf(a.date)>=0) return ok+'颱風假免扣';
+      if(a.waived&&has('att_waive')) return ok+(a.half_day?'補足整天':'免扣');
+      if(a.half_forced&&has('half_pay')) return ok+'算半天';
+      if(has('att_ok')) return ok+(a.half_day?'算半天':'照扣');
+      _rvTodo++;
+      return '<span style="color:#e5484d;font-weight:600">未核對</span> <span style="color:#868e96">(先照'+(a.half_day?'半天':'扣')+'算)</span>';
+    };
     var attRows=(bd.attItems||[]).filter(function(a){ return a.punch_in||a.punch_out||num(a.work_hours)>0||num(a.late_hours)>0||num(a.early_hours)>0; }).map(function(a){
       var wd=(a.weekday>=0&&a.weekday<=6)?('（'+wkn[a.weekday]+'）'):'';
       var st=[];
       if(num(a.late_hours)) st.push('<span style="color:#e5484d">遲到'+num(a.late_hours)+'h</span>');
       if(num(a.early_hours)) st.push(a.early_exempt?('<span style="color:#2f9e44">早退'+num(a.early_hours)+'h(主管免計)</span>'):('<span style="color:#e5484d">早退'+num(a.early_hours)+'h</span>'));
-      if(a.half_day) st.push(a.waived?'<span style="color:#2f9e44">半天→颱風假補足整天</span>':(a.half_forced?'<span style="color:#e5a800">算半天(不扣早退)</span>':'<span style="color:#e5a800">半天</span>'));
-      if(a.waived&&(num(a.late_hours)||num(a.early_hours))) st.push('<span style="color:#2f9e44">颱風假免扣</span>');
+      if(a.half_day) st.push(a.waived?'<span style="color:#2f9e44">半天→'+(_rvTyp.indexOf(a.date)>=0?'颱風假':'')+'補足整天</span>':(a.half_forced?'<span style="color:#e5a800">算半天(不扣早退)</span>':'<span style="color:#e5a800">半天</span>'));
+      if(a.waived&&(num(a.late_hours)||num(a.early_hours))) st.push('<span style="color:#2f9e44">'+(_rvTyp.indexOf(a.date)>=0?'颱風假免扣':'免扣')+'</span>');
       if(a.leave_type&&num(a.leave_hours)) st.push(esc(a.leave_type)+num(a.leave_hours)+'h');
       if(a.punch_in&&!a.punch_out){ var _mk=punchMissKind(a.punch_in,_detIsCR); var _nd=_mk.ot?(_mk.miss==='out'?'加班下班':'加班上班'):(_mk.miss==='out'?'下班':'上班'); st.push('<span style="color:#e5a800">⚠缺'+_nd+'卡</span>'); }   // 單筆打卡:依時間判上下班,可在薪資頁上方警示區補登
       if(a.is_foreign&&!st.length&&(a.punch_in||a.punch_out)) st.push('<span style="color:#40c057">加班打卡</span>');
       if(!st.length) st.push('<span style="color:#40c057">正常</span>');
       var io=(a.punch_in||a.punch_out)?(esc(a.punch_in||'—')+' ~ '+esc(a.punch_out||'—')):'—';
       var wkHr=(a.att_waived||a.waived)&&a.half_day?8:(num(a.work_hours)||'—');
-      return '<tr><td>'+esc(a.date)+wd+'</td><td style="text-align:center">'+io+'</td><td style="text-align:center">'+wkHr+'</td><td style="text-align:left">'+st.join(' · ')+'</td></tr>';
+      return '<tr><td>'+esc(a.date)+wd+'</td><td style="text-align:center">'+io+'</td><td style="text-align:center">'+wkHr+'</td><td style="text-align:left">'+st.join(' · ')+'</td><td style="text-align:left">'+_rvCell(a)+'</td></tr>';
     }).join('');
-    var attSection=attRows?('<div class="ps-sec">打卡明細(遲到/早退標紅)</div><table>'
-      +'<tr style="font-weight:600"><td>日期</td><td style="text-align:center">上班 ~ 下班</td><td style="text-align:center">時數</td><td style="text-align:left">狀態</td></tr>'
+    var _rvSum=_rvNeed?('<div style="font-size:12px;margin:2px 0 4px;color:'+(_rvTodo?'#e5484d':'#2f9e44')+'">遲到/早退/半天 '+_rvNeed+' 天,'+(_rvTodo?('<b>'+_rvTodo+' 天未核對</b>(到「出勤核對」確認)'):'全部已核對')+'</div>'):'';
+    var attSection=attRows?('<div class="ps-sec">打卡明細(遲到/早退標紅)</div>'+_rvSum+'<table>'
+      +'<tr style="font-weight:600"><td>日期</td><td style="text-align:center">上班 ~ 下班</td><td style="text-align:center">時數</td><td style="text-align:left">狀態</td><td style="text-align:left">核對結果</td></tr>'
       +attRows+'</table>'):'';
     // 加班明細數量:兩個普通加班級距 + 國定假日 + 星期日(僅列有天數者;外勞附固定金額)
     var _oc=bd.ot_counts||{}, _ocp=bd.ot_cat_pay||{};
