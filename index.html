@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.10.3"/>
+<meta name="sc-version" content="2026.11.10.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -25042,6 +25042,7 @@ const HEALTH_SCHEMA=[
   ['projects','insp_photo_beam,insp_photo_col,insp_sc_form,insp_sc_sign,insp_sc_color,insp_note','insp_requirement_migration.sql(報驗需求)'],
   ['zones','erect_date,handover_date','loading_plan_migration.sql(月產量排程)'],
   ['zones','online_date,drawing_ok_at,drawing_ok_by,jig_util,jig_bevel,bevel_jig_at,bevel_jig_by,util_jig_at,util_jig_by','readiness_migration.sql(上線準備)'],
+  ['zones','no_sp_at,no_sp_by','zones_no_sp_migration.sql(上線準備:這區沒有 SP)'],
   ['zones','util_proc_code,util_weight_kg,util_price,price_note,unit_price','產值/水電單價欄位'],
   ['gen_logs','ordered_at,ordered_by','readiness_migration.sql(靠模已開單)'],
   ['loading_plan','issue','loading_plan_migration.sql'],
@@ -57965,7 +57966,8 @@ function rdyEvalCore(z,src){
   const own=sp.filter(i=>(i.make||'').trim()!=='外包'), out=sp.filter(i=>(i.make||'').trim()==='外包');
   const okN=a=>a.filter(i=>prodStatusLevel(i.status)>=2).length, startN=a=>a.filter(i=>prodStatusLevel(i.status)>=1).length;
   const spIt={k:'sp', short:'SP', label:'SP清點狀態', name:''};
-  if(!sp.length) items.push(Object.assign(spIt,{st:'todo', text:'SP 狀態表還沒有這區'}));
+  // SP 狀態表沒有這區:可在詳情頁勾「這區沒有 SP」(zones.no_sp_at)→ 算完成;之後 SP 表有資料就改看資料
+  if(!sp.length) items.push(Object.assign(spIt, (z&&z.no_sp_at)?{st:'done', noSp:true, text:'確認沒有 SP　'+rdyWho(z.no_sp_at,z.no_sp_by)}:{st:'todo', noSp:false, text:'SP 狀態表還沒有這區'}));
   else if(!own.length) items.push(Object.assign(spIt,{st:'na', text:'全部外包'}));
   else { const n=okN(own); items.push(Object.assign(spIt,{st:n>=own.length?'done':(startN(own)?'part':'todo'), text:'清點 OK '+n+'/'+own.length})); }
   const outIt={k:'out', short:'外', label:'外包', name:'SP/角鐵'};
@@ -58037,6 +58039,9 @@ function rdyCardsHtml(ev,proj,zone,canEdit){
   const icon={done:'●',part:'◐',todo:'○',na:'—'};
   return '<div class="rdy-cards">'+ev.items.map(it=>{
     let act='';
+    if(it.k==='sp' && it.noSp!==undefined && ev.z && (canEdit||it.noSp))
+      act='<label class="rdy-line rdy-chk" title="SP 狀態表沒有資料、這區本來就沒有 SP 時勾選,燈號算完成"><input type="checkbox"'+(it.noSp?' checked':'')+(canEdit?'':' disabled')
+        +' onchange="rdySetNoSp(this.checked)">這區沒有 SP</label>';
     if(it.k==='rev' && canEdit) act='<button class="btn'+(it.st==='done'?'':' btn-primary')+' rdy-act" onclick="rdyOpenReview()">'+(it.st==='done'?'修改':'審核 OK')+'</button>';
     if(it.k==='jig'){
       const lines=[];
@@ -58084,6 +58089,19 @@ async function rdySetUtilJig(on){
   const z=rdyCtxZone(); if(!z) return;
   const who=(typeof currentUser!=='undefined'&&currentUser&&currentUser.name)||null;
   await rdyPatchZone(z.id, on?{util_jig_at:new Date().toISOString(), util_jig_by:who}:{util_jig_at:null, util_jig_by:null}, '水電靠模開單');
+  rdyRenderZone();
+}
+async function rdySetNoSp(on){
+  const z=rdyCtxZone(); if(!z) return;
+  const who=(typeof currentUser!=='undefined'&&currentUser&&currentUser.name)||null;
+  const patch=on?{no_sp_at:new Date().toISOString(), no_sp_by:who}:{no_sp_at:null, no_sp_by:null};
+  const r=await sbFetch('/rest/v1/zones?id=eq.'+encodeURIComponent(z.id)+'&select=id',{method:'PATCH',headers:{'Prefer':'return=representation'},body:JSON.stringify(patch)});
+  if(!r.ok && /no_sp/.test(JSON.stringify(r.data||''))){ alert('「這區沒有 SP」還不能存：資料庫缺欄位，請先在 Supabase SQL Editor 執行 zones_no_sp_migration.sql。'); rdyRenderZone(); return; }
+  if(r.ok&&Array.isArray(r.data)&&r.data.length){
+    prodReceiptZones.forEach(x=>{ if(String(x.id)===String(z.id)) Object.assign(x,patch); });
+    if(Array.isArray(ldZones)) ldZones.forEach(x=>{ if(String(x.id)===String(z.id)) Object.assign(x,patch); });
+    if(typeof prodMemoReset==='function') prodMemoReset();
+  } else alert('「這區沒有 SP」儲存失敗('+(r.status||'?')+')');
   rdyRenderZone();
 }
 async function rdySetBevelJig(on){
