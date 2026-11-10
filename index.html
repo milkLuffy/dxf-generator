@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.05.2"/>
+<meta name="sc-version" content="2026.11.10.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -3157,6 +3157,51 @@ table.perm-mx .perm-mx-role{width:104px;max-width:104px;box-sizing:border-box}
     <div class="modal-actions">
       <button class="btn-modal-cancel" onclick="closeModal('pr-att-modal')">取消</button>
       <button class="btn-modal-ok" onclick="payrollAttSave()">套用</button>
+    </div>
+  </div>
+</div>
+
+<!-- 薪資計算:出勤核對(全員遲到/早退/半天) -->
+<style>
+  #pr-review-modal .modal{max-width:820px;width:96vw}
+  #pr-review-modal .pr-rv-wrap{max-height:min(60vh,520px);overflow:auto;border:1px solid var(--border);border-radius:8px}
+  #pr-review-modal td{vertical-align:middle}
+  #pr-review-modal tr.pr-rv-person td{background:var(--bg3);font-weight:700;font-size:13px;position:sticky;top:0;z-index:1}
+  #pr-review-modal tr.pr-rv-todo td{background:rgba(229,72,77,.07)}
+  #pr-review-modal .pr-rv-opts{display:flex;flex-wrap:wrap;gap:6px}
+  #pr-review-modal .pr-rv-opt{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap;background:var(--bg2)}
+  #pr-review-modal .pr-rv-opt.on{border-color:var(--accent2);background:rgba(10,132,255,.12)}
+  #pr-review-modal .pr-rv-opt input{margin:0}
+  .pr-rv-badge{display:inline-block;margin-left:5px;min-width:18px;padding:0 5px;border-radius:9px;background:var(--danger);color:#fff;font-size:11px;line-height:18px;text-align:center}
+  @media (max-width:600px){
+    #pr-review-modal .pr-rv-opt{padding:7px 9px}
+    #pr-review-modal thead{display:none}
+    #pr-review-modal table,#pr-review-modal tbody{display:block;width:100%}
+    #pr-review-modal tbody tr:not(.pr-rv-person){display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;padding:9px 10px;border-bottom:1px solid var(--border)}
+    #pr-review-modal tbody tr.pr-rv-person{display:block}
+    #pr-review-modal tbody tr.pr-rv-person td{display:block}
+    #pr-review-modal tbody tr:not(.pr-rv-person) td{border:0;padding:0;background:none!important}
+    #pr-review-modal tbody td:nth-child(5){order:3}
+    #pr-review-modal tbody td:nth-child(3){order:4;grid-column:1/-1}
+    #pr-review-modal tbody td:nth-child(4){order:5;grid-column:1/-1}
+  }
+</style>
+<div class="modal-overlay" id="pr-review-modal">
+  <div class="modal">
+    <div class="modal-title">出勤核對 — 遲到 / 早退 / 半天</div>
+    <div style="font-size:12px;color:var(--text3);margin:-4px 0 8px" id="pr-review-sub">—</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <label style="font-size:13px;display:inline-flex;gap:5px;align-items:center;cursor:pointer"><input type="checkbox" id="pr-review-only" onchange="payrollReviewToggle(this.checked)">只看未核對</label>
+      <div style="flex:1"></div>
+      <button class="btn" id="pr-review-all" onclick="payrollReviewAcceptAll()" style="padding:6px 12px">未核對的全部照目前選項確認</button>
+    </div>
+    <div class="pr-rv-wrap">
+      <table class="data-table" style="margin:0"><thead><tr><th>日期</th><th>打卡</th><th>狀況</th><th>怎麼算</th><th style="text-align:center">核對</th></tr></thead><tbody id="pr-review-body"></tbody></table>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px">照扣＝照打卡時數扣遲到/早退；算半天＝當天只算 0.5 天、不扣遲到早退（請假半天用這個）；免扣＝當天算整天不扣。下班 13:00 以前系統本來就算半天，可改成「補足整天」。套用後記得按「儲存草稿」或「鎖定本月」才會存進資料庫。</div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal('pr-review-modal')">取消</button>
+      <button class="btn-modal-ok" onclick="payrollReviewSave()">套用</button>
     </div>
   </div>
 </div>
@@ -6529,6 +6574,7 @@ window.normalizeFullWidth=function(value){
         <button class="btn" onclick="document.getElementById('pr-punch-file').click()" title="上傳打卡記錄表(.xlsx),以真實打卡時間計算出勤/遲到/加班" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--accent2);background:transparent;color:var(--accent2);cursor:pointer">📎 上傳打卡xlsx</button>
         <button class="btn btn-primary" onclick="payrollCalc()" style="padding:7px 14px;border-radius:var(--rad);background:var(--accent2);border:1px solid var(--accent2);color:#fff;cursor:pointer">🧮 計算</button>
         <button class="btn" onclick="payrollTyphoonOpen('holiday')" title="自己選當月哪幾天是國定假日(不會自動帶入)" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">國定假日<span id="pr-holiday-count"></span></button>
+        <button class="btn" onclick="payrollReviewOpen()" title="當月所有人的遲到、早退、半天集中核對:照扣 / 算半天 / 免扣" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">出勤核對<span id="pr-review-count" class="pr-rv-badge" style="display:none"></span></button>
         <button class="btn" onclick="payrollTyphoonOpen()" title="設定當月颱風假/特殊假日期(全體當天遲到早退免扣、半天補足整天)" style="padding:7px 14px;border-radius:var(--rad);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer">颱風假</button>
         <label id="pr-office-ot-wrap" style="display:none;font-size:12px;color:var(--text2);align-items:center;gap:4px" title="只有管理員看得到這個選項;設定跟著帳號走(換電腦也一樣)。畫面、明細單、CSV、Excel 一併套用。">辦公人員加班
           <select id="pr-office-ot-view" onchange="payrollOfficeOtView(this.value)" style="padding:6px 8px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text)">
@@ -43656,7 +43702,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     const base=emp.pay_type==='monthly'?num(emp.base_salary):num(emp.daily_wage)*(rawWorkDays-localSunDays);
     const otExcludedDates=otItems.filter(x=>x.excluded&&(num(x.raw_pay)>0||x.cat||num(x.holiday_pay)>0)).map(x=>x.date);
     const leaveItems=monthAtt.filter(a=>num(a.leave_hours)>0).map(a=>{const rate=cfg.leaveRate[a.leave_type]!=null?cfg.leaveRate[a.leave_type]:1;return{date:a.work_date,type:a.leave_type,hours:num(a.leave_hours),deduct:hourlyBase(emp)*num(a.leave_hours)*rate};});
-    const leaveDeduct=emp.pay_type==='monthly'?leaveItems.reduce((s,x)=>s+x.deduct,0):0;
+    const leaveDeduct=(emp.pay_type==='monthly'&&emp.emp_type==='office')?leaveItems.reduce((s,x)=>s+x.deduct,0):0;   // 請假扣薪只有辦公室人員;現場/外勞只看打卡
     // 外勞平日不打白天卡、只在 17:00 後打加班卡,打卡時刻不代表遲到/早退 → 一律不計遲到早退(加班仍依打卡下班判分段)
     const noLate=(R.late&&R.late.mode)==='none';   // 四類規則「遲到早退:不計」(預設外勞)
     const lateCount=monthAtt.reduce((s,a)=>s+((a.late&&!noLate)?1:0),0);
@@ -44442,6 +44488,17 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       if(usePunch){
         var praw=prPunchByKey[s.id_number]||prPunchByKey[s.name]||[];   // 員編=身分證/居留證號,比對不到退回姓名
         baseAtt=praw.slice();
+        // 辦公室人員:打卡表沒有請假,另外併入出勤回報的請假(照費率設定的比例扣)。請假那天的遲到/早退由請假說明,不另扣。
+        if(emp.emp_type==='office'){
+          (prAttByName[s.name]||[]).forEach(function(l){
+            if(!l.leave_type||!(num(l.leave_hours)>0)) return;
+            var d=String(l.work_date||'').slice(0,10), k=-1;
+            for(var bi=0;bi<baseAtt.length;bi++){ if(baseAtt[bi].work_date===d){ k=bi; break; } }
+            var lv={leave_type:l.leave_type, leave_hours:num(l.leave_hours)};
+            if(k>=0) baseAtt[k]=Object.assign({},baseAtt[k],lv,{late:false,late_hours:0,early_hours:0});
+            else baseAtt.push(Object.assign({work_date:d, weekday:new Date(d+'T00:00:00').getDay(), work_hours:0, work_day:0},lv));
+          });
+        }
       } else {
         baseAtt=(prAttByName[s.name]||[]).slice();
       }
@@ -44586,7 +44643,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         var halfPayN=attItems.filter(function(a){ return a.half_forced; }).length;
         var attDed=num(bd.attend_deduct);
         var waivedN=attItems.filter(function(a){ return a.waived && (num(a.late_hours)>0||num(a.early_hours)>0||a.half_day); }).length;
-        var halfN=attItems.filter(function(a){ return a.half_day && !a.waived && !a.half_forced; }).length;   // 未處理的半天班 → 警示(自己選「算半天」的不算)
+        var okD=((prAdjust[String(p.emp_id)]||{}).att_ok)||[];
+        var halfN=attItems.filter(function(a){ return a.half_day && !a.waived && !a.half_forced && okD.indexOf(a.date)<0; }).length;   // 未處理的半天班 → 警示(自己選「算半天」或出勤核對確認過的不算)
         var parts=[];
         if(attDed) parts.push('<span style="color:var(--danger)">-'+money(attDed)+'</span>');
         else if(hasAttEvent && !halfN) parts.push('<span style="color:var(--accent2)">$0</span>');
@@ -44678,6 +44736,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         +'<td>'+insM(ecSum)+'</td></tr>';
     }
     document.getElementById('pr-count').textContent=prRows.length+' 人 · '+period+' '+window.hrScopeLabel();
+    prReviewBadge();
     var hcEl=document.getElementById('pr-holiday-count'); if(hcEl) hcEl.textContent=prHolidayDates().length?('('+prHolidayDates().length+')'):'';
     // 投保申報(含身分證字號)只有管理員能下載;薪資 Excel/CSV 改為依權限逐格遮蔽,人人可下載
     var bIns=document.getElementById('pr-btn-inscsv'); if(bIns) bIns.style.display=isPayAdmin()?'':'none';
@@ -44713,7 +44772,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   };
 
   window.payrollSaveDraft=function(){ return payrollSave('draft'); };
-  window.payrollLock=async function(){ if(!await uiConfirm('確定鎖定本月薪資?薪資單將標記為 locked。')) return; return payrollSave('locked'); };
+  window.payrollLock=async function(){ if(!await prReviewGuard('鎖定本月')) return; if(!await uiConfirm('確定鎖定本月薪資?薪資單將標記為 locked。')) return; return payrollSave('locked'); };
 
   async function payrollSave(status){
     if(!prRows.length){ alert('尚未計算,請先按「計算」'); return; }
@@ -44746,7 +44805,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   // 依帳號權限逐格遮蔽:看不到的欄位整格清空,下方合計是逐格加總已寫入的值,
   // 所以合計自然只含看得到的部分 —— 不會被「合計減去其他人」反推出被遮的金額。
   var xlsMaskedRows=0;
-  window.payrollExportExcel=function(){
+  window.payrollExportExcel=async function(){
+    if(prRows.length&&!await prReviewGuard('匯出 Excel')) return;
     xlsMaskedRows=0;
     if(!prRows.length){ alert('尚未計算，請先按「計算」'); return; }
     if(typeof XLSX==='undefined'){ alert('Excel 元件尚未載入，請稍後再試'); return; }
@@ -45614,12 +45674,127 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     var cur=prAdjust[String(prAttSid)]||{};
     if(waive.length) cur.att_waive=waive; else delete cur.att_waive;
     if(halfPay.length) cur.half_pay=halfPay; else delete cur.half_pay;
+    // 視窗裡列出、沒選免扣也沒選算半天的日子 = 核對過照扣
+    var okDates=[]; cbs.forEach(function(cb){ var d=cb.getAttribute('data-date'); if(checked.indexOf(d)<0&&halfPay.indexOf(d)<0&&typ.indexOf(d)<0) okDates.push(d); });
+    if(okDates.length) cur.att_ok=okDates; else delete cur.att_ok;
     if(Object.keys(cur).length) prAdjust[String(prAttSid)]=cur; else delete prAdjust[String(prAttSid)];
     payrollRecalcOne(prAttSid, waive);
     closeModal('pr-att-modal');
     payrollRender(prLastNoset, prLastPeriod);
     document.getElementById('pr-status').textContent='狀態:草稿(調整尚未儲存,請按「儲存草稿」)';
   };
+
+  // ④ 出勤核對:當月所有人的遲到/早退/半天集中一張表,每筆選「照扣 / 算半天 / 免扣」。
+  //    選過就算核對過(存 adjustments[sid]:att_waive 免扣、half_pay 算半天、att_ok 照扣);颱風假日期自動算核對過。
+  //    還沒核對的照系統原本的算法先算,鎖定/匯出 Excel 前會提醒。
+  var prRvItems=[], prRvOnlyTodo=true;
+  function prReviewCollect(){
+    var typ=prTyphoonDates(), out=[];
+    prRows.forEach(function(p){
+      var bd=p.breakdown||{}, sid=String(p.emp_id), adj=prAdjust[sid]||{};
+      var waive=adj.att_waive||[], half=adj.half_pay||[], ok=adj.att_ok||[];
+      var baseByDate={}; (p._baseAtt||[]).forEach(function(x){ baseByDate[x.work_date]=x; });
+      (bd.attItems||[]).forEach(function(a){
+        var o=baseByDate[a.date];
+        if(a.half_forced&&o) a=Object.assign({},a,{half_day:false,early_hours:num(o.early_hours),late_hours:num(o.late_hours),late:!!o.late,work_day:1});
+        var early=a.early_exempt?0:num(a.early_hours), late=num(a.late_hours);
+        if(!(late>0||early>0||a.half_day)) return;
+        var pm=!!(a.punch_in&&toMin(a.punch_in)>=toMin('12:00'));
+        var canHalf=!a.half_day&&!a.is_foreign&&(early>0||pm);
+        var isTyp=typ.indexOf(a.date)>=0;
+        var choice=(a.waived||isTyp)?'waive':(half.indexOf(a.date)>=0&&canHalf)?'half':'deduct';
+        out.push({sid:sid,name:p._name||'',perDay:num(p._perDay),hourly:num(bd.attend_hourly),date:a.date,weekday:a.weekday,
+          punch_in:a.punch_in||'',punch_out:a.punch_out||'',late:late,early:early,autoHalf:!!a.half_day,pm:pm,canHalf:canHalf,typhoon:isTyp,
+          choice:choice,done:isTyp||waive.indexOf(a.date)>=0||half.indexOf(a.date)>=0||ok.indexOf(a.date)>=0});
+      });
+    });
+    return out;
+  }
+  function prReviewTodoCount(){ try{ return prRows.length?prReviewCollect().filter(function(x){ return !x.done; }).length:0; }catch(e){ return 0; } }
+  function prReviewBadge(){
+    var el=document.getElementById('pr-review-count'); if(!el) return;
+    var n=prReviewTodoCount();
+    el.textContent=n?(' '+n):''; el.style.display=n?'':'none';
+  }
+  window.payrollReviewOpen=function(){
+    if(!prRows.length){ alert('請先按「計算」'); return; }
+    prRvItems=prReviewCollect();
+    if(!prRvItems.length){ alert('本月沒有遲到、早退或半天。'); return; }
+    prRvItems.forEach(function(x){ x.wasDone=x.done; });
+    prRvOnlyTodo=prRvItems.some(function(x){ return !x.done; });
+    payrollReviewRender();
+    openModal('pr-review-modal');
+  };
+  function prRvAmt(x,ch){   // 這筆照某個選項會扣多少(負數=少領)
+    if(ch==='waive') return x.autoHalf?Math.round(0.5*x.perDay):0;   // 半天補足整天:多領半天
+    if(ch==='half') return -Math.round(0.5*x.perDay);
+    return x.autoHalf?0:-Math.round((x.late+x.early)*x.hourly);
+  }
+  window.payrollReviewRender=function(){
+    var locked=!!(prRun&&prRun.status==='locked');
+    var list=prRvItems.filter(function(x){ return !prRvOnlyTodo||!x.wasDone; });   // 以打開時為準,選完不會馬上消失
+    var todo=prRvItems.filter(function(x){ return !x.done; }).length;
+    document.getElementById('pr-review-sub').innerHTML='共 '+prRvItems.length+' 筆，<b style="color:'+(todo?'var(--danger)':'var(--accent2)')+'">'+(todo?('還有 '+todo+' 筆沒核對'):'全部核對完成')+'</b>。選了就算核對過；沒核對的先照系統原本算法算。';
+    document.getElementById('pr-review-only').checked=prRvOnlyTodo;
+    var lastName=null;
+    document.getElementById('pr-review-body').innerHTML=list.map(function(x){
+      var i=prRvItems.indexOf(x), dis=locked||x.typhoon?' disabled':'';
+      var st=[];
+      if(x.late) st.push('<span style="color:var(--danger)">遲到'+x.late+'h</span>');
+      if(x.early) st.push('<span style="color:var(--danger)">早退'+x.early+'h</span>');
+      if(x.autoHalf) st.push('<span style="color:var(--yellow)">半天</span>');
+      if(x.pm&&!x.autoHalf) st.push('<span style="color:var(--yellow)">下午才來</span>');
+      if(x.typhoon) st.push('<span style="color:var(--accent2)">颱風假</span>');
+      var opt=function(val,label){
+        var on=x.choice===val, a=prRvAmt(x,val);
+        var amt=a?('<span style="font-size:11px;color:'+(a<0?'var(--danger)':'var(--accent2)')+'">'+(a<0?'-':'+')+money(Math.abs(a))+'</span>'):'<span style="font-size:11px;color:var(--text3)">$0</span>';
+        return '<label class="pr-rv-opt'+(on?' on':'')+'"><input type="radio" name="prrv'+i+'" value="'+val+'"'+(on?' checked':'')+dis+' onchange="payrollReviewPick('+i+',this.value)">'+label+' '+amt+'</label>';
+      };
+      var opts=x.autoHalf
+        ? opt('deduct','算半天')+opt('waive','補足整天')
+        : opt('deduct','照扣')+(x.canHalf?opt('half','算半天'):'')+opt('waive','免扣');
+      var head=x.name!==lastName?'<tr class="pr-rv-person"><td colspan="5">'+esc(x.name)+'</td></tr>':''; lastName=x.name;
+      var wd=(x.weekday>=0&&x.weekday<=6)?('（'+WKN[x.weekday]+'）'):'';
+      return head+'<tr class="'+(x.done?'':'pr-rv-todo')+'">'
+        +'<td style="font-family:var(--mono);white-space:nowrap">'+esc(String(x.date).slice(5))+wd+'</td>'
+        +'<td style="font-family:var(--mono);white-space:nowrap">'+esc(x.punch_in||'—')+' ~ '+esc(x.punch_out||'—')+'</td>'
+        +'<td>'+st.join(' · ')+'</td>'
+        +'<td><div class="pr-rv-opts">'+opts+'</div></td>'
+        +'<td style="text-align:center;white-space:nowrap">'+(x.done?'<span style="color:var(--accent2);font-size:12px">已核對</span>':'<span style="color:var(--danger);font-size:12px">未核對</span>')+'</td></tr>';
+    }).join('')||'<tr><td colspan="5" class="empty-state">沒有未核對的項目</td></tr>';
+    var btn=document.getElementById('pr-review-all'); if(btn){ btn.disabled=locked||!todo; }
+  };
+  window.payrollReviewPick=function(i,val){ var x=prRvItems[i]; if(!x) return; x.choice=val; x.done=true; x._dirty=true; payrollReviewRender(); };
+  window.payrollReviewToggle=function(on){ prRvOnlyTodo=!!on; prRvItems.forEach(function(x){ x.wasDone=x.done; }); payrollReviewRender(); };
+  // 未核對的全部照目前(系統建議)的選項確認
+  window.payrollReviewAcceptAll=function(){
+    prRvItems.forEach(function(x){ if(!x.done){ x.done=true; x._dirty=true; } });
+    payrollReviewRender();
+  };
+  window.payrollReviewSave=function(){
+    if(prRun&&prRun.status==='locked'){ alert('本月已鎖定,請先解鎖再調整。'); return; }
+    var bySid={};
+    prRvItems.forEach(function(x){ if(x._dirty&&!x.typhoon) (bySid[x.sid]=bySid[x.sid]||[]).push(x); });
+    var sids=Object.keys(bySid);
+    if(!sids.length){ closeModal('pr-review-modal'); return; }
+    sids.forEach(function(sid){
+      var cur=prAdjust[sid]||{}, dates=bySid[sid].map(function(x){ return x.date; });
+      var keep=function(arr){ return (arr||[]).filter(function(d){ return dates.indexOf(d)<0; }); };
+      var waive=keep(cur.att_waive), half=keep(cur.half_pay), ok=keep(cur.att_ok);
+      bySid[sid].forEach(function(x){ if(x.choice==='waive') waive.push(x.date); else if(x.choice==='half') half.push(x.date); else ok.push(x.date); });
+      [['att_waive',waive],['half_pay',half],['att_ok',ok]].forEach(function(kv){ if(kv[1].length) cur[kv[0]]=kv[1]; else delete cur[kv[0]]; });
+      if(Object.keys(cur).length) prAdjust[sid]=cur; else delete prAdjust[sid];
+      payrollRecalcOne(sid, waive);
+    });
+    closeModal('pr-review-modal');
+    payrollRender(prLastNoset, prLastPeriod);
+    document.getElementById('pr-status').textContent='狀態:草稿(出勤核對尚未儲存,請按「儲存草稿」)';
+  };
+  // 鎖定、匯出 Excel 前:還有沒核對的就先提醒
+  async function prReviewGuard(what){
+    var n=prReviewTodoCount(); if(!n) return true;
+    return await uiConfirm('還有 '+n+' 筆遲到 / 早退 / 半天沒有核對（會照系統原本算法算）。\n仍要'+what+'嗎?\n\n要先核對請按取消，再按上方「出勤核對」。');
+  }
 
   // ③ 加班費 / 假日加班費 逐日明細:點薪資表「加班費」或「假日加班費」欄開啟。
   //    勾選=當天不算加班(該日加班費、假日加班費、加班天數全部不計),存於 adjustments[sid].ot_exclude。
