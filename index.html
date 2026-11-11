@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.10.5"/>
+<meta name="sc-version" content="2026.11.11.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -42001,6 +42001,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         company:companyOf(c.proj_num,zk), status:utilSt, note:(rec.note||'') });
       grand+=uTotal;
     });
+    // 主件逐月先建好分組才判斷是否已請款,整月都請完會留下空分組 → 拿掉,避免回報表出現沒有內容的「YYYY/MM未請款」
+    Object.keys(byYm).forEach(function(ym){ if(!byYm[ym].length) delete byYm[ym]; });
     var ubq=outputQuery('ub-search');
     if(ubq){
       Object.keys(byYm).forEach(function(ym){
