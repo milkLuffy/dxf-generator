@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.11.1"/>
+<meta name="sc-version" content="2026.11.11.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -49051,7 +49051,8 @@ function pmReasonSummary(details){
 function prodParseProductNotices(text){
   const src=String(text||'').replace(/\r/g,'');
   // 每張通知單以日期/倉庫/批次/工程/副號/流水編號的固定表頭切開。
-  const header=/^\s*(\d{8})\s+([A-Z]\d{3})\s+(\d{4})\s+([A-Z0-9*_-]+)\s+([A-Z])\s+([A-Z0-9]+-\d+)\s*$/gmi;
+  // 工程副號可能是一個字母(A)或字母加數字(A001,2026-11 起的通知單)
+  const header=/^\s*(\d{8})\s+([A-Z]\d{3})\s+(\d{4})\s+([A-Z0-9*_-]+)\s+([A-Z][A-Z0-9]{0,5})\s+([A-Z0-9]+-\d+)\s*$/gmi;
   const hits=[]; let m;
   while((m=header.exec(src))) hits.push({at:m.index,end:header.lastIndex,date:m[1],warehouse:m[2],batch:m[3],project:m[4],sub:m[5],fullSerial:pmNormalizeSerial(m[6])});
   return hits.map((h,idx)=>{
