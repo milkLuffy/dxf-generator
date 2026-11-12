@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.12.2"/>
+<meta name="sc-version" content="2026.11.12.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -26224,6 +26224,8 @@ let layoutFilterText = '';
 let layoutDailyOutputKeys = new Set();
 // 「已上線支數」用的三份參考資料(建議清單要按剩餘數量判斷,不能只看有沒有上線過):
 let layoutShippedQty = {};     // 工程編號|構件編號 -> 已出貨的上線支數(這些列不在 layoutRows 裡)
+let layoutShippedDates = {};   // 同上 -> 已出貨那些列的上線日期(超過 BOM 數量時提示「幾月幾號登記過」)
+let layoutDailyDates = {};     // 工程編號|構件編號 -> 每日產量(報驗)日期
 let layoutDailyQty = {};       // 工程編號|構件編號 -> 每日產量支數(已報驗,可能未經線上進度表)
 let layoutBOMQtyMap = {};      // 工程編號|構件編號 -> BOM 總支數(建議清單要 O(1) 查,不能每次掃全表)
 
@@ -26262,15 +26264,17 @@ async function layoutLoadPreInspKeys() {
   } catch(e) {}
 }
 async function layoutLoadDailyOutputKeys() {
-  const r = await sbFetchAll('/rest/v1/daily_output?select=proj_num,part_no');
+  let r = await sbFetchAll('/rest/v1/daily_output?select=proj_num,part_no,date');
+  if (!r.ok) r = await sbFetchAll('/rest/v1/daily_output?select=proj_num,part_no');
   layoutDailyOutputKeys = new Set();
-  layoutDailyQty = {};
+  layoutDailyQty = {}; layoutDailyDates = {};
   if (Array.isArray(r.data)) {
     r.data.forEach(x => {
       if (!x.proj_num || !x.part_no) return;
       const k = layoutDailyKey(x.proj_num, x.part_no);
       layoutDailyOutputKeys.add(k);
       layoutDailyQty[k] = (layoutDailyQty[k] || 0) + 1;   // 每日產量一列 = 一支
+      if (x.date) (layoutDailyDates[k] || (layoutDailyDates[k] = [])).push(String(x.date).slice(0,10));
     });
   }
 }
@@ -26279,13 +26283,14 @@ async function layoutLoadDailyOutputKeys() {
 // 這裡只收「已出貨」的上線支數 —— 未出貨的列 layoutInit 一律載進 layoutRows(不分工程),
 // 由 layoutUsedQty 即時統計,才不會跟本表剛輸入的資料重複計算,也不會因為載入後又新增而算漏。
 async function layoutLoadOnlineKeys() {
-  layoutShippedQty = {};
+  layoutShippedQty = {}; layoutShippedDates = {};
   const lr = await sbFetchAll('/rest/v1/layout_items?select=proj_num,part_no,work_date,qty&ship_date=not.is.null');
   if (Array.isArray(lr.data)) {
     lr.data.forEach(x => {
       if (!x.proj_num || !x.part_no || !x.work_date) return;
       const k = layoutDailyKey(x.proj_num, x.part_no);
       layoutShippedQty[k] = (layoutShippedQty[k] || 0) + (parseInt(x.qty) || 1);
+      (layoutShippedDates[k] || (layoutShippedDates[k] = [])).push({d:String(x.work_date).slice(0,10), n:parseInt(x.qty) || 1});
     });
   }
 }
@@ -26565,6 +26570,22 @@ function layoutBOMQty(projNum, partNo) {
 // 第 i 列以外「已上線」支數:本表其他列 + 已出貨;每日產量(已報驗)較多時以它為準。
 // 每日產量可能已含這一列自己(已存檔且報驗過),所以先扣掉自己的支數。
 // 用手打的構件編號、數量選單都要看這個,不能只看本表——不然已出貨(不在本表)的構件可以重複登記。
+// 超過 BOM 數量時的說明:「P5(BOM 2 支):11/08 上線(已出貨)、11/10 上線」;
+// 進度表都沒有紀錄、只有每日產量報驗的,改列報驗日期。excludeI = 正在輸入的那一列(不算自己)。
+function layoutRegisteredNote(projNum, partNo, excludeI) {
+  const k = layoutDailyKey(projNum, partNo), md = d => d ? (+d.slice(5,7)) + '/' + (+d.slice(8,10)) : '日期不明';
+  const list = [];
+  (layoutShippedDates[k] || []).forEach(x => list.push({d:x.d, t:md(x.d) + ' 上線(已出貨)' + (x.n > 1 ? '×' + x.n : '')}));
+  layoutRows.forEach((r, idx) => {
+    if (idx === excludeI || !r.part_no || layoutDailyKey(r.proj_num, r.part_no) !== k) return;
+    const n = parseInt(r.qty) || 0; if (!n) return;
+    list.push({d:String(r.work_date || '').slice(0,10), t:md(String(r.work_date || '').slice(0,10)) + ' 上線' + (n > 1 ? '×' + n : '')});
+  });
+  if (!list.length) (layoutDailyDates[k] || []).forEach(d => list.push({d, t:md(d) + ' 報驗'}));
+  list.sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
+  const bom = layoutBOMQty(projNum, partNo);
+  return partNo + '(BOM ' + bom + ' 支' + (list.length ? ':' + list.map(x => x.t).join('、') : '') + ')';
+}
 function layoutOtherUsed(i) {
   const r = layoutRows[i]; if (!r || !r.part_no) return 0;
   const k = layoutDailyKey(r.proj_num, r.part_no);
@@ -27069,7 +27090,7 @@ function layoutAutofillRow(i) {
   const used = layoutOtherUsed(i);
   const remaining = bomQty - used;
   if (remaining <= 0) {
-    row._qtyError = '此構件已全部上線完畢';
+    row._qtyError = '已超過 BOM 數量,已登記過：' + layoutRegisteredNote(row.proj_num, row.part_no, i);
     row.qty = 0;
   } else {
     row._qtyError = '';
@@ -27333,10 +27354,11 @@ function layoutPickPart(i, partNo, projNum) {
     const remaining = bomQty - used;
     if (remaining <= 0) {
       const k = layoutRows[i]._key;
+      const note = layoutRegisteredNote(layoutRows[i].proj_num, layoutRows[i].part_no, i);
       layoutClearRowData(i);
       layoutHideSuggest();
       renderLayoutInput();
-      layoutWarnRowByKey(k, '此構件已全部上線完畢,該筆已清除');
+      layoutWarnRowByKey(k, '已超過 BOM 數量,該筆已清除。已登記過：' + note);
       return;
     }
     else { layoutRows[i]._qtyError = ''; if (!layoutRows[i].qty || layoutRows[i].qty > remaining) layoutRows[i].qty = 1; }
@@ -27448,7 +27470,8 @@ async function layoutMultiOpen() {
         '<div class="layout-multi-help" id="layout-multi-count">只列出尚有未上線數量的構件，可多重勾選。</div>' +
       '</div>' +
       '<div id="layout-multi-text-panel" style="display:none">' +
-        '<textarea class="input-modal-field layout-multi-text" id="layout-multi-text" placeholder="例如：D13Y12 D13Y10、D15Y03.D13Y01"></textarea>' +
+        '<textarea class="input-modal-field layout-multi-text" id="layout-multi-text" placeholder="例如：D13Y12 D13Y10、D15Y03.D13Y01&#10;同一支要 2 支：D13Y12*2 或打兩次 D13Y12 D13Y12"></textarea>' +
+        '<div style="font-size:12px;color:var(--text3);margin-top:4px">「編號*數量」= 多支；超過 BOM 數量的會略過並列出已登記的日期。</div>' +
         '<div class="layout-multi-help">任何分隔符都可以（空白、換行、逗號、頓號、點、斜線、引號…）；系統會自動解析並從所選工程的 BOM 帶入資料。</div>' +
       '</div>' +
       '<div class="input-modal-actions"><button type="button" class="input-modal-btn cancel" onclick="layoutMultiClose()">取消</button><button type="button" class="input-modal-btn ok" onclick="layoutMultiSubmit()">加入明細</button></div>' +
@@ -27518,8 +27541,16 @@ function layoutMultiParse(text) {
   // 先 NFKC 把全形英數/符號轉半形,避免貪上全形字母漏掘。
   let src = String(text || '');
   try { src = src.normalize('NFKC'); } catch (e) {}
-  const toks = src.toUpperCase().match(/[A-Z0-9][A-Z0-9_-]*/g) || [];
-  return [...new Set(toks.map(s => s.replace(/^[_-]+|[_-]+$/g, '')).filter(Boolean))];
+  // 「P5*2」「P5＊2」「P5×2」= 2 支;同一個編號打兩次也算 2 支(是否超過 BOM 數量在送出時判斷)。
+  // 不用英文 x 當乘號:編號本身常有 X(例 D21X1)。
+  const out = [], re = /([A-Z0-9][A-Z0-9_-]*)(?:\s*[*×]\s*(\d{1,3}))?/g;
+  let m; const up = src.toUpperCase();
+  while ((m = re.exec(up))) {
+    const pn = m[1].replace(/^[_-]+|[_-]+$/g, ''); if (!pn) continue;
+    const n = m[2] ? Math.max(1, parseInt(m[2], 10)) : 1;
+    for (let j = 0; j < n; j++) out.push(pn);
+  }
+  return out;
 }
 
 async function layoutMultiSubmit() {
@@ -27540,16 +27571,21 @@ async function layoutMultiSubmit() {
   layoutBOMCache.filter(c => c._proj_num === proj && c.part_no && layoutMultiIsActiveStatus(c._zone_status)).forEach(c => {
     const k = String(c.part_no).trim().toUpperCase(); if (!byPart.has(k)) byPart.set(k,c);
   });
-  const accepted = [], missing = [], online = [];
+  const accepted = [], missing = [], online = [], overCnt = {};
   partNos.forEach(pn => {
     const c = byPart.get(String(pn).toUpperCase());
-    if (!c) { missing.push(pn); return; }
-    if (layoutPartExhausted(proj, c.part_no, null, used)) { online.push(c.part_no); return; }
+    if (!c) { if (!missing.includes(pn)) missing.push(pn); return; }
+    if (layoutPartExhausted(proj, c.part_no, null, used)) { if (!online.includes(c.part_no)) online.push(c.part_no); overCnt[c.part_no] = (overCnt[c.part_no] || 0) + 1; return; }
     accepted.push(c);
     const k = layoutDailyKey(proj, c.part_no); used[k] = (used[k] || 0) + 1;
   });
+  // 在把本次的列加進表格之前算好,才分得出「之前登記的」與「這次輸入的」
+  const accN = {}; accepted.forEach(c => { accN[c.part_no] = (accN[c.part_no] || 0) + 1; });
+  const overNotes = online.map(pn => '・' + layoutRegisteredNote(proj, pn).replace(/\)$/, (accN[pn] ? (/支:/.test(layoutRegisteredNote(proj, pn)) ? '、' : ':') + '本次加入 ' + accN[pn] + ' 支' : '') + ')')
+    + ' — 多出 ' + overCnt[pn] + ' 支未加入');
+  const overTxt = () => overNotes.join('\n');
   if (!accepted.length) {
-    alert('沒有可加入的構件。' + (missing.length ? '\nBOM 找不到：' + missing.join('、') : '') + (online.length ? '\n已上線：' + online.join('、') : ''));
+    alert('沒有可加入的構件。' + (missing.length ? '\nBOM 找不到：' + missing.join('、') : '') + (online.length ? '\n\n超過 BOM 數量,已登記過：\n' + overTxt() : ''));
     return;
   }
   layoutSnapshotNow();
@@ -27560,9 +27596,10 @@ async function layoutMultiSubmit() {
   })));
   layoutEnsureBlankRow(); pgState.layout = 0; renderLayoutInput(); renderLayoutStats(); layoutMultiClose();
   clearTimeout(_layoutSaveTimer); await layoutFlushDirty();
-  let msg = '已加入 ' + accepted.length + ' 筆明細';
-  if (missing.length) msg += '\nBOM 找不到，已略過：' + missing.join('、');
-  if (online.length) msg += '\n已上線，已略過：' + online.join('、');
+  const accCnt = {}; accepted.forEach(c => { accCnt[c.part_no] = (accCnt[c.part_no] || 0) + 1; });
+  let msg = '已加入 ' + accepted.length + ' 筆明細：' + Object.keys(accCnt).map(pn => pn + (accCnt[pn] > 1 ? '×' + accCnt[pn] : '')).join('、');
+  if (missing.length) msg += '\n\nBOM 找不到，已略過：' + missing.join('、');
+  if (online.length) msg += '\n\n超過 BOM 數量，已略過（已登記過）：\n' + overTxt();
   alert(msg);
 }
 
@@ -31958,13 +31995,13 @@ function layoutPasteGrid(cells2d, anchor) {
   affected.forEach(ri => {
     const row = layoutRows[ri];
     if (!row || !row._qtyError) return;
-    pasteFull.push(row.part_no);
+    pasteFull.push(layoutRegisteredNote(row.proj_num, row.part_no, ri));
     if (row.id) { try { sbFetch('/rest/v1/layout_items?id=eq.' + row.id, {method:'DELETE'}); } catch(e){} row.id = null; }
     row.part_no = ''; row.proj_num = ''; row.zone_code = ''; row.drawing_no = ''; row.spec = ''; row.qty = 1; row.bed = '';
     row.net_weight = ''; row.ship_date = ''; row.inspect_no = ''; row.done_date = ''; row._qtyError = ''; row._dirty = false;
   });
   if (pasteFull.length) {
-    setTimeout(() => alert('已全部上線,已略過 ' + pasteFull.length + ' 支：' + [...new Set(pasteFull)].join('、')), 0);
+    setTimeout(() => alert('超過 BOM 數量,已略過 ' + pasteFull.length + ' 支。已登記過：\n' + [...new Set(pasteFull)].map(t => '・' + t).join('\n')), 0);
   }
   // 貼上後停留在「被貼上的最後一個儲存格」(範圍的右下角),方便繼續用鍵盤操作。
   const lastRi = affected.length ? affected[affected.length - 1] : startIdx;
