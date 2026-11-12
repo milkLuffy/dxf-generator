@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.12.1"/>
+<meta name="sc-version" content="2026.11.12.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -27624,7 +27624,7 @@ function layoutMarkDirty(i) {
 }
 async function layoutFlushDirty() {
   if (_layoutSaving) { _layoutSaveAgain = true; return; } // 防止同時寫入造成重複新增
-  const dirty = layoutRows.filter(r => r._dirty && (r.part_no || r.bed));
+  const dirty = layoutRows.filter(r => r._dirty && (r.part_no || r.bed) && !r._qtyError);   // 數量已滿(已全部上線)的列不存,避免 qty=0 被當 1 支寫入
   if (!dirty.length) return;
   _layoutSaving = true;
   let saved = 0;
@@ -31953,6 +31953,19 @@ function layoutPasteGrid(cells2d, anchor) {
     if (layoutRowIsInput(row) && (row.part_no || row.proj_num || row.bed || row.ship_date)) row._isInput = false;
     layoutMarkDirty(ri);   // 自動存(貼上的每一列)
   });
+  // 貼上的構件已全部上線(含已出貨/已報驗)→ 不能留著:qty=0 存檔時會被當成 1 支,變成重複登記
+  const pasteFull = [];
+  affected.forEach(ri => {
+    const row = layoutRows[ri];
+    if (!row || !row._qtyError) return;
+    pasteFull.push(row.part_no);
+    if (row.id) { try { sbFetch('/rest/v1/layout_items?id=eq.' + row.id, {method:'DELETE'}); } catch(e){} row.id = null; }
+    row.part_no = ''; row.proj_num = ''; row.zone_code = ''; row.drawing_no = ''; row.spec = ''; row.qty = 1; row.bed = '';
+    row.net_weight = ''; row.ship_date = ''; row.inspect_no = ''; row.done_date = ''; row._qtyError = ''; row._dirty = false;
+  });
+  if (pasteFull.length) {
+    setTimeout(() => alert('已全部上線,已略過 ' + pasteFull.length + ' 支：' + [...new Set(pasteFull)].join('、')), 0);
+  }
   // 貼上後停留在「被貼上的最後一個儲存格」(範圍的右下角),方便繼續用鍵盤操作。
   const lastRi = affected.length ? affected[affected.length - 1] : startIdx;
   const maxCols = cells2d.reduce((m, l) => Math.max(m, l.length), 1);
