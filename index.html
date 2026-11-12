@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.12.5"/>
+<meta name="sc-version" content="2026.11.12.6"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1514,18 +1514,24 @@ html.dtv-open,html.dtv-open body{overflow:hidden}
 .hww-card .v{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text)}
 .hww-card .v small{font-size:12px;color:var(--text3);font-weight:500;margin-left:3px}
 .hww-card .d{font-size:11px;color:var(--text2);margin-top:2px}
-.hww-group{margin-bottom:14px}
-.hww-group-h{font-weight:700;margin:4px 0 6px;color:var(--text)}
-.hww-group-h small{color:var(--text3);font-weight:500;margin-left:6px}
-.hww-tbl{border-collapse:collapse;font-size:13px;min-width:820px}
-.hww-tbl th,.hww-tbl td{border-bottom:1px solid var(--border);padding:6px 10px;text-align:left;white-space:nowrap}
-.hww-tbl th{font-size:12px;color:var(--text2);font-weight:600}
-.hww-tbl td.code{font-family:var(--mono);font-weight:700}
+.hw-tblbox.hww-box{width:auto}
+.hww-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,660px),1fr));gap:4px 22px;align-items:start}
+.hww-group{margin-bottom:14px;min-width:0}
+.hww-group-h{font-weight:700;font-size:17px;margin:4px 0 6px;color:var(--text)}
+.hww-group-h small{color:var(--text3);font-weight:500;font-size:13px;margin-left:6px}
+.hww-group-h .hww-legend{float:right;font-size:12px;font-weight:500;color:var(--text2)}
+.hww-group-h .hww-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px;background:color-mix(in srgb,var(--accent3) 16%,transparent);border:1px solid color-mix(in srgb,var(--accent3) 40%,transparent)}
+.hww-tbl{border-collapse:collapse;font-size:15px;width:100%}
+.hww-tbl th,.hww-tbl td{border-bottom:1px solid var(--border);padding:8px 9px;text-align:left;white-space:nowrap}
+.hww-tbl th{font-size:13.5px;color:var(--text2);font-weight:600}
+.hww-tbl td.code{font-family:var(--mono);font-weight:700;font-size:16px}
 .hww-tbl td.num{font-family:var(--mono);text-align:right}
-.hww-tbl td.diff{color:var(--yellow)}
-.hww-own{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;border:1px solid var(--border)}
+.hww-tbl td.diff{color:var(--yellow);font-weight:700}
+.hww-tbl tr.inv td{background:color-mix(in srgb,var(--accent3) 10%,transparent)}
+.hww-own{display:inline-block;padding:1px 9px;border-radius:999px;font-size:13px;border:1px solid var(--border)}
 .hww-own.eg{color:var(--accent2);border-color:var(--accent2)}
 .hww-wrap{overflow:auto}
+.hww-cards .hw-card.inv{background:color-mix(in srgb,var(--accent3) 10%,var(--bg2))}
 @media(max-width:768px){.hww-tbl{display:none}.hww-cards{display:block!important}.hww-card{flex:1 1 calc(50% - 8px);min-width:0}}
 .hww-cards{display:none}
 /* ⑥ 設備清單 */
@@ -9630,7 +9636,7 @@ window.normalizeFullWidth=function(value){
         <!-- ⑥-2 焊機清單:CO2(C1~)/AC(A1~),改編號會自動照順序排;焊工人數由公司名冊自動統計 -->
         <div id="hw-weld-panel" style="display:none">
           <div class="hww-sum" id="hww-sum"></div>
-          <div class="hw-tblbox">
+          <div class="hw-tblbox hww-box">
           <div class="layout-toolbar">
             <span class="layout-hint">焊機依種類與編號排序(C1、C2…C10;A1、A2…)。焊工人數依公司名冊「在職、職稱焊工」自動統計。</span>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -15381,7 +15387,7 @@ function hwCardsClear(){
 // o:{edit,del,title,num,unit,meta:[...],sub(html)}
 function hwCard(o){
   const meta=(o.meta||[]).filter(x=>x!=null&&String(x).trim()!=='').map(esc).join('<span class="sep">·</span>');
-  return '<div class="hw-card" onclick="'+o.edit+'">'
+  return '<div class="hw-card'+(o.cls?' '+o.cls:'')+'" onclick="'+o.edit+'">'
     +(o.del?'<button class="hw-card-del" aria-label="刪除" onclick="event.stopPropagation();'+o.del+'">✕</button>':'')
     +'<div class="hw-card-top"><span class="hw-card-title">'+esc(o.title||'')+'</span>'
     +(o.num!=null&&o.num!==''?'<span class="hw-card-num">'+esc(o.num)+(o.unit?'<small>'+esc(o.unit)+'</small>':'')+'</span>':'')+'</div>'
@@ -16329,20 +16335,21 @@ function hwRenderWeld(){
   if(!rows.length){ box.innerHTML='<div class="empty-state">'+(q?'沒有符合搜尋的焊機':'還沒有焊機資料')+'</div>'; return; }
   box.innerHTML=HW_WELD_KINDS.map(k=>{
     const g=rows.filter(w=>w.kind===k); if(!g.length) return '';
-    const tr=g.map(w=>'<tr>'
+    const tr=g.map(w=>'<tr'+(w.drive==='變頻'?' class="inv"':'')+'>'
       +'<td class="code">'+esc(w.code||'')+'</td><td>'+esc(w.contractor||'')+'</td><td>'+esc(w.bed||'')+'</td>'
-      +'<td class="num">'+(w.year_label?esc(w.year_label)+'年':'')+'</td>'
+      +'<td class="num">'+(w.year_label?esc(w.year_label):'')+'</td>'
       +'<td class="num'+(w.year_label&&w.actual_year&&+w.year_label!==+w.actual_year?' diff':'')+'">'+(w.actual_year?esc(w.actual_year):'')+'</td>'
       +'<td>'+esc(hwWeldModel(w))+'</td>'
       +'<td><span class="hww-own'+(w.owner==='長榮'?' eg':'')+'">'+esc(w.owner||'鎮山')+'</span></td>'
       +'<td>'+esc(w.note||'')+'</td>'
       +'<td style="text-align:center"><button class="hw-act" onclick="hwWeldEdit('+w.id+')">編輯</button> <button class="hw-act del" onclick="hwWeldDelete('+w.id+')">刪除</button></td></tr>').join('');
-    const cards=g.map(w=>hwCard({edit:'hwWeldEdit('+w.id+')',del:'hwWeldDelete('+w.id+')',title:w.code,num:w.year_label?w.year_label+'年':'',
+    const cards=g.map(w=>hwCard({cls:w.drive==='變頻'?'inv':'',edit:'hwWeldEdit('+w.id+')',del:'hwWeldDelete('+w.id+')',title:w.code,num:w.year_label?String(w.year_label):'',
       meta:[hwWeldModel(w), w.owner||'鎮山', w.actual_year&&+w.actual_year!==+w.year_label?'實際 '+w.actual_year:'', w.bed?'柱位 '+w.bed:'', w.contractor&&w.contractor!=='鎮山'?w.contractor:'', w.note]})).join('');
-    return '<div class="hww-group"><div class="hww-group-h">'+k+' 焊機<small>'+g.length+' 台</small></div>'
-      +'<div class="hww-wrap"><table class="hww-tbl"><thead><tr><th>機台編號</th><th>承攬商</th><th>柱位</th><th style="text-align:right">年份</th><th style="text-align:right">實際年份</th><th>機型(廠牌)</th><th>歸屬</th><th>備註</th><th style="text-align:center">操作</th></tr></thead><tbody>'+tr+'</tbody></table></div>'
+    return '<div class="hww-group"><div class="hww-group-h">'+k+' 焊機<small>'+g.length+' 台</small>'+(g.some(w=>w.drive==='變頻')?'<span class="hww-legend"><i></i>變頻</span>':'')+'</div>'
+      +'<div class="hww-wrap"><table class="hww-tbl"><thead><tr><th>機台編號</th><th>承攬商</th><th>柱位</th><th style="text-align:right">長榮入帳年份</th><th style="text-align:right">實際年份</th><th>機型(廠牌)</th><th>歸屬</th><th>備註</th><th style="text-align:center">操作</th></tr></thead><tbody>'+tr+'</tbody></table></div>'
       +'<div class="hww-cards">'+cards+'</div></div>';
   }).join('');
+  box.innerHTML='<div class="hww-groups">'+box.innerHTML+'</div>';
 }
 function hwWeldNextCode(kind){
   const p=kind==='AC'?'A':'C';
@@ -16358,7 +16365,7 @@ function hwWeldEdit(id){
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 10px">'
     +fld('種類','<select class="input-modal-field" id="hww-kind"><option value="CO2">CO2 焊機</option><option value="AC">AC 焊機</option></select>')
     +fld('機台編號','<input class="input-modal-field" id="hww-code" placeholder="例 C11、A12">')
-    +fld('年份(標示)','<input type="number" class="input-modal-field" id="hww-year" placeholder="例 2026">')
+    +fld('長榮入帳年份','<input type="number" class="input-modal-field" id="hww-year" placeholder="例 2026">')
     +fld('實際年份','<input type="number" class="input-modal-field" id="hww-actual" placeholder="例 2025">')
     +fld('機型','<select class="input-modal-field" id="hww-drive"><option value="變頻">變頻</option><option value="傳統">傳統</option><option value="">—</option></select>')
     +fld('廠牌','<input class="input-modal-field" id="hww-brand" list="hww-brand-list" placeholder="例 濰昕"><datalist id="hww-brand-list">'+brands.map(b=>'<option value="'+esc(b)+'">').join('')+'</datalist>')
@@ -16412,15 +16419,60 @@ async function hwWeldDelete(id){
   const r=await sbFetch('/rest/v1/hw_welders?id=eq.'+id,{method:'DELETE'}); if(!r.ok){ alert('刪除失敗'); return; }
   hwWelders=hwWelders.filter(x=>x.id!==id); hwRenderWeld();
 }
-// 匯出格式比照原本的「焊機統整」表:CO2/AC 年份分兩欄、實際年份另兩欄,下面附小計與焊工人數
+// 匯出格式比照原本的「新竹廠(協力商)焊機統整」表(2026鎮山.xlsx):標楷體、字級、框線、欄寬、列高、合併儲存格都照原檔
 function hwExportWeld(){
-  const aoa=[['承攬商','柱位','機台編號','CO2焊機年份','AC焊機年份','機型(廠牌)','歸屬','備註','CO2實際年份','AC實際年份']];
-  hwWelders.forEach(w=>{ const co2=w.kind==='CO2';
-    aoa.push([w.contractor||'',w.bed||'',w.code||'',co2&&w.year_label?w.year_label+'年':'',!co2&&w.year_label?w.year_label+'年':'',hwWeldModel(w),w.owner||'',w.note||'',co2?(w.actual_year||''):'',!co2?(w.actual_year||''):'']); });
-  const ww=hwWeldWorkers();
-  aoa.push(['','','小計',hwWelders.filter(w=>w.kind==='CO2').length,hwWelders.filter(w=>w.kind==='AC').length]);
-  aoa.push(['焊工人數','','本工',ww.own]); aoa.push(['','','外勞',ww.foreign]); aoa.push(['','','總計',ww.total]);
-  hwExport(aoa,'焊機清單','焊機清單 '+egToday()+'.xlsx');
+  const XS=window.XLSX; if(!XS){ alert('Excel 元件還沒載入,請稍後再試'); return; }
+  const bd={style:'thin',color:{rgb:'000000'}}, box={top:bd,bottom:bd,left:bd,right:bd};
+  const st=(sz,o)=>{ o=o||{}; const x={font:{name:'標楷體',sz:sz,color:{rgb:'000000'}},alignment:{horizontal:o.h||'center',vertical:'center',wrapText:!!o.wrap}};
+    if(o.border!==false) x.border=Object.assign({},box,o.diag?{diagonal:bd,diagonalDown:true}:{}); return x; };
+  const S={title:st(20), head:st(18), headDiag:st(18,{h:'left',wrap:true,diag:true}), cell:st(16), empty:st(14), owner:st(20,{wrap:true}),
+    plain:st(16,{border:false}), act:st(14,{border:false}), note:st(16,{border:false,h:'left'})};
+  const ws={}, merges=[], rows=[];
+  const put=(r,c,v,style)=>{ const ref=XS.utils.encode_cell({r,c}); const cell={t:typeof v==='number'?'n':'s',v:v==null?'':v,s:style}; if(v==null||v==='') cell.t='s'; ws[ref]=cell; };
+  const mg=(r1,c1,r2,c2)=>merges.push({s:{r:r1,c:c1},e:{r:r2,c:c2}});
+  // 標題與表頭(第 1~3 列)
+  for(let c=0;c<7;c++) put(0,c,c===0?'新竹廠(協力商)焊機統整':'',S.title); mg(0,0,0,6);
+  put(1,0,'承攬商',S.head); put(2,0,'',S.head); mg(1,0,2,0);
+  put(1,1,'柱位',S.head); put(2,1,'',S.head); mg(1,1,2,1);
+  put(1,2,'              機台     \n 機台編號',S.headDiag); put(2,2,'',S.headDiag); mg(1,2,2,2);
+  put(1,3,'CO2焊機',S.head); put(1,4,'AC焊機',S.head);
+  put(2,3,'年份',S.head); put(2,4,'',S.head); mg(2,3,2,4);
+  put(1,5,'備註',S.head); put(1,6,'',S.head); put(2,5,'',S.head); put(2,6,'',S.head); mg(1,5,2,6);
+  put(1,8,'CO2焊機',S.head); put(1,9,'AC焊機',S.head);
+  put(2,8,'實際年份',S.head); put(2,9,'',S.head); mg(2,8,2,9);
+  rows[0]={hpt:33.5}; rows[1]={hpt:23}; rows[2]={hpt:34.25};
+  // 明細:CO2 在前、AC 在後;歸屬欄同種類連續相同就合併
+  const list=HW_WELD_KINDS.flatMap(k=>hwWelders.filter(w=>w.kind===k));
+  const R0=3; let hasNote=false;
+  list.forEach((w,i)=>{ const r=R0+i, co2=w.kind==='CO2';
+    put(r,0,w.contractor||'鎮山',S.cell); put(r,1,w.bed||'',S.cell); put(r,2,w.code||'',S.cell);
+    const yr=w.year_label?w.year_label+'年':'';
+    put(r,3,co2?yr:'',co2?S.cell:S.empty); put(r,4,co2?'':yr,co2?S.empty:S.cell);
+    put(r,5,hwWeldModel(w),S.cell); put(r,6,w.owner||'鎮山',S.owner);
+    put(r,8,co2&&w.actual_year?+w.actual_year:'',S.act); put(r,9,!co2&&w.actual_year?+w.actual_year:'',S.act);
+    if(w.note){ hasNote=true; put(r,7,w.note,S.note); }
+  });
+  for(let i=0;i<list.length;){ let j=i; const o=list[i].owner||'鎮山';
+    while(j+1<list.length && list[j+1].kind===list[i].kind && (list[j+1].owner||'鎮山')===o) j++;
+    if(j>i) mg(R0+i,6,R0+j,6);
+    for(let t=i;t<=j;t++) rows[R0+t]={hpt:j>i?20:26};
+    i=j+1; }
+  // 小計與焊工人數
+  const ww=hwWeldWorkers(), L=R0+list.length;
+  put(L,0,'',S.plain); put(L,1,'',S.plain); put(L,2,'小計',S.cell);
+  put(L,3,list.filter(w=>w.kind==='CO2').length,S.cell); put(L,4,list.filter(w=>w.kind==='AC').length,S.cell); put(L,5,'',S.plain);
+  put(L+1,0,'焊工人數',S.cell); put(L+1,2,'本工',S.cell); put(L+1,3,ww.own,S.cell);
+  put(L+2,0,'',S.plain); put(L+2,2,'外勞',S.cell); put(L+2,3,ww.foreign,S.cell);
+  put(L+3,0,'',S.plain); put(L+3,2,'總計',S.cell); put(L+3,3,ww.total,S.cell);
+  for(let r=L+1;r<=L+3;r++){ put(r,4,'',S.plain); put(r,5,'',S.plain); }
+  for(let r=L;r<=L+3;r++) rows[r]={hpt:20};
+  ws['!ref']=XS.utils.encode_range({s:{r:0,c:0},e:{r:L+3,c:9}});
+  ws['!merges']=merges; ws['!rows']=rows;
+  ws['!cols']=[{width:14.33},{width:13.5,hidden:true},{width:34.33},{width:16.16},{width:16.16},{width:20.66},{width:10.33},{width:hasNote?24:9},{width:13.83},{width:13.83}];
+  ws['!autofilter']={ref:'A2:F'+(R0+list.length)};
+  ws['!margins']={left:0.7,right:0.7,top:0.75,bottom:0.75,header:0.3,footer:0.3};
+  const wb=XS.utils.book_new(); XS.utils.book_append_sheet(wb,ws,new Date().getFullYear()+'-鎮山');
+  XS.writeFile(wb,'焊機清單 '+egToday()+'.xlsx');
 }
 
 // ── 防護用具領用表：依月份篩選並產生 A4 直式分頁列印 / PDF ──
