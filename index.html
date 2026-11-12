@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.11.3"/>
+<meta name="sc-version" content="2026.11.12.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -26562,6 +26562,15 @@ function layoutBOMQty(projNum, partNo) {
 }
 
 // Used qty = sum of qty in other rows with same proj+part (excluding row index excludeI)
+// 第 i 列以外「已上線」支數:本表其他列 + 已出貨;每日產量(已報驗)較多時以它為準。
+// 每日產量可能已含這一列自己(已存檔且報驗過),所以先扣掉自己的支數。
+// 用手打的構件編號、數量選單都要看這個,不能只看本表——不然已出貨(不在本表)的構件可以重複登記。
+function layoutOtherUsed(i) {
+  const r = layoutRows[i]; if (!r || !r.part_no) return 0;
+  const k = layoutDailyKey(r.proj_num, r.part_no);
+  const own = r.id ? (parseInt(r.qty) || 0) : 0;
+  return Math.max((layoutDailyQty[k] || 0) - own, (layoutShippedQty[k] || 0) + layoutUsedQty(r.proj_num, r.part_no, i));
+}
 function layoutUsedQty(projNum, partNo, excludeI) {
   if (!partNo) return 0;
   const pn = partNo.trim().toUpperCase();
@@ -26583,7 +26592,7 @@ function layoutQtySelect(i) {
     return '<select onchange="layoutEdit('+i+',\'qty\',parseInt(this.value))" style="width:56px"><option value="1"'+(row.qty==1?' selected':'')+'>1</option></select>';
   }
   const bomQty = layoutBOMQty(row.proj_num, row.part_no);
-  const used = layoutUsedQty(row.proj_num, row.part_no, i);
+  const used = layoutOtherUsed(i);
   const remaining = Math.max(0, bomQty - used);
   const cur = parseInt(row.qty) || 1;
   // selectable max = remaining (this row's own qty already excluded from used)
@@ -27057,7 +27066,7 @@ function layoutAutofillRow(i) {
   layoutApplyDailyStatus(row);
   // qty management: check remaining
   const bomQty = layoutBOMQty(row.proj_num, row.part_no);
-  const used = layoutUsedQty(row.proj_num, row.part_no, i);
+  const used = layoutOtherUsed(i);
   const remaining = bomQty - used;
   if (remaining <= 0) {
     row._qtyError = '此構件已全部上線完畢';
@@ -27320,7 +27329,7 @@ function layoutPickPart(i, partNo, projNum) {
     layoutApplyDailyStatus(layoutRows[i]);
     // qty check
     const bomQty = layoutBOMQty(layoutRows[i].proj_num, layoutRows[i].part_no);
-    const used = layoutUsedQty(layoutRows[i].proj_num, layoutRows[i].part_no, i);
+    const used = layoutOtherUsed(i);
     const remaining = bomQty - used;
     if (remaining <= 0) {
       const k = layoutRows[i]._key;
