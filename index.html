@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.12.7"/>
+<meta name="sc-version" content="2026.11.13.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -8926,6 +8926,14 @@ window.normalizeFullWidth=function(value){
         #page-spcount .spc-pill{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--bg3);color:var(--text3)}
         #page-spcount .spc-pill.ok{background:var(--spc-ok-bg);color:var(--spc-ok)}
         #page-spcount .spc-pill.short{background:var(--spc-short-bg);color:var(--spc-short)}
+        #page-spcount .spc-pill.done{display:inline-flex;align-items:center;gap:4px;background:var(--spc-ok);color:#fff;font-weight:600}
+        #page-spcount .spc-pill.done svg{width:12px;height:12px}
+        #page-spcount .spc-zone-card.done{border-color:var(--spc-ok);background:linear-gradient(var(--spc-ok-bg),var(--spc-ok-bg)),var(--bg2)}
+        #page-spcount .spc-zone-card.done .spc-zone-code{color:var(--spc-ok)}
+        #page-spcount .spc-done-who{font-size:11px;color:var(--text3);margin-top:-2px}
+        #page-spcount .spc-card-opts{display:flex;flex-wrap:wrap;gap:2px 12px}
+        #page-spcount .spc-pick.done-pick input{accent-color:var(--spc-ok)}
+        #page-spcount .spc-zone-card.done .spc-pick.done-pick{color:var(--spc-ok);font-weight:600}
         #page-spcount .spc-back{cursor:pointer;background:none;color:var(--text2);font-family:var(--mono);font-size:13px;border:1px solid var(--border-hi);border-radius:8px;padding:8px 14px;min-height:40px}
         #page-spcount .spc-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
         #page-spcount .spc-title{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);flex:1;min-width:0}
@@ -25274,6 +25282,7 @@ const HEALTH_SCHEMA=[
   ['zones','erect_date,handover_date','loading_plan_migration.sql(月產量排程)'],
   ['zones','online_date,drawing_ok_at,drawing_ok_by,jig_util,jig_bevel,bevel_jig_at,bevel_jig_by,util_jig_at,util_jig_by','readiness_migration.sql(上線準備)'],
   ['zones','no_sp_at,no_sp_by','zones_no_sp_migration.sql(上線準備:這區沒有 SP)'],
+  ['zones','spc_done,spc_done_at,spc_done_by','zones_spc_done_migration.sql(SP清點:清點完成)'],
   ['zones','util_proc_code,util_weight_kg,util_price,price_note,unit_price','產值/水電單價欄位'],
   ['gen_logs','ordered_at,ordered_by','readiness_migration.sql(靠模已開單)'],
   ['loading_plan','issue','loading_plan_migration.sql'],
@@ -59011,20 +59020,24 @@ async function ldDashPlan(){
     var r=await sbFetchAll('/rest/v1/multilevel_analyses?select=id,project_no,zone_code,mother_no,created_at&order=created_at.desc,id.desc');
     if(!r.ok)throw new Error(dbErr(r));
     // BOM 工程總表標「已完成」的工程區不用再點 → 清單不列(抓不到 BOM 資料就照舊全列)
-    var done={};
+    var done={},zmeta={};
     try{
-      var dz=await sbFetchAll('/rest/v1/zones?select=project_id,zone_code&status=eq.'+encodeURIComponent('已完成'));
+      // 一次抓全部工程區:status(BOM 已完成不列)＋清點完成標記(zones.spc_done*;還沒執行 migration 就退回舊欄位)
+      var dz=await sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,status,spc_done,spc_done_at,spc_done_by');
+      spc.doneCols=dz.ok;
+      if(!dz.ok)dz=await sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,status');
       var dp=await sbFetchAll('/rest/v1/projects?select=id,proj_num');
       if(dz.ok&&dp.ok&&Array.isArray(dz.data)&&Array.isArray(dp.data)){
         var pn={};dp.data.forEach(function(p){pn[p.id]=up(p.proj_num);});
-        dz.data.forEach(function(z){if(pn[z.project_id])done[pn[z.project_id]+'|'+up(z.zone_code)]=1;});
+        dz.data.forEach(function(z){if(!pn[z.project_id])return;var k=pn[z.project_id]+'|'+up(z.zone_code);zmeta[k]=z;if(z.status==='已完成')done[k]=1;});
       }
     }catch(e){console.warn('SP清點:讀 BOM 完成狀態失敗',e);}
+    spc.zmeta=zmeta;
     var seen={},list=[];
     (r.data||[]).forEach(function(a){var k=up(a.project_no)+'|'+up(a.zone_code||a.mother_no);if(seen[k]||done[k])return;seen[k]=1;list.push(a);});
     spc.list=list;
     if(skipCounts)return list;
-    var c=await sbFetchAll('/rest/v1/sp_counts?select=project_no,zone_code,actual_qty,need_qty');
+    var c=await sbFetchAll('/rest/v1/sp_counts?select=project_no,zone_code,part_no,spec,actual_qty,need_qty');
     spc.counts=c.ok&&Array.isArray(c.data)?c.data:null;
     return list;
   }
@@ -59032,7 +59045,8 @@ async function ldDashPlan(){
   function renderList(){
     var host=el('spc-list');if(!host)return;
     if(!spc.list){host.innerHTML='<div class="spc-empty">載入中…</div>';return;}
-    var sum={};(spc.counts||[]).forEach(function(c){if(c.actual_qty==null)return;var k=up(c.project_no)+'|'+up(c.zone_code),s=sum[k]||(sum[k]={n:0,short:0});s.n++;if(num(c.actual_qty)<num(c.need_qty))s.short++;});
+    var sum={};(spc.counts||[]).forEach(function(c){if(c.actual_qty==null)return;var k=up(c.project_no)+'|'+up(c.zone_code),s=sum[k]||(sum[k]={n:0,short:0,keys:{}});s.n++;s.keys[key(c.part_no,c.spec)]=1;if(num(c.actual_qty)<num(c.need_qty))s.short++;});
+    setTimeout(function(){listAutoCheck(sum).catch(function(e){console.warn('SP清點:自動完成檢查失敗',e);});},0);
     var q=up(spc.listQ),rows=spc.list.filter(function(a){return !q||(up(a.project_no)+' '+up(a.zone_code||a.mother_no)+' '+up(a.project_no)+'-'+up(a.zone_code||a.mother_no)).indexOf(q)>=0;});
     if(!rows.length){host.innerHTML='<div class="spc-empty">'+(spc.list.length?'沒有符合的工程區':'還沒有任何已儲存的多階資料分析。請先到「多階資料分析」匯入並儲存。')+'</div>';renderPickBar();return;}
     var by={},order=[];
@@ -59041,15 +59055,64 @@ async function ldDashPlan(){
     host.innerHTML=(spc.counts===null?'<div class="spc-warn">讀不到清點紀錄。請先在 Supabase 執行 sp_counts_migration.sql</div>':'')+order.map(function(p){
       return '<div class="spc-proj"><div class="spc-proj-title">'+h(p)+'</div><div class="spc-zone-grid">'+by[p].sort(function(a,b){return String(a.zone_code||'').localeCompare(String(b.zone_code||''),undefined,{numeric:true});}).map(function(a){
         var z=a.zone_code||a.mother_no||'',s=sum[up(a.project_no)+'|'+up(z)],pk=pickKey(a.project_no,z),n=spc.pick.indexOf(pk);
-        var badge=s?(s.short?'<span class="spc-pill short">已點 '+s.n+' 種 · 缺 '+s.short+'</span>':'<span class="spc-pill ok">已點 '+s.n+' 種</span>'):'<span class="spc-pill">尚未清點</span>';
+        var zm=spc.zmeta&&spc.zmeta[pickKey(a.project_no,z)],isDone=!!(zm&&zm.spc_done===true);
+        var badge=isDone?'<span class="spc-pill done">'+SPC_CHECK+'已清點完成</span>'+(s&&s.short?'<span class="spc-pill short">缺 '+s.short+' 種</span>':'')
+          :s?(s.short?'<span class="spc-pill short">已點 '+s.n+' 種 · 缺 '+s.short+'</span>':'<span class="spc-pill ok">已點 '+s.n+' 種</span>'):'<span class="spc-pill">尚未清點</span>';
+        var who=isDone?[zm.spc_done_by||'',zm.spc_done_at?doneDate(zm.spc_done_at):''].filter(Boolean).join(' '):'';
         var args=h(JSON.stringify(a.project_no||''))+','+h(JSON.stringify(z));
-        return '<div class="spc-zone-card'+(n>=0?' picked':'')+'" role="button" tabindex="0" onclick="spcOpenZone('+args+')" onkeydown="if(event.key===\'Enter\')spcOpenZone('+args+')"><span class="spc-zone-code">'+h(z||'—')+'</span>'+badge+
-          '<label class="spc-pick" onclick="event.stopPropagation()" title="勾選同工程編號的多個工程區一起清點"><input type="checkbox" '+(n>=0?'checked ':'')+'onchange="spcTogglePick('+args+',this.checked,this)">'+(n>=0?'第 '+(n+1)+' 區':'合併')+'</label></div>';
+        return '<div class="spc-zone-card'+(n>=0?' picked':'')+(isDone?' done':'')+'" role="button" tabindex="0" onclick="spcOpenZone('+args+')" onkeydown="if(event.key===\'Enter\')spcOpenZone('+args+')"><span class="spc-zone-code">'+h(z||'—')+'</span>'+badge+
+          (who?'<span class="spc-done-who">'+h(who)+'</span>':'')+
+          '<div class="spc-card-opts"><label class="spc-pick" onclick="event.stopPropagation()" title="勾選同工程編號的多個工程區一起清點"><input type="checkbox" '+(n>=0?'checked ':'')+'onchange="spcTogglePick('+args+',this.checked,this)">'+(n>=0?'第 '+(n+1)+' 區':'合併')+'</label>'+
+          (zm?'<label class="spc-pick done-pick" onclick="event.stopPropagation()" title="這區已經清點完成(全部點完會自動打勾)"><input type="checkbox" '+(isDone?'checked ':'')+(canEdit()?'':'disabled ')+'onchange="spcSetDone('+args+',this.checked,this)">清點完成</label>':'')+
+          '</div></div>';
       }).join('')+'</div></div>';
     }).join('');
     renderPickBar();
   }
   window.spcListSearch=function(v){spc.listQ=v;renderList();};
+  var SPC_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  function doneDate(t){var d=new Date(t);return isNaN(d)?'':(d.getMonth()+1)+'/'+d.getDate();}
+  function whoName(){return (typeof currentUser!=='undefined'&&currentUser&&currentUser.name)||null;}
+  // 清點完成標記存在 zones.spc_done(true 完成 / false 手動取消 / null 沒設定過)
+  async function setDone(proj,zone,on,quiet){
+    var zm=spc.zmeta&&spc.zmeta[pickKey(proj,zone)];if(!zm)return false;
+    if(!spc.doneCols){if(!quiet)alert('「清點完成」還不能存：資料庫缺欄位，請先在 Supabase SQL Editor 執行 zones_spc_done_migration.sql。');return false;}
+    var patch=on?{spc_done:true,spc_done_at:new Date().toISOString(),spc_done_by:whoName()}:{spc_done:false,spc_done_at:null,spc_done_by:null};
+    var r=await sbFetch('/rest/v1/zones?id=eq.'+encodeURIComponent(zm.id)+'&select=id',{method:'PATCH',headers:{'Prefer':'return=representation'},body:JSON.stringify(patch)});
+    if(!r.ok||!Array.isArray(r.data)||!r.data.length){if(!quiet)alert('「清點完成」儲存失敗（'+dbErr(r)+'）');return false;}
+    Object.assign(zm,patch);return true;
+  }
+  window.spcSetDone=async function(proj,zone,on,box){
+    if(!canEdit()){if(box)box.checked=!on;return;}
+    if(box)box.disabled=true;
+    if(!await setDone(proj,zone,on)&&box)box.checked=!on;
+    renderList();
+  };
+  // 全部零件都點完 → 自動打勾。force=false(開頁/清單檢查)只補沒設定過的;force=true(剛存檔點完)連手動取消過的也打勾
+  async function autoDone(proj,zone,force){
+    var zm=spc.zmeta&&spc.zmeta[pickKey(proj,zone)];if(!zm||!spc.doneCols||zm.spc_done===true)return false;
+    if(zm.spc_done===false&&!force)return false;
+    if(!canEdit())return false;
+    return setDone(proj,zone,true,true);
+  }
+  // 清單:有點過、還沒標記的區,抓多階資料算總種數,已全部點完就自動打勾(只檢查一次)
+  async function listAutoCheck(sum){
+    if(!spc.doneCols||!canEdit()||typeof window.maFlatParts!=='function')return;
+    var cand=spc.list.filter(function(a){var k=pickKey(a.project_no,a.zone_code||a.mother_no),zm=spc.zmeta[k];return zm&&zm.spc_done==null&&sum[k]&&!(spc.autoChecked||(spc.autoChecked={}))[k];});
+    if(!cand.length)return;
+    cand.forEach(function(a){spc.autoChecked[pickKey(a.project_no,a.zone_code||a.mother_no)]=1;});
+    var r=await sbFetch('/rest/v1/multilevel_analyses?id=in.('+cand.map(function(a){return encodeURIComponent(a.id);}).join(',')+')&select=id,raw_text');
+    if(!r.ok||!Array.isArray(r.data))return;
+    var changed=false;
+    for(var i=0;i<cand.length;i++){
+      var a=cand[i],row=r.data.find(function(x){return String(x.id)===String(a.id);});if(!row)continue;
+      var flat=window.maFlatParts(row.raw_text||'');if(!flat)continue;
+      var keys={};flat.items.forEach(function(it){var pn=String(it.partNo||'').trim();if(!pn||/^E/i.test(pn)||it.category==='E')return;keys[key(pn,it.specification)]=1;});
+      var total=Object.keys(keys).length,k=pickKey(a.project_no,a.zone_code||a.mother_no);
+      if(total&&sum[k].keys&&Object.keys(keys).every(function(x){return sum[k].keys[x];})){if(await autoDone(a.project_no,a.zone_code||a.mother_no,false))changed=true;}
+    }
+    if(changed&&active())renderList();
+  }
   window.spcTogglePick=function(proj,zone,on,box){
     var k=pickKey(proj,zone);
     if(on){
@@ -59109,6 +59172,7 @@ async function ldDashPlan(){
     await fetchCounts();
     render();
     startPoll();
+    zonesAutoDone(false);
   }
   async function fetchCounts(){
     var r=await sbFetch('/rest/v1/sp_counts?select=zone_code,part_no,spec,actual_qty,need_qty,updated_by_name,updated_at&project_no=eq.'+encodeURIComponent(spc.proj)+'&zone_code=in.('+spc.zones.map(encodeURIComponent).join(',')+')');
@@ -59270,7 +59334,12 @@ async function ldDashPlan(){
   });
 
   // ── 連動 CP 看板的 SP 狀態(各區各自算) ─────────────────────────────
-  function scheduleSync(){clearTimeout(spc.syncTimer);spc.syncTimer=setTimeout(syncAll,1500);}
+  function scheduleSync(){clearTimeout(spc.syncTimer);spc.syncTimer=setTimeout(function(){zonesAutoDone(true);syncAll();},1500);}
+  // 目前開著的區(合併時各區各算)全部點完 → 清點完成打勾
+  function zonesAutoDone(force){
+    var proj=spc.proj;
+    spc.zones.slice().forEach(function(z){var s=zoneSummary(z);if(s.total&&s.counted===s.total)autoDone(proj,z,force).catch(function(){});});
+  }
   async function syncAll(){
     var proj=spc.proj,zones=spc.zones.slice(),notes=[];
     try{
