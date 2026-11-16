@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.16.4"/>
+<meta name="sc-version" content="2026.11.16.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1597,6 +1597,9 @@ html.dtv-open,html.dtv-open body{overflow:hidden}
 .ccol-mv{background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);width:34px;height:30px;display:flex;align-items:center;justify-content:center;padding:0;flex:none}
 .ccol-mv:disabled{opacity:.3}
 .ccol-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.ccol-all{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 45px;margin-bottom:6px;font-size:14px;font-weight:700;cursor:pointer}
+.ccol-all input{width:18px;height:18px;min-height:0;flex:none;margin:0;padding:0;accent-color:var(--accent)}
+.ccol-all-n{margin-left:auto;font-weight:400;font-size:12px;color:var(--text3)}
 #comp-col-btn.on{border-color:var(--accent);color:var(--accent)}
 /* 工程區詳情頁工具列(搜尋/篩選/勾選非本公司/更新BOM/輸入進料…):排不下就換行。
    原本內層不換行會把整頁撐寬 → 變成整個視窗左右捲、表格外框沒在捲,凍結的序號/構件編號就沒作用 */
@@ -21320,8 +21323,9 @@ function compColOpen() {
   m.onclick = e => { if (e.target === m) compColClose(); };
   m.innerHTML = '<div class="modal"><div class="modal-title">'+icSvg('gear')+' 構件總表欄位</div>'+
     '<div class="ccol-note">勾選要顯示的欄位，用 ▲▼ 或拖曳調整順序。設定只存在這台裝置。</div>'+
+    '<label class="ccol-all"><input type="checkbox" id="ccol-all" onchange="compColSetAll(this.checked)"><span>全選</span><span class="ccol-all-n" id="ccol-all-n"></span></label>'+
     '<div class="ccol-list" id="ccol-list"></div>'+
-    '<div class="ccol-tools"><button class="btn-sm btn-export" type="button" onclick="compColShowAll()">全部顯示</button>'+
+    '<div class="ccol-tools">'+
     '<button class="btn-sm btn-export" type="button" onclick="compColReset()">恢復預設</button></div>'+
     '<div class="modal-actions"><button class="btn-modal-cancel" type="button" onclick="compColClose()">關閉</button></div></div>';
   compColRenderList();
@@ -21341,6 +21345,10 @@ function compColRenderList() {
       '<button class="ccol-mv" type="button" title="下移"'+(i===ord.length-1?' disabled':'')+' onclick="compColMove(&quot;'+k+'&quot;,1)">'+icSvg('chevDown')+'</button></div>';
   }).join('');
   box.scrollTop = st;
+  // 全選勾勾:全部顯示＝打勾、部分顯示＝半勾
+  const all = document.getElementById('ccol-all'), nHid = ord.filter(c => hid.has(c.key)).length;
+  if (all) { all.checked = nHid === 0; all.indeterminate = nHid > 0 && nHid < ord.length; }
+  const cnt = document.getElementById('ccol-all-n'); if (cnt) cnt.textContent = '顯示 ' + (ord.length - nHid) + ' / ' + ord.length + ' 欄';
   // 拖曳排序:用 pointer 事件(手機手指、電腦滑鼠都能拖;iPhone 不支援 HTML5 draggable)。
   // 拖曳中不搬動 DOM(iPhone 搬動元素會中斷觸控,只能拖一格),改用位移:被拖的列跟著手指走,其他列滑開讓位,放開才存新順序
   box.querySelectorAll('.ccol-grip').forEach(grip => {
@@ -21425,7 +21433,15 @@ function compColToggle(k, show) {
   p.hidden = Array.from(hid);
   compColPrefsSet(p); renderCompTable(); compColRenderList();
 }
-function compColShowAll() { const p = compColPrefsGet(); p.hidden = []; compColPrefsSet(p); renderCompTable(); compColRenderList(); }
+// 全選:打勾＝全部顯示;取消＝全部隱藏,但至少留「構件編號」一欄
+function compColSetAll(show) {
+  const p = compColPrefsGet();
+  const keep = (compColAll.find(c => c.key === 'part_no') || compColAll[0] || {}).key;
+  const keys = compColAll.map(c => c.key);
+  p.hidden = show ? p.hidden.filter(k => !keys.includes(k)) : p.hidden.filter(k => !keys.includes(k)).concat(keys.filter(k => k !== keep));
+  if (!show && colFilterState.comp) { keys.forEach(k => { if (k !== keep) delete colFilterState.comp[k]; }); pagerReset('comp'); }
+  compColPrefsSet(p); renderCompTable(); compColRenderList();
+}
 function compColReset() { compColPrefsSet({ order: [], hidden: [] }); renderCompTable(); compColRenderList(); }
 
 
