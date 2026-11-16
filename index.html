@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.16.3"/>
+<meta name="sc-version" content="2026.11.16.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1577,7 +1577,10 @@ html.dtv-open,html.dtv-open body{overflow:hidden}
 .ccol-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--border);background:var(--bg2)}
 .ccol-row:last-child{border-bottom:none}
 .ccol-row.off .ccol-name{color:var(--text3);text-decoration:line-through}
-.ccol-row.dragging{position:relative;z-index:1;background:var(--bg3);box-shadow:0 0 0 2px var(--accent),0 6px 18px rgba(0,0,0,.35)}
+.ccol-list{position:relative}
+.ccol-sorting .ccol-row{transition:transform .15s ease}
+.ccol-row.dragging{position:relative;z-index:3;transition:none;background:linear-gradient(rgba(79,142,247,.22),rgba(79,142,247,.22)),var(--bg3);box-shadow:0 0 0 2px var(--accent),0 10px 24px rgba(0,0,0,.45);border-radius:6px}
+.ccol-sorting{user-select:none;-webkit-user-select:none}
 .ccol-grip{color:var(--text3);cursor:grab;display:flex;align-items:center;justify-content:center;align-self:stretch;margin:-6px 0 -6px -8px;padding:0 6px 0 12px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .ccol-row.dragging .ccol-grip{cursor:grabbing;color:var(--accent)}
 .ccol-row label{flex:1;display:flex;align-items:center;gap:8px;cursor:pointer;min-width:0;font-size:14px}
@@ -21338,39 +21341,62 @@ function compColRenderList() {
       '<button class="ccol-mv" type="button" title="下移"'+(i===ord.length-1?' disabled':'')+' onclick="compColMove(&quot;'+k+'&quot;,1)">'+icSvg('chevDown')+'</button></div>';
   }).join('');
   box.scrollTop = st;
-  // 拖曳排序:用 pointer 事件(手機手指、電腦滑鼠都能拖;iPhone 不支援 HTML5 draggable)。按住左邊把手拖,列會即時跟著移動
+  // 拖曳排序:用 pointer 事件(手機手指、電腦滑鼠都能拖;iPhone 不支援 HTML5 draggable)。
+  // 拖曳中不搬動 DOM(iPhone 搬動元素會中斷觸控,只能拖一格),改用位移:被拖的列跟著手指走,其他列滑開讓位,放開才存新順序
   box.querySelectorAll('.ccol-grip').forEach(grip => {
     grip.addEventListener('pointerdown', e => {
       if (e.button != null && e.button !== 0) return;
       e.preventDefault();
       const row = grip.closest('.ccol-row');
-      let lastY = e.clientY, moved = false;
+      const rows = Array.from(box.querySelectorAll('.ccol-row'));
+      const from = rows.indexOf(row);
+      const tops = rows.map(r => r.offsetTop), hs = rows.map(r => r.offsetHeight);
+      const h = hs[from];
+      const startY = e.clientY, startScroll = box.scrollTop;
+      let lastY = e.clientY, to = from;
       row.classList.add('dragging');
-      try { grip.setPointerCapture(e.pointerId); } catch (_) {}
-      const place = () => {
-        const others = Array.from(box.querySelectorAll('.ccol-row')).filter(r => r !== row);
-        const tgt = others.find(r => { const b = r.getBoundingClientRect(); return lastY < b.top + b.height / 2; });
-        if (tgt) { if (row.nextElementSibling !== tgt) { box.insertBefore(row, tgt); moved = true; } }
-        else if (box.lastElementChild !== row) { box.appendChild(row); moved = true; }
+      box.classList.add('ccol-sorting');
+      try { if (navigator.vibrate) navigator.vibrate(12); } catch (_) {}
+      const layout = () => {
+        const dy = (lastY - startY) + (box.scrollTop - startScroll);
+        row.style.transform = 'translateY(' + dy + 'px) scale(1.02)';
+        const mid = tops[from] + h / 2 + dy;
+        to = 0;
+        rows.forEach((r, i) => { if (i !== from && tops[i] + hs[i] / 2 < mid) to++; });
+        rows.forEach((r, i) => {
+          if (i === from) return;
+          const sh = (from < i && i <= to) ? -h : (to <= i && i < from) ? h : 0;
+          r.style.transform = sh ? 'translateY(' + sh + 'px)' : '';
+        });
       };
-      // 拖到清單上下邊緣時自動捲動
-      const timer = setInterval(() => {
+      layout();
+      const timer = setInterval(() => {   // 拖到清單上下邊緣時自動捲動
         const b = box.getBoundingClientRect();
-        const dy = lastY < b.top + 36 ? -10 : lastY > b.bottom - 36 ? 10 : 0;
-        if (dy) { box.scrollTop += dy; place(); }
+        const dy = lastY < b.top + 40 ? -12 : lastY > b.bottom - 40 ? 12 : 0;
+        if (dy) { const before = box.scrollTop; box.scrollTop += dy; if (box.scrollTop !== before) layout(); }
       }, 30);
-      const move = ev => { lastY = ev.clientY; place(); };
+      const move = ev => { lastY = ev.clientY; layout(); };
+      const block = ev => { ev.preventDefault(); };   // 拖曳中不讓整頁跟著捲
       const end = () => {
         clearInterval(timer);
-        grip.removeEventListener('pointermove', move);
-        grip.removeEventListener('pointerup', end);
-        grip.removeEventListener('pointercancel', end);
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', end);
+        window.removeEventListener('pointercancel', end);
+        window.removeEventListener('touchmove', block);
+        rows.forEach(r => { r.style.transform = ''; });
         row.classList.remove('dragging');
-        if (moved) compColSaveOrder(Array.from(box.querySelectorAll('.ccol-row')).map(r => decodeURIComponent(r.dataset.key)));
+        box.classList.remove('ccol-sorting');
+        if (to !== from) {
+          const keys = rows.map(r => decodeURIComponent(r.dataset.key));
+          const k = keys.splice(from, 1)[0];
+          keys.splice(to, 0, k);
+          compColSaveOrder(keys);
+        }
       };
-      grip.addEventListener('pointermove', move);
-      grip.addEventListener('pointerup', end);
-      grip.addEventListener('pointercancel', end);
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', end);
+      window.addEventListener('pointercancel', end);
+      window.addEventListener('touchmove', block, { passive: false });
     });
   });
 }
