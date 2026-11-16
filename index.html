@@ -1567,6 +1567,23 @@ html.dtv-open,html.dtv-open body{overflow:hidden}
 #zone-components .layout-table input[data-col="加工機"], #zone-beam .layout-table input[data-col="加工機"]{min-width:12ch}
 /* 構件總表縮放列(截圖用):只在手機顯示,見下方 @media */
 .zt-zoom-bar{display:none}
+/* 構件總表「欄位」設定視窗:勾選顯示、▲▼／拖曳排序(每台裝置各自記住) */
+#comp-col-modal .modal{max-width:420px;width:calc(100vw - 32px)}
+.ccol-note{font-size:12px;color:var(--text3);margin:-4px 0 10px}
+.ccol-list{max-height:min(60vh,520px);overflow-y:auto;border:1px solid var(--border);border-radius:8px}
+.ccol-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.ccol-row:last-child{border-bottom:none}
+.ccol-row.off .ccol-name{color:var(--text3);text-decoration:line-through}
+.ccol-row.drag-over{box-shadow:inset 0 2px 0 var(--accent)}
+.ccol-row.dragging{opacity:.4}
+.ccol-grip{color:var(--text3);cursor:grab;display:flex}
+.ccol-row label{flex:1;display:flex;align-items:center;gap:8px;cursor:pointer;min-width:0;font-size:14px}
+.ccol-row label input{width:18px;height:18px;flex:none}
+.ccol-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ccol-mv{background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);width:34px;height:30px;display:flex;align-items:center;justify-content:center;padding:0;flex:none}
+.ccol-mv:disabled{opacity:.3}
+.ccol-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+#comp-col-btn.on{border-color:var(--accent);color:var(--accent)}
 /* 工程區詳情頁工具列(搜尋/篩選/勾選非本公司/更新BOM/輸入進料…):排不下就換行。
    原本內層不換行會把整頁撐寬 → 變成整個視窗左右捲、表格外框沒在捲,凍結的序號/構件編號就沒作用 */
 #page-zone-detail .bom-result-bar > div{flex-wrap:wrap;justify-content:flex-end;min-width:0}
@@ -4372,6 +4389,7 @@ window.normalizeFullWidth=function(value){
           <input class="search-input" id="comp-search" placeholder="搜尋構件總表..." oninput="compSearchInput(this.value)" style="width:200px"/>
           <button class="btn-sm btn-export" id="comp-a201-blank-btn" type="button" onclick="compToggleA201Blank()" title="只顯示 A201 尚未上線(空白)的構件;再按一下恢復">篩選 A201 空白</button>
           <button class="btn-sm btn-export" type="button" onclick="clearCompFilters()">清除篩選</button>
+          <button class="btn-sm btn-export" id="comp-col-btn" type="button" onclick="compColOpen()" title="調整欄位順序、隱藏欄位(每台裝置各自記住)">⚙ 欄位</button>
           <div class="bom-result-actions" id="zone-comp-actions"></div>
         </div>
       </div>
@@ -21081,6 +21099,8 @@ function renderCompTable() {
     {key:'drawing_no',label:'圖號'}
   ];
   extCols.forEach(c => cols.push({key:'ext:'+c, label:c, ext:true, custom: zoneCompCustomCols.includes(c)}));
+  compColAll = cols.slice();
+  const vcols = compColVisible(cols);   // 使用者自訂的欄位順序/隱藏(篩選仍用全部欄位計算)
 
   // 分離「本公司製作」與「非本公司製作」— 統計只計入本公司製作
   const included = zoneComponents.filter(r => !zoneExcludedParts.has(r.part_no));
@@ -21120,11 +21140,11 @@ function renderCompTable() {
     colValues[col.key] = cascadedColValues('comp', included, compColValueGetter, col.key);
   });
   compVisibleParts = rows.map(r => r.part_no);
-  const compColspan = cols.length + (showChk?1:0);
+  const compColspan = vcols.length + (showChk?1:0);
   const pgComp = pagerSlice('comp', rows);
   let html = '<div class="layout-table-wrap" style="max-height:'+(zoneCompExpanded?'none':'')+'"><table class="layout-table'+(showChk?' has-chk':'')+'" onkeydown="compTableKey(event)"><thead><tr>';
   if (showChk) html += '<th class="chk-col"><input type="checkbox" class="nonco-chk" title="'+(zoneMatMode?'全選顯示中的構件':'全選(將顯示中的構件全部標記為非本公司)')+'" onchange="'+(zoneMatMode?'matSelectAllVisible(this.checked)':'excludeAllVisible(this.checked)')+'"></th>';
-  cols.forEach(col => {
+  vcols.forEach(col => {
     const active = colFilterActive('comp', col.key) ? ' active' : '';
     // 自訂欄位:標題附上「重新命名 / 刪除」小按鈕
     const custBtns = col.custom
@@ -21142,9 +21162,9 @@ function renderCompTable() {
       if (zoneMatMode) html += '<td class="chk-col"><input type="checkbox" class="nonco-chk" data-part="'+dp+'"'+(zoneMatChecked.has(r.part_no)?' checked':'')+' onchange="toggleMatPart(this.dataset.part, this.checked)"></td>';
       else html += '<td class="chk-col"><input type="checkbox" class="nonco-chk" data-part="'+dp+'" onchange="toggleExcludePart(this.dataset.part, this.checked)"></td>';
     }
-    html += '<td>'+(r.seq||'')+'</td><td class="partno">'+(r.part_no||'')+'</td><td>'+(r.common_no||'')+'</td>';
-    html += '<td>'+(r.spec||'')+'</td><td>'+(r.qty||'')+'</td><td>'+(r.net_weight||'')+'</td><td>'+(r.drawing_no||'')+'</td>';
-    extCols.forEach(c => {
+    vcols.forEach(col => {
+      if (!col.ext) { html += '<td'+(col.key==='part_no'?' class="partno"':'')+'>'+(r[col.key]||'')+'</td>'; return; }
+      const c = col.label;
       if (c === '進料') {
         const recs = zoneReceipts[r.part_no] || [];
         const got = recs.reduce((s,x) => s + (parseInt(x.qty)||0), 0);
@@ -21203,8 +21223,17 @@ function renderCompTable() {
   const totalWFixed = totalW.toFixed(2);
   const totalT = (totalW/1000).toFixed(2);
   const totalLabel = excluded.length ? '合計（本公司製作）' : '合計';
-  html += '<tr class="total-row"><td colspan="'+(showChk?5:4)+'">'+totalLabel+'</td><td>'+totalQty+'</td><td class="total-weight">'+totalWFixed+' ('+totalT+'t)</td><td></td>';
-  extCols.forEach(()=> html += '<td></td>');
+  // 合計列依目前欄位順序:數量/總重前面的欄合併放「合計」字樣
+  const totIdx = vcols.findIndex(c => c.key==='qty' || c.key==='net_weight');
+  const lead = totIdx < 0 ? vcols.length : totIdx;
+  html += '<tr class="total-row">';
+  if (lead + (showChk?1:0) > 0) html += '<td colspan="'+(lead+(showChk?1:0))+'">'+totalLabel+'</td>';
+  vcols.slice(lead).forEach((c, i) => {
+    const pre = (i===0 && lead===0 && !showChk) ? totalLabel+' ' : '';
+    if (c.key==='qty') html += '<td>'+pre+totalQty+'</td>';
+    else if (c.key==='net_weight') html += '<td class="total-weight">'+pre+totalWFixed+' ('+totalT+'t)</td>';
+    else html += '<td></td>';
+  });
   html += '</tr>';
   html += '</tbody></table></div>';
   el.innerHTML = zoneCompZoomBarHtml() + html;   // 縮放列只在手機顯示(CSS)
@@ -21238,6 +21267,108 @@ function renderExcludedTable(excluded) {
   h+='</tbody></table></div>';
   el.innerHTML=h;
 }
+
+// ── 構件總表欄位設定:使用者自己調整欄位順序、隱藏欄位;存在這台裝置(localStorage),電腦/手機各自設定 ──
+// 新出現的欄位(例如新版次 R 欄、自訂欄)沒在設定裡 → 依預設位置插在它前一欄後面、預設顯示
+let compColAll = [];
+const COMP_COL_PREF_KEY = 'comp_col_prefs';
+function compColPrefsGet() {
+  try {
+    const p = JSON.parse(localStorage.getItem(COMP_COL_PREF_KEY) || '{}') || {};
+    return { order: Array.isArray(p.order) ? p.order : [], hidden: Array.isArray(p.hidden) ? p.hidden : [] };
+  } catch (e) { return { order: [], hidden: [] }; }
+}
+function compColPrefsSet(p) { try { localStorage.setItem(COMP_COL_PREF_KEY, JSON.stringify(p)); } catch (e) {} }
+function compColOrdered(cols) {
+  const keys = cols.map(c => c.key), p = compColPrefsGet();
+  const res = [];
+  p.order.forEach(k => { if (keys.includes(k) && !res.includes(k)) res.push(k); });
+  keys.forEach((k, i) => {
+    if (res.includes(k)) return;
+    let pos = 0;
+    for (let j = i - 1; j >= 0; j--) { const at = res.indexOf(keys[j]); if (at >= 0) { pos = at + 1; break; } }
+    res.splice(pos, 0, k);
+  });
+  return res.map(k => cols.find(c => c.key === k));
+}
+function compColVisible(cols) {
+  const hid = new Set(compColPrefsGet().hidden);
+  const v = compColOrdered(cols).filter(c => !hid.has(c.key));
+  const btn = document.getElementById('comp-col-btn');
+  const nHid = cols.filter(c => hid.has(c.key)).length;
+  if (btn) { btn.classList.toggle('on', nHid > 0); btn.title = nHid ? ('已隱藏 '+nHid+' 欄;點此調整') : '調整欄位順序、隱藏欄位(每台裝置各自記住)'; }
+  return v.length ? v : [cols.find(c => c.key === 'part_no') || cols[0]];
+}
+function compColOpen() {
+  let m = document.getElementById('comp-col-modal');
+  if (!m) { m = document.createElement('div'); m.id = 'comp-col-modal'; document.body.appendChild(m); }
+  m.className = 'modal-overlay show';
+  m.onclick = e => { if (e.target === m) compColClose(); };
+  m.innerHTML = '<div class="modal"><div class="modal-title">'+icSvg('gear')+' 構件總表欄位</div>'+
+    '<div class="ccol-note">勾選要顯示的欄位，用 ▲▼ 或拖曳調整順序。設定只存在這台裝置。</div>'+
+    '<div class="ccol-list" id="ccol-list"></div>'+
+    '<div class="ccol-tools"><button class="btn-sm btn-export" type="button" onclick="compColShowAll()">全部顯示</button>'+
+    '<button class="btn-sm btn-export" type="button" onclick="compColReset()">恢復預設</button></div>'+
+    '<div class="modal-actions"><button class="btn-modal-cancel" type="button" onclick="compColClose()">關閉</button></div></div>';
+  compColRenderList();
+}
+function compColClose() { const m = document.getElementById('comp-col-modal'); if (m) m.className = 'modal-overlay'; }
+function compColRenderList() {
+  const box = document.getElementById('ccol-list');
+  if (!box) return;
+  const st = box.scrollTop;
+  const ord = compColOrdered(compColAll), hid = new Set(compColPrefsGet().hidden);
+  box.innerHTML = ord.map((c, i) => {
+    const k = encodeURIComponent(c.key);
+    return '<div class="ccol-row'+(hid.has(c.key)?' off':'')+'" draggable="true" data-key="'+k+'">'+
+      '<span class="ccol-grip" title="拖曳排序">'+icSvg('menu')+'</span>'+
+      '<label><input type="checkbox"'+(hid.has(c.key)?'':' checked')+' onchange="compColToggle(&quot;'+k+'&quot;,this.checked)"><span class="ccol-name">'+esc(c.label)+'</span></label>'+
+      '<button class="ccol-mv" type="button" title="上移"'+(i===0?' disabled':'')+' onclick="compColMove(&quot;'+k+'&quot;,-1)">'+icSvg('chevUp')+'</button>'+
+      '<button class="ccol-mv" type="button" title="下移"'+(i===ord.length-1?' disabled':'')+' onclick="compColMove(&quot;'+k+'&quot;,1)">'+icSvg('chevDown')+'</button></div>';
+  }).join('');
+  box.scrollTop = st;
+  let dragKey = null;
+  box.querySelectorAll('.ccol-row').forEach(row => {
+    row.addEventListener('dragstart', e => { dragKey = decodeURIComponent(row.dataset.key); row.classList.add('dragging'); try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragKey); } catch (_) {} });
+    row.addEventListener('dragend', () => { row.classList.remove('dragging'); box.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over')); });
+    row.addEventListener('dragover', e => { e.preventDefault(); box.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over')); row.classList.add('drag-over'); });
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      const to = decodeURIComponent(row.dataset.key);
+      if (!dragKey || dragKey === to) return;
+      const keys = compColOrdered(compColAll).map(c => c.key).filter(k => k !== dragKey);
+      keys.splice(keys.indexOf(to), 0, dragKey);   // 放到目標欄的前面
+      compColSaveOrder(keys);
+    });
+  });
+}
+function compColSaveOrder(keys) {
+  const p = compColPrefsGet();
+  // 保留其他工程區才有的欄位設定(例如別區的自訂欄),目前這區的欄位用新順序
+  p.order = keys.concat(p.order.filter(k => !keys.includes(k)));
+  compColPrefsSet(p); renderCompTable(); compColRenderList();
+}
+function compColMove(k, d) {
+  k = decodeURIComponent(k);
+  const keys = compColOrdered(compColAll).map(c => c.key), i = keys.indexOf(k), j = i + d;
+  if (i < 0 || j < 0 || j >= keys.length) return;
+  keys.splice(i, 1); keys.splice(j, 0, k);
+  compColSaveOrder(keys);
+}
+function compColToggle(k, show) {
+  k = decodeURIComponent(k);
+  const p = compColPrefsGet(), hid = new Set(p.hidden);
+  if (show) hid.delete(k);
+  else {
+    if (compColAll.filter(c => !hid.has(c.key) && c.key !== k).length === 0) { alert('至少要留一個欄位'); compColRenderList(); return; }
+    hid.add(k);
+    if (colFilterState.comp && colFilterState.comp[k]) { delete colFilterState.comp[k]; pagerReset('comp'); }   // 隱藏的欄不留篩選,免得看不到原因
+  }
+  p.hidden = Array.from(hid);
+  compColPrefsSet(p); renderCompTable(); compColRenderList();
+}
+function compColShowAll() { const p = compColPrefsGet(); p.hidden = []; compColPrefsSet(p); renderCompTable(); compColRenderList(); }
+function compColReset() { compColPrefsSet({ order: [], hidden: [] }); renderCompTable(); compColRenderList(); }
 
 
 let _compStatusTimer = null;
