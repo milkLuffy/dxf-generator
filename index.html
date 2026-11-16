@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.16.5"/>
+<meta name="sc-version" content="2026.11.17.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5222,6 +5222,12 @@ window.normalizeFullWidth=function(value){
     #page-drawingsearch .ds-file-card{cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
     #page-drawingsearch .ds-file-card:hover{border-color:var(--accent2);background:color-mix(in srgb,var(--accent2) 7%,var(--bg3));transform:translateY(-1px)}
     #page-drawingsearch .ds-file-card:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+    #page-drawingsearch .ds-proj-card .ds-proj-title{font-size:15px}
+    #page-drawingsearch .ds-proj-card .ds-proj-title b{color:var(--accent2);font-family:var(--mono)}
+    #page-drawingsearch .ds-proj-zones{white-space:normal;word-break:break-word}
+    #page-drawingsearch .ds-proj-arrow{font-size:24px;color:var(--text3);flex:none;padding:0 4px}
+    #page-drawingsearch .ds-proj-back{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:2px}
+    #page-drawingsearch .ds-proj-back-name{font-weight:700;font-size:14px;min-width:0}
     #page-drawingsearch .ds-file-card.is-active{border-color:var(--accent2);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent2) 35%,transparent)}
     #page-drawingsearch .ds-item-main{min-width:0}.ds-code{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600;color:var(--accent2)}
     #page-drawingsearch .ds-meta{font-size:12px;color:var(--text3);overflow-wrap:anywhere}
@@ -54360,6 +54366,14 @@ function dsFileCardKeydown(event, id) {
   dsActivateFile(id);
 }
 
+// 「所有已上傳圖面」分兩層:先列工程(每個工程一張卡),點進去才列該工程各工程區的 PDF;有打搜尋字時直接列出符合的 PDF
+let dsFilesProject = null;   // 目前點進去的工程 id(null = 工程列表)
+function dsFilesOpenProject(pid) {
+  dsFilesProject = pid == null ? null : String(pid);
+  dsRenderFiles();
+  const sec = dsEl('ds-files'); if (sec && sec.closest('.ds-card')) sec.closest('.ds-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function dsZoneCmp(a, b) { return String(a || '').localeCompare(String(b || ''), undefined, { numeric: true, sensitivity: 'base' }); }
 function dsRenderFiles() {
   const box = dsEl('ds-files');
   const summary = dsEl('ds-files-summary');
@@ -54381,19 +54395,54 @@ function dsRenderFiles() {
       .filter(Boolean).join(' ').normalize('NFKC').toLocaleLowerCase();
     return !filter || searchable.includes(filter);
   });
-  if (summary) summary.textContent = filter
-    ? '顯示 ' + visibleFiles.length + '／' + dsAllFiles.length + ' 份 PDF'
-    : '共 ' + dsAllFiles.length + ' 份 PDF（所有工程區）';
-  if (!dsAllFiles.length) { box.innerHTML = '<div class="ds-empty">目前尚未上傳任何圖面。</div>'; return; }
-  if (!visibleFiles.length) { box.innerHTML = '<div class="ds-empty">找不到符合條件的已上傳圖面。</div>'; return; }
-  box.innerHTML = visibleFiles.map(file => {
+  // 點進去的工程已經沒有圖面(被刪光)→ 回工程列表
+  if (dsFilesProject != null && !dsAllFiles.some(f => String(f.project_id) === dsFilesProject)) dsFilesProject = null;
+  if (!dsAllFiles.length) { if (summary) summary.textContent = '共 0 份 PDF'; box.innerHTML = '<div class="ds-empty">目前尚未上傳任何圖面。</div>'; return; }
+  const projOf = f => projectsById.get(String(f.project_id));
+  const zoneOf = f => zonesById.get(String(f.zone_id));
+  const projLabel = pid => { const pj = projectsById.get(String(pid)); return [pj?.proj_num, pj?.proj_name].filter(Boolean).join(' ') || '未知工程'; };
+  // ── 第一層:工程列表(沒點進工程、也沒打搜尋字)──
+  if (dsFilesProject == null && !filter) {
+    const groups = new Map();
+    dsAllFiles.forEach(f => { const k = String(f.project_id); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(f); });
+    const list = Array.from(groups.entries()).map(([pid, files]) => ({
+      pid, files, latest: files.reduce((m, f) => (String(f.created_at || '') > m ? String(f.created_at || '') : m), ''),
+      num: String(projectsById.get(pid)?.proj_num || '')
+    })).sort((a, b) => (b.latest > a.latest ? 1 : b.latest < a.latest ? -1 : 0) || dsZoneCmp(a.num, b.num));   // 最近有上傳的工程排前面
+    if (summary) summary.textContent = '共 ' + list.length + ' 個工程、' + dsAllFiles.length + ' 份 PDF；點工程看各工程區圖面';
+    box.innerHTML = list.map(g => {
+      const pj = projectsById.get(g.pid);
+      const zoneCodes = Array.from(new Set(g.files.map(f => zoneOf(f)?.zone_code || '').filter(Boolean))).sort(dsZoneCmp);
+      const pages = g.files.reduce((s, f) => s + (Number(f.page_count) || 0), 0);
+      const hasActive = g.files.some(f => f.id === dsActiveFileId);
+      const latest = dsUploadedAt(g.latest);
+      return '<div class="ds-item ds-file-card ds-proj-card' + (hasActive ? ' is-active' : '') + '" role="button" tabindex="0" aria-label="開啟工程 ' + dsEsc(projLabel(g.pid)) + ' 的圖面" onclick="dsFilesOpenProject(\'' + dsEsc(g.pid) + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();dsFilesOpenProject(\'' + dsEsc(g.pid) + '\')}">' +
+        '<div class="ds-item-main"><div class="ds-proj-title"><b>' + dsEsc(pj?.proj_num || '未知工程') + '</b> ' + dsEsc(pj?.proj_name || '') + (hasActive ? ' · 搜尋中' : '') + '</div>' +
+        '<div class="ds-meta">' + g.files.length + ' 份 PDF · ' + pages + ' 頁' + (latest ? ' · 最近上傳 ' + dsEsc(latest) : '') + '</div>' +
+        (zoneCodes.length ? '<div class="ds-meta ds-proj-zones">工程區：' + zoneCodes.map(dsEsc).join('、') + '</div>' : '') +
+        '</div><span class="ds-proj-arrow" aria-hidden="true">›</span></div>';
+    }).join('');
+    return;
+  }
+  // ── 第二層:某工程的各工程區 PDF(或搜尋結果)──
+  let shown = dsFilesProject != null ? visibleFiles.filter(f => String(f.project_id) === dsFilesProject) : visibleFiles;
+  if (dsFilesProject != null) shown = shown.slice().sort((a, b) => dsZoneCmp(zoneOf(a)?.zone_code, zoneOf(b)?.zone_code) || dsZoneCmp(a.original_name, b.original_name));
+  const projTotal = dsFilesProject != null ? dsAllFiles.filter(f => String(f.project_id) === dsFilesProject).length : dsAllFiles.length;
+  if (summary) summary.textContent = dsFilesProject != null
+    ? (filter ? '顯示 ' + shown.length + '／' + projTotal + ' 份 PDF' : '共 ' + projTotal + ' 份 PDF')
+    : '搜尋全部工程：顯示 ' + shown.length + '／' + dsAllFiles.length + ' 份 PDF';
+  const backHtml = dsFilesProject != null
+    ? '<div class="ds-proj-back"><button class="btn" type="button" onclick="dsFilesOpenProject(null)">‹ 全部工程</button><span class="ds-proj-back-name">' + dsEsc(projLabel(dsFilesProject)) + '</span></div>'
+    : '';
+  if (!shown.length) { box.innerHTML = backHtml + '<div class="ds-empty">找不到符合條件的已上傳圖面。</div>'; return; }
+  box.innerHTML = backHtml + shown.map(file => {
     const rows = pagesByFile[file.id] || [];
     const drawingCount = new Set(rows.map(row => dsNorm(row.drawing_no)).filter(Boolean)).size;
     const project = projectsById.get(String(file.project_id));
     const zone = zonesById.get(String(file.zone_id));
     const projectText = [project?.proj_num, project?.proj_name].filter(Boolean).join(' ');
     const zoneText = [zone?.zone_code, zone?.zone_name].filter(Boolean).join(' ');
-    const locationText = [projectText || '未知工程', zoneText || '未知工程區'].join(' · ');
+    const locationText = dsFilesProject != null ? ('工程區 ' + (zoneText || '未知')) : [projectText || '未知工程', zoneText || '未知工程區'].join(' · ');
     const uploadedAt = dsUploadedAt(file.created_at);
     const isAdmin = !!currentUser?.isAdmin;
     const isOwner = String(file.created_by || '') === String(currentUser?.id || '');
