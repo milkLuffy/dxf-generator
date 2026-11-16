@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.16.1"/>
+<meta name="sc-version" content="2026.11.16.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1567,6 +1567,9 @@ html.dtv-open,html.dtv-open body{overflow:hidden}
 #zone-components .layout-table input[data-col="加工機"], #zone-beam .layout-table input[data-col="加工機"]{min-width:12ch}
 /* 構件總表縮放列(截圖用):只在手機顯示,見下方 @media */
 .zt-zoom-bar{display:none}
+/* 構件總表:加工機＝二次製作 → 整列淺紫底色(手機凍結欄要疊在不透明底上) */
+#zone-components .layout-table tr.comp-2nd td{background-color:rgba(175,82,222,.13)}
+#zone-components .layout-table tr.comp-2nd td.zt-stk{background:linear-gradient(rgba(175,82,222,.13),rgba(175,82,222,.13)),var(--bg2)}
 /* 構件總表「欄位」設定視窗:勾選顯示、▲▼／拖曳排序(每台裝置各自記住) */
 #comp-col-modal .modal{max-width:420px;width:calc(100vw - 32px)}
 .ccol-note{font-size:12px;color:var(--text3);margin:-4px 0 10px}
@@ -21156,7 +21159,7 @@ function renderCompTable() {
   html += '</tr></thead><tbody>';
   pgComp.slice.forEach(r => {
     const ext = zoneCompExt[r.part_no] || {};
-    html += '<tr>';
+    html += '<tr'+(compIs2nd(ext['加工機'])?' class="comp-2nd"':'')+'>';   // 加工機＝二次製作 → 整列淺底色
     if (showChk) {
       const dp = String(r.part_no||'').replace(/"/g,'&quot;');
       if (zoneMatMode) html += '<td class="chk-col"><input type="checkbox" class="nonco-chk" data-part="'+dp+'"'+(zoneMatChecked.has(r.part_no)?' checked':'')+' onchange="toggleMatPart(this.dataset.part, this.checked)"></td>';
@@ -21371,12 +21374,14 @@ function compColShowAll() { const p = compColPrefsGet(); p.hidden = []; compColP
 function compColReset() { compColPrefsSet({ order: [], hidden: [] }); renderCompTable(); compColRenderList(); }
 
 
+function compIs2nd(v) { return String(v == null ? '' : v).replace(/\s/g, '') === '二次製作'; }
 let _compStatusTimer = null;
 function compExtEdit(input) {
   const part = input.dataset.part;
   const col = input.dataset.col;
   if (!zoneCompExt[part]) zoneCompExt[part] = {};
   zoneCompExt[part][col] = input.value;
+  if (col === '加工機') { const tr = input.closest('tr'); if (tr) tr.classList.toggle('comp-2nd', compIs2nd(input.value)); }
   if (col === 'A201' || col === 'A202') {
     clearTimeout(_compStatusTimer);
     _compStatusTimer = setTimeout(() => applyCurrentZoneStatus(), 400);
