@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.16.2"/>
+<meta name="sc-version" content="2026.11.16.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1577,11 +1577,19 @@ html.dtv-open,html.dtv-open body{overflow:hidden}
 .ccol-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--border);background:var(--bg2)}
 .ccol-row:last-child{border-bottom:none}
 .ccol-row.off .ccol-name{color:var(--text3);text-decoration:line-through}
-.ccol-row.drag-over{box-shadow:inset 0 2px 0 var(--accent)}
-.ccol-row.dragging{opacity:.4}
-.ccol-grip{color:var(--text3);cursor:grab;display:flex}
+.ccol-row.dragging{position:relative;z-index:1;background:var(--bg3);box-shadow:0 0 0 2px var(--accent),0 6px 18px rgba(0,0,0,.35)}
+.ccol-grip{color:var(--text3);cursor:grab;display:flex;align-items:center;justify-content:center;align-self:stretch;margin:-6px 0 -6px -8px;padding:0 6px 0 12px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.ccol-row.dragging .ccol-grip{cursor:grabbing;color:var(--accent)}
 .ccol-row label{flex:1;display:flex;align-items:center;gap:8px;cursor:pointer;min-width:0;font-size:14px}
-.ccol-row label input{width:18px;height:18px;flex:none}
+.ccol-row label input{width:18px;height:18px;min-height:0;flex:none;margin:0;padding:0;accent-color:var(--accent)}
+/* 手機:構件總表工具列改成三欄等寬按鈕,搜尋框與「收合表格」佔滿整列 */
+@media(max-width:768px){
+  #page-zone-detail .bom-result-bar > div{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px!important;width:100%}
+  #page-zone-detail #comp-search{grid-column:1/-1;width:100%!important;box-sizing:border-box}
+  #page-zone-detail #zone-comp-actions{display:contents}
+  #page-zone-detail .bom-result-bar > div .btn-sm{justify-content:center;text-align:center;white-space:normal;line-height:1.25;min-height:46px;padding:6px 6px;font-size:13px;margin:0;width:100%;box-sizing:border-box}
+  #page-zone-detail #zone-comp-expand-btn,#page-zone-detail #zone-comp-actions .insp-sel-stat,#page-zone-detail #mat-batch-date{grid-column:1/-1}
+}
 .ccol-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ccol-mv{background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);width:34px;height:30px;display:flex;align-items:center;justify-content:center;padding:0;flex:none}
 .ccol-mv:disabled{opacity:.3}
@@ -21323,25 +21331,46 @@ function compColRenderList() {
   const ord = compColOrdered(compColAll), hid = new Set(compColPrefsGet().hidden);
   box.innerHTML = ord.map((c, i) => {
     const k = encodeURIComponent(c.key);
-    return '<div class="ccol-row'+(hid.has(c.key)?' off':'')+'" draggable="true" data-key="'+k+'">'+
+    return '<div class="ccol-row'+(hid.has(c.key)?' off':'')+'" data-key="'+k+'">'+
       '<span class="ccol-grip" title="拖曳排序">'+icSvg('menu')+'</span>'+
       '<label><input type="checkbox"'+(hid.has(c.key)?'':' checked')+' onchange="compColToggle(&quot;'+k+'&quot;,this.checked)"><span class="ccol-name">'+esc(c.label)+'</span></label>'+
       '<button class="ccol-mv" type="button" title="上移"'+(i===0?' disabled':'')+' onclick="compColMove(&quot;'+k+'&quot;,-1)">'+icSvg('chevUp')+'</button>'+
       '<button class="ccol-mv" type="button" title="下移"'+(i===ord.length-1?' disabled':'')+' onclick="compColMove(&quot;'+k+'&quot;,1)">'+icSvg('chevDown')+'</button></div>';
   }).join('');
   box.scrollTop = st;
-  let dragKey = null;
-  box.querySelectorAll('.ccol-row').forEach(row => {
-    row.addEventListener('dragstart', e => { dragKey = decodeURIComponent(row.dataset.key); row.classList.add('dragging'); try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragKey); } catch (_) {} });
-    row.addEventListener('dragend', () => { row.classList.remove('dragging'); box.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over')); });
-    row.addEventListener('dragover', e => { e.preventDefault(); box.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over')); row.classList.add('drag-over'); });
-    row.addEventListener('drop', e => {
+  // 拖曳排序:用 pointer 事件(手機手指、電腦滑鼠都能拖;iPhone 不支援 HTML5 draggable)。按住左邊把手拖,列會即時跟著移動
+  box.querySelectorAll('.ccol-grip').forEach(grip => {
+    grip.addEventListener('pointerdown', e => {
+      if (e.button != null && e.button !== 0) return;
       e.preventDefault();
-      const to = decodeURIComponent(row.dataset.key);
-      if (!dragKey || dragKey === to) return;
-      const keys = compColOrdered(compColAll).map(c => c.key).filter(k => k !== dragKey);
-      keys.splice(keys.indexOf(to), 0, dragKey);   // 放到目標欄的前面
-      compColSaveOrder(keys);
+      const row = grip.closest('.ccol-row');
+      let lastY = e.clientY, moved = false;
+      row.classList.add('dragging');
+      try { grip.setPointerCapture(e.pointerId); } catch (_) {}
+      const place = () => {
+        const others = Array.from(box.querySelectorAll('.ccol-row')).filter(r => r !== row);
+        const tgt = others.find(r => { const b = r.getBoundingClientRect(); return lastY < b.top + b.height / 2; });
+        if (tgt) { if (row.nextElementSibling !== tgt) { box.insertBefore(row, tgt); moved = true; } }
+        else if (box.lastElementChild !== row) { box.appendChild(row); moved = true; }
+      };
+      // 拖到清單上下邊緣時自動捲動
+      const timer = setInterval(() => {
+        const b = box.getBoundingClientRect();
+        const dy = lastY < b.top + 36 ? -10 : lastY > b.bottom - 36 ? 10 : 0;
+        if (dy) { box.scrollTop += dy; place(); }
+      }, 30);
+      const move = ev => { lastY = ev.clientY; place(); };
+      const end = () => {
+        clearInterval(timer);
+        grip.removeEventListener('pointermove', move);
+        grip.removeEventListener('pointerup', end);
+        grip.removeEventListener('pointercancel', end);
+        row.classList.remove('dragging');
+        if (moved) compColSaveOrder(Array.from(box.querySelectorAll('.ccol-row')).map(r => decodeURIComponent(r.dataset.key)));
+      };
+      grip.addEventListener('pointermove', move);
+      grip.addEventListener('pointerup', end);
+      grip.addEventListener('pointercancel', end);
     });
   });
 }
