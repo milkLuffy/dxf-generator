@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.17.2"/>
+<meta name="sc-version" content="2026.11.17.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1571,7 +1571,22 @@ html.dtv-open,html.dtv-open body{overflow:hidden}
 #zone-components .layout-table tr.comp-2nd td{background-color:rgba(175,82,222,.13)}
 #zone-components .layout-table tr.comp-2nd td.zt-stk{background:linear-gradient(rgba(175,82,222,.13),rgba(175,82,222,.13)),var(--bg2)}
 /* 構件總表「欄位」設定視窗:勾選顯示、▲▼／拖曳排序(每台裝置各自記住) */
-#comp-col-modal .modal{max-width:420px;width:calc(100vw - 32px)}
+#comp-col-modal .modal,#ma-lay-modal .modal{max-width:420px;width:calc(100vw - 32px)}
+#ma-lay-modal .modal{max-height:calc(100dvh - 32px);overflow-y:auto}
+.ma-lay-sec{font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 6px}
+.ma-lay-sec:first-of-type{margin-top:0}
+.ccol-row.ccol-fixed{padding-left:50px}
+/* 多階資料分析:手機版區塊順序/隱藏(設定存在這台裝置,電腦版不套用) */
+.ma-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ma-lay-btn{display:none!important}
+@media(max-width:768px){
+  #page-multilevel.active{display:flex;flex-direction:column}
+  #page-multilevel>*{min-width:0}
+  #page-multilevel>.ma-intro,#page-multilevel>.ma-panel{order:var(--ma-ord,0)}
+  #page-multilevel .ma-tabs>.ma-tab{order:var(--ma-ord,0)}
+  #page-multilevel .ma-lay-hidden{display:none!important}
+  .ma-lay-btn{display:inline-flex!important;flex:none}
+}
 .ccol-note{font-size:12px;color:var(--text3);margin:-4px 0 10px}
 .ccol-list{max-height:min(60vh,520px);overflow-y:auto;border:1px solid var(--border);border-radius:8px}
 .ccol-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--border);background:var(--bg2)}
@@ -4671,7 +4686,7 @@ window.normalizeFullWidth=function(value){
 
     <!-- 多階資料分析 -->
     <div class="page ma-entry-mode" id="page-multilevel">
-      <div class="page-title">多階資料分析</div>
+      <div class="page-title ma-title-row">多階資料分析<button type="button" class="btn btn-add-row ma-lay-btn" onclick="maLayOpen()" title="調整手機版區塊順序、隱藏區塊">⚙ 版面</button></div>
 
       <div class="ma-intro ma-no-print ma-entry-only">
         <div>
@@ -4726,6 +4741,7 @@ window.normalizeFullWidth=function(value){
           <span class="ma-save-status" id="ma-save-status-top"></span>
           <button type="button" class="btn btn-gen ma-save-top" onclick="maSaveAnalysis()" id="ma-save-btn-top" disabled>☁ 儲存分析結果</button>
           <button type="button" class="btn btn-gen" onclick="maDownloadExcel()">⬇ 下載 Excel</button>
+          <button type="button" class="btn btn-add-row ma-lay-btn" onclick="maLayOpen()" title="調整手機版區塊順序、隱藏區塊">⚙ 版面</button>
         </div>
       </div>
 
@@ -21360,14 +21376,104 @@ function compColRenderList() {
   const all = document.getElementById('ccol-all'), nHid = ord.filter(c => hid.has(c.key)).length;
   if (all) { all.checked = nHid === 0; all.indeterminate = nHid > 0 && nHid < ord.length; }
   const cnt = document.getElementById('ccol-all-n'); if (cnt) cnt.textContent = '顯示 ' + (ord.length - nHid) + ' / ' + ord.length + ' 欄';
+  ccolDragSort(box, compColSaveOrder);
+}
+// ── 多階資料分析:手機版區塊順序、隱藏(存在這台裝置 localStorage;只在手機寬度生效)──
+const MA_LAY_KEY = 'ma_mobile_layout';
+const MA_LAY_ENTRY = [{ k: 'intro', l: '說明介紹' }, { k: 'import', l: '① 匯入多階資料' }, { k: 'history', l: '歷史分析紀錄' }];
+const MA_LAY_TABS = [{ k: 'parts', l: '零件表' }, { k: 'curtain', l: '帷幕明細 Q' }, { k: 'mep', l: '水電明細 H' }, { k: 'wordprompt', l: '帷幕／水電 Word Prompt' }];
+const MA_LAY_FIXED = { entry: [{ k: 'rules', l: '分析規則（匯入區塊右下）' }], result: [{ k: 'summary', l: '統計摘要（工程編號、構件數…）' }] };
+function maLayGet() {
+  try { const p = JSON.parse(localStorage.getItem(MA_LAY_KEY) || '{}') || {}; return { entry: Array.isArray(p.entry) ? p.entry : [], tabs: Array.isArray(p.tabs) ? p.tabs : [], hidden: Array.isArray(p.hidden) ? p.hidden : [] }; }
+  catch (e) { return { entry: [], tabs: [], hidden: [] }; }
+}
+function maLaySet(p) { try { localStorage.setItem(MA_LAY_KEY, JSON.stringify(p)); } catch (e) {} }
+function maLayOrd(defs, saved) { const keys = defs.map(x => x.k); return saved.filter((k, i) => keys.includes(k) && saved.indexOf(k) === i).concat(keys.filter(k => !saved.includes(k))).map(k => defs.find(x => x.k === k)); }
+function maLayEl(k) {
+  const pg = document.getElementById('page-multilevel'); if (!pg) return null;
+  if (k === 'intro') return pg.querySelector(':scope > .ma-intro');
+  if (k === 'import') { const t = document.getElementById('ma-raw-input'); return t && t.closest('.ma-panel'); }
+  if (k === 'history') { const h = document.getElementById('ma-history-list'); return h && h.closest('.ma-panel'); }
+  if (k === 'rules') return pg.querySelector('.ma-rule-box');
+  if (k === 'summary') return document.getElementById('ma-summary');
+  return pg.querySelector('.ma-tabs [data-ma-tab="' + k + '"]');
+}
+function maLayApply() {
+  const p = maLayGet(), hid = new Set(p.hidden);
+  maLayOrd(MA_LAY_ENTRY, p.entry).forEach((x, i) => { const el = maLayEl(x.k); if (el) el.style.setProperty('--ma-ord', i + 1); });
+  maLayOrd(MA_LAY_TABS, p.tabs).forEach((x, i) => { const el = maLayEl(x.k); if (el) el.style.setProperty('--ma-ord', i + 1); });
+  MA_LAY_ENTRY.concat(MA_LAY_TABS, MA_LAY_FIXED.entry, MA_LAY_FIXED.result).forEach(x => { const el = maLayEl(x.k); if (el) el.classList.toggle('ma-lay-hidden', hid.has(x.k)); });
+  // 手機上目前的頁籤被隱藏 → 切到第一個顯示的頁籤
+  if (window.matchMedia && window.matchMedia('(max-width:768px)').matches && typeof maSwitchTab === 'function') {
+    const act = document.querySelector('#page-multilevel .ma-tabs .ma-tab.active');
+    if (act && hid.has(act.getAttribute('data-ma-tab'))) { const first = maLayOrd(MA_LAY_TABS, p.tabs).find(x => !hid.has(x.k)); if (first) maSwitchTab(first.k, true); }
+  }
+}
+function maLayOpen() {
+  let m = document.getElementById('ma-lay-modal');
+  if (!m) { m = document.createElement('div'); m.id = 'ma-lay-modal'; document.body.appendChild(m); }
+  m.className = 'modal-overlay show';
+  m.onclick = e => { if (e.target === m) maLayClose(); };
+  m.innerHTML = '<div class="modal"><div class="modal-title">' + icSvg('gear') + ' 多階資料分析版面</div>' +
+    '<div class="ccol-note">手機版用：勾選要顯示的區塊，用 ▲▼ 或按住左邊把手拖曳調整順序。設定只存在這台裝置，電腦版不受影響。</div>' +
+    '<div class="ma-lay-sec">匯入頁</div><div class="ccol-list" id="ma-lay-entry"></div>' +
+    '<div class="ma-lay-sec">分析結果頁籤</div><div class="ccol-list" id="ma-lay-tabs"></div>' +
+    '<div class="ma-lay-sec">其他</div><div class="ccol-list" id="ma-lay-fixed"></div>' +
+    '<div class="ccol-tools"><button class="btn-sm btn-export" type="button" onclick="maLayReset()">恢復預設</button></div>' +
+    '<div class="modal-actions"><button class="btn-modal-cancel" type="button" onclick="maLayClose()">關閉</button></div></div>';
+  maLayRender();
+}
+function maLayClose() { const m = document.getElementById('ma-lay-modal'); if (m) m.className = 'modal-overlay'; }
+function maLayRowHtml(x, i, n, hid, group) {
+  const k = encodeURIComponent(x.k), off = hid.has(x.k);
+  const chk = '<label><input type="checkbox"' + (off ? '' : ' checked') + ' onchange="maLayToggle(&quot;' + k + '&quot;,this.checked,&quot;' + group + '&quot;)"><span class="ccol-name">' + esc(x.l) + '</span></label>';
+  if (!group) return '<div class="ccol-row ccol-fixed' + (off ? ' off' : '') + '" data-key="' + k + '">' + chk + '</div>';
+  return '<div class="ccol-row' + (off ? ' off' : '') + '" data-key="' + k + '"><span class="ccol-grip" title="拖曳排序">' + icSvg('menu') + '</span>' + chk +
+    '<button class="ccol-mv" type="button" title="上移"' + (i === 0 ? ' disabled' : '') + ' onclick="maLayMove(&quot;' + group + '&quot;,&quot;' + k + '&quot;,-1)">' + icSvg('chevUp') + '</button>' +
+    '<button class="ccol-mv" type="button" title="下移"' + (i === n - 1 ? ' disabled' : '') + ' onclick="maLayMove(&quot;' + group + '&quot;,&quot;' + k + '&quot;,1)">' + icSvg('chevDown') + '</button></div>';
+}
+function maLayRender() {
+  const p = maLayGet(), hid = new Set(p.hidden);
+  [['entry', MA_LAY_ENTRY], ['tabs', MA_LAY_TABS]].forEach(([g, defs]) => {
+    const box = document.getElementById('ma-lay-' + g); if (!box) return;
+    const ord = maLayOrd(defs, p[g]);
+    box.innerHTML = ord.map((x, i) => maLayRowHtml(x, i, ord.length, hid, g)).join('');
+    ccolDragSort(box, keys => maLaySaveOrder(g, keys));
+  });
+  const fx = document.getElementById('ma-lay-fixed');
+  if (fx) fx.innerHTML = MA_LAY_FIXED.entry.concat(MA_LAY_FIXED.result).map(x => maLayRowHtml(x, 0, 1, hid, '')).join('');
+}
+function maLaySaveOrder(g, keys) { const p = maLayGet(); p[g] = keys; maLaySet(p); maLayApply(); maLayRender(); }
+function maLayMove(g, k, dlt) {
+  k = decodeURIComponent(k);
+  const keys = maLayOrd(g === 'tabs' ? MA_LAY_TABS : MA_LAY_ENTRY, maLayGet()[g]).map(x => x.k), i = keys.indexOf(k), j = i + dlt;
+  if (i < 0 || j < 0 || j >= keys.length) return;
+  keys.splice(i, 1); keys.splice(j, 0, k); maLaySaveOrder(g, keys);
+}
+function maLayToggle(k, show, g) {
+  k = decodeURIComponent(k);
+  const p = maLayGet(), hid = new Set(p.hidden);
+  if (show) hid.delete(k);
+  else {
+    const defs = g === 'tabs' ? MA_LAY_TABS : g === 'entry' ? MA_LAY_ENTRY : null;
+    if (defs && defs.every(x => x.k === k || hid.has(x.k))) { alert(g === 'tabs' ? '至少要留一個頁籤' : '至少要留一個區塊'); maLayRender(); return; }
+    hid.add(k);
+  }
+  p.hidden = Array.from(hid); maLaySet(p); maLayApply(); maLayRender();
+}
+function maLayReset() { maLaySet({ entry: [], tabs: [], hidden: [] }); maLayApply(); maLayRender(); }
+document.addEventListener('DOMContentLoaded', () => { try { maLayApply(); } catch (e) {} });
+
+// 清單拖曳排序(構件總表欄位、多階分析版面共用):box 裡每列 .ccol-row[data-key](encodeURIComponent)、左邊 .ccol-grip 把手;放開呼叫 onDrop(新順序 keys)
+function ccolDragSort(box, onDrop) {
   // 拖曳排序:用 pointer 事件(手機手指、電腦滑鼠都能拖;iPhone 不支援 HTML5 draggable)。
   // 拖曳中不搬動 DOM(iPhone 搬動元素會中斷觸控,只能拖一格),改用位移:被拖的列跟著手指走,其他列滑開讓位,放開才存新順序
-  box.querySelectorAll('.ccol-grip').forEach(grip => {
+  box.querySelectorAll(':scope > .ccol-row > .ccol-grip').forEach(grip => {
     grip.addEventListener('pointerdown', e => {
       if (e.button != null && e.button !== 0) return;
       e.preventDefault();
       const row = grip.closest('.ccol-row');
-      const rows = Array.from(box.querySelectorAll('.ccol-row'));
+      const rows = Array.from(box.querySelectorAll(':scope > .ccol-row'));
       const from = rows.indexOf(row);
       const tops = rows.map(r => r.offsetTop), hs = rows.map(r => r.offsetHeight);
       const h = hs[from];
@@ -21409,7 +21515,7 @@ function compColRenderList() {
           const keys = rows.map(r => decodeURIComponent(r.dataset.key));
           const k = keys.splice(from, 1)[0];
           keys.splice(to, 0, k);
-          compColSaveOrder(keys);
+          onDrop(keys);
         }
       };
       window.addEventListener('pointermove', move);
@@ -55803,6 +55909,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var page=document.getElementById('page-multilevel'),title=document.getElementById('ma-result-title');
     if(title){title.textContent=maResultHeading();title.title=maResultHeading();}
     if(page){page.classList.remove('ma-entry-mode');page.classList.add('ma-results-mode');}
+    if(typeof maLayApply==='function')maLayApply();   // 手機版頁籤順序/隱藏(目前頁籤被隱藏就換到第一個)
     if(!fromHistory&&typeof setView==='function'){
       var current=typeof getView==='function'?getView():null;
       if(!current||current.page!=='multilevel'||current.ma!=='results')setView({page:'multilevel',ma:'results'});
