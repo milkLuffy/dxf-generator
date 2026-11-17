@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.17.3"/>
+<meta name="sc-version" content="2026.11.17.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -42745,13 +42745,13 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
           +'</tr>';
       });
       reportTons+=monTons; reportQty+=monQty;
-      var monthRows='<tr class="ub-report-period"><td>'+ym.replace('-','/')+'未請款</td><td colspan="8"></td></tr>';
+      var monthRows='<tr class="ub-report-period"><td>'+ym.replace('-','/')+'未請款</td><td colspan="9"></td></tr>';
       rs.forEach(function(r){
         var st=r.status||'未請款',stClass=/未請款|未過/.test(st)?'st-unbilled':/已議價|點工/.test(st)?'st-negotiated':'';
         var reportZone=String(r.zone_code||'')+(r.kind==='水電'?'水電':'');
         monthRows+='<tr><td>'+esc(r.proj_num)+'</td><td>'+esc(reportZone)+'</td><td>'+esc(r.proc_code||'')+'</td><td>'+esc(r.sub_code||'')+'</td>'
           +'<td class="num">'+t2(r.tons)+' t</td><td class="num">'+(r.qty==null?'':intf(r.qty)+' 支')+'</td><td class="num">'+ntd(r.amount)+'</td>'
-          +'<td class="'+stClass+'">'+esc(st)+'</td><td>'+esc(r.note||'')+'</td></tr>';
+          +'<td class="'+stClass+'">'+esc(st)+'</td><td>'+esc(r.note||'')+'</td><td'+coStyle(r.company)+'>'+esc(r.company||'')+'</td></tr>';
       });
       reportRows=monthRows+reportRows;
       reportLines.push(ym.replace('-','/')+'｜主件 '+ntd(monMain)+'｜水電 '+ntd(monUtil)+'｜小計 '+ntd(sub));
@@ -42772,8 +42772,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(byYm['2025-08']&&byYm['2025-09']&&byYm['2026-05']) reportTons+=0.01;
     var latestYm=yms[0]||today().slice(0,7);
     var overview='<div class="ub-report-sheet"><table class="ub-report-table"><tbody>'
-      +'<tr class="ub-report-title"><td colspan="9">累計至'+latestYm.replace('-','/')+'未請款</td></tr>'+reportRows
-      +'<tr class="ub-report-total"><td>總計未請款</td><td></td><td></td><td></td><td class="num">'+t2(reportTons)+' t</td><td class="num">'+intf(reportQty)+' 支</td><td class="num">'+ntd(grand)+'</td><td></td><td></td></tr>'
+      +'<tr class="ub-report-title"><td colspan="10">累計至'+latestYm.replace('-','/')+'未請款</td></tr>'+reportRows
+      +'<tr class="ub-report-total"><td>總計未請款</td><td></td><td></td><td></td><td class="num">'+t2(reportTons)+' t</td><td class="num">'+intf(reportQty)+' 支</td><td class="num">'+ntd(grand)+'</td><td></td><td></td><td></td></tr>'
       +'</tbody></table></div>';
     el.innerHTML='<div class="ub-grid">'+html+'</div>';
     if(reportEl) reportEl.innerHTML=overview;
