@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.17.1"/>
+<meta name="sc-version" content="2026.11.17.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -4651,6 +4651,11 @@ window.normalizeFullWidth=function(value){
 .ma-merge-bar[hidden],.ma-part-hits[hidden]{display:none}
 .ma-history-pick{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--text3);cursor:pointer;padding:0 4px;user-select:none}
 .ma-history-item.picked{border-color:var(--accent2)}
+.ma-hist-proj .ma-history-title{font-size:13px}.ma-hist-proj .ma-history-title b{color:var(--accent2)}
+.ma-hist-zones{white-space:normal;word-break:break-word;font-family:var(--mono)}
+.ma-hist-arrow{font-size:22px;color:var(--text3);padding:0 4px}
+.ma-hist-back{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:2px}
+.ma-hist-back .btn{min-height:30px;padding:3px 10px;font-size:12px}.ma-hist-back-name{font-family:var(--mono);font-weight:700;font-size:13px;min-width:0}
 .ma-zone-tag{font-family:var(--mono);font-size:11px;padding:1px 6px;margin-right:6px;border-radius:5px;background:var(--bg3);border:1px solid var(--border);color:var(--text2)}
 @media(max-width:1100px){.ma-summary{grid-template-columns:repeat(3,minmax(110px,1fr))}}
 @media(max-width:900px){.ma-input-grid,.ma-pdf-grid{grid-template-columns:1fr}.ma-sheet{grid-template-columns:1fr}.ma-component-meta{display:none}.ma-results-nav{top:var(--appbar-h)}}
@@ -56343,13 +56348,39 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     if(isGuest||!currentSession){maHistoryRows=[];host.innerHTML='<div class="ma-empty">訪客模式不提供雲端儲存；登入後即可查看歷史紀錄。</div>';return;}
     maMergeSel=maMergeSel.filter(function(id){return maHistoryRows.some(function(x){return String(x.id)===id;});});   // 被刪掉的紀錄不能留在勾選裡
     if(!maHistoryRows.length){host.innerHTML='<div class="ma-empty">尚無已儲存的分析紀錄</div>';maRenderMergeBar();return;}
-    host.innerHTML=maHistoryRows.map(function(r){
+    // 分兩層:先列工程(工程編號),點進去才列該工程各工程區的紀錄
+    var pkey=function(r){return String(r.project_no||'').trim();};
+    if(maHistProj!=null&&!maHistoryRows.some(function(r){return pkey(r)===maHistProj;}))maHistProj=null;
+    var cmp=function(a,b){return String(a||'').localeCompare(String(b||''),undefined,{numeric:true,sensitivity:'base'});};
+    if(maHistProj==null){
+      var groups={},order=[];
+      maHistoryRows.forEach(function(r){var k=pkey(r);if(!groups[k]){groups[k]=[];order.push(k);}groups[k].push(r);});   // 資料已依建立時間新→舊,最近有存的工程排前面
+      host.innerHTML=order.map(function(k){
+        var rs=groups[k],zones=rs.map(function(r){return r.zone_code||r.mother_no||'';}).filter(function(v,i,a){return v&&a.indexOf(v)===i;}).sort(cmp);
+        var name=maProjName(k),ka=maEsc(JSON.stringify(k));
+        return '<div class="ma-history-item ma-hist-proj" role="button" tabindex="0" title="點一下查看此工程的各工程區紀錄" onclick="maHistOpenProj('+ka+')" onkeydown="if(event.target===this&&(event.key===\'Enter\'||event.key===\' \')){event.preventDefault();maHistOpenProj('+ka+');}"><div class="ma-history-main"><div class="ma-history-title"><b>'+maEsc(k||'未填工程編號')+'</b>'+(name?' '+maEsc(name):'')+'</div><div class="ma-history-meta">'+zones.length+' 個工程區 · '+rs.length+' 筆紀錄 · 最近 '+maEsc(maHistoryDate(rs[0].created_at))+'</div>'+(zones.length?'<div class="ma-history-meta ma-hist-zones">'+zones.map(maEsc).join('、')+'</div>':'')+'</div><span class="ma-hist-arrow" aria-hidden="true">›</span></div>';
+      }).join('');
+      maRenderMergeBar();
+      return;
+    }
+    var shown=maHistoryRows.filter(function(r){return pkey(r)===maHistProj;}).slice().sort(function(a,b){return cmp(a.zone_code||a.mother_no,b.zone_code||b.mother_no)||String(b.created_at||'').localeCompare(String(a.created_at||''));});
+    var pname=maProjName(maHistProj);
+    host.innerHTML='<div class="ma-hist-back"><button class="btn btn-add-row" type="button" onclick="maHistOpenProj(null)">‹ 全部工程</button><span class="ma-hist-back-name">'+maEsc(maHistProj||'未填工程編號')+(pname?' '+maEsc(pname):'')+'</span><span class="ma-history-meta">'+shown.length+' 筆紀錄</span></div>'+shown.map(function(r){
       var title=[r.project_no,r.zone_code,r.mother_no].filter(Boolean).filter(function(v,i,a){return a.indexOf(v)===i;}).join(' · ')||'未命名分析';
       var picked=maMergeSel.indexOf(String(r.id))>=0;
       return '<div class="ma-history-item'+(picked?' picked':'')+'" role="button" tabindex="0" title="點一下載入此分析" onclick="maOpenAnalysis('+r.id+')" onkeydown="if(event.target===this&&(event.key===\'Enter\'||event.key===\' \')){event.preventDefault();maOpenAnalysis('+r.id+');}"><div class="ma-history-main"><div class="ma-history-title">'+maEsc(title)+'</div><div class="ma-history-meta">'+maEsc(maHistoryDate(r.created_at))+(r.created_by_name?' · '+maEsc(r.created_by_name):'')+'</div></div><div class="ma-history-actions"><label class="ma-history-pick" title="勾選同工程編號的多個工程區,合併開啟一起搜尋" onclick="event.stopPropagation()"><input type="checkbox" '+(picked?'checked ':'')+'onchange="maToggleMergePick('+r.id+',this.checked,this)">合併</label><button class="btn btn-add-row" style="color:var(--danger)" title="刪除此紀錄" onclick="event.stopPropagation();maDeleteAnalysis('+r.id+')">刪除</button></div></div>';
     }).join('');
     maRenderMergeBar();
   }
+  var maHistProj=null;   // 歷史紀錄目前點進去的工程編號(null = 工程列表)
+  function maProjName(no){
+    if(!no||typeof allBOM==='undefined'||!Array.isArray(allBOM))return '';
+    var p=allBOM.find(function(x){return String(x.proj_num||'').trim()===no;});return p&&p.proj_name||'';
+  }
+  window.maHistOpenProj=function(no){
+    maHistProj=no==null?null:String(no);maHistoryRender();
+    var h=document.getElementById('ma-history-list');if(h&&h.closest('.ma-panel'))h.closest('.ma-panel').scrollIntoView({behavior:'smooth',block:'start'});
+  };
   window.maLoadHistory=async function(force){
     if(maHistoryLoaded&&!force)return;
     maAllAnalyses=null;
@@ -56357,7 +56388,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     if(isGuest||!currentSession){maHistoryRender([]);return;}
     host.innerHTML='<div class="ma-empty">載入中…</div>';
     maHistoryRows=[];
-    var r=await sbFetch('/rest/v1/multilevel_analyses?select=id,project_no,zone_code,mother_no,component_count,part_count,q_count,h_count,created_at,created_by_name&order=created_at.desc&limit=50');
+    var r=await sbFetch('/rest/v1/multilevel_analyses?select=id,project_no,zone_code,mother_no,component_count,part_count,q_count,h_count,created_at,created_by_name&order=created_at.desc&limit=500');
     if(!r.ok){host.innerHTML='<div class="ma-empty">無法載入歷史紀錄。請先執行 multilevel_analyses_migration.sql<br>'+maEsc(maDbError(r))+'</div>';return;}
     maHistoryLoaded=true;maHistoryRender(Array.isArray(r.data)?r.data:[]);
   };
