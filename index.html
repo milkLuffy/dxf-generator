@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.17.4"/>
+<meta name="sc-version" content="2026.11.17.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -15084,7 +15084,7 @@ function navTo(page, viewState) {
   if(page==='selfcheck') selfcheckInit();
   if(page==='drawingsearch') drawingSearchInit();
   if(page==='pricing') pricingInit();
-  if(page==='output') outputInit();
+  if(page==='output'){ outputInit(); if(typeof window.blRefreshLabor==='function') setTimeout(window.blRefreshLabor,0); }
   if(page==='cost') costInit();
   if(page==='projpl') projplInit();
   if(page==='attend') attendInit();
@@ -42362,6 +42362,26 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     blLaborSel={};
     blLaborRender(); renderSummaries();
   };
+  // 點工單在別頁(點工單頁/其他裝置)改了請款日期,這裡的 blLabor 不會變 → 回到產值頁或切回 App 時只重抓點工單、重畫摘要卡片
+  // (不重跑 blInit:那會重載請款紀錄,可能蓋掉還沒存的輸入)
+  var blLaborBusy=false;
+  window.blRefreshLabor=async function(){
+    if(blDemo || blLaborBusy) return;
+    var p=document.getElementById('output-billing-panel');
+    if(!p || p.style.display==='none' || !document.getElementById('page-output')?.classList.contains('active')) return;
+    blLaborBusy=true;
+    try{
+      var res=await sbFetchAll('/rest/v1/labor_orders?select=id,proj_num,doc_no,work_date,content,bill_date,actual_amount,retention,has_retention');
+      if(res && res.ok && Array.isArray(res.data)){
+        blLabor=res.data;
+        renderSummaries();
+        var m=document.getElementById('bl-labor-modal');
+        if(m && m.classList.contains('show') && !Object.keys(blLaborSel).length) blLaborRender();
+      }
+    }catch(e){ console.warn('labor refresh failed',e); }
+    blLaborBusy=false;
+  };
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) window.blRefreshLabor(); });
   // 請款狀況「未議價」可點 → 跳到單價分頁的這個工程區(狀況會即時變,所以點的當下再看文字)
   window.blStatusClick=function(el,zid){
     if(String(el&&el.textContent||'').trim()!=='未議價') return;
