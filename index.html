@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.18.1"/>
+<meta name="sc-version" content="2026.11.18.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -4556,6 +4556,7 @@ window.normalizeFullWidth=function(value){
 .ma-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .ma-result-search{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg)}
 .ma-result-search .search-input{flex:1;max-width:none;min-width:0}
+.ma-table th.ma-w,.ma-table td.ma-w{text-align:right;white-space:nowrap;font-family:var(--mono)}
 .ma-search-status{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
 .ma-tab{padding:8px 15px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text2);font-family:var(--mono);font-size:12px;cursor:pointer}
 .ma-tab:hover{border-color:var(--border-hi);color:var(--text)}
@@ -55796,6 +55797,16 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   }
   // 三星號以下的拆解列掛在上一階零件底下:記階層與母件,數量換算成整支構件的總數(報表上印的是「每一個母件」的數量)。
   // 水電 H／帷幕 Q 的子件跟著母件歸類;BH/RH/BT/BOX 的翼腹板(母件編號+F 或 +W)歸 F/W 板,不算 SP。
+  // 重量(kg):報表的「單重」是每個零件的重量;總重一律用 單重 × 數量(子件數量已乘上母件數,與畫面數量一致)
+  function maNumOrEmpty(v){v=String(v==null?'':v).replace(/,/g,'').trim();if(v==='')return '';var n=Number(v);return isNaN(n)?'':n;}
+  function maTailWeights(line){var t=String(line||'').slice(122).trim().split(/\s+/),out=[];for(var k=0;k<t.length&&out.length<4;k++){var n=maNumOrEmpty(t[k]);if(n==='')break;out.push(n);}return out.length===4?out:null;}
+  function maPerUnit(v,qty){var n=maNumOrEmpty(v),q=Number(qty);if(n===''||String(qty==null?'':qty).trim()===''||isNaN(q)||q<=0)return '';return n/q;}
+  function maItemNet(i){var q=Number(i&&i.quantity);if(!i||i.unitNet===''||i.unitNet==null||i.quantity===''||isNaN(q))return '';return i.unitNet*q;}
+  function maSumNet(items){return items.reduce(function(s,i){var w=maItemNet(i);return s+(w===''?0:w);},0);}
+  function maItemWeight(i){var q=Number(i&&i.quantity);if(!i||i.unitWeight===''||i.unitWeight==null||i.quantity===''||isNaN(q))return '';return i.unitWeight*q;}
+  function maSumWeight(items){return items.reduce(function(s,i){var w=maItemWeight(i);return s+(w===''?0:w);},0);}
+  function maWFmt(n){if(n===''||n==null||isNaN(Number(n)))return '';return (Math.round(Number(n)*100)/100).toLocaleString('en-US',{maximumFractionDigits:2});}
+  function maHasWeight(){return maComponents.some(function(c){return c.items.some(function(i){return i.unitWeight!==''&&i.unitWeight!=null;});});}
   function maPushItem(current,stack,depth,item){
     item.level=depth;item.perQty=item.quantity;item.parentNo='';
     if(depth<=2){stack.length=0;stack[2]=item;current.items.push(item);return;}
@@ -55819,8 +55830,10 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var map={},order=[];
     items.forEach(function(i){
       var key=String(i.specification||'');
-      if(!map[key]){map[key]={規格:i.specification,品名:i.description,材質:i.material,單位:i.unit,數量:0};order.push(key);}
+      if(!map[key]){map[key]={規格:i.specification,品名:i.description,材質:i.material,單位:i.unit,數量:0,總重:0,淨重:0};order.push(key);}
       var q=Number(i.quantity);map[key].數量+=isNaN(q)?0:q;
+      var w=maItemWeight(i);map[key].總重+=w===''?0:w;
+      var nw=maItemNet(i);map[key].淨重+=nw===''?0:nw;
     });
     return order.map(function(k){return map[k];});
   }
@@ -55831,18 +55844,21 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     items.forEach(function(i){
       var key=[i.partNo,i.description,i.specification,i.material,i.unit].map(function(v){return String(v==null?'':v).trim();}).join('\u0001');
       var m=map[key];
-      if(!m){m=map[key]={item:i,qty:0,hasQty:false,rows:0};order.push(key);}
+      if(!m){m=map[key]={item:i,qty:0,hasQty:false,rows:0,w:0,hasW:false,n:0,hasN:false};order.push(key);}
+      var iw=maItemWeight(i);if(iw!==''){m.w+=iw;m.hasW=true;}
+      var inw=maItemNet(i);if(inw!==''){m.n+=inw;m.hasN=true;}
       var q=Number(i.quantity);
       if(i.quantity!==''&&i.quantity!=null&&!isNaN(q)){m.qty+=q;m.hasQty=true;}
       m.rows++;
     });
     var catRank=function(i){var n=MA_PART_ORDER.indexOf(maPartCategory(i));return n<0?99:n;};
-    return order.map(function(k){var m=map[k];return {item:m.item,quantity:m.hasQty?maQtyFmt(m.qty):'',rows:m.rows};})
+    return order.map(function(k){var m=map[k];return {item:m.item,quantity:m.hasQty?maQtyFmt(m.qty):'',rows:m.rows,weight:m.hasW?m.w:'',net:m.hasN?m.n:''};})
       .sort(function(a,b){return catRank(a.item)-catRank(b.item)||String(a.item.partNo||'').localeCompare(String(b.item.partNo||''),undefined,{numeric:true});});
   }
   function maMergedTable(title,merged,rawCount,showCategory){
+    var hw=maHasWeight(),tw=merged.reduce(function(s,m){return s+(m.weight===''?0:m.weight);},0),tn=merged.reduce(function(s,m){return s+(m.net===''?0:m.net);},0);
     var total=maQtyFmt(merged.reduce(function(s,m){var q=Number(m.quantity);return s+(m.quantity===''||isNaN(q)?0:q);},0));
-    return '<div class="ma-flat-title">'+maEsc(title)+' · '+merged.length+' 種零件（原 '+rawCount+' 筆，同名零件已合併、數量加總）</div><div class="ma-table-wrap"><table class="ma-table ma-flat-table"><thead><tr><th>零件編號</th><th class="ma-m-only">數量</th><th class="ma-m-hide">品名</th><th>規格</th><th class="ma-m-hide">材質</th><th>單位</th><th class="ma-m-hide">數量</th>'+(showCategory?'<th>分類</th>':'')+'</tr></thead><tbody>'+merged.map(function(m){var i=m.item,qt=(m.rows>1?' title="由 '+m.rows+' 筆合併"':'');return '<tr><td class="code">'+maEsc(i.partNo)+'</td><td class="ma-m-only ma-m-qty"'+qt+'>'+maEsc(m.quantity)+'</td><td class="ma-m-hide">'+maEsc(i.description)+'</td><td class="code">'+maEsc(i.specification)+'</td><td class="ma-m-hide">'+maEsc(i.material)+'</td><td>'+maEsc(i.unit)+'</td><td class="ma-m-hide"'+qt+'>'+maEsc(m.quantity)+'</td>'+(showCategory?'<td>'+maCatTag(maPartCategory(i))+'</td>':'')+'</tr>';}).join('')+'</tbody><tfoot><tr class="ma-total-row"><td>數量加總</td><td class="ma-m-only ma-m-qty">'+total+'</td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide">'+total+'</td>'+(showCategory?'<td></td>':'')+'</tr></tfoot></table></div>';
+    return '<div class="ma-flat-title">'+maEsc(title)+' · '+merged.length+' 種零件（原 '+rawCount+' 筆，同名零件已合併、數量加總）</div><div class="ma-table-wrap"><table class="ma-table ma-flat-table"><thead><tr><th>零件編號</th><th class="ma-m-only">數量</th><th class="ma-m-hide">品名</th><th>規格</th><th class="ma-m-hide">材質</th><th>單位</th><th class="ma-m-hide">數量</th>'+(hw?'<th class="ma-m-hide ma-w">單重</th><th class="ma-w">總重</th><th class="ma-w">淨重</th>':'')+(showCategory?'<th>分類</th>':'')+'</tr></thead><tbody>'+merged.map(function(m){var i=m.item,qt=(m.rows>1?' title="由 '+m.rows+' 筆合併"':'');return '<tr><td class="code">'+maEsc(i.partNo)+'</td><td class="ma-m-only ma-m-qty"'+qt+'>'+maEsc(m.quantity)+'</td><td class="ma-m-hide">'+maEsc(i.description)+'</td><td class="code">'+maEsc(i.specification)+'</td><td class="ma-m-hide">'+maEsc(i.material)+'</td><td>'+maEsc(i.unit)+'</td><td class="ma-m-hide"'+qt+'>'+maEsc(m.quantity)+'</td>'+(hw?'<td class="ma-m-hide ma-w">'+maWFmt(i.unitWeight)+'</td><td class="ma-w">'+maWFmt(m.weight)+'</td><td class="ma-w">'+maWFmt(m.net)+'</td>':'')+(showCategory?'<td>'+maCatTag(maPartCategory(i))+'</td>':'')+'</tr>';}).join('')+'</tbody><tfoot><tr class="ma-total-row"><td>數量加總</td><td class="ma-m-only ma-m-qty">'+total+'</td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide">'+total+'</td>'+(hw?'<td class="ma-m-hide"></td><td class="ma-w">'+maWFmt(tw)+'</td><td class="ma-w">'+maWFmt(tn)+'</td>':'')+(showCategory?'<td></td>':'')+'</tr></tfoot></table></div>';
   }
   function maSpecDisplay(item,c){
     var s=String(item.specification==null?'':item.specification),cs=String(c&&c.componentSpec!=null?c.componentSpec:'');
@@ -55969,6 +55985,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     function col(name){return headers.indexOf(name);}
     var hi=col('階層'),pi=col('工程'),ci=col('構件編號'),coi=col('共通編號'),si=col('規格'),qi=col('BOM數量'),di=col('圖號');
     var ni=col('品名'); if(ni<0)ni=col('零件名稱'); if(ni<0)ni=col('名稱');
+    var uwi=col('單重'),twi=col('總重'),nwi=col('淨重');
     var components=[],current=null,seq=0,projectNo='',zoneCode='',zi=col('分區'),stack=[];
     for(var n=headerIndex+1;n<lines.length;n++){
       if(!lines[n].trim())continue;
@@ -55979,10 +55996,10 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       if(!zoneCode)zoneCode=get(zi);
       if(level==='*'){
         if(!number)continue;
-        current={componentNo:number,drawingNo:drawing,componentSpec:spec,items:[]};
+        current={componentNo:number,drawingNo:drawing,componentSpec:spec,items:[],weight:maNumOrEmpty(get(twi)),netWeight:maNumOrEmpty(get(nwi))};
         components.push(current);seq=0;stack.length=0;
       }else if(current&&number){
-        maPushItem(current,stack,level.length,{sequence:level.length===2?++seq:'',partNo:number,description:name,specification:spec,material:'',unit:'',quantity:qty===''?'':Number(qty),code:''});
+        maPushItem(current,stack,level.length,{sequence:level.length===2?++seq:'',partNo:number,description:name,specification:spec,material:'',unit:'',quantity:qty===''?'':Number(qty),unitWeight:maNumOrEmpty(get(uwi)),unitNet:maPerUnit(get(nwi),qty),code:''});
       }
     }
     return {components:components,projectNo:projectNo,zoneCode:zoneCode};
@@ -55999,7 +56016,8 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       var exact=function(t){for(var n=0;n<head.length;n++)if(head[n]===t)return n;return -1;},has=function(t){for(var n=0;n<head.length;n++)if(head[n].indexOf(t)>=0)return n;return -1;};
       // 表頭被切開或併起來都要認得：「材質   單」＋「位」拆兩欄、「線 代碼  圖    號」併成一欄
       var c={level:exact('階層'),seq:has('序號'),no:has('構件編號'),spec:has('規格'),
-        mat:has('材質'),unit:has('單位')>=0?has('單位'):has('位'),qty:has('數量'),code:has('代碼'),draw:has('圖號')};
+        mat:has('材質'),unit:has('單位')>=0?has('單位'):has('位'),qty:has('數量'),code:has('代碼'),draw:has('圖號'),
+        uw:exact('單重'),tw:exact('總重'),nw:exact('淨重')};
       if(c.level===0&&c.no>0&&c.spec>c.no&&c.qty>c.spec&&c.code>c.qty)cols=c;
     }
     if(!cols)return null;
@@ -56019,7 +56037,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       if(level==='*'){
         var drawing=cell(cols.draw);
         if(!drawing)for(var k=cells.length-1;k>cols.code;k--){if(cell(k)){drawing=cell(k);break;}}
-        current={componentNo:partNo,drawingNo:drawing,componentSpec:cell(cols.spec),items:[]};
+        current={componentNo:partNo,drawingNo:drawing,componentSpec:cell(cols.spec),items:[],weight:maNumOrEmpty(cell(cols.tw)),netWeight:maNumOrEmpty(cell(cols.nw))};
         components.push(current);stack.length=0;
         return;
       }
@@ -56038,6 +56056,8 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
         material:mat,
         unit:unit,
         quantity:qty===''?'':Number(qty),
+        unitWeight:maNumOrEmpty(cell(cols.uw)),
+        unitNet:maPerUnit(cell(cols.nw),qty),
         code:code==='Q'||code==='H'||code==='E'?code:''
       });
     });
@@ -56064,7 +56084,8 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
         var root=line.match(/^\*(?!\*)\s+\d+\s+(\S+)/);
         if(root){
           var tail=line.trim().match(/(\S+)$/);
-          current={componentNo:root[1],drawingNo:tail?tail[1]:'',componentSpec:maFixedField(line,68,98),items:[]};
+          var rw=maTailWeights(line);
+          current={componentNo:root[1],drawingNo:tail?tail[1]:'',componentSpec:maFixedField(line,68,98),items:[],weight:rw?rw[1]:'',netWeight:rw?rw[3]:''};
           components.push(current);stack.length=0;
           return;
         }
@@ -56080,6 +56101,8 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
           material:maFixedField(line,98,109),
           unit:maFixedField(line,109,116),
           quantity:qtyText===''?'':Number(qtyText),
+          unitWeight:(maTailWeights(line)||[''])[0],
+          unitNet:maPerUnit((maTailWeights(line)||['','','',''])[3],qtyText),
           code:codeMatch?codeMatch[1]:''
         });
       });
@@ -56122,13 +56145,14 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   function maQtyTip(i){return i.level>2&&i.perQty!==''&&i.perQty!=null?' title="每個 '+maEsc(i.parentNo||'母件')+' 用 '+maEsc(i.perQty)+'，此構件合計 '+maEsc(i.quantity)+'"':'';}
   function maRowsTable(items,showCategory,c){
     if(!items.length)return '<div class="ma-empty">沒有符合資料</div>';
-    return '<div class="ma-table-wrap"><table class="ma-table"><thead><tr><th>項次</th><th>零件編號</th><th class="ma-m-only">數量</th><th class="ma-m-hide">品名</th><th>規格</th><th class="ma-m-hide">材質</th><th>單位</th><th class="ma-m-hide">數量</th>'+(showCategory?'<th>分類</th>':'')+'</tr></thead><tbody>'+items.map(function(i){
+    var hw=maHasWeight();
+    return '<div class="ma-table-wrap"><table class="ma-table"><thead><tr><th>項次</th><th>零件編號</th><th class="ma-m-only">數量</th><th class="ma-m-hide">品名</th><th>規格</th><th class="ma-m-hide">材質</th><th>單位</th><th class="ma-m-hide">數量</th>'+(hw?'<th class="ma-m-hide ma-w">單重</th><th class="ma-w">總重</th><th class="ma-w">淨重</th>':'')+(showCategory?'<th>分類</th>':'')+'</tr></thead><tbody>'+items.map(function(i){
       var qt=maQtyTip(i);
-      return '<tr'+(i.level>2?' class="ma-sub-row"':'')+'><td>'+maEsc(i.sequence)+'</td><td class="code">'+maSubMark(i)+maEsc(i.partNo)+'</td><td class="ma-m-only ma-m-qty"'+qt+'>'+maEsc(i.quantity)+'</td><td class="ma-m-hide">'+maEsc(i.description)+'</td><td class="code">'+maEsc(maSpecDisplay(i,c))+'</td><td class="ma-m-hide">'+maEsc(i.material)+'</td><td>'+maEsc(i.unit)+'</td><td class="ma-m-hide"'+qt+'>'+maEsc(i.quantity)+'</td>'+(showCategory?'<td>'+maCatTag(maPartCategory(i))+'</td>':'')+'</tr>';
-    }).join('')+'</tbody><tfoot><tr class="ma-total-row"><td colspan="2">數量加總</td><td class="ma-m-only ma-m-qty">'+maSumQty(items)+'</td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide">'+maSumQty(items)+'</td>'+(showCategory?'<td></td>':'')+'</tr></tfoot></table></div>';
+      return '<tr'+(i.level>2?' class="ma-sub-row"':'')+'><td>'+maEsc(i.sequence)+'</td><td class="code">'+maSubMark(i)+maEsc(i.partNo)+'</td><td class="ma-m-only ma-m-qty"'+qt+'>'+maEsc(i.quantity)+'</td><td class="ma-m-hide">'+maEsc(i.description)+'</td><td class="code">'+maEsc(maSpecDisplay(i,c))+'</td><td class="ma-m-hide">'+maEsc(i.material)+'</td><td>'+maEsc(i.unit)+'</td><td class="ma-m-hide"'+qt+'>'+maEsc(i.quantity)+'</td>'+(hw?'<td class="ma-m-hide ma-w">'+maWFmt(i.unitWeight)+'</td><td class="ma-w">'+maWFmt(maItemWeight(i))+'</td><td class="ma-w">'+maWFmt(maItemNet(i))+'</td>':'')+(showCategory?'<td>'+maCatTag(maPartCategory(i))+'</td>':'')+'</tr>';
+    }).join('')+'</tbody><tfoot><tr class="ma-total-row"><td colspan="2">數量加總</td><td class="ma-m-only ma-m-qty">'+maSumQty(items)+'</td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide">'+maSumQty(items)+'</td>'+(hw?'<td class="ma-m-hide"></td><td class="ma-w">'+maWFmt(maSumWeight(items))+'</td><td class="ma-w">'+maWFmt(maSumNet(items))+'</td>':'')+(showCategory?'<td></td>':'')+'</tr></tfoot></table></div>';
   }
   function maComponentBlock(c,items,showCategory,open){
-    return '<details class="ma-component" '+(open?'open':'')+'><summary>'+(c.zone?'<span class="ma-zone-tag">'+maEsc(c.zone)+'</span>':'')+'<span class="ma-component-id">'+maEsc(c.componentNo)+'</span><span class="ma-drawing-no">圖號 '+maEsc(c.drawingNo||'—')+'</span><span class="ma-component-meta">'+maEsc(c.componentSpec)+' · '+items.length+' 筆</span></summary>'+maRowsTable(items,showCategory,c)+'</details>';
+    return '<details class="ma-component" '+(open?'open':'')+'><summary>'+(c.zone?'<span class="ma-zone-tag">'+maEsc(c.zone)+'</span>':'')+'<span class="ma-component-id">'+maEsc(c.componentNo)+'</span><span class="ma-drawing-no">圖號 '+maEsc(c.drawingNo||'—')+'</span><span class="ma-component-meta">'+maEsc(c.componentSpec)+' · '+items.length+' 筆'+(c.weight!==''&&c.weight!=null?' · 總重 '+maWFmt(c.weight)+' kg':'')+(c.netWeight!==''&&c.netWeight!=null?' · 淨重 '+maWFmt(c.netWeight)+' kg':'')+'</span></summary>'+maRowsTable(items,showCategory,c)+'</details>';
   }
   function maPartCatCount(key){
     var comps=0,rows=0;
@@ -56163,8 +56187,8 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var allItems=[];groups.forEach(function(g){g.items.forEach(function(item){allItems.push({c:g.c,item:item});});});
     var totalQty=maSumQty(allItems.map(function(r){return r.item;}));
     if(maPartsCat==='成品材'&&maPartsMode==='flat'){
-      var agg=maAggBySpec(allItems.map(function(r){return r.item;}));
-      body.innerHTML='<div class="ma-flat-title">成品材（依規格加總）· '+agg.length+' 種規格</div><div class="ma-table-wrap"><table class="ma-table ma-flat-table"><thead><tr><th>規格</th><th>品名</th><th>材質</th><th>單位</th><th>數量</th></tr></thead><tbody>'+agg.map(function(a){return '<tr><td class="code">'+maEsc(a.規格)+'</td><td>'+maEsc(a.品名)+'</td><td>'+maEsc(a.材質)+'</td><td>'+maEsc(a.單位)+'</td><td>'+maEsc(a.數量)+'</td></tr>';}).join('')+'</tbody><tfoot><tr class="ma-total-row"><td colspan="4">數量加總</td><td>'+totalQty+'</td></tr></tfoot></table></div>';
+      var agg=maAggBySpec(allItems.map(function(r){return r.item;})),aw=maHasWeight();
+      body.innerHTML='<div class="ma-flat-title">成品材（依規格加總）· '+agg.length+' 種規格</div><div class="ma-table-wrap"><table class="ma-table ma-flat-table"><thead><tr><th>規格</th><th>品名</th><th>材質</th><th>單位</th><th>數量</th>'+(aw?'<th class="ma-w">總重</th><th class="ma-w">淨重</th>':'')+'</tr></thead><tbody>'+agg.map(function(a){return '<tr><td class="code">'+maEsc(a.規格)+'</td><td>'+maEsc(a.品名)+'</td><td>'+maEsc(a.材質)+'</td><td>'+maEsc(a.單位)+'</td><td>'+maEsc(a.數量)+'</td>'+(aw?'<td class="ma-w">'+maWFmt(a.總重)+'</td><td class="ma-w">'+maWFmt(a.淨重)+'</td>':'')+'</tr>';}).join('')+'</tbody><tfoot><tr class="ma-total-row"><td colspan="4">數量加總</td><td>'+totalQty+'</td>'+(aw?'<td class="ma-w">'+maWFmt(agg.reduce(function(s,a){return s+a.總重;},0))+'</td><td class="ma-w">'+maWFmt(agg.reduce(function(s,a){return s+a.淨重;},0))+'</td>':'')+'</tr></tfoot></table></div>';
       return;
     }
     if(maPartsMode==='grouped'){
@@ -56427,7 +56451,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var rows=[];
     maComponents.forEach(function(c){c.items.forEach(function(i){
       if(filterCode&&i.code!==filterCode)return;
-      rows.push({'工程編號':maProject.工程編號,'工程區':c.zone||maProject.工程區,'構件編號':c.componentNo,'圖號':c.drawingNo,'階層':'*'.repeat(i.level||2),'母件零件':i.parentNo||'','項次':i.sequence,'零件編號':i.partNo,'品名':i.description,'規格':i.specification,'材質':i.material,'單位':i.unit,'每個母件數量':i.level>2?i.perQty:'','數量':i.quantity,'分類':maPartCategory(i)});
+      rows.push({'工程編號':maProject.工程編號,'工程區':c.zone||maProject.工程區,'構件編號':c.componentNo,'圖號':c.drawingNo,'階層':'*'.repeat(i.level||2),'母件零件':i.parentNo||'','項次':i.sequence,'零件編號':i.partNo,'品名':i.description,'規格':i.specification,'材質':i.material,'單位':i.unit,'每個母件數量':i.level>2?i.perQty:'','數量':i.quantity,'單重':i.unitWeight===''||i.unitWeight==null?'':i.unitWeight,'總重':(function(w){return w===''?'':Math.round(w*100)/100;})(maItemWeight(i)),'淨重':(function(w){return w===''?'':Math.round(w*100)/100;})(maItemNet(i)),'分類':maPartCategory(i)});
     });});
     return rows;
   }
@@ -56451,12 +56475,14 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     MA_PART_ORDER.forEach(function(cat){
       var merged=maMergeParts(all.filter(function(i){return maPartCategory(i)===cat;}));
       if(!merged.length)return;
-      var total=0;
+      var total=0,totalW=0,totalN=0;
       var rows=merged.map(function(m){
         var i=m.item,q=Number(m.quantity);if(m.quantity!==''&&!isNaN(q))total+=q;
-        return {'零件編號':i.partNo,'品名':i.description,'規格':i.specification,'材質':i.material,'單位':i.unit,'數量':m.quantity,'出現筆數':m.rows};
+        if(m.weight!=='')totalW+=m.weight;
+        if(m.net!=='')totalN+=m.net;
+        return {'零件編號':i.partNo,'品名':i.description,'規格':i.specification,'材質':i.material,'單位':i.unit,'數量':m.quantity,'總重':m.weight===''?'':Math.round(m.weight*100)/100,'淨重':m.net===''?'':Math.round(m.net*100)/100,'出現筆數':m.rows};
       });
-      rows.push({'零件編號':'合計','品名':'','規格':'','材質':'','單位':'','數量':maQtyFmt(total),'出現筆數':merged.reduce(function(n,m){return n+m.rows;},0)});
+      rows.push({'零件編號':'合計','品名':'','規格':'','材質':'','單位':'','數量':maQtyFmt(total),'總重':Math.round(totalW*100)/100,'淨重':Math.round(totalN*100)/100,'出現筆數':merged.reduce(function(n,m){return n+m.rows;},0)});
       sheets.push({name:MA_PART_SHEET[cat]||cat,rows:rows});
     });
     maSaveWorkbook(maFileBaseZoneFirst()+'多階詳細資料.xlsx',sheets);
