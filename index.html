@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.18.2"/>
+<meta name="sc-version" content="2026.11.18.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1615,7 +1615,7 @@ html.dtv-open,html.dtv-open body{overflow:hidden}
 .ccol-all{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 45px;margin-bottom:6px;font-size:14px;font-weight:700;cursor:pointer}
 .ccol-all input{width:18px;height:18px;min-height:0;flex:none;margin:0;padding:0;accent-color:var(--accent)}
 .ccol-all-n{margin-left:auto;font-weight:400;font-size:12px;color:var(--text3)}
-#comp-col-btn.on{border-color:var(--accent);color:var(--accent)}
+#comp-col-btn.on,#ma-col-btn.on{border-color:var(--accent);color:var(--accent)}
 /* 工程區詳情頁工具列(搜尋/篩選/勾選非本公司/更新BOM/輸入進料…):排不下就換行。
    原本內層不換行會把整頁撐寬 → 變成整個視窗左右捲、表格外框沒在捲,凍結的序號/構件編號就沒作用 */
 #page-zone-detail .bom-result-bar > div{flex-wrap:wrap;justify-content:flex-end;min-width:0}
@@ -4767,6 +4767,7 @@ window.normalizeFullWidth=function(value){
             <input type="search" class="search-input" id="ma-result-search" placeholder="搜尋構件、圖號、零件、規格…(多個用空白分隔,符合任一)" oninput="maSetResultSearch(this.value)"/>
             <span class="ma-search-status" id="ma-search-status">全部資料</span>
             <button type="button" class="btn btn-add-row" onclick="maClearResultSearch()">清除</button>
+            <button type="button" class="btn btn-add-row" id="ma-col-btn" onclick="maColOpen()" title="調整欄位順序、隱藏欄位(每台裝置各自記住)">⚙ 欄位</button>
           </div>
         </div>
 
@@ -21313,19 +21314,22 @@ function renderExcludedTable(excluded) {
   el.innerHTML=h;
 }
 
-// ── 構件總表欄位設定:使用者自己調整欄位順序、隱藏欄位;存在這台裝置(localStorage),電腦/手機各自設定 ──
+// ── 欄位設定(共用):使用者自己調整欄位順序、隱藏欄位;存在這台裝置(localStorage),電腦/手機各自設定 ──
+// 構件總表、多階資料表共用同一個視窗;開啟時傳入 ctx:
+//   {title, prefKey, defHidden?, cols()->[{key,label}], keep(留最後一欄), render(), onHide?(k), onHideAll?(keys)}
 // 新出現的欄位(例如新版次 R 欄、自訂欄)沒在設定裡 → 依預設位置插在它前一欄後面、預設顯示
-let compColAll = [];
-const COMP_COL_PREF_KEY = 'comp_col_prefs';
-function compColPrefsGet() {
+let ccolCtx = null;
+function ccolPrefsGet(key, defHidden) {
   try {
-    const p = JSON.parse(localStorage.getItem(COMP_COL_PREF_KEY) || '{}') || {};
+    const raw = localStorage.getItem(key);
+    if (raw == null) return { order: [], hidden: (defHidden || []).slice() };
+    const p = JSON.parse(raw || '{}') || {};
     return { order: Array.isArray(p.order) ? p.order : [], hidden: Array.isArray(p.hidden) ? p.hidden : [] };
-  } catch (e) { return { order: [], hidden: [] }; }
+  } catch (e) { return { order: [], hidden: (defHidden || []).slice() }; }
 }
-function compColPrefsSet(p) { try { localStorage.setItem(COMP_COL_PREF_KEY, JSON.stringify(p)); } catch (e) {} }
-function compColOrdered(cols) {
-  const keys = cols.map(c => c.key), p = compColPrefsGet();
+function ccolPrefsSet(key, p) { try { localStorage.setItem(key, JSON.stringify(p)); } catch (e) {} }
+function ccolOrderedBy(p, cols) {
+  const keys = cols.map(c => c.key);
   const res = [];
   p.order.forEach(k => { if (keys.includes(k) && !res.includes(k)) res.push(k); });
   keys.forEach((k, i) => {
@@ -21336,49 +21340,74 @@ function compColOrdered(cols) {
   });
   return res.map(k => cols.find(c => c.key === k));
 }
+// 依設定排出要顯示的欄;全部被藏光就留 keep 那一欄
+function ccolVisibleBy(p, cols, keep) {
+  const hid = new Set(p.hidden);
+  const v = ccolOrderedBy(p, cols).filter(c => !hid.has(c.key));
+  return v.length ? v : [cols.find(c => c.key === keep) || cols[0]].filter(Boolean);
+}
+function ccolCur() { return ccolCtx ? ccolPrefsGet(ccolCtx.prefKey, ccolCtx.defHidden) : { order: [], hidden: [] }; }
+function ccolSave(p) { if (!ccolCtx) return; ccolPrefsSet(ccolCtx.prefKey, p); ccolCtx.render(); ccolRenderList(); }
+
+let compColAll = [];
+const COMP_COL_PREF_KEY = 'comp_col_prefs';
+function compColPrefsGet() { return ccolPrefsGet(COMP_COL_PREF_KEY); }
+function compColPrefsSet(p) { ccolPrefsSet(COMP_COL_PREF_KEY, p); }
+function compColOrdered(cols) { return ccolOrderedBy(compColPrefsGet(), cols); }
 function compColVisible(cols) {
-  const hid = new Set(compColPrefsGet().hidden);
-  const v = compColOrdered(cols).filter(c => !hid.has(c.key));
+  const p = compColPrefsGet(), hid = new Set(p.hidden);
   const btn = document.getElementById('comp-col-btn');
   const nHid = cols.filter(c => hid.has(c.key)).length;
   if (btn) { btn.classList.toggle('on', nHid > 0); btn.title = nHid ? ('已隱藏 '+nHid+' 欄;點此調整') : '調整欄位順序、隱藏欄位(每台裝置各自記住)'; }
-  return v.length ? v : [cols.find(c => c.key === 'part_no') || cols[0]];
+  return ccolVisibleBy(p, cols, 'part_no');
 }
 function compColOpen() {
+  ccolOpen({
+    title: '構件總表欄位', prefKey: COMP_COL_PREF_KEY, keep: 'part_no',
+    cols: () => compColAll, render: () => renderCompTable(),
+    // 隱藏的欄不留篩選,免得看不到原因
+    onHide: k => { if (colFilterState.comp && colFilterState.comp[k]) { delete colFilterState.comp[k]; pagerReset('comp'); } },
+    onHideAll: keys => { if (colFilterState.comp) { keys.forEach(k => { delete colFilterState.comp[k]; }); pagerReset('comp'); } }
+  });
+}
+function ccolOpen(ctx) {
+  ccolCtx = ctx;
   let m = document.getElementById('comp-col-modal');
   if (!m) { m = document.createElement('div'); m.id = 'comp-col-modal'; document.body.appendChild(m); }
   m.className = 'modal-overlay show';
-  m.onclick = e => { if (e.target === m) compColClose(); };
-  m.innerHTML = '<div class="modal"><div class="modal-title">'+icSvg('gear')+' 構件總表欄位</div>'+
-    '<div class="ccol-note">勾選要顯示的欄位，用 ▲▼ 或拖曳調整順序。設定只存在這台裝置。</div>'+
-    '<label class="ccol-all"><input type="checkbox" id="ccol-all" onchange="compColSetAll(this.checked)"><span>全選</span><span class="ccol-all-n" id="ccol-all-n"></span></label>'+
+  m.onclick = e => { if (e.target === m) ccolClose(); };
+  m.innerHTML = '<div class="modal"><div class="modal-title">'+icSvg('gear')+' '+esc(ctx.title)+'</div>'+
+    '<div class="ccol-note">'+esc(ctx.note || '勾選要顯示的欄位，用 ▲▼ 或拖曳調整順序。設定只存在這台裝置。')+'</div>'+
+    '<label class="ccol-all"><input type="checkbox" id="ccol-all" onchange="ccolSetAll(this.checked)"><span>全選</span><span class="ccol-all-n" id="ccol-all-n"></span></label>'+
     '<div class="ccol-list" id="ccol-list"></div>'+
     '<div class="ccol-tools">'+
-    '<button class="btn-sm btn-export" type="button" onclick="compColReset()">恢復預設</button></div>'+
-    '<div class="modal-actions"><button class="btn-modal-cancel" type="button" onclick="compColClose()">關閉</button></div></div>';
-  compColRenderList();
+    '<button class="btn-sm btn-export" type="button" onclick="ccolReset()">恢復預設</button></div>'+
+    '<div class="modal-actions"><button class="btn-modal-cancel" type="button" onclick="ccolClose()">關閉</button></div></div>';
+  ccolRenderList();
 }
-function compColClose() { const m = document.getElementById('comp-col-modal'); if (m) m.className = 'modal-overlay'; }
-function compColRenderList() {
+function ccolClose() { const m = document.getElementById('comp-col-modal'); if (m) m.className = 'modal-overlay'; }
+function compColClose() { ccolClose(); }
+function ccolRenderList() {
   const box = document.getElementById('ccol-list');
-  if (!box) return;
+  if (!box || !ccolCtx) return;
   const st = box.scrollTop;
-  const ord = compColOrdered(compColAll), hid = new Set(compColPrefsGet().hidden);
+  const p = ccolCur(), ord = ccolOrderedBy(p, ccolCtx.cols()), hid = new Set(p.hidden);
   box.innerHTML = ord.map((c, i) => {
     const k = encodeURIComponent(c.key);
     return '<div class="ccol-row'+(hid.has(c.key)?' off':'')+'" data-key="'+k+'">'+
       '<span class="ccol-grip" title="拖曳排序">'+icSvg('menu')+'</span>'+
-      '<label><input type="checkbox"'+(hid.has(c.key)?'':' checked')+' onchange="compColToggle(&quot;'+k+'&quot;,this.checked)"><span class="ccol-name">'+esc(c.label)+'</span></label>'+
-      '<button class="ccol-mv" type="button" title="上移"'+(i===0?' disabled':'')+' onclick="compColMove(&quot;'+k+'&quot;,-1)">'+icSvg('chevUp')+'</button>'+
-      '<button class="ccol-mv" type="button" title="下移"'+(i===ord.length-1?' disabled':'')+' onclick="compColMove(&quot;'+k+'&quot;,1)">'+icSvg('chevDown')+'</button></div>';
+      '<label><input type="checkbox"'+(hid.has(c.key)?'':' checked')+' onchange="ccolToggle(&quot;'+k+'&quot;,this.checked)"><span class="ccol-name">'+esc(c.label)+'</span></label>'+
+      '<button class="ccol-mv" type="button" title="上移"'+(i===0?' disabled':'')+' onclick="ccolMove(&quot;'+k+'&quot;,-1)">'+icSvg('chevUp')+'</button>'+
+      '<button class="ccol-mv" type="button" title="下移"'+(i===ord.length-1?' disabled':'')+' onclick="ccolMove(&quot;'+k+'&quot;,1)">'+icSvg('chevDown')+'</button></div>';
   }).join('');
   box.scrollTop = st;
   // 全選勾勾:全部顯示＝打勾、部分顯示＝半勾
   const all = document.getElementById('ccol-all'), nHid = ord.filter(c => hid.has(c.key)).length;
   if (all) { all.checked = nHid === 0; all.indeterminate = nHid > 0 && nHid < ord.length; }
   const cnt = document.getElementById('ccol-all-n'); if (cnt) cnt.textContent = '顯示 ' + (ord.length - nHid) + ' / ' + ord.length + ' 欄';
-  ccolDragSort(box, compColSaveOrder);
+  ccolDragSort(box, ccolSaveOrder);
 }
+function compColRenderList() { ccolRenderList(); }
 // ── 多階資料分析:手機版區塊順序、隱藏(存在這台裝置 localStorage;只在手機寬度生效)──
 const MA_LAY_KEY = 'ma_mobile_layout';
 const MA_LAY_ENTRY = [{ k: 'intro', l: '說明介紹' }, { k: 'import', l: '① 匯入多階資料' }, { k: 'history', l: '歷史分析紀錄' }];
@@ -21526,41 +21555,44 @@ function ccolDragSort(box, onDrop) {
     });
   });
 }
-function compColSaveOrder(keys) {
-  const p = compColPrefsGet();
-  // 保留其他工程區才有的欄位設定(例如別區的自訂欄),目前這區的欄位用新順序
+function ccolSaveOrder(keys) {
+  const p = ccolCur();
+  // 保留目前沒出現的欄位設定(例如別區的自訂欄),目前這些欄位用新順序
   p.order = keys.concat(p.order.filter(k => !keys.includes(k)));
-  compColPrefsSet(p); renderCompTable(); compColRenderList();
+  ccolSave(p);
 }
-function compColMove(k, d) {
+function ccolMove(k, d) {
+  if (!ccolCtx) return;
   k = decodeURIComponent(k);
-  const keys = compColOrdered(compColAll).map(c => c.key), i = keys.indexOf(k), j = i + d;
+  const keys = ccolOrderedBy(ccolCur(), ccolCtx.cols()).map(c => c.key), i = keys.indexOf(k), j = i + d;
   if (i < 0 || j < 0 || j >= keys.length) return;
   keys.splice(i, 1); keys.splice(j, 0, k);
-  compColSaveOrder(keys);
+  ccolSaveOrder(keys);
 }
-function compColToggle(k, show) {
+function ccolToggle(k, show) {
+  if (!ccolCtx) return;
   k = decodeURIComponent(k);
-  const p = compColPrefsGet(), hid = new Set(p.hidden);
+  const p = ccolCur(), hid = new Set(p.hidden);
   if (show) hid.delete(k);
   else {
-    if (compColAll.filter(c => !hid.has(c.key) && c.key !== k).length === 0) { alert('至少要留一個欄位'); compColRenderList(); return; }
+    if (ccolCtx.cols().filter(c => !hid.has(c.key) && c.key !== k).length === 0) { alert('至少要留一個欄位'); ccolRenderList(); return; }
     hid.add(k);
-    if (colFilterState.comp && colFilterState.comp[k]) { delete colFilterState.comp[k]; pagerReset('comp'); }   // 隱藏的欄不留篩選,免得看不到原因
+    if (ccolCtx.onHide) ccolCtx.onHide(k);
   }
   p.hidden = Array.from(hid);
-  compColPrefsSet(p); renderCompTable(); compColRenderList();
+  ccolSave(p);
 }
-// 全選:打勾＝全部顯示;取消＝全部隱藏,但至少留「構件編號」一欄
-function compColSetAll(show) {
-  const p = compColPrefsGet();
-  const keep = (compColAll.find(c => c.key === 'part_no') || compColAll[0] || {}).key;
-  const keys = compColAll.map(c => c.key);
+// 全選:打勾＝全部顯示;取消＝全部隱藏,但至少留 keep 那一欄
+function ccolSetAll(show) {
+  if (!ccolCtx) return;
+  const p = ccolCur(), cols = ccolCtx.cols();
+  const keep = (cols.find(c => c.key === ccolCtx.keep) || cols[0] || {}).key;
+  const keys = cols.map(c => c.key);
   p.hidden = show ? p.hidden.filter(k => !keys.includes(k)) : p.hidden.filter(k => !keys.includes(k)).concat(keys.filter(k => k !== keep));
-  if (!show && colFilterState.comp) { keys.forEach(k => { if (k !== keep) delete colFilterState.comp[k]; }); pagerReset('comp'); }
-  compColPrefsSet(p); renderCompTable(); compColRenderList();
+  if (!show && ccolCtx.onHideAll) ccolCtx.onHideAll(keys.filter(k => k !== keep));
+  ccolSave(p);
 }
-function compColReset() { compColPrefsSet({ order: [], hidden: [] }); renderCompTable(); compColRenderList(); }
+function ccolReset() { if (!ccolCtx) return; try { localStorage.removeItem(ccolCtx.prefKey); } catch (e) {} ccolCtx.render(); ccolRenderList(); }
 
 
 function compIs2nd(v) { return String(v == null ? '' : v).replace(/\s/g, '') === '二次製作'; }
@@ -55855,10 +55887,86 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     return order.map(function(k){var m=map[k];return {item:m.item,quantity:m.hasQty?maQtyFmt(m.qty):'',rows:m.rows,weight:m.hasW?m.w:'',net:m.hasN?m.n:''};})
       .sort(function(a,b){return catRank(a.item)-catRank(b.item)||String(a.item.partNo||'').localeCompare(String(b.item.partNo||''),undefined,{numeric:true});});
   }
+  // ── 多階表格欄位:可自己排序、隱藏(⚙ 欄位,零件表/帷幕/水電/合併明細共用;存在這台裝置,手機寬度與電腦各一份)──
+  // 手機預設沿用原本版面:數量排在零件編號後面,品名/材質/單重先藏起來
+  var MA_COLS=[{key:'seq',label:'項次'},{key:'partNo',label:'零件編號'},{key:'desc',label:'品名'},{key:'spec',label:'規格'},{key:'mat',label:'材質'},{key:'unit',label:'單位'},{key:'qty',label:'數量'},{key:'uw',label:'單重'},{key:'tw',label:'總重'},{key:'nw',label:'淨重'},{key:'cat',label:'分類'}];
+  var MA_COLS_M_ORDER=['seq','partNo','qty','desc','spec','mat','unit','uw','tw','nw','cat'];
+  var MA_W_KEYS=['uw','tw','nw'];
+  function maColMobile(){return !!(window.matchMedia&&window.matchMedia('(max-width:620px)').matches);}
+  function maColKey(){return 'ma_col_prefs'+(maColMobile()?'_m':'');}
+  function maColDefHidden(){return maColMobile()?['desc','mat','uw']:[];}
+  function maColAll(){
+    var hw=maHasWeight(),list=maColMobile()?MA_COLS_M_ORDER.map(function(k){return MA_COLS.find(function(c){return c.key===k;});}):MA_COLS.slice();
+    return list.filter(function(c){return hw||MA_W_KEYS.indexOf(c.key)<0;});
+  }
+  // avail:這張表本身有哪些欄(合併明細沒有項次;成品材依規格加總沒有零件編號/單重/分類)
+  function maColsFor(avail){
+    var all=maColAll().filter(function(c){return avail[c.key];});
+    var v=ccolVisibleBy(ccolPrefsGet(maColKey(),maColDefHidden()),all,'partNo');
+    return v.length?v:all.slice(0,1);
+  }
+  function maColCell(key,r){
+    var i=r.i||{};
+    switch(key){
+      case 'seq':return '<td>'+maEsc(r.seq)+'</td>';
+      case 'partNo':return '<td class="code">'+(r.mark||'')+maEsc(i.partNo)+'</td>';
+      case 'desc':return '<td>'+maEsc(i.description)+'</td>';
+      case 'spec':return '<td class="code">'+maEsc(r.spec)+'</td>';
+      case 'mat':return '<td>'+maEsc(i.material)+'</td>';
+      case 'unit':return '<td>'+maEsc(i.unit)+'</td>';
+      case 'qty':return '<td class="ma-m-qty"'+(r.qtip||'')+'>'+maEsc(r.qty)+'</td>';
+      case 'uw':return '<td class="ma-w">'+maWFmt(i.unitWeight)+'</td>';
+      case 'tw':return '<td class="ma-w">'+maWFmt(r.w)+'</td>';
+      case 'nw':return '<td class="ma-w">'+maWFmt(r.n)+'</td>';
+      case 'cat':return '<td>'+maCatTag(maPartCategory(i))+'</td>';
+    }
+    return '<td></td>';
+  }
+  // foot={qty,tw,nw}:合計列只填數量/總重/淨重,「數量加總」字樣放在第一個非合計欄
+  function maColTable(cols,rows,foot,cls){
+    var sumKeys=['qty','tw','nw','uw'],labelAt=-1;
+    for(var k=0;k<cols.length;k++){if(sumKeys.indexOf(cols[k].key)<0){labelAt=k;break;}}
+    return '<div class="ma-table-wrap"><table class="ma-table'+(cls?' '+cls:'')+'"><thead><tr>'+cols.map(function(c){return '<th'+(MA_W_KEYS.indexOf(c.key)>=0?' class="ma-w"':'')+'>'+maEsc(c.label)+'</th>';}).join('')+'</tr></thead><tbody>'+
+      rows.map(function(r){return '<tr'+(r.tr||'')+'>'+cols.map(function(c){return maColCell(c.key,r);}).join('')+'</tr>';}).join('')+
+      '</tbody><tfoot><tr class="ma-total-row">'+cols.map(function(c,k){
+        if(c.key==='qty')return '<td class="ma-m-qty">'+maEsc(foot.qty)+'</td>';
+        if(c.key==='tw')return '<td class="ma-w">'+maWFmt(foot.tw)+'</td>';
+        if(c.key==='nw')return '<td class="ma-w">'+maWFmt(foot.nw)+'</td>';
+        return '<td>'+(k===labelAt?'數量加總':'')+'</td>';
+      }).join('')+'</tr></tfoot></table></div>';
+  }
+  function maColBtnState(){
+    var b=document.getElementById('ma-col-btn');if(!b)return;
+    var hid=ccolPrefsGet(maColKey(),maColDefHidden()).hidden,n=maColAll().filter(function(c){return hid.indexOf(c.key)>=0;}).length;
+    var custom=false;try{custom=!!localStorage.getItem(maColKey());}catch(e){}
+    b.classList.toggle('on',custom);
+    b.title=(n?'已隱藏 '+n+' 欄;':'')+'調整欄位順序、隱藏欄位('+(maColMobile()?'手機':'電腦')+'版,每台裝置各自記住)';
+  }
+  // 重畫三個分頁的表格,保留目前展開的構件
+  function maRerenderTables(){
+    var open={};
+    ['ma-parts-body','ma-curtain-result','ma-mep-result'].forEach(function(id){
+      document.querySelectorAll('#'+id+' details.ma-component[open]').forEach(function(d){open[id+'|'+(d.querySelector('summary')||{}).textContent]=1;});
+    });
+    maRenderParts();maRenderCategory('Q','ma-curtain-result','帷幕');maRenderCategory('H','ma-mep-result','水電');
+    ['ma-parts-body','ma-curtain-result','ma-mep-result'].forEach(function(id){
+      document.querySelectorAll('#'+id+' details.ma-component').forEach(function(d){if(open[id+'|'+(d.querySelector('summary')||{}).textContent])d.open=true;});
+    });
+    maColBtnState();
+  }
+  window.maColOpen=function(){
+    var m=maColMobile();
+    ccolOpen({title:'多階資料表欄位（'+(m?'手機':'電腦')+'版）',
+      note:'勾選要顯示的欄位，用 ▲▼ 或拖曳調整順序。零件表、帷幕、水電各表共用；手機與電腦各一份設定，只存在這台裝置。',
+      prefKey:maColKey(),defHidden:maColDefHidden(),keep:'partNo',cols:maColAll,render:maRerenderTables});
+  };
+  if(window.matchMedia){var maColMq=window.matchMedia('(max-width:620px)'),maColMqFn=function(){if(maComponents.length)maRerenderTables();};if(maColMq.addEventListener)maColMq.addEventListener('change',maColMqFn);else if(maColMq.addListener)maColMq.addListener(maColMqFn);}
   function maMergedTable(title,merged,rawCount,showCategory){
-    var hw=maHasWeight(),tw=merged.reduce(function(s,m){return s+(m.weight===''?0:m.weight);},0),tn=merged.reduce(function(s,m){return s+(m.net===''?0:m.net);},0);
+    var tw=merged.reduce(function(s,m){return s+(m.weight===''?0:m.weight);},0),tn=merged.reduce(function(s,m){return s+(m.net===''?0:m.net);},0);
     var total=maQtyFmt(merged.reduce(function(s,m){var q=Number(m.quantity);return s+(m.quantity===''||isNaN(q)?0:q);},0));
-    return '<div class="ma-flat-title">'+maEsc(title)+' · '+merged.length+' 種零件（原 '+rawCount+' 筆，同名零件已合併、數量加總）</div><div class="ma-table-wrap"><table class="ma-table ma-flat-table"><thead><tr><th>零件編號</th><th class="ma-m-only">數量</th><th class="ma-m-hide">品名</th><th>規格</th><th class="ma-m-hide">材質</th><th>單位</th><th class="ma-m-hide">數量</th>'+(hw?'<th class="ma-m-hide ma-w">單重</th><th class="ma-w">總重</th><th class="ma-w">淨重</th>':'')+(showCategory?'<th>分類</th>':'')+'</tr></thead><tbody>'+merged.map(function(m){var i=m.item,qt=(m.rows>1?' title="由 '+m.rows+' 筆合併"':'');return '<tr><td class="code">'+maEsc(i.partNo)+'</td><td class="ma-m-only ma-m-qty"'+qt+'>'+maEsc(m.quantity)+'</td><td class="ma-m-hide">'+maEsc(i.description)+'</td><td class="code">'+maEsc(i.specification)+'</td><td class="ma-m-hide">'+maEsc(i.material)+'</td><td>'+maEsc(i.unit)+'</td><td class="ma-m-hide"'+qt+'>'+maEsc(m.quantity)+'</td>'+(hw?'<td class="ma-m-hide ma-w">'+maWFmt(i.unitWeight)+'</td><td class="ma-w">'+maWFmt(m.weight)+'</td><td class="ma-w">'+maWFmt(m.net)+'</td>':'')+(showCategory?'<td>'+maCatTag(maPartCategory(i))+'</td>':'')+'</tr>';}).join('')+'</tbody><tfoot><tr class="ma-total-row"><td>數量加總</td><td class="ma-m-only ma-m-qty">'+total+'</td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide">'+total+'</td>'+(hw?'<td class="ma-m-hide"></td><td class="ma-w">'+maWFmt(tw)+'</td><td class="ma-w">'+maWFmt(tn)+'</td>':'')+(showCategory?'<td></td>':'')+'</tr></tfoot></table></div>';
+    var cols=maColsFor({partNo:1,desc:1,spec:1,mat:1,unit:1,qty:1,uw:1,tw:1,nw:1,cat:showCategory});
+    var rows=merged.map(function(m){return {i:m.item,spec:m.item.specification,qty:m.quantity,qtip:(m.rows>1?' title="由 '+m.rows+' 筆合併"':''),w:m.weight,n:m.net};});
+    return '<div class="ma-flat-title">'+maEsc(title)+' · '+merged.length+' 種零件（原 '+rawCount+' 筆，同名零件已合併、數量加總）</div>'+maColTable(cols,rows,{qty:total,tw:tw,nw:tn},'ma-flat-table');
   }
   function maSpecDisplay(item,c){
     var s=String(item.specification==null?'':item.specification),cs=String(c&&c.componentSpec!=null?c.componentSpec:'');
@@ -56145,11 +56253,9 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   function maQtyTip(i){return i.level>2&&i.perQty!==''&&i.perQty!=null?' title="每個 '+maEsc(i.parentNo||'母件')+' 用 '+maEsc(i.perQty)+'，此構件合計 '+maEsc(i.quantity)+'"':'';}
   function maRowsTable(items,showCategory,c){
     if(!items.length)return '<div class="ma-empty">沒有符合資料</div>';
-    var hw=maHasWeight();
-    return '<div class="ma-table-wrap"><table class="ma-table"><thead><tr><th>項次</th><th>零件編號</th><th class="ma-m-only">數量</th><th class="ma-m-hide">品名</th><th>規格</th><th class="ma-m-hide">材質</th><th>單位</th><th class="ma-m-hide">數量</th>'+(hw?'<th class="ma-m-hide ma-w">單重</th><th class="ma-w">總重</th><th class="ma-w">淨重</th>':'')+(showCategory?'<th>分類</th>':'')+'</tr></thead><tbody>'+items.map(function(i){
-      var qt=maQtyTip(i);
-      return '<tr'+(i.level>2?' class="ma-sub-row"':'')+'><td>'+maEsc(i.sequence)+'</td><td class="code">'+maSubMark(i)+maEsc(i.partNo)+'</td><td class="ma-m-only ma-m-qty"'+qt+'>'+maEsc(i.quantity)+'</td><td class="ma-m-hide">'+maEsc(i.description)+'</td><td class="code">'+maEsc(maSpecDisplay(i,c))+'</td><td class="ma-m-hide">'+maEsc(i.material)+'</td><td>'+maEsc(i.unit)+'</td><td class="ma-m-hide"'+qt+'>'+maEsc(i.quantity)+'</td>'+(hw?'<td class="ma-m-hide ma-w">'+maWFmt(i.unitWeight)+'</td><td class="ma-w">'+maWFmt(maItemWeight(i))+'</td><td class="ma-w">'+maWFmt(maItemNet(i))+'</td>':'')+(showCategory?'<td>'+maCatTag(maPartCategory(i))+'</td>':'')+'</tr>';
-    }).join('')+'</tbody><tfoot><tr class="ma-total-row"><td colspan="2">數量加總</td><td class="ma-m-only ma-m-qty">'+maSumQty(items)+'</td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide"></td><td></td><td class="ma-m-hide">'+maSumQty(items)+'</td>'+(hw?'<td class="ma-m-hide"></td><td class="ma-w">'+maWFmt(maSumWeight(items))+'</td><td class="ma-w">'+maWFmt(maSumNet(items))+'</td>':'')+(showCategory?'<td></td>':'')+'</tr></tfoot></table></div>';
+    var cols=maColsFor({seq:1,partNo:1,desc:1,spec:1,mat:1,unit:1,qty:1,uw:1,tw:1,nw:1,cat:showCategory});
+    var rows=items.map(function(i){return {tr:i.level>2?' class="ma-sub-row"':'',i:i,seq:i.sequence,mark:maSubMark(i),spec:maSpecDisplay(i,c),qty:i.quantity,qtip:maQtyTip(i),w:maItemWeight(i),n:maItemNet(i)};});
+    return maColTable(cols,rows,{qty:maSumQty(items),tw:maSumWeight(items),nw:maSumNet(items)},'');
   }
   function maComponentBlock(c,items,showCategory,open){
     return '<details class="ma-component" '+(open?'open':'')+'><summary>'+(c.zone?'<span class="ma-zone-tag">'+maEsc(c.zone)+'</span>':'')+'<span class="ma-component-id">'+maEsc(c.componentNo)+'</span><span class="ma-drawing-no">圖號 '+maEsc(c.drawingNo||'—')+'</span><span class="ma-component-meta">'+maEsc(c.componentSpec)+' · '+items.length+' 筆'+(c.weight!==''&&c.weight!=null?' · 總重 '+maWFmt(c.weight)+' kg':'')+(c.netWeight!==''&&c.netWeight!=null?' · 淨重 '+maWFmt(c.netWeight)+' kg':'')+'</span></summary>'+maRowsTable(items,showCategory,c)+'</details>';
@@ -56163,6 +56269,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     return {comps:comps,rows:rows};
   }
   function maRenderParts(){
+    maColBtnState();
     var totalComps=maComponents.filter(function(c){return maPartItems(c).length;}).length;
     var tabCount=document.getElementById('ma-tab-parts-count');if(tabCount)tabCount.textContent=totalComps+' 支構件';
     var tabsHost=document.getElementById('ma-parts-cat-tabs');
@@ -56188,7 +56295,9 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var totalQty=maSumQty(allItems.map(function(r){return r.item;}));
     if(maPartsCat==='成品材'&&maPartsMode==='flat'){
       var agg=maAggBySpec(allItems.map(function(r){return r.item;})),aw=maHasWeight();
-      body.innerHTML='<div class="ma-flat-title">成品材（依規格加總）· '+agg.length+' 種規格</div><div class="ma-table-wrap"><table class="ma-table ma-flat-table"><thead><tr><th>規格</th><th>品名</th><th>材質</th><th>單位</th><th>數量</th>'+(aw?'<th class="ma-w">總重</th><th class="ma-w">淨重</th>':'')+'</tr></thead><tbody>'+agg.map(function(a){return '<tr><td class="code">'+maEsc(a.規格)+'</td><td>'+maEsc(a.品名)+'</td><td>'+maEsc(a.材質)+'</td><td>'+maEsc(a.單位)+'</td><td>'+maEsc(a.數量)+'</td>'+(aw?'<td class="ma-w">'+maWFmt(a.總重)+'</td><td class="ma-w">'+maWFmt(a.淨重)+'</td>':'')+'</tr>';}).join('')+'</tbody><tfoot><tr class="ma-total-row"><td colspan="4">數量加總</td><td>'+totalQty+'</td>'+(aw?'<td class="ma-w">'+maWFmt(agg.reduce(function(s,a){return s+a.總重;},0))+'</td><td class="ma-w">'+maWFmt(agg.reduce(function(s,a){return s+a.淨重;},0))+'</td>':'')+'</tr></tfoot></table></div>';
+      var acols=maColsFor({desc:1,spec:1,mat:1,unit:1,qty:1,tw:1,nw:1});
+      var arows=agg.map(function(a){return {i:{description:a.品名,specification:a.規格,material:a.材質,unit:a.單位},spec:a.規格,qty:a.數量,w:aw?a.總重:'',n:aw?a.淨重:''};});
+      body.innerHTML='<div class="ma-flat-title">成品材（依規格加總）· '+agg.length+' 種規格</div>'+maColTable(acols,arows,{qty:totalQty,tw:agg.reduce(function(s,a){return s+a.總重;},0),nw:agg.reduce(function(s,a){return s+a.淨重;},0)},'ma-flat-table');
       return;
     }
     if(maPartsMode==='grouped'){
