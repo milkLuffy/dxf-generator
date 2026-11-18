@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.17.5"/>
+<meta name="sc-version" content="2026.11.18.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -4556,7 +4556,7 @@ window.normalizeFullWidth=function(value){
 .ma-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .ma-result-search{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg)}
 .ma-result-search .search-input{flex:1;max-width:none;min-width:0}
-.ma-search-status{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap}
+.ma-search-status{font-family:var(--mono);font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
 .ma-tab{padding:8px 15px;border:1px solid var(--border);border-radius:var(--rad);background:var(--bg3);color:var(--text2);font-family:var(--mono);font-size:12px;cursor:pointer}
 .ma-tab:hover{border-color:var(--border-hi);color:var(--text)}
 .ma-tab.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
@@ -4763,7 +4763,7 @@ window.normalizeFullWidth=function(value){
             <button class="ma-tab" data-ma-tab="wordprompt" onclick="maSwitchTab('wordprompt')">帷幕／水電 Word Prompt</button>
           </div>
           <div class="ma-result-search">
-            <input type="search" class="search-input" id="ma-result-search" placeholder="模糊搜尋構件、圖號、零件、品名、規格、材質…" oninput="maSetResultSearch(this.value)"/>
+            <input type="search" class="search-input" id="ma-result-search" placeholder="搜尋構件、圖號、零件、規格…(多個用空白分隔,符合任一)" oninput="maSetResultSearch(this.value)"/>
             <span class="ma-search-status" id="ma-search-status">全部資料</span>
             <button type="button" class="btn btn-add-row" onclick="maClearResultSearch()">清除</button>
           </div>
@@ -55861,7 +55861,8 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   }
   function maPartCount(){return maComponents.reduce(function(n,c){return n+maPartItems(c).length;},0);}
   function maCodeCount(code){return maComponents.reduce(function(n,c){return n+c.items.filter(function(i){return i.code===code&&!(i.level>2);}).length;},0);}
-  function maSearchTokens(){return String(maSearchQuery||'').toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);}
+  // 多個關鍵字用空白／逗號／頓號／換行分隔＝符合任一個(可從 Excel 整欄貼上),重複的只算一次
+  function maSearchTokens(){var seen={};return String(maSearchQuery||'').toLocaleLowerCase().split(/[\s,，、;；]+/).filter(function(t){if(!t||seen[t])return false;seen[t]=1;return true;});}
   function maSearchText(c,item){
     return [maProject.工程編號,maProject.工程區,maProject.母件編號,c.zone,c.componentNo,c.drawingNo,c.componentSpec,
       item&&item.sequence,item&&item.partNo,item&&item.description,item&&item.specification,item&&item.material,
@@ -55870,8 +55871,8 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
   function maFilterGroups(groups){
     var tokens=maSearchTokens();if(!tokens.length)return groups;
     return groups.map(function(g){
-      var componentHit=tokens.every(function(t){return maSearchText(g.c,null).indexOf(t)>=0;});
-      var items=componentHit?g.items:g.items.filter(function(item){var text=maSearchText(g.c,item);return tokens.every(function(t){return text.indexOf(t)>=0;});});
+      var componentHit=tokens.some(function(t){return maSearchText(g.c,null).indexOf(t)>=0;});
+      var items=componentHit?g.items:g.items.filter(function(item){var text=maSearchText(g.c,item);return tokens.some(function(t){return text.indexOf(t)>=0;});});
       return {c:g.c,items:items};
     }).filter(function(g){return g.items.length;});
   }
@@ -55879,7 +55880,14 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     var el=document.getElementById('ma-search-status');if(!el)return;
     if(!maSearchTokens().length){el.textContent='全部資料';return;}
     var rows=(groups||[]).reduce(function(n,g){return n+g.items.length;},0);
-    el.textContent='找到 '+(groups||[]).length+' 支構件 · '+rows+' 筆';
+    var msg='找到 '+(groups||[]).length+' 支構件 · '+rows+' 筆';
+    var tokens=maSearchTokens();
+    if(tokens.length>1){
+      // 多個關鍵字時,列出在整份資料(不分頁籤)裡完全沒出現的,方便發現打錯或缺的編號
+      var miss=tokens.filter(function(t){return !maComponents.some(function(c){return maSearchText(c,null).indexOf(t)>=0||c.items.some(function(i){return maSearchText(c,i).indexOf(t)>=0;});});});
+      if(miss.length){var orig={};String(maSearchQuery||'').split(/[\s,，、;；]+/).forEach(function(t){var k=t.toLocaleLowerCase();if(t&&!orig[k])orig[k]=t;});msg+=' · 找不到：'+miss.map(function(t){return orig[t]||t;}).join('、');}
+    }
+    el.textContent=msg;el.title=msg;
   }
   window.maSetResultSearch=function(value){
     maSearchQuery=String(value||'');
