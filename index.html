@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.18.4"/>
+<meta name="sc-version" content="2026.11.18.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1279,6 +1279,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .log-table tr:hover td{background:var(--bg3)}
 .log-table td.proj{color:var(--text);font-weight:500}
 .log-table td.frames span{color:var(--accent2);margin-right:4px;display:inline-block;background:rgba(79,142,247,.1);border-radius:3px;padding:1px 5px;margin-bottom:2px}
+.log-table td.frames span.dup{box-shadow:inset 0 0 0 1.5px var(--danger)}   /* 同工程編號有完全一樣的尺寸 */
 .log-table td.date{color:var(--text3);white-space:nowrap}
 .log-table td.op{color:var(--accent3)}
 .log-table td.op.guest{color:#c89050}
@@ -31712,12 +31713,21 @@ function renderLog(logs){
   document.getElementById('log-count').textContent=logs.length+' 筆';
   if(!logs.length){document.getElementById('log-container').innerHTML='<div class="log-empty">'+(allLogs.length?'沒有符合的紀錄':'尚無產生紀錄')+'</div>';return;}
   const canOrder=!isGuest&&currentUser&&(typeof pagePerm!=='function'||pagePerm('dxf')==='edit');
+  // 同一個工程編號(proj_name)裡完全一樣的尺寸 → 紅框;用全部紀錄算,篩選後仍標得出來
+  const frKey=f=>String(f==null?'':f).trim().replace(/\s+/g,' ').toUpperCase();
+  const projKey=e=>String(e.proj_name||'').trim().toUpperCase();
+  const frCnt=new Map();
+  allLogs.forEach(e=>{ if(!Array.isArray(e.frames)) return; const pk=projKey(e); if(!pk) return;
+    let m=frCnt.get(pk); if(!m) frCnt.set(pk,m=new Map());
+    e.frames.forEach(f=>{ const k=frKey(f); if(k) m.set(k,(m.get(k)||0)+1); }); });
   let html='<div class="log-wrap"><table class="log-table"><thead><tr><th>日期/時間</th><th>人員</th><th>工程編號</th><th>工程區</th><th>檔案名稱</th><th>尺寸</th><th>開單</th><th></th></tr></thead><tbody>';
   logs.forEach(e=>{
     const dt=new Date(e.created_at);
     const date=dt.toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
     const time=dt.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
-    const fr=Array.isArray(e.frames)?e.frames.map(f=>`<span>${esc(f)}</span>`).join(''):esc(e.frames||'');
+    const fm=frCnt.get(projKey(e));
+    const fr=Array.isArray(e.frames)?e.frames.map(f=>{ const n=fm&&fm.get(frKey(f))||0;
+      return n>1?`<span class="dup" title="同工程編號共有 ${n} 個相同尺寸">${esc(f)}</span>`:`<span>${esc(f)}</span>`; }).join(''):esc(e.frames||'');
     const isGuestEntry=(e.user_name||'').includes('(訪客)');
     const canDel=!isGuest&&currentUser&&(currentUser.isAdmin||(e.user_id&&e.user_id===currentUser.id));
     const done=!!e.ordered_at;
