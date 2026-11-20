@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.20.1"/>
+<meta name="sc-version" content="2026.11.20.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -20405,29 +20405,41 @@ async function commitZoneSave(data, compMode){
   await loadZones(currentProjectId);
   if (subFlip) await zoneSyncSubcontractProd(flipId, flipOn);
 }
+// 更新基本資料:已有的構件(依構件編號)更新共通編號/重量/數量/規格,保留加工機、進料、A201 等;
+// 貼上的資料裡有、工程區還沒有的構件 → 新增。貼上資料裡沒有的舊構件不動。回傳 {ok, updated, added, failed}
+async function zoneUpdateBasicComps(zoneId, parsed){
+  const res={ok:true, updated:0, added:0, failed:0};
+  const cr=await sbFetch('/rest/v1/components?select=id,part_no&zone_id=eq.'+zoneId);
+  if(!cr.ok||!Array.isArray(cr.data)){ res.ok=false; return res; }   // 抓不到舊構件就不新增,免得整批重複
+  const idByPart={};
+  cr.data.forEach(c=>{ idByPart[String(c.part_no||'').trim()]=c.id; });
+  const adds=[], seen=new Set();
+  for(const c of parsed){
+    const pn=String(c.partNo||'').trim();
+    if(!pn||seen.has(pn)) continue;
+    seen.add(pn);
+    const cid=idByPart[pn];
+    if(cid){
+      const r=await sbFetch('/rest/v1/components?id=eq.'+cid,{method:'PATCH',headers:{'Prefer':'return=minimal'},
+        body:JSON.stringify({ common_no:c.commonNo, net_weight:parseFloat(c.netW)||null, qty:parseInt(c.qty)||null, spec:c.spec })});
+      if(r.ok) res.updated++; else res.failed++;
+    } else {
+      adds.push({ zone_id:zoneId, seq:parseInt(c.seq)||null, part_no:pn, common_no:c.commonNo,
+        spec:c.spec, qty:parseInt(c.qty)||null, net_weight:parseFloat(c.netW)||null, drawing_no:c.drawingNo });
+    }
+  }
+  if(adds.length){
+    const r=await sbFetch('/rest/v1/components',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(adds)});
+    if(r.ok) res.added=adds.length; else res.failed+=adds.length;
+  }
+  return res;
+}
 // 依模式將解析出的構件寫入指定工程區(與批次匯入邏輯一致)
 // mode: 'weight'(更新共通編號/重量/數量/規格) | 'overwrite'(刪除舊構件重建)
 async function applyZoneComponents(zoneId, mode, parsed){
   parsed=parsed||zoneModalParsed;
   if(!parsed.length) return;
-  if(mode==='weight'){
-    const cr=await sbFetch('/rest/v1/components?select=id,part_no&zone_id=eq.'+zoneId);
-    const idByPart={};
-    if(Array.isArray(cr.data)) cr.data.forEach(c=>{ idByPart[c.part_no]=c.id; });
-    for(const c of parsed){
-      const cid=idByPart[c.partNo];
-      if(cid){
-        await sbFetch('/rest/v1/components?id=eq.'+cid,{method:'PATCH',headers:{'Prefer':'return=minimal'},
-          body:JSON.stringify({
-            common_no:c.commonNo,
-            net_weight:parseFloat(c.netW)||null,
-            qty:parseInt(c.qty)||null,
-            spec:c.spec
-          })});
-      }
-    }
-    return;
-  }
+  if(mode==='weight') return zoneUpdateBasicComps(zoneId, parsed);
   // overwrite: 先刪除舊構件再全部重建
   await sbFetch('/rest/v1/components?zone_id=eq.'+zoneId,{method:'DELETE'});
   const comps=parsed.map(c=>({
@@ -20486,10 +20498,14 @@ function confirmZoneBomUpdate(){
   const doApply=async (mode)=>{
     const btn=document.getElementById('btn-zone-bom-update');
     btn.disabled=true; btn.textContent='更新中...';
-    await applyZoneComponents(zoneId, mode, parsed);
+    const res=await applyZoneComponents(zoneId, mode, parsed);
     btn.disabled=false; btn.textContent='更新';
     closeModal('zone-bom-update-modal');
     await loadComponents(zoneId);
+    if(mode==='weight'&&res){
+      if(!res.ok) alert('讀取現有構件失敗，這次沒有更新，請重新整理後再試一次。');
+      else alert('更新 '+res.updated+' 支、新增 '+res.added+' 支'+(res.failed?('，'+res.failed+' 支失敗'):''));
+    }
   };
   // 已有構件 → 三選一(與新增/編輯一致);取消則什麼都不動
   if(zoneComponents && zoneComponents.length){
@@ -26243,23 +26259,7 @@ async function runBatchImport(dupMode) {
       if (dupMode === 'weight') {
         // update BOM basic fields of matching components by part_no; keep ext untouched
         // fetch existing components to map part_no -> id
-        const cr = await sbFetch('/rest/v1/components?select=id,part_no&zone_id=eq.' + zoneId);
-        const idByPart = {};
-        if (Array.isArray(cr.data)) cr.data.forEach(c => { idByPart[c.part_no] = c.id; });
-        for (const c of z.components) {
-          const cid = idByPart[c.partNo];
-          if (cid) {
-            await sbFetch('/rest/v1/components?id=eq.' + cid, {
-              method:'PATCH', headers:{'Prefer':'return=minimal'},
-              body: JSON.stringify({
-                common_no: c.commonNo,
-                net_weight: parseFloat(c.netW)||null,
-                qty: parseInt(c.qty)||null,
-                spec: c.spec
-              })
-            });
-          }
-        }
+        await zoneUpdateBasicComps(zoneId, z.components);   // 已有的更新、新的構件新增
         updated++;
         continue;
       }
