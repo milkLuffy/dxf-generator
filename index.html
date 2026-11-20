@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.20.2"/>
+<meta name="sc-version" content="2026.11.20.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -14467,7 +14467,12 @@ async function loadProfile() {
   if(!r.data?.[0]) {
     // 全新帳號(目前只有 Google 登入會走到這裡,因為帳密註冊已移除):一律建立為「待審核」,並通知管理員審核
     const gname=currentSession.user?.user_metadata?.full_name||currentSession.user?.user_metadata?.name||account;
-    await sbFetch('/rest/v1/profiles',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:uid,name:gname,account,status:'pending'})});
+    // 一定要確認真的寫進資料庫:原本沒檢查結果,寫入被擋時使用者照樣看到「審核中」,
+    // 但管理員的待審核清單是空的,永遠等不到核准
+    const ins=await sbFetch('/rest/v1/profiles',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:uid,name:gname,account,status:'pending'})});
+    if(!ins.ok && ins.status!==409){   // 409=別的分頁剛好已經建好,不算失敗
+      throw new Error('新帳號建立失敗(HTTP '+(ins.status||0)+')'+(ins.data?.message?':'+ins.data.message:''));
+    }
     name=gname; status='pending';
     notifyAdminNewAccount(gname,account).catch(()=>{});   // 不阻塞登入流程,失敗不影響使用者體驗(管理員仍可在後台看到待審核清單)
     pushNotifyApproval('account');                        // 同上,另外推到管理員手機
@@ -14532,7 +14537,12 @@ async function checkOAuthCallback() {
   if(!r.ok||!r.data){setLoginMsg('Google 登入失敗');return;}
   currentSession.user=r.data; isGuest=false;
   saveSession();
-  try{ await loadProfile(); }catch(e){ document.getElementById('login-screen').style.display='flex'; setLoginMsg('網路不穩，帳號資料載入失敗，請重新整理'); return; }
+  try{ await loadProfile(); }catch(e){
+    document.getElementById('login-screen').style.display='flex';
+    const m=String(e&&e.message||'');
+    setLoginMsg(m.indexOf('新帳號建立失敗')===0 ? '新帳號無法送出審核,請把這段訊息告訴管理員:'+m : '網路不穩，帳號資料載入失敗，請重新整理');
+    return;
+  }
   enterApp();
 }
 async function enterApp(restore) {   // restore=true 才還原上次頁面 (重新整理);登入/登出後重新登入一律進主頁
@@ -35154,7 +35164,8 @@ function isActualPageReload() {
     document.getElementById('pending-screen').style.display = 'none';
     document.getElementById('rejected-screen').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
-    if(typeof setLoginMsg==='function')setLoginMsg('載入失敗，請檢查網路後重新整理');
+    const m=String(e&&e.message||'');
+    if(typeof setLoginMsg==='function')setLoginMsg(m.indexOf('新帳號建立失敗')===0 ? '新帳號無法送出審核,請把這段訊息告訴管理員:'+m : '載入失敗，請檢查網路後重新整理');
   }
 })();
 
