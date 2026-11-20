@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.20.3"/>
+<meta name="sc-version" content="2026.11.20.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -14481,7 +14481,7 @@ async function loadProfile() {
   const googleIdentity=(currentSession.user?.identities||[]).find(x=>x.provider==='google');
   const identityMeta=googleIdentity?.identity_data||{};
   const avatarUrl=meta.avatar_url||meta.picture||identityMeta.avatar_url||identityMeta.picture||'';
-  currentUser={id:uid,name,account,isAdmin,perms,disabled,avatarUrl,status,staffId,staffName,staffRole,staffDept,hoursExempt:!!r.data?.[0]?.hours_exempt};
+  currentUser={id:uid,name,account,isAdmin,perms,disabled,avatarUrl,status,staffId,staffName,staffRole,staffDept,hoursExempt:!!r.data?.[0]?.hours_exempt,readOnly:!!r.data?.[0]?.read_only};
   if(typeof ahLoadCfg==='function'){ try{ await ahLoadCfg(); }catch(e){} }   // 使用時段設定;讀不到就維持「未啟用」
 }
 // 呼叫 Edge Function 通知管理員有新帳號待審核(見 supabase/functions/notify-new-account)
@@ -14908,6 +14908,10 @@ function navItemVisible(k){
 function pagePerm(k){
   if(isGuest) return GUEST_PERMS[k]||'hide';
   const u=currentUser; if(!u) return 'hide';
+  if(u.readOnly){ const v=pagePermBase(k,u); return v==='edit'?'read':v; }   // 唯讀帳號(profiles.read_only):看得到的頁面一律唯讀,資料庫端也拒絕寫入
+  return pagePermBase(k,u);
+}
+function pagePermBase(k,u){
   if(u.isAdmin&&!adminPreviewMode) return 'edit';      // 管理員正常模式:全部可編輯
   const p=u.perms||{};
   if(HR_PAGES.has(k)){                                  // 人事薪資:先看該頁自己的鍵,沒設才沿用整區鍵;未授權隱藏
@@ -25677,6 +25681,8 @@ const HEALTH_SCHEMA=[
   ['gen_logs','ordered_at,ordered_by','readiness_migration.sql(靠模已開單)'],
   ['loading_plan','issue','loading_plan_migration.sql'],
   ['profiles','perms,disabled','access_control_migration.sql(帳號權限)'],
+  ['profiles','device_exempt','device_exempt_migration.sql(裝置綁定豁免)'],
+  ['profiles','read_only','read_only_account_migration.sql(唯讀帳號)'],
   ['todos','is_template,parent_id,repeat_unit,repeat_interval,repeat_from,repeat_until','todos_migration.sql(重複待辦)'],
   ['todo_users','','todos_migration.sql(檢視表)'],
   ['leave_requests','','leave_requests_migration.sql'],
