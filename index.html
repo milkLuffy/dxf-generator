@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.18.5"/>
+<meta name="sc-version" content="2026.11.20.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5313,7 +5313,7 @@ window.normalizeFullWidth=function(value){
         <summary>📘 使用規則（點此展開）</summary>
         <ul>
           <li><b>誰能刪除：</b>管理員可以刪全部圖面；上傳者可以刪自己上傳的（電腦、手機都可以）；其他人只能看。刪除前會再確認一次，<span class="warn">刪了無法復原</span>。</li>
-          <li><b>自動刪除：</b>工程區或工程的狀態變成「已完成」時（工程區所有構件都登記每日產量後，系統會自動改成已完成），該區圖面會在下次有人打開圖面快搜時<span class="warn">自動刪除、無法復原</span>。</li>
+          <li><b>自動刪除：</b>工程區所有構件（非本公司製作的不算）在線上進度表都填了出貨日期，或工程區／工程改成「轉包」時，該區圖面會<span class="warn">自動刪除、無法復原</span>。只有「已完成」（A202 都登記了）不會刪。</li>
           <li><b>上傳：</b>只能用電腦上傳（手機不顯示上傳區），而且只能上傳到「進行中」的工程區。</li>
           <li><b>手機看圖：</b>手機看的是預覽圖（不是原始 PDF，才不會當機）。電腦上傳完、或任何人用電腦登入系統時會在背景自動產生（中斷了下次會從停下的那頁接著做）；還沒產生的頁手機會提示「還在產生中」。可兩指縮放、點兩下放大，直向橫向都能看。</li>
           <li><b>原始畫質、列印、合併多張：</b>請用電腦。</li>
@@ -13641,12 +13641,17 @@ async function sbFetch(path, opts={}, _retried) {
   if (text === undefined) text = await res.text();
   let data=null; try{data=JSON.parse(text);}catch(e){}
   if(!res.ok) errlogHttp(res.status, _m, path, data!=null?data:text.slice(0,200));
-  // 工程/工程區完成後，DB trigger 會建立圖面清理佇列；由已核准的線上使用者立即執行 Storage 刪除。
+  // 圖面自動刪除:工程區改「轉包」(DB trigger 排佇列),或線上進度表填了出貨日期(清理前掃描全部出貨的區)
+  // → 由已核准的線上使用者立即執行 Storage 刪除。
   if(res.ok && _m==='PATCH' && /^\/rest\/v1\/(projects|zones)\?/.test(path)){
     try{
       const body=typeof opts.body==='string'?JSON.parse(opts.body):opts.body;
-      if(body?.status==='已完成') setTimeout(()=>window.dsProcessCleanupQueue?.(),400);
+      if(body?.status==='轉包') setTimeout(()=>window.dsProcessCleanupQueue?.(),400);
     }catch(e){}
+  }
+  if(res.ok && (_m==='POST'||_m==='PATCH') && /^\/rest\/v1\/layout_items(\?|$)/.test(path)
+     && /"ship_date":"\d/.test(typeof opts.body==='string'?opts.body:JSON.stringify(opts.body||''))){
+    clearTimeout(window._dsShipCleanupT); window._dsShipCleanupT=setTimeout(()=>window.dsProcessCleanupQueue?.(),1500);
   }
   return {ok:res.ok, status:res.status, data};
 }
@@ -55681,6 +55686,9 @@ async function dsProcessCleanupQueue() {
   if (dsCleanupBusy || isGuest || !currentSession || !currentUser || currentUser.disabled || currentUser.status !== 'approved') return;
   dsCleanupBusy = true;
   try {
+    // 先把「全部出貨」或轉包的工程區排進佇列(還沒跑 drawing_cleanup_ship_migration.sql 時這支 RPC 不存在,略過)
+    const sweep = await dsDbDirect('/rest/v1/rpc/drawing_queue_shipped_zones', { method: 'POST', body: '{}' });
+    if (!sweep.ok && sweep.status !== 404) console.warn('圖面自動清理：出貨掃描失敗', sweep.data);
     for (let pass = 0; pass < 20; pass++) {
       const queueResult = await dsDbDirect('/rest/v1/drawing_cleanup_queue?select=id,file_id,storage_key&order=requested_at&limit=100');
       if (!queueResult.ok || !Array.isArray(queueResult.data) || !queueResult.data.length) break;
