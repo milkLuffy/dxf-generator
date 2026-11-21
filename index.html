@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.20.4"/>
+<meta name="sc-version" content="2026.11.21.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -6767,7 +6767,7 @@ window.normalizeFullWidth=function(value){
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <div class="table-scroll">
-          <table class="data-table" id="leave-table">
+          <table class="data-table mc-off" id="leave-table">
             <thead><tr>
               <th>姓名</th><th>部門</th><th>到職日</th><th>本期(到職週年)</th>
               <th>應給</th><th>已休</th><th>已折現</th><th>剩餘</th><th>登記</th>
@@ -6935,9 +6935,10 @@ window.normalizeFullWidth=function(value){
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr>
-              <th>帳號 (Email)</th><th>顯示名稱</th><th>綁定公司名冊</th><th>管理員</th><th>審核</th><th>停用</th><th>強制登出</th><th>頁面權限</th><th>刪除</th>
+              <th>帳號 (Email)</th><th>顯示名稱</th><th>綁定公司名冊</th><th>管理員</th><th title="唯讀:看得到的頁面全部只能看不能改(資料庫也擋)
+裝置免核准:任何電腦/手機登入都自動核准">特殊</th><th>審核</th><th>停用</th><th>強制登出</th><th>頁面權限</th><th>刪除</th>
             </tr></thead>
-            <tbody id="accounts-body"><tr><td colspan="9" class="empty-state">載入中...</td></tr></tbody>
+            <tbody id="accounts-body"><tr><td colspan="10" class="empty-state">載入中...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -8107,16 +8108,34 @@ window.normalizeFullWidth=function(value){
     @media(max-width:768px),(pointer:coarse) and (max-width:1100px){
       #page-bom #bom-view-list{display:none}
       /* 每日產量：日期導覽保留，篩選與區間收合；明細表改分類卡片 */
+      /* 手機版工具列改用格線:每顆按鈕同寬、同高,不再一長一短 */
       #page-daily .toolbar{gap:8px;padding:10px 12px}
-      #page-daily .toolbar select,#page-daily .toolbar input{min-height:40px;font-size:16px}
-      #page-daily #daily-toolbar-1 .btn{flex:1 1 auto;justify-content:center;min-height:40px}
-      #page-daily #daily-view-date{flex:1 1 150px}
-      #page-daily .daily-m-more{display:inline-flex;flex:1 1 100%;justify-content:center;min-height:42px}
-      #page-daily #daily-f-part{flex:1 1 100%;width:auto}
-      #page-daily #daily-count{flex:1 1 100%}
+      #page-daily .toolbar :is(select,input,.btn){box-sizing:border-box;width:100%!important;min-width:0;min-height:42px;margin:0;font-size:15px}
+      #page-daily .toolbar :is(select,input){font-size:16px}
+      #page-daily .toolbar .btn{justify-content:center;padding:0 8px;white-space:nowrap}
+      /* 第一列:日期 / 前一天‧今日‧後一天 / 星期 / 區間(展開才有) */
+      #page-daily #daily-toolbar-1{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
+      #page-daily #daily-toolbar-1>*{grid-column:1/-1}
+      #page-daily #daily-view-date{order:-1}
+      #page-daily #daily-toolbar-1>.btn:nth-of-type(1){grid-column:1/3}
+      #page-daily #daily-toolbar-1>.btn:nth-of-type(3){grid-column:3/5}
+      #page-daily #daily-toolbar-1>#daily-next-btn{grid-column:5/7;order:1}
+      #page-daily #daily-toolbar-1>:is(.date-wk-show,.daily-range-label,#daily-range-start,#daily-range-end){order:2}
+      #page-daily #daily-toolbar-1>.date-wk-show{text-align:center}
+      #page-daily #daily-toolbar-1>.daily-range-label{margin:4px 0 -2px}
+      #page-daily #daily-toolbar-1>#daily-range-start{grid-column:1/4}
+      #page-daily #daily-toolbar-1>#daily-range-end{grid-column:4/7}
+      #page-daily #daily-toolbar-1>span[style]{display:none}
+      #page-daily:not(.m-open) #daily-toolbar-1>:is(.daily-range-label,#daily-range-start,#daily-range-end){display:none}
+      /* 第二列:收合時只有「篩選與更多」+搜尋+筆數;展開後一律兩欄 */
+      #page-daily #daily-toolbar-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+      #page-daily #daily-toolbar-2>:is(.daily-m-more,#daily-f-part,#daily-count,.daily-seg){grid-column:1/-1}
+      #page-daily #daily-toolbar-2>:is(.daily-mode-label,.toolbar-sep){display:none}
+      #page-daily .daily-m-more{display:inline-flex}
+      #page-daily #daily-count{text-align:center}
+      #page-daily .daily-seg{display:flex}
+      #page-daily .daily-seg button{flex:1 1 0;min-height:40px;font-size:14px}
       #page-daily:not(.m-open) #daily-toolbar-2>:not(.daily-m-more):not(#daily-f-part):not(#daily-count){display:none!important}
-      #page-daily:not(.m-open) #daily-toolbar-1>:is(.daily-range-label,#daily-range-start,#daily-range-end,span[style]){display:none}
-      #page-daily.m-open #daily-toolbar-2>:is(select,.btn:not(.daily-m-more)){flex:1 1 45%}
       #page-daily #daily-view-mode button[data-mode="flat"]{display:none}
       #page-daily .dc-head{flex-wrap:wrap;gap:8px 10px;padding:12px}
       #page-daily .dc-spacer{display:none}
@@ -8358,6 +8377,90 @@ window.normalizeFullWidth=function(value){
       #leave-table td:nth-child(8)::before{content:'剩餘 ';font-size:11px;font-weight:400;color:var(--text3)}
       #leave-table td:nth-child(9){grid-column:1/-1}
       #leave-table td:nth-child(9) .btn-icon{width:100%;min-height:42px}
+    }
+    /* ── 手機版通用「表格→卡片」(mcApply,見程式 MCARD_PAGES):一列一張卡,每格前面顯示欄位名稱,不用左右滑 ── */
+    @media(max-width:768px),(pointer:coarse) and (max-width:1100px){
+      .mc-scroll{overflow:visible!important;max-height:none!important;width:auto!important}
+      .mc-host{padding:0!important;border:0!important;background:transparent!important;overflow:visible!important;box-shadow:none!important}
+      table.mc-tbl{display:block!important;width:100%!important;min-width:0!important;max-width:none!important;border:0!important;background:transparent!important}
+      table.mc-tbl>thead{display:none!important}
+      table.mc-tbl>:is(tbody,tfoot){display:block!important}
+      table.mc-tbl>:is(tbody,tfoot)>tr{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;margin:0 0 10px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg2)}
+      table.mc-tbl>tfoot>tr{border-color:var(--accent2);background:var(--bg3)}
+      table.mc-tbl>:is(tbody,tfoot)>tr.mc-full{display:block!important}
+      table.mc-tbl>:is(tbody,tfoot)>tr>:is(td,th){display:block!important;position:static!important;left:auto!important;width:auto!important;min-width:0!important;max-width:none!important;height:auto!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;text-align:left!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere;font-size:14px;line-height:1.45}
+      table.mc-tbl>:is(tbody,tfoot)>tr>[data-mcl]::before{content:attr(data-mcl);display:block;margin-bottom:2px;font:400 11px var(--sans);letter-spacing:0;color:var(--text3);white-space:normal}
+      table.mc-tbl>:is(tbody,tfoot)>tr>.mc-title{grid-column:1/-1;order:-1;font-size:16px!important;font-weight:600;color:var(--text)}
+      table.mc-tbl>:is(tbody,tfoot)>tr>.mc-title::before{display:none!important}
+      table.mc-tbl>:is(tbody,tfoot)>tr>.mc-wide{grid-column:1/-1}
+      table.mc-tbl>:is(tbody,tfoot)>tr>.mc-empty{display:none!important}
+      table.mc-tbl :is(input:not([type=checkbox]):not([type=radio]),select,textarea){box-sizing:border-box;width:100%!important;min-width:0!important;min-height:40px;font-size:16px!important}
+      table.mc-tbl .btn,table.mc-tbl button{min-height:36px}
+      /* 薪資計算:數字欄多,三欄排;「實發」放到卡片右上角,一眼看到 */
+      #page-payroll table.mc-tbl>:is(tbody,tfoot)>tr{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px}
+      #pr-body-pay>tr>.mc-title,#pr-foot-pay>tr>.mc-title{grid-column:1/3}
+      #pr-body-pay>tr>td:nth-child(20){order:-1;grid-column:3;text-align:right!important;font-size:17px!important;font-weight:700;color:var(--accent2)}
+      #pr-foot-pay>tr>td:nth-child(17){order:-1;grid-column:3;text-align:right!important;font-size:17px!important;font-weight:700;color:var(--accent2)}
+      #pr-body-pay>tr>td:nth-child(21){grid-column:1/-1}
+      #pr-body-pay>tr>td:nth-child(21)::before{display:none!important}
+      #pr-body-pay>tr>td:nth-child(21) a{display:flex;align-items:center;justify-content:center;min-height:40px;border:1px solid var(--accent2);border-radius:10px}
+      /* 分頁列:不換行、左右滑(原本被擠成直排一字一行) */
+      :is(#page-output,#page-pricing) :is(.layout-tabs,.pr-tabs){flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+      :is(#page-output,#page-pricing) :is(.layout-tabs,.pr-tabs)::-webkit-scrollbar{display:none}
+      :is(#page-output,#page-pricing) .layout-tab{flex:none!important;white-space:nowrap;padding:10px 14px}
+      /* 產值回報各分頁的日期工具列:按鈕三顆一排等寬,日期整列,區間兩格並排 */
+      #page-output .ovr-toolbar{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:center}
+      #page-output .ovr-toolbar>*{grid-column:1/-1;min-width:0;margin:0!important}
+      #page-output .ovr-toolbar>.btn{grid-column:span 2;justify-content:center;min-height:40px;padding:0 6px;white-space:nowrap}
+      #page-output .ovr-toolbar>input{grid-column:span 3;box-sizing:border-box;width:100%!important;min-height:42px;font-size:16px!important}
+      #page-output :is(#ovr-one-view,#ovr-daily-view) .ovr-toolbar>input{grid-column:1/-1;order:-1}
+      #page-output .ovr-toolbar>span{font-size:12px}
+      #page-output .ovr-toolbar>span:empty{display:none}
+      #page-output .ovr-toolbar>:is(.date-wk-show,.mc-hide){display:none!important}
+      #page-output .ovr-toolbar>.btn:last-child{grid-column:1/-1}
+      #page-output .ovr-toolbar>.ovr-seg-sep{border-left:0;padding-left:0;margin-left:0}
+      #output-report-panel .ovr-stat-head{width:auto!important}
+      #output-report-panel .ovr-stat-cards{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));flex:1 1 100%!important}
+      #output-report-panel .ovr-stat-card{min-width:0!important}
+      /* 計價:底部合計區改單欄,標籤不再被擠成一字一行 */
+      #page-pricing .pr-foot-grid{grid-template-columns:minmax(0,1fr)!important}
+      #page-pricing .pr-sum-row{gap:10px;min-width:0}
+      #page-pricing .pr-sum-row .pr-sum-label{flex:1 1 auto;min-width:0}
+      #page-pricing .pr-sum-row input{flex:none;font-size:16px}
+      /* 水電靠模:每組一張卡,第一行 W/H/R、第二行內匡/外匡結果,不必左右滑 */
+      #page-dxf .dxf-table-wrap{overflow:visible}
+      #page-dxf .dxf-rows{min-width:0!important}
+      #page-dxf .table-header,#page-dxf .dxf-row{grid-template-columns:24px repeat(3,minmax(0,1fr)) 34px;min-width:0;gap:6px}
+      #page-dxf .table-header>div:nth-child(n+5){display:none}
+      #page-dxf .dxf-row{padding:10px 8px;row-gap:8px}
+      #page-dxf .dxf-row input[type=number]{min-width:0;min-height:42px;font-size:16px}
+      #page-dxf .dxf-row>.btn-del{grid-column:5;grid-row:1}
+      #page-dxf .dxf-row>.calc-cell{grid-row:2;font-size:13px}
+      #page-dxf .dxf-row>.calc-cell:nth-of-type(2){grid-column:2/4}
+      #page-dxf .dxf-row>.calc-cell:nth-of-type(3){grid-column:4/6}
+      #page-dxf .dxf-row>.calc-cell::before{display:block;font-size:11px;color:var(--text3)}
+      #page-dxf .dxf-row>.calc-cell:nth-of-type(2)::before{content:'內匡'}
+      #page-dxf .dxf-row>.calc-cell:nth-of-type(3)::before{content:'外匡'}
+      #page-dxf .dxf-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      #page-dxf .dxf-actions>.btn{min-width:0;min-height:44px;justify-content:center;margin:0}
+      #page-dxf .dxf-actions>.btn-gen{grid-column:1/-1}
+      #page-dxf .global-r-bar{flex-wrap:wrap;gap:8px}
+      #page-dxf .global-r-bar input{flex:1 1 0;min-width:0;font-size:16px}
+      #page-dxf .log-actions-bar{display:flex;flex-wrap:wrap;gap:8px;width:100%}
+      #page-dxf .log-actions-bar .log-filter{flex:1 1 100%;min-width:0;min-height:42px;font-size:16px}
+      #page-dxf .log-actions-bar .btn-sm{flex:1 1 0;min-height:40px}
+      #page-dxf .log-table td.frames span{margin-bottom:4px}
+      /* 操作紀錄:篩選列兩欄對齊 */
+      #page-audit #audit-toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      #page-audit #audit-toolbar>*{min-width:0;margin:0}
+      #page-audit #audit-toolbar>#audit-f-user{grid-column:1/-1}
+      #page-audit #audit-toolbar :is(select,input){box-sizing:border-box;width:100%!important;min-height:42px;font-size:16px}
+      #page-audit #audit-toolbar>span:has(>input[type=date]){display:flex!important;flex-direction:column;align-items:stretch!important;gap:2px!important}
+      #page-audit #audit-toolbar .date-wk-show{font-size:12px;text-align:center}
+      #page-audit #audit-toolbar>span:not(:has(input)):not(#audit-count){display:none}
+      #page-audit #audit-toolbar>#audit-f-q{grid-column:1/-1}
+      #page-audit #audit-toolbar>.btn{min-height:42px;justify-content:center}
+      #page-audit #audit-count{align-self:center;text-align:right}
     }
     /* ── 出勤回報 手機版：點名／加班／明細＋LINE 回報（attMRender，只在手機與觸控平板出現）── */
     #att-m-wrap:empty{display:none}
@@ -23639,7 +23742,7 @@ let allAccounts=[], accStaffList=[], accStatusFilter='';
 async function loadAccounts(silent) {
   const body=document.getElementById('accounts-body');
   // silent=true(背景輪詢刷新):不清空表格、不顯示「載入中」,避免每個輪詢週期畫面就閃一次。
-  if(!silent) body.innerHTML='<tr><td colspan="9" class="empty-state">載入中...</td></tr>';
+  if(!silent) body.innerHTML='<tr><td colspan="10" class="empty-state">載入中...</td></tr>';
   const [pRes,sRes]=await Promise.all([
     // select=* 才不會因為新欄位(例如 hours_exempt)還沒建立就整頁回 400
     sbFetchAll('/rest/v1/profiles?select=*&order=account'),
@@ -23679,7 +23782,7 @@ function filterAccounts(){
 }
 function renderAccounts(list){
   const body=document.getElementById('accounts-body');
-  if(!list.length){body.innerHTML='<tr><td colspan="9" class="empty-state">無帳號資料</td></tr>';return;}
+  if(!list.length){body.innerHTML='<tr><td colspan="10" class="empty-state">無帳號資料</td></tr>';return;}
   const staffOpts=id=>['<option value="">— 未綁定 —</option>'].concat(
     (accStaffList||[]).map(s=>`<option value="${s.id}"${String(s.id)===String(id)?' selected':''}>${(s.name||'').replace(/</g,'&lt;')}</option>`)
   ).join('');
@@ -23703,6 +23806,10 @@ function renderAccounts(list){
     <td><input type="text" class="acc-name search-input" style="width:140px;padding:6px 8px" value="${(a.name||'').replace(/"/g,'&quot;')}" placeholder="(用名冊姓名)" onchange="saveAccountRow('${jid}',this)"/></td>
     <td><select class="acc-staff filter-select" style="min-width:130px" onchange="saveAccountRow('${jid}',this)">${staffOpts(a.staff_id)}</select></td>
     <td style="text-align:center"><input type="checkbox" class="acc-admin" ${a.is_admin?'checked':''} style="width:16px;height:16px;cursor:pointer" onchange="saveAccountRow('${jid}',this)"/></td>
+    <td style="white-space:nowrap;font-size:12px;line-height:1.9">
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer" title="看得到的頁面全部只能看不能改(資料庫也擋)"><input type="checkbox" ${a.read_only?'checked':''} style="width:15px;height:15px;cursor:pointer" onchange="toggleAccountFlag('${jid}','read_only',this)"/>唯讀</label>
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer" title="任何電腦/手機登入都自動核准,不用逐台審核"><input type="checkbox" ${a.device_exempt?'checked':''} style="width:15px;height:15px;cursor:pointer" onchange="toggleAccountFlag('${jid}','device_exempt',this)"/>裝置免核准</label>
+    </td>
     <td style="text-align:center;white-space:nowrap">
       <div>${badge}</div>
       <div style="margin-top:4px;display:flex;flex-wrap:nowrap;gap:4px;justify-content:center">${actionBtns}</div>
@@ -23766,6 +23873,19 @@ async function toggleAccountDisabled(id,disabled){
   if(!r.ok){ alert('更新失敗('+r.status+')'); return; }
   acc.disabled=disabled;
   filterAccounts();
+}
+// ── 唯讀帳號 / 裝置免核准(即時 PATCH;欄位見 read_only_account_migration.sql、device_exempt_migration.sql)──
+async function toggleAccountFlag(id,field,el){
+  const acc=allAccounts.find(a=>String(a.id)===String(id)); if(!acc) return;
+  const on=!!el.checked, who=acc.account||acc.name||id;
+  if(field==='read_only'&&currentUser&&String(currentUser.id)===String(id)&&on){ alert('不能把自己設成唯讀,否則就改不回來了。'); el.checked=false; return; }
+  const msg=field==='read_only'
+    ? (on?`確定把「${who}」設成唯讀?\n看得到的頁面全部只能看、不能新增/修改/刪除(資料庫也會擋)。${acc.is_admin?'\n他是管理員:一樣看得到全部,但不能改。':''}`:`確定取消「${who}」的唯讀?`)
+    : (on?`確定讓「${who}」的所有裝置自動核准?\n之後他用任何電腦/手機登入都不用再審核。`:`確定取消「${who}」的裝置免核准?\n已核准的裝置不受影響,之後的新裝置要重新審核。`);
+  if(!await uiConfirm(msg)){ el.checked=!on; return; }
+  const r=await sbFetch(`/rest/v1/profiles?id=eq.${id}`,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({[field]:on})});
+  if(!r.ok){ el.checked=!on; alert('更新失敗('+r.status+')'); return; }
+  acc[field]=on;
 }
 // ── 強制登出(踢人):寫入 force_logout_at,對方裝置會在下一次線上狀態回報週期內偵測到並自動登出 ──
 // 注意:本功能需要 profiles 資料表有 force_logout_at (timestamptz) 欄位,若尚未新增,PATCH 會失敗並顯示提示。
@@ -60084,6 +60204,106 @@ async function ldDashPlan(){
     if(typeof isGuest!=='undefined'&&(isGuest||!currentSession)){showView('list');el('spc-list').innerHTML='<div class="spc-empty">登入後才能使用 SP清點</div>';return;}
     if(view&&view.spzone)openZone(view.spproj,view.spzone);else spcShowList();
   };
+})();
+</script>
+<script>
+// ══════════ 手機版通用「表格→卡片」══════════
+// 寬表格在手機上左右滑很難查:把指定頁面裡的表格每一列排成一張卡,每格前面自動帶出表頭的欄位名稱
+// (表頭有合併格的,取「上層·下層」)。只改畫面,不動各頁的商業邏輯;各頁重畫表格後自動重新套用。
+// 第一個有內容的格當卡片標題;長文字整列寬;空白格不顯示;合併很多欄的列(分組/小計)整條顯示。
+// 不想被轉的表格加 class="mc-off";某一格固定整列寬加 class="mc-wide mc-wide-fixed"。
+(function(){
+  const MCARD_PAGES=['output','dxf','payroll','leave','pricing','audit'];
+  const MQ=window.matchMedia('(max-width:768px),(pointer:coarse) and (max-width:1100px)');
+  const MIN_COLS=4;
+  const clean=t=>String(t||'').replace(/[▼▾⏷⇅↕]/g,'').replace(/\s+/g,' ').trim();
+  // 表頭(含 colspan/rowspan)→ 每一欄的名稱
+  function headLabels(table){
+    const rows=table.tHead?[...table.tHead.rows]:[];
+    const grid=[];
+    rows.forEach((tr,ri)=>{
+      grid[ri]=grid[ri]||[];
+      let c=0;
+      [...tr.cells].forEach(th=>{
+        while(grid[ri][c]!==undefined) c++;
+        const cs=Math.max(1,th.colSpan|0), rs=Math.max(1,th.rowSpan|0), tx=clean(th.textContent);
+        for(let r=0;r<rs;r++){ grid[ri+r]=grid[ri+r]||[]; for(let k=0;k<cs;k++) grid[ri+r][c+k]=tx; }
+        c+=cs;
+      });
+    });
+    const n=grid.reduce((m,r)=>Math.max(m,r.length),0);
+    const out=[];
+    for(let c=0;c<n;c++){
+      const parts=[]; grid.forEach(r=>{ const t=r[c]; if(t&&parts[parts.length-1]!==t) parts.push(t); });
+      out[c]=parts.join('·');
+    }
+    return out;
+  }
+  function isEmptyCell(td){
+    if(td.querySelector('input,select,textarea,button,img,svg,canvas,a,label')) return false;
+    const t=td.textContent.replace(/\s+/g,'');
+    return t===''||t==='—'||t==='-';
+  }
+  function applyTable(table){
+    if(table.classList.contains('mc-off')||table.closest('.modal-overlay,[role=dialog],.mc-off')) return;
+    const labels=headLabels(table);
+    if(labels.length<MIN_COLS){ unapplyTable(table); return; }
+    table.classList.add('mc-tbl');
+    const sc=table.parentElement;
+    if(sc&&!sc.classList.contains('page')){
+      sc.classList.add('mc-scroll');
+      const host=sc.parentElement;
+      if(host&&host.classList.contains('card')&&host.children.length===1) host.classList.add('mc-host');
+    }
+    const half=Math.max(3,Math.ceil(labels.length/2));
+    [...table.tBodies,table.tFoot].filter(Boolean).forEach(sec=>[...sec.rows].forEach(tr=>{
+      const cells=[...tr.cells];
+      const full=cells.length<=2 && cells.some(td=>(td.colSpan|0)>=half);
+      tr.classList.toggle('mc-full',full);
+      let c=0, firstSet=false;
+      cells.forEach(td=>{
+        const cs=Math.max(1,td.colSpan|0), lb=labels[c]||'';
+        if(lb && !full) td.setAttribute('data-mcl',lb); else td.removeAttribute('data-mcl');
+        const empty=!full&&isEmptyCell(td);
+        td.classList.toggle('mc-empty',empty);
+        const title=!full&&!firstSet&&!empty;
+        td.classList.toggle('mc-title',title); if(title) firstSet=true;
+        if(!td.classList.contains('mc-wide-fixed')) td.classList.toggle('mc-wide', !title && (cs>=2 || td.textContent.trim().length>18));
+        c+=cs;
+      });
+    }));
+  }
+  function unapplyTable(table){
+    if(!table.classList.contains('mc-tbl')) return;
+    table.classList.remove('mc-tbl');
+    const sc=table.parentElement; if(!sc) return;
+    sc.classList.remove('mc-scroll');
+    sc.parentElement&&sc.parentElement.classList.remove('mc-host');
+  }
+  let busy=false;
+  function scanPage(page){
+    if(!page) return;
+    busy=true;
+    try{
+      page.querySelectorAll('table').forEach(t=>MQ.matches?applyTable(t):unapplyTable(t));
+      // 工具列裡單獨一個「~」的分隔字:手機排成兩格並排時用不到
+      page.querySelectorAll('.ovr-toolbar>span,.toolbar>span').forEach(sp=>sp.classList.toggle('mc-hide',/^[~～]$/.test(sp.textContent.trim())));
+    }
+    finally{ setTimeout(()=>{busy=false;},0); }   // 自己改 class 觸發的變動不要再排一次
+  }
+  const pending=new Set(); let raf=0;
+  function queue(page){ if(!page) return; pending.add(page); if(!raf) raf=setTimeout(()=>{ raf=0; const ps=[...pending]; pending.clear(); ps.forEach(scanPage); },30); }   // 不用 rAF:背景分頁 rAF 不會跑
+  function init(){
+    MCARD_PAGES.forEach(k=>{
+      const page=document.getElementById('page-'+k); if(!page) return;
+      new MutationObserver(()=>{ if(!busy) queue(page); }).observe(page,{childList:true,subtree:true});
+      queue(page);
+    });
+    const onMq=()=>window.mcRescan();
+    MQ.addEventListener?MQ.addEventListener('change',onMq):MQ.addListener(onMq);
+  }
+  window.mcRescan=()=>MCARD_PAGES.forEach(k=>queue(document.getElementById('page-'+k)));
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 })();
 </script>
 </body>
