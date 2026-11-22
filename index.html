@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.22.11"/>
+<meta name="sc-version" content="2026.11.22.12"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -8714,12 +8714,12 @@ window.normalizeFullWidth=function(value){
       #output-billing-panel table.mc-focus>tbody>tr>td.bl-mact{order:100;display:flex!important;flex:1 1 100%!important;max-width:none!important;flex-wrap:wrap;gap:6px;margin:0!important;padding:4px 0 0!important;border:0!important;background:none!important}
       #output-billing-panel table.mc-focus>tbody>tr>td.bl-mact::before{display:none!important}
       #output-billing-panel table.mc-focus>tbody>tr>td.bl-mact .btn{flex:1 1 calc(50% - 3px);justify-content:center;min-height:40px;padding:0 6px;font-size:13px;white-space:nowrap}
-      #output-billing-panel table.mc-focus>tbody>tr>td.bl-mact .btn[data-a=next]{flex-basis:100%;min-height:44px;font-weight:700;background:var(--accent2);border-color:var(--accent2);color:#fff}
+      #output-billing-panel table.mc-focus>tbody>tr>td.bl-mact .btn[data-a=next]{flex:2 1 0;min-height:44px;font-weight:700;background:var(--accent2);border-color:var(--accent2);color:#fff}
       #output-billing-panel .bl-foot{bottom:calc(69px + env(safe-area-inset-bottom));gap:6px 8px;margin:8px 0 0;padding:8px 10px}
       #output-billing-panel .bl-foot-n,#output-billing-panel .bl-foot-sum{font-size:12px}
       #output-billing-panel .bl-foot-sum{margin-right:0;margin-left:auto}
       #output-billing-panel .bl-foot-sum b{font-size:15px}
-      #output-billing-panel .bl-foot>button{flex:1 1 calc(50% - 4px);justify-content:center;min-height:42px;padding:0 6px;font-size:13px;white-space:nowrap}
+      #output-billing-panel .bl-foot>button{flex:1 1 100%;justify-content:center;min-height:42px;padding:0 6px;font-size:13px;white-space:nowrap}
       /* 分頁列:不換行、左右滑(原本被擠成直排一字一行) */
       :is(#page-output,#page-pricing) :is(.layout-tabs,.pr-tabs){flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
       :is(#page-output,#page-pricing) :is(.layout-tabs,.pr-tabs)::-webkit-scrollbar{display:none}
@@ -42217,35 +42217,13 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(f==='other') return ['已請款','未請款','未議價','點工計價'].indexOf(st)<0;
     return st===f;
   }
-  // 「填入預估」可用的列:本期有自己的產量、單價已議、不是轉包/水電承接列
-  function blEstOf(row,withBacklog){
-    if(!row||row.carry_from_first||row.is_sub||row.price_note) return 0;
-    var v=row.backlog_only?0:num(row.total);
-    if(withBacklog) (row.backlog||[]).forEach(function(p){ v+=num(p.total); });
-    return Math.round(v);
-  }
-  // 未填請款價格的列一次帶入預估(有前期未請的列不動:那會連前期一起核銷,要人工確認)
-  window.blFillEst=async function(round){
-    var list=(blRowsCache[round]||[]).filter(function(row){
-      if(row.zid==null||blRowBacklog(row)) return false;
-      var rec=blRecords[round+'|'+row.zid]||{};
-      return !hasBillInput(rec.bill_price) && num(row.unit_price)>0 && blEstOf(row)>0;
-    });
-    if(!list.length){ await uiConfirm('第'+(round===1?'一':'二')+'次計價沒有可以帶入預估的列(請款價格都填了,或單價未議)。',{okText:'知道了',cancelText:'關閉'}); return; }
-    var sum=list.reduce(function(a,row){ return a+blEstOf(row); },0);
-    if(!await uiConfirm('把第'+(round===1?'一':'二')+'次計價「請款價格還沒填」的 '+list.length+' 筆,帶入預估總價?\n合計 '+ntd(sum)+'\n\n(有前期未請款的列不會動,請個別確認)',{okText:'帶入',danger:false})) return;
-    list.forEach(function(row){ blCell(round,row.zid,'bill_price',String(blEstOf(row))); });
-    blRenderRound(round);
-  };
   // ── 手機:點卡片才展開填寫 ──
   function blMobile(){ var t=document.querySelector('#output-billing-panel .bl-round table'); return !!(t&&t.classList.contains('mc-tbl')); }
   function blMobActions(tr,round,idx){
     if(tr.querySelector('td.bl-mact')) return;
     var row=(blRowsCache[round]||[])[idx]; if(!row||row.zid==null) return;
-    var est=blEstOf(row,true), hasPrice=!!tr.querySelector('input[id$="-price"]');
     var td=document.createElement('td'); td.className='bl-mact';
-    td.innerHTML=(hasPrice&&est>0?'<button type="button" class="btn" data-a="est">填入預估 '+money(est)+'</button>':'')
-      +(tr.querySelector('input[id$="-date"]')?'<button type="button" class="btn" data-a="today">日期填今天</button>':'')
+    td.innerHTML=(tr.querySelector('input[id$="-date"]')?'<button type="button" class="btn" data-a="today">日期填今天</button>':'')
       +'<button type="button" class="btn" data-a="close">收起</button>'
       +'<button type="button" class="btn btn-primary" data-a="next">存好,下一筆 ›</button>';
     tr.appendChild(td);
@@ -42266,8 +42244,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(btn){
       var round=tr.closest('.bl-round-2')?2:1, idx=+tr.dataset.blIdx, row=(blRowsCache[round]||[])[idx]; if(!row) return;
       var a=btn.dataset.a;
-      if(a==='est'){ var pi=tr.querySelector('input[id$="-price"]'); if(pi){ pi.value=fmtBill(String(blEstOf(row,true))); blCell(round,row.zid,'bill_price',pi.value); } }
-      else if(a==='today'){ var di=tr.querySelector('input[id$="-date"]'); if(di){ di.value=today(); blCell(round,row.zid,'bill_date',di.value); } }
+      if(a==='today'){ var di=tr.querySelector('input[id$="-date"]'); if(di){ di.value=today(); blCell(round,row.zid,'bill_date',di.value); } }
       else if(a==='close'){ blMobClose(tr); }
       else if(a==='next'){
         btn.textContent='儲存中…'; await blFlushPending();
@@ -43139,7 +43116,6 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var ft=document.getElementById('bl-foot');
       if(ft) ft.innerHTML='<span class="bl-foot-n">已填 <b>'+cnt['已請款']+' / '+cnt.all+'</b></span>'
         +'<span class="bl-foot-sum">實際請款合計 <b>'+ntd(billed)+'</b></span>'
-        +'<button type="button" class="btn bl-foot-est" onclick="blFillEst('+round+')" title="請款價格還沒填的列,一次帶入預估總價(有前期未請的列不動)">⇣ 未填的全部帶入預估</button>'
         +'<button type="button" class="btn-add-new bl-foot-arc" onclick="blArchive()" title="第一次、第二次計價已請款的列一起封存">📦 封存本次請款</button>';
     }
   };
