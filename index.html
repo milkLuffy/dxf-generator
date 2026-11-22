@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.22.3"/>
+<meta name="sc-version" content="2026.11.22.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5917,6 +5917,15 @@ window.normalizeFullWidth=function(value){
         @media(max-width:760px){.yr-kpis{grid-template-columns:1fr}}
         .ub-group-h{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent2);margin:18px 0 8px}
         .ub-group-h .ubh-n,.ar-more{display:none}
+        .lv-rule-card{margin-top:12px;padding:12px 14px}
+        .lv-rule-h{font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px}
+        .lv-rule-h span{margin-left:8px;font-size:11px;font-weight:400;color:var(--text3)}
+        .lv-rule-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:12px;align-items:start}
+        .lv-rule-table{width:100%;font-size:13px}
+        .lv-rule-table td:first-child{white-space:nowrap;color:var(--text2)}
+        .lv-rule-table td:last-child{color:var(--text)}
+        .lv-rule-sub{font-size:11px;color:var(--text3)}
+        .ar-g1 .ar-head .ubh-t{color:var(--yellow)}
         .ub-report-months{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,280px));gap:8px;width:fit-content;max-width:100%;margin:10px 0 14px}
         .ub-report-month{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);padding:8px 10px;font-family:var(--mono)}
         .ub-report-month .m{font-size:12px;font-weight:700;color:var(--accent2);margin-bottom:5px}
@@ -6774,6 +6783,35 @@ window.normalizeFullWidth=function(value){
               <th>應給</th><th>已休</th><th>已折現</th><th>剩餘</th><th>登記</th>
             </tr></thead>
             <tbody id="leave-body"><tr><td colspan="9" class="empty-state">載入中...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card lv-rule-card">
+        <div class="lv-rule-h">台灣特休規則<span>勞動基準法第 38 條</span></div>
+        <div class="lv-rule-grid">
+          <table class="data-table mc-off lv-rule-table">
+            <thead><tr><th>工作年資</th><th>特休天數</th></tr></thead>
+            <tbody>
+              <tr><td>未滿 6 個月</td><td>0 天</td></tr>
+              <tr><td>6 個月以上、未滿 1 年</td><td>3 天</td></tr>
+              <tr><td>1 年以上、未滿 2 年</td><td>7 天</td></tr>
+              <tr><td>2 年以上、未滿 3 年</td><td>10 天</td></tr>
+              <tr><td>3 年以上、未滿 5 年</td><td>每年 14 天</td></tr>
+              <tr><td>5 年以上、未滿 10 年</td><td>每年 15 天</td></tr>
+              <tr><td>10 年以上</td><td>每多 1 年加 1 天<br><span class="lv-rule-sub">10 年 16 天、15 年 21 天、20 年 26 天</span></td></tr>
+              <tr><td>24 年以上</td><td>30 天(上限)</td></tr>
+            </tbody>
+          </table>
+          <table class="data-table mc-off lv-rule-table">
+            <thead><tr><th>項目</th><th>規定</th></tr></thead>
+            <tbody>
+              <tr><td>本頁計算方式</td><td>週年制:每過一次到職日重新給一次,本期 = 到職週年起算一年</td></tr>
+              <tr><td>誰排休假日</td><td>由勞工排定;雇主有急迫需求或勞工個人因素,雙方可協商調整</td></tr>
+              <tr><td>休假期間工資</td><td>照給,不可扣薪</td></tr>
+              <tr><td>沒休完</td><td>年度終結或離職時沒休完的天數,雇主要發給工資</td></tr>
+              <tr><td>遞延</td><td>勞雇雙方協商後可遞延到下一年度;下一年度終結或離職時仍沒休,再發給工資</td></tr>
+              <tr><td>書面通知</td><td>雇主要把每年特休日期、未休天數與發給的工資記在工資清冊,並每年以書面通知勞工</td></tr>
+            </tbody>
           </table>
         </div>
       </div>
@@ -8444,6 +8482,41 @@ window.normalizeFullWidth=function(value){
       #output-archive-panel .ar-head .ar-more::after{content:'看明細 ▾'}
       #output-archive-panel .ar-group.open .ar-more::after{content:'收合 ▴'}
       #output-archive-panel .ar-group:not(.open)>.card{display:none!important}
+      #output-archive-panel .ar-g1 .ar-head{background:rgba(255,184,0,.10);border-color:rgba(255,184,0,.45)}
+      #output-archive-panel .ar-g1.open .ar-head{border-color:var(--yellow)}
+      #output-archive-panel .ar-g1.open>.card{border-color:var(--yellow)!important;background:rgba(255,184,0,.06)!important}
+      #output-archive-panel .ar-g1 .ar-head .ubh-t{color:var(--yellow)}
+      /* 費率設定:欄位兩欄小格、規則表每種日子一張小卡(四類各一格) */
+      #page-payrollcfg .page-header{flex-wrap:wrap;gap:8px}
+      #page-payrollcfg .page-header>div{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:6px!important}
+      #page-payrollcfg .page-header>div>label{display:none}
+      #page-payrollcfg .page-header>div>#pcfg-eff{grid-column:1/-1;box-sizing:border-box;width:100%;min-height:42px;font-size:16px}
+      #page-payrollcfg .page-header>div>.date-wk-show{display:none}
+      #page-payrollcfg .page-header>div>:is(.btn,.btn-add-new){min-height:40px;justify-content:center;padding:0 6px!important;font-size:13px;white-space:nowrap}
+      #page-payrollcfg .pcfg-card{padding:10px 12px;margin-bottom:8px}
+      #page-payrollcfg .pcfg-card h4{font-size:13px;margin-bottom:8px}
+      #page-payrollcfg .pcfg-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 8px}
+      #page-payrollcfg .pcfg-f{min-width:0;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg3)}
+      #page-payrollcfg .pcfg-f label{font-size:10.5px;line-height:1.3}
+      #page-payrollcfg .pcfg-f input{box-sizing:border-box;width:100%;min-width:0;min-height:34px;font-size:16px;background:var(--bg2)}
+      #page-payrollcfg .pcfg-rules-wrap{overflow:visible}
+      #pcfg-rules.mc-tbl>tbody>tr{gap:6px 8px;margin-bottom:6px;padding:9px 10px;border-radius:10px}
+      #pcfg-rules.mc-tbl>tbody>tr>.mc-title{font-size:14px!important}
+      #pcfg-rules.mc-tbl>tbody>tr:not(.mc-full)>td{grid-column:auto!important}
+      #pcfg-rules.mc-tbl>tbody>tr>td{font-size:12px;padding:6px!important;border:1px solid var(--border)!important;border-radius:8px;background:var(--bg3)!important}
+      #pcfg-rules.mc-tbl>tbody>tr>td::before{font-size:10.5px!important;font-weight:600!important;color:var(--accent2)!important}
+      #pcfg-rules.mc-tbl select{min-height:34px!important;font-size:14px!important}
+      #pcfg-rules.mc-tbl .pr-in{white-space:normal;flex-wrap:wrap}
+      #pcfg-rules.mc-tbl .pr-in input{width:64px!important;min-height:30px!important;font-size:14px!important}
+      #pcfg-rules.mc-tbl>tbody>tr.mc-full>td{border:0!important;background:transparent!important;padding:0!important}
+      #pcfg-grades{display:flex;flex-wrap:wrap;gap:4px}
+      #page-payrollcfg .pcfg-grade input{width:70px;font-size:15px}
+      #page-payrollcfg .pcfg-card>div[style*="display:flex"]{gap:6px!important}
+      #page-payrollcfg .pcfg-card>div[style*="display:flex"]>.btn{flex:1 1 0;min-height:38px;padding:0 4px!important;justify-content:center;white-space:nowrap}
+      #page-payrollcfg #hol-year-label{flex:1 1 100%;order:-1}
+      /* 請假台帳:特休規則表兩張上下排 */
+      #page-leave .lv-rule-grid{grid-template-columns:1fr!important}
+      #page-leave .lv-rule-table td{font-size:13px}
       #output-archive-panel .ar-group.open>.card{padding:8px!important;border:1px solid var(--accent2)!important;border-top:0!important;border-radius:0 0 12px 12px;background:var(--bg3)!important}
       table.mc-tbl.mc-focus td[data-r=m]{flex:0 1 96px}
       #page-output .ub-group-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;margin:22px 2px 8px}
@@ -43161,8 +43234,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
           +'</tr>';
       });
       grand+=sub;
-      var gp=mo.split('|'), gLbl=gp[0]?(gp[0]+' 第'+(gp[1]==='1'?'一':'二')+'次請款'):'(未填請款日期)';
-      html+='<div class="ar-group"><div class="ub-group-h ar-head" onclick="this.parentElement.classList.toggle(\'open\')"><span class="ubh-t">'+esc(gLbl)+'</span>　<span class="ubh-sum"><span class="ubh-lbl">小計 </span>'+ntd(sub)+'</span>'
+      var gp=mo.split('|'), gLbl=gp[0]?(gp[0]+' 第'+(gp[1]==='1'?'一':'二')+'次請款'+(gp[1]==='1'?'(長榮暫估款)':'')):'(未填請款日期)';
+      html+='<div class="ar-group ar-g'+(gp[1]||'0')+'"><div class="ub-group-h ar-head" onclick="this.parentElement.classList.toggle(\'open\')"><span class="ubh-t">'+esc(gLbl)+'</span>　<span class="ubh-sum"><span class="ubh-lbl">小計 </span>'+ntd(sub)+'</span>'
         +'　<span class="ubh-co" style="color:var(--accent3)"><span class="ubh-lbl">鎮山 </span>'+ntd(byCo['鎮山']||0)+'</span>'
         +'　<span class="ubh-co" style="color:var(--yellow)"><span class="ubh-lbl">麗生 </span>'+ntd(byCo['麗生']||0)+'</span>'
         +'<span class="ubh-co ubh-n"><span class="ubh-lbl">筆數 </span>'+rs.length+'</span><span class="ar-more"></span></div>'
@@ -60288,7 +60361,7 @@ async function ldDashPlan(){
 // 第一個有內容的格當卡片標題;長文字整列寬;空白格不顯示;合併很多欄的列(分組/小計)整條顯示。
 // 不想被轉的表格加 class="mc-off";某一格固定整列寬加 class="mc-wide mc-wide-fixed"。
 (function(){
-  const MCARD_PAGES=['output','dxf','payroll','leave','pricing','audit','emp'];
+  const MCARD_PAGES=['output','dxf','payroll','leave','pricing','audit','emp','payrollcfg'];
   const MQ=window.matchMedia('(max-width:768px),(pointer:coarse) and (max-width:1100px)');
   const MIN_COLS=4;
   // 「重點卡片」規格:依表頭名稱指定每一欄的角色,讓卡片有主次——
