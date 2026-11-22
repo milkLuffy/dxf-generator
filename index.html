@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.22.9"/>
+<meta name="sc-version" content="2026.11.22.10"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5921,6 +5921,22 @@ window.normalizeFullWidth=function(value){
         #output-yearly-panel .ov-tbl :is(td,th).yr-ls{color:var(--yellow)}
         /* 請款紀錄:每期一張彙總卡(標題 … 鎮山/麗生 … 小計 … N 筆明細),點了才展開明細表 */
         #output-archive-panel .ar-group{margin-bottom:10px}
+        /* 未請款:每個產量月一張彙總卡(月份 … 小計 … 前往請款核對 … N 筆明細),點了才展開明細表 */
+        #output-unbilled-panel .ub-grid{grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
+        #output-unbilled-panel .ub-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 0;margin:0;padding:12px 18px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);cursor:pointer;font-size:0;user-select:none}
+        #output-unbilled-panel .ub-head:hover{border-color:var(--accent2)}
+        #output-unbilled-panel .ub-head .ubh-t{order:0;font-size:16px;color:var(--text)}
+        #output-unbilled-panel .ub-head .ubh-ym{order:1;margin-left:8px;font:400 12px var(--mono);color:var(--text3)}
+        #output-unbilled-panel .ub-head .ubh-n{display:none}
+        #output-unbilled-panel .ub-head .ubh-sum{order:2;margin-left:auto;font:800 20px var(--mono);color:var(--red)}
+        #output-unbilled-panel .ub-head .ubh-lbl{font:400 11px var(--sans);color:var(--text3)}
+        #output-unbilled-panel .ub-head .ubh-go{order:3;margin-left:18px;font-size:12px}
+        #output-unbilled-panel .ub-head .ar-more{order:4;margin-left:16px;font:400 12px var(--sans);color:var(--accent2);white-space:nowrap}
+        #output-unbilled-panel .ub-head .ar-more::after{content:attr(data-n) ' 筆明細 ▾'}
+        #output-unbilled-panel .ub-month.open .ar-more::after{content:'收合 ▴'}
+        #output-unbilled-panel .ub-month:not(.open)>.card{display:none}
+        #output-unbilled-panel .ub-month.open .ub-head{border-color:var(--accent2);border-radius:12px 12px 0 0}
+        #output-unbilled-panel .ub-month.open>.card{margin:0;border:1px solid var(--accent2);border-top:0;border-radius:0 0 12px 12px}
         #output-archive-panel .ar-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 0;margin:0;padding:12px 18px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);cursor:pointer;font-size:0;user-select:none}
         #output-archive-panel .ar-head:hover{border-color:var(--accent2)}
         #output-archive-panel .ar-head .ubh-t{order:0;font-size:16px;color:var(--text)}
@@ -8541,6 +8557,19 @@ window.normalizeFullWidth=function(value){
       #output-archive-panel .ar-g1.open .ar-head{border-color:var(--yellow)}
       #output-archive-panel .ar-g1.open>.card{border-color:var(--yellow)!important;background:rgba(255,184,0,.06)!important}
       #output-archive-panel .ar-g1 .ar-head .ubh-t{color:var(--yellow)}
+      #output-unbilled-panel .ub-head{padding:10px 12px;margin:0!important}
+      #output-unbilled-panel .ub-month{margin-bottom:0}
+      #output-unbilled-panel .ub-grid{gap:8px!important}
+      #output-unbilled-panel .ub-month.open .ub-head{border-radius:12px 12px 0 0}
+      #output-unbilled-panel .ub-head::after{content:'';flex-basis:100%;height:0;order:5}
+      #output-unbilled-panel .ub-head .ubh-t{font-size:15px}
+      #output-unbilled-panel .ub-head .ubh-n{display:none!important}
+      #output-unbilled-panel .ub-head .ar-more{order:2;margin-left:auto}
+      #output-unbilled-panel .ub-head .ar-more::after{content:attr(data-n) ' 筆 ▾'}
+      #output-unbilled-panel .ub-head .ubh-sum{order:7;margin-left:auto;font-size:19px}
+      #output-unbilled-panel .ub-head .ubh-go{order:8;flex:1 1 100%;margin:4px 0 0;min-height:34px;justify-content:center}
+      #output-unbilled-panel .ub-month:not(.open) .ubh-go{display:none}
+      #output-unbilled-panel .ub-month.open>.card{padding:8px!important;border:1px solid var(--accent2)!important;border-top:0!important;border-radius:0 0 12px 12px;background:var(--bg3)!important}
       /* 費率設定:欄位兩欄小格、規則表每種日子一張小卡(四類各一格) */
       #page-payrollcfg .page-header{flex-wrap:wrap;gap:8px}
       #page-payrollcfg .page-header>div{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:6px!important}
@@ -43175,8 +43204,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         reportLines.push('  '+r.proj_num+' '+reportZone+(r.kind==='水電'?'':' '+r.kind)+'｜'+(r.labor?'點工計價':ntd(r.amount))+'｜'+(r.status||'未請款'));
       });
       reportLines.push('');
-      html+='<section class="ub-month"><div class="ub-group-h"><span class="ubh-t">'+(+ym.slice(5,7))+'月產量</span>　<span class="ubh-ym">('+ym+')</span>　<span class="ubh-sum"><span class="ubh-lbl">小計 </span>'+ntd(sub)+'</span>'
-        +'<span class="ubh-n">'+rs.length+' 筆</span>　<button class="btn ubh-go" style="padding:2px 10px" onclick="blGoMonth(\''+ym+'\')">→ 前往此月請款核對</button></div>'
+      html+='<section class="ub-month"><div class="ub-group-h ub-head" onclick="this.parentElement.classList.toggle(\'open\')"><span class="ubh-t">'+(+ym.slice(5,7))+'月產量</span>　<span class="ubh-ym">('+ym+')</span>　<span class="ubh-sum"><span class="ubh-lbl">小計 </span>'+ntd(sub)+'</span>'
+        +'<span class="ubh-n">'+rs.length+' 筆</span>　<button class="btn ubh-go" style="padding:2px 10px" onclick="event.stopPropagation();blGoMonth(\''+ym+'\')">→ 前往此月請款核對</button><span class="ar-more" data-n="'+rs.length+'"></span></div>'
         +'<div class="card" style="padding:0;overflow:auto"><table class="data-table ov-tbl"><thead><tr>'
         +'<th>次別</th><th>項目</th><th>工程編號</th><th>工程區</th><th>加工代號</th><th>工程副號</th>'
         +'<th class="num">噸數</th><th class="num">支數</th><th class="num">金額</th><th>公司</th><th>狀況</th><th>備註</th>'
