@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.22.8"/>
+<meta name="sc-version" content="2026.11.22.9"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5916,7 +5916,27 @@ window.normalizeFullWidth=function(value){
         .yr-total-row td{font-weight:800;background:var(--bg3);border-top:2px solid var(--border)}
         @media(max-width:760px){.yr-kpis{grid-template-columns:1fr}}
         .ub-group-h{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent2);margin:18px 0 8px}
-        .ub-group-h .ubh-n,.ar-more{display:none}
+        .ub-group-h .ubh-n{display:none}
+        #output-yearly-panel .ov-tbl :is(td,th).yr-zs{color:var(--accent3)}
+        #output-yearly-panel .ov-tbl :is(td,th).yr-ls{color:var(--yellow)}
+        /* 請款紀錄:每期一張彙總卡(標題 … 鎮山/麗生 … 小計 … N 筆明細),點了才展開明細表 */
+        #output-archive-panel .ar-group{margin-bottom:10px}
+        #output-archive-panel .ar-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 0;margin:0;padding:12px 18px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);cursor:pointer;font-size:0;user-select:none}
+        #output-archive-panel .ar-head:hover{border-color:var(--accent2)}
+        #output-archive-panel .ar-head .ubh-t{order:0;font-size:16px;color:var(--text)}
+        #output-archive-panel .ar-head .ubh-co{order:1;margin-left:28px;font:400 13px var(--mono)}
+        #output-archive-panel .ar-head .ubh-n{display:none}
+        #output-archive-panel .ar-head .ubh-lbl{font:400 11px var(--sans);color:var(--text3)}
+        #output-archive-panel .ar-head .ubh-sum{order:2;margin-left:auto;font:800 20px var(--mono);color:var(--accent2)}
+        #output-archive-panel .ar-head .ar-more{order:3;margin-left:20px;font:400 12px var(--sans);color:var(--accent2);white-space:nowrap}
+        #output-archive-panel .ar-head .ar-more::after{content:attr(data-n) ' 筆明細 ▾'}
+        #output-archive-panel .ar-group.open .ar-more::after{content:'收合 ▴'}
+        #output-archive-panel .ar-group:not(.open)>.card{display:none}
+        #output-archive-panel .ar-group.open .ar-head{border-color:var(--accent2);border-radius:12px 12px 0 0}
+        #output-archive-panel .ar-group.open>.card{margin:0;border:1px solid var(--accent2);border-top:0;border-radius:0 0 12px 12px}
+        #output-archive-panel .ar-g1 .ar-head{background:rgba(255,184,0,.10);border-color:rgba(255,184,0,.45)}
+        #output-archive-panel .ar-g1.open .ar-head,#output-archive-panel .ar-g1.open>.card{border-color:var(--yellow)}
+        #output-archive-panel .ar-head .ar-tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:rgba(255,184,0,.18);font:600 11px var(--sans);vertical-align:2px}
         .lv-rule-card{margin-top:12px;padding:12px 14px}
         .lv-rule-h{font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px}
         .lv-rule-h span{margin-left:8px;font-size:11px;font-weight:400;color:var(--text3)}
@@ -8510,7 +8530,7 @@ window.normalizeFullWidth=function(value){
       #output-archive-panel .ar-head .ubh-sum{order:7;margin-left:auto;font:800 19px var(--mono);color:var(--accent2)}
       #output-archive-panel .ar-head .ubh-sum .ubh-lbl{display:block;text-align:right;font:400 10px var(--sans)}
       #output-archive-panel .ar-head::after{content:'';flex-basis:100%;height:0;order:5}
-      #output-archive-panel .ar-head .ubh-co{order:6;flex:0 1 auto;margin-right:16px;font:400 13px var(--mono)}
+      #output-archive-panel .ar-head .ubh-co{order:6;flex:0 1 auto;margin-left:0;margin-right:16px;font:400 13px var(--mono)}
       #output-archive-panel .ar-head .ubh-co .ubh-lbl{display:block;font:400 10px var(--sans);color:var(--text3)}
       #output-archive-panel .ar-head .ubh-n{display:none!important}
       #output-archive-panel .ar-head .ar-more{display:inline!important;order:2;flex:none;align-self:center;margin-left:auto;font-size:12px;color:var(--accent2)}
@@ -43333,11 +43353,11 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       if(r.company==='鎮山') m.zs+=amt; else if(r.company==='麗生') m.ls+=amt; else m.other+=amt;
     });
     var totals=months.reduce(function(a,m){a.total+=m.total;a.zs+=m.zs;a.ls+=m.ls;a.other+=m.other;a.count+=m.count;return a;},{total:0,zs:0,ls:0,other:0,count:0});
-    var body=months.map(function(m,idx){return '<tr><td>'+(idx+1)+' 月</td><td class="num">'+ntd(m.zs)+'</td><td class="num">'+ntd(m.ls)+'</td><td class="num">'+ntd(m.total)+'</td><td class="num">'+m.count.toLocaleString('en-US')+'</td></tr>';}).join('');
-    body+='<tr class="yr-total-row"><td>全年合計</td><td class="num">'+ntd(totals.zs)+'</td><td class="num">'+ntd(totals.ls)+'</td><td class="num">'+ntd(totals.total)+'</td><td class="num">'+totals.count.toLocaleString('en-US')+'</td></tr>';
+    var body=months.map(function(m,idx){return '<tr><td>'+(idx+1)+' 月</td><td class="num yr-zs">'+ntd(m.zs)+'</td><td class="num yr-ls">'+ntd(m.ls)+'</td><td class="num">'+ntd(m.total)+'</td><td class="num">'+m.count.toLocaleString('en-US')+'</td></tr>';}).join('');
+    body+='<tr class="yr-total-row"><td>全年合計</td><td class="num yr-zs">'+ntd(totals.zs)+'</td><td class="num yr-ls">'+ntd(totals.ls)+'</td><td class="num">'+ntd(totals.total)+'</td><td class="num">'+totals.count.toLocaleString('en-US')+'</td></tr>';
     var unclassified=totals.other?'<div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--yellow)">注意：另有未分類公司金額 '+ntd(totals.other)+'，已計入「總金額」，未計入鎮山或麗生。</div>':'';
     el.innerHTML='<div class="yr-kpis">'+yrKpi('總金額',totals.total,'',null,'')+yrKpi('鎮山總金額',totals.zs,'zs',YR_LIMITS.zs,'原年度上限 NT$30,000,000－新營廠預估 NT$12,000,000')+yrKpi('麗生總金額',totals.ls,'ls',YR_LIMITS.ls,'年度上限 NT$30,000,000')+'</div>'
-      +'<div class="card" style="padding:0;overflow:auto"><table class="data-table ov-tbl"><thead><tr><th>月份</th><th class="num">鎮山請款金額</th><th class="num">麗生請款金額</th><th class="num">每月總金額</th><th class="num">封存筆數</th></tr></thead><tbody>'+body+'</tbody></table></div>'+unclassified;
+      +'<div class="card" style="padding:0;overflow:auto"><table class="data-table ov-tbl"><thead><tr><th>月份</th><th class="num yr-zs">鎮山請款金額</th><th class="num yr-ls">麗生請款金額</th><th class="num">每月總金額</th><th class="num">封存筆數</th></tr></thead><tbody>'+body+'</tbody></table></div>'+unclassified;
   };
 
   // 刪除單筆封存紀錄
