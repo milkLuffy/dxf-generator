@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.22.1"/>
+<meta name="sc-version" content="2026.11.22.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5916,6 +5916,7 @@ window.normalizeFullWidth=function(value){
         .yr-total-row td{font-weight:800;background:var(--bg3);border-top:2px solid var(--border)}
         @media(max-width:760px){.yr-kpis{grid-template-columns:1fr}}
         .ub-group-h{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent2);margin:18px 0 8px}
+        .ub-group-h .ubh-n{display:none}
         .ub-report-months{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,280px));gap:8px;width:fit-content;max-width:100%;margin:10px 0 14px}
         .ub-report-month{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);padding:8px 10px;font-family:var(--mono)}
         .ub-report-month .m{font-size:12px;font-weight:700;color:var(--accent2);margin-bottom:5px}
@@ -8396,6 +8397,47 @@ window.normalizeFullWidth=function(value){
       table.mc-tbl>:is(tbody,tfoot)>tr>.mc-empty{display:none!important}
       table.mc-tbl :is(input:not([type=checkbox]):not([type=radio]),select,textarea){box-sizing:border-box;width:100%!important;min-width:0!important;min-height:40px;font-size:16px!important}
       table.mc-tbl .btn,table.mc-tbl button{min-height:36px}
+      /* 重點卡片(MC_SPECS):第一行 標題…金額,第二行小標籤,第三行數字並排 */
+      table.mc-tbl.mc-focus>:is(tbody,tfoot)>tr:not(.mc-full){display:flex!important;flex-wrap:wrap;align-items:flex-end;gap:8px 12px}
+      table.mc-tbl.mc-focus>:is(tbody,tfoot)>tr:not(.mc-full)::before,table.mc-tbl.mc-focus>:is(tbody,tfoot)>tr:not(.mc-full)::after{content:'';flex-basis:100%;height:0}
+      table.mc-tbl.mc-focus>:is(tbody,tfoot)>tr::before{order:3}
+      table.mc-tbl.mc-focus>:is(tbody,tfoot)>tr::after{order:5}
+      table.mc-tbl.mc-focus td[data-r]::before{display:none}
+      table.mc-tbl.mc-focus td[data-r=t]{order:1;flex:none;font:700 17px var(--sans)!important;color:var(--text)!important}
+      table.mc-tbl.mc-focus td[data-r=a]{order:2;margin-left:auto;text-align:right!important;font:800 18px var(--mono)!important;color:var(--mc-amt,var(--accent2))!important;white-space:nowrap!important}
+      table.mc-tbl.mc-focus td[data-r=a]::before{display:block!important;content:attr(data-mcl);font:400 10px var(--sans);color:var(--text3)}
+      table.mc-tbl.mc-focus td[data-r=c]{order:4;flex:none;padding:2px 9px!important;border-radius:999px;background:var(--bg3)!important;font-size:12px!important;color:var(--text2)}
+      table.mc-tbl.mc-focus td[data-r=m],table.mc-tbl.mc-focus td[data-r=f]{order:6;flex:1 1 68px;font-size:14px}
+      table.mc-tbl.mc-focus td[data-r=f]{order:7;flex:1 1 calc(50% - 6px)}
+      table.mc-tbl.mc-focus td:is([data-r=m],[data-r=f])::before{display:block!important;content:attr(data-mcl);margin-bottom:1px;font:400 10px var(--sans);color:var(--text3)}
+      table.mc-tbl.mc-focus td[data-r=s]{order:6;flex:none;margin-left:auto}
+      table.mc-tbl.mc-focus td[data-r=n]{order:8;flex:1 1 100%;font-size:12px!important;color:var(--text3)}
+      table.mc-tbl.mc-focus td[data-r=n]::before{display:inline!important;content:attr(data-mcl) '：';font-size:11px}
+      table.mc-tbl.mc-focus td[data-r=x]{order:9;flex:none;margin-left:auto}
+      table.mc-tbl.mc-focus td[data-r=h]{display:none!important}
+      table.mc-tbl.mc-focus>tfoot>tr td[data-r=t]{color:var(--accent2)!important}
+      table.mc-tbl.mc-focus td[data-r=m]{flex:0 1 96px}
+      #page-output .ub-group-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;margin:22px 2px 8px}
+      #page-output .ub-group-h .ubh-t{font-size:16px;color:var(--text)}
+      #page-output .ub-group-h .ubh-ym{font-size:12px;font-weight:400;color:var(--text3)}
+      #page-output .ub-group-h .ubh-sum{margin-left:auto;font-size:17px;color:var(--text)}
+      #page-output .ub-group-h .ubh-lbl{font-size:11px;font-weight:400;color:var(--text3)}
+      #page-output .ub-group-h .ubh-n{display:inline;font-size:11px;font-weight:400;color:var(--text3)}
+      #page-output .ub-group-h .ubh-co{font-size:12px}
+      #page-output .ub-group-h .ubh-go{flex:1 1 100%;min-height:38px;margin-top:6px;justify-content:center}
+      #page-output .ub-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+      #page-output .ub-summary .bl-scard:first-child{grid-column:1/-1}
+      #page-output .ub-summary .bl-scard:first-child .big{font-size:24px}
+      #page-output .ub-month .card,#output-archive-panel .card:has(table){overflow:visible!important}
+      /* 請款核對:金額格裡的「＋前期未請…」換行小字;計價期間標題列、兩個日期並排;整列提示用一般字級 */
+      #output-billing-panel td[data-r=a]{max-width:62%;white-space:normal!important}
+      #output-billing-panel td[data-r=a] .bl-backlog{display:block;margin-top:2px;font:600 11px var(--mono);white-space:normal;text-align:right}
+      #output-billing-panel .bl-round-h{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 8px;align-items:center}
+      #output-billing-panel .bl-round-h>:is(.bl-round-title,.ovr-seg-sep){grid-column:span 1;border:0;padding:0;margin:0}
+      #output-billing-panel .bl-round-h>.ovr-seg-sep{text-align:right}
+      #output-billing-panel .bl-round-h>span[style]{display:none}
+      #output-billing-panel .bl-round-h>input{box-sizing:border-box;width:100%!important;min-width:0;min-height:42px;font-size:16px}
+      #output-billing-panel tr.mc-full>td{font-size:13px!important;font-weight:400!important;line-height:1.6}
       /* 薪資計算:數字欄多,三欄排;「實發」放到卡片右上角,一眼看到 */
       #page-payroll table.mc-tbl>:is(tbody,tfoot)>tr{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px}
       #pr-body-pay>tr>.mc-title,#pr-foot-pay>tr>.mc-title{grid-column:1/3}
@@ -8418,6 +8460,7 @@ window.normalizeFullWidth=function(value){
       #page-output .ovr-toolbar>span:empty{display:none}
       #page-output .ovr-toolbar>:is(.date-wk-show,.mc-hide){display:none!important}
       #page-output .ovr-toolbar>.btn:last-child{grid-column:1/-1}
+      #page-output .ovr-toolbar>input.search-input{grid-column:1/-1;max-width:none!important}
       #page-output .ovr-toolbar>.ovr-seg-sep{border-left:0;padding-left:0;margin-left:0}
       #output-report-panel .ovr-stat-head{width:auto!important}
       /* 每日產值回報等:電腦版「依內容寬度」的外框,手機改成撐滿,卡片才不會只佔左半邊 */
@@ -42970,8 +43013,8 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
         reportLines.push('  '+r.proj_num+' '+reportZone+(r.kind==='水電'?'':' '+r.kind)+'｜'+(r.labor?'點工計價':ntd(r.amount))+'｜'+(r.status||'未請款'));
       });
       reportLines.push('');
-      html+='<section class="ub-month"><div class="ub-group-h">'+(+ym.slice(5,7))+'月產量　('+ym+')　小計 '+ntd(sub)
-        +'　<button class="btn" style="padding:2px 10px" onclick="blGoMonth(\''+ym+'\')">→ 前往此月請款核對</button></div>'
+      html+='<section class="ub-month"><div class="ub-group-h"><span class="ubh-t">'+(+ym.slice(5,7))+'月產量</span>　<span class="ubh-ym">('+ym+')</span>　<span class="ubh-sum"><span class="ubh-lbl">小計 </span>'+ntd(sub)+'</span>'
+        +'<span class="ubh-n">'+rs.length+' 筆</span>　<button class="btn ubh-go" style="padding:2px 10px" onclick="blGoMonth(\''+ym+'\')">→ 前往此月請款核對</button></div>'
         +'<div class="card" style="padding:0;overflow:auto"><table class="data-table ov-tbl"><thead><tr>'
         +'<th>次別</th><th>項目</th><th>工程編號</th><th>工程區</th><th>加工代號</th><th>工程副號</th>'
         +'<th class="num">噸數</th><th class="num">支數</th><th class="num">金額</th><th>公司</th><th>狀況</th><th>備註</th>'
@@ -42985,7 +43028,13 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       +'<tr class="ub-report-title"><td colspan="10">累計至'+latestYm.replace('-','/')+'未請款</td></tr>'+reportRows
       +'<tr class="ub-report-total"><td>總計未請款</td><td></td><td></td><td></td><td class="num">'+t2(reportTons)+' t</td><td class="num">'+intf(reportQty)+' 支</td><td class="num">'+ntd(grand)+'</td><td></td><td></td><td></td></tr>'
       +'</tbody></table></div>';
-    el.innerHTML='<div class="ub-grid">'+html+'</div>';
+    // 最上面先給總數:一眼看到「還有多少沒請款」
+    var ubN=yms.reduce(function(a,ym){ return a+byYm[ym].length; },0);
+    el.innerHTML='<div class="bl-summary ub-summary">'
+      +'<div class="bl-scard"><span class="lbl">未請款總計</span><span class="big ov-red">'+ntd(grand)+'</span><span class="sub">'+ubN+' 筆 · '+yms.length+' 個產量月</span></div>'
+      +'<div class="bl-scard"><span class="lbl">主件</span><span class="big">'+ntd(reportMain)+'</span></div>'
+      +'<div class="bl-scard"><span class="lbl">水電</span><span class="big">'+ntd(reportUtil)+'</span></div>'
+      +'</div><div class="ub-grid">'+html+'</div>';
     if(reportEl) reportEl.innerHTML=overview;
   };
 
@@ -43092,9 +43141,9 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       });
       grand+=sub;
       var gp=mo.split('|'), gLbl=gp[0]?(gp[0]+' 第'+(gp[1]==='1'?'一':'二')+'次請款'):'(未填請款日期)';
-      html+='<div class="ub-group-h">'+esc(gLbl)+'　小計 '+ntd(sub)
-        +'　<span style="color:var(--accent3)">鎮山 '+ntd(byCo['鎮山']||0)+'</span>'
-        +'　<span style="color:var(--yellow)">麗生 '+ntd(byCo['麗生']||0)+'</span></div>'
+      html+='<div class="ub-group-h"><span class="ubh-t">'+esc(gLbl)+'</span>　<span class="ubh-sum"><span class="ubh-lbl">小計 </span>'+ntd(sub)+'</span><span class="ubh-n">'+rs.length+' 筆</span>'
+        +'　<span class="ubh-co" style="color:var(--accent3)">鎮山 '+ntd(byCo['鎮山']||0)+'</span>'
+        +'　<span class="ubh-co" style="color:var(--yellow)">麗生 '+ntd(byCo['麗生']||0)+'</span></div>'
         +'<div class="card" style="padding:0;overflow:auto"><table class="data-table ov-tbl"><thead><tr>'
         +'<th>請款日期</th><th>產量月/次別</th><th>計價期間</th><th>工程編號</th><th>工程區</th><th>加工代號</th><th>工程副號</th>'
         +'<th class="num">總噸數</th><th class="num">總支數</th><th class="num">預估總價</th>'
@@ -60220,6 +60269,33 @@ async function ldDashPlan(){
   const MCARD_PAGES=['output','dxf','payroll','leave','pricing','audit'];
   const MQ=window.matchMedia('(max-width:768px),(pointer:coarse) and (max-width:1100px)');
   const MIN_COLS=4;
+  // 「重點卡片」規格:依表頭名稱指定每一欄的角色,讓卡片有主次——
+  //   t=標題(大字) a=金額(右上大字) c=小標籤 m=數字(標籤在上) s=狀態(靠右) n=備註(整列小字) x=操作鈕 h=不顯示
+  // 沒列到的欄位當 m。含輸入框的格一律當表單欄位(兩欄並排)。key 裡的欄位全部出現才套用。
+  const MC_SPECS=[
+    {key:['次別','項目','金額','狀況'], amt:'var(--red)',
+      t:['工程編號','工程區'], a:['金額'], c:['次別','項目','加工代號','工程副號','公司'], s:['狀況'], n:['備註']},
+    {key:['請款日期','實收合計'], amt:'var(--accent)',
+      t:['工程編號','工程區'], a:['實收合計'], c:['產量月/次別','加工代號','工程副號','公司'], n:['計價期間','備註'], x:['操作']},
+    {key:['請款價格','請款狀況'],
+      t:['工程編號','工程區'], a:['預估總價'], c:['加工代號','工程副號','公司','水電加工代號'], s:['請款狀況']},
+    {key:['總噸數','總價','單價(元/t)'],
+      t:['工程編號','工程區'], a:['總價'], c:['加工代號','工程副號']},
+    {key:['產量(支)','產值(元)'],
+      t:['工程編號','工程區'], a:['產值(元)']},
+    {key:['類別','產值','產值比'], t:['類別'], a:['產值']},
+    {key:['月份','每月總金額'], t:['月份'], a:['每月總金額']},
+    {key:['水電重量(kg)','水電單價'],
+      t:['工程編號','工程區'], a:['單價'], c:['加工代號','副號','水電加工代號'], h:['水電重量(kg)']}
+  ];
+  const ROLE_KEYS=['t','a','c','s','n','x','h'];
+  function specFor(labels){
+    return MC_SPECS.find(sp=>sp.key.every(k=>labels.indexOf(k)>=0))||null;
+  }
+  function roleOf(spec,label){
+    for(const r of ROLE_KEYS) if(spec[r]&&spec[r].indexOf(label)>=0) return r;
+    return 'm';
+  }
   const clean=t=>String(t||'').replace(/[▼▾⏷⇅↕]/g,'').replace(/\s+/g,' ').trim();
   // 表頭(含 colspan/rowspan)→ 每一欄的名稱
   function headLabels(table){
@@ -60253,6 +60329,9 @@ async function ldDashPlan(){
     const labels=headLabels(table);
     if(labels.length<MIN_COLS){ unapplyTable(table); return; }
     table.classList.add('mc-tbl');
+    const spec=specFor(labels);
+    table.classList.toggle('mc-focus',!!spec);
+    if(spec&&spec.amt) table.style.setProperty('--mc-amt',spec.amt); else table.style.removeProperty('--mc-amt');
     const sc=table.parentElement;
     if(sc&&!sc.classList.contains('page')){
       sc.classList.add('mc-scroll');
@@ -60270,6 +60349,14 @@ async function ldDashPlan(){
         if(lb && !full) td.setAttribute('data-mcl',lb); else td.removeAttribute('data-mcl');
         const empty=!full&&isEmptyCell(td);
         td.classList.toggle('mc-empty',empty);
+        if(spec&&!full){
+          // 合計列第一格常是合併格(「合計」),當標題
+          const hasInput=!!td.querySelector('input:not([type=checkbox]):not([type=radio]),select,textarea');
+          let role=hasInput?'f':(cs>1&&c===0?'t':roleOf(spec,lb));
+          td.setAttribute('data-r',role); td.classList.remove('mc-title','mc-wide');
+          c+=cs; return;
+        }
+        td.removeAttribute('data-r');
         const title=!full&&!firstSet&&!empty;
         td.classList.toggle('mc-title',title); if(title) firstSet=true;
         if(!td.classList.contains('mc-wide-fixed')) td.classList.toggle('mc-wide', !title && (cs>=2 || td.textContent.trim().length>18));
