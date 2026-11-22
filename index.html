@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.22.5"/>
+<meta name="sc-version" content="2026.11.22.6"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -8450,6 +8450,25 @@ window.normalizeFullWidth=function(value){
       table.mc-tbl.mc-compact td[data-r=a]:not(.mc-empty)~td[data-r=x]{margin-left:0}
       table.mc-tbl.mc-compact td[data-r=x] :is(.btn-icon,.btn,button,a){min-height:28px!important;padding:2px 10px!important;font-size:12px!important}
       table.mc-tbl.mc-compact td[data-r=a]{order:1}
+      #output-archive-panel table.mc-compact td[data-r=x]{order:9;margin-left:auto}
+      /* 產值小卡:數字的欄名改成同一行(噸數 9.19),狀態放到小標籤那排,卡片再矮一行 */
+      #page-output table.mc-compact td[data-r=m]{flex:0 0 auto!important;margin-right:6px;font-size:13px}
+      #page-output table.mc-compact td[data-r=m]::before{display:inline!important;margin:0 4px 0 0!important;font-size:11px!important}
+      #page-output table.mc-compact td[data-r=s]{order:4;margin-left:auto}
+      #page-output table.mc-compact td[data-r=s] .bill-status-pill{padding:2px 8px;min-width:0}
+      #output-billing-panel table.mc-focus>tbody>tr:not(.mc-full){gap:6px 10px;margin-bottom:6px;padding:10px 12px;border-radius:10px}
+      #output-billing-panel table.mc-focus td[data-r=t]{font-size:15px!important}
+      #output-billing-panel table.mc-focus td[data-r=a]{font-size:16px!important}
+      #output-billing-panel table.mc-focus td[data-r=c]{padding:1px 7px!important;font-size:11px!important}
+      #output-billing-panel table.mc-focus td[data-r=m]{flex:0 0 calc(33.33% - 7px)!important;font-size:13px}
+      #output-billing-panel table.mc-focus td[data-r=f] :is(input,select){min-height:34px!important;padding:3px 8px!important}
+      /* 產值:每月標題、總計卡也收緊 */
+      #page-output .ub-group-h{margin:14px 2px 6px}
+      #page-output .ub-group-h .ubh-go{min-height:34px;margin-top:4px}
+      #page-output .bl-summary{gap:6px;margin-bottom:8px}
+      #page-output .bl-scard{padding:7px 10px}
+      #output-archive-panel .ar-group{margin-bottom:8px}
+      #output-archive-panel .ar-head{padding:10px 12px}
       /* 人事三頁:搜尋列、工具列按鈕對齊 */
       :is(#page-emp,#page-leave) .page-header{flex-wrap:wrap;gap:4px}
       :is(#page-emp,#page-leave,#page-payroll) .page-header>span{font-size:11px!important}
@@ -60381,7 +60400,7 @@ async function ldDashPlan(){
   const MCARD_PAGES=['output','dxf','payroll','leave','pricing','audit','emp','payrollcfg'];
   const MQ=window.matchMedia('(max-width:768px),(pointer:coarse) and (max-width:1100px)');
   const MIN_COLS=4;
-  // 「重點卡片」規格:依表頭名稱指定每一欄的角色,讓卡片有主次——
+  // 「重點卡片」規格:依表頭名稱指定每一欄的角色,讓卡片有主次(預設小卡,compact:0 改一般卡)——
   //   t=標題(大字) a=金額(右上大字) c=小標籤 m=數字(標籤在上) s=狀態(靠右) n=備註(整列小字) x=操作鈕 h=不顯示
   // 沒列到的欄位當 m。含輸入框的格一律當表單欄位(兩欄並排)。key 裡的欄位全部出現才套用。
   const MC_SPECS=[
@@ -60389,7 +60408,7 @@ async function ldDashPlan(){
       t:['工程編號','工程區'], a:['金額'], c:['次別','項目','加工代號','工程副號','公司'], s:['狀況'], n:['備註']},
     {key:['請款日期','實收合計'], amt:'var(--accent)',
       t:['工程編號','工程區'], a:['實收合計'], c:['產量月/次別','加工代號','工程副號','公司'], n:['計價期間','備註'], x:['操作']},
-    {key:['請款價格','請款狀況'],
+    {key:['請款價格','請款狀況'], compact:0,
       t:['工程編號','工程區'], a:['預估總價'], c:['加工代號','工程副號','公司','水電加工代號'], s:['請款狀況']},
     {key:['總噸數','總價','單價(元/t)'],
       t:['工程編號','工程區'], a:['總價'], c:['加工代號','工程副號']},
@@ -60452,7 +60471,7 @@ async function ldDashPlan(){
     table.classList.add('mc-tbl');
     const spec=specFor(labels);
     table.classList.toggle('mc-focus',!!spec);
-    table.classList.toggle('mc-compact',!!(spec&&spec.compact));
+    table.classList.toggle('mc-compact',!!(spec&&spec.compact!==0));   // 預設小卡;compact:0 才用一般卡
     if(spec&&spec.amt) table.style.setProperty('--mc-amt',spec.amt); else table.style.removeProperty('--mc-amt');
     const sc=table.parentElement;
     if(sc&&!sc.classList.contains('page')){
