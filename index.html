@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.24.1"/>
+<meta name="sc-version" content="2026.11.24.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -40923,6 +40923,96 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
 </script>
 
 <!-- ── 產值 (Output value，管理員) ── -->
+<!-- 產值 即時同步:開著產值頁時定時靜默重讀目前分頁(單價/產值回報/請款核對/未請款/請款紀錄/年總覽) -->
+<script>
+(function(){
+  // 各分頁的面板與重讀函式;請款核對、未請款要抓的表比較多,間隔拉長一點
+  var TABS={
+    'price':           {pid:'output-price-panel',           fn:'outputAutoRefresh', ms:20000},
+    'report':          {pid:'output-report-panel',          fn:'ovrAutoRefresh',    ms:20000},
+    'billing':         {pid:'output-billing-panel',         fn:'blAutoRefresh',     ms:30000},
+    'unbilled':        {pid:'output-unbilled-panel',        fn:'ubAutoRefresh',     ms:30000},
+    'unbilled-report': {pid:'output-unbilled-report-panel', fn:'ubAutoRefresh',     ms:30000},
+    'archive':         {pid:'output-archive-panel',         fn:'arAutoRefresh',     ms:20000},
+    'yearly':          {pid:'output-yearly-panel',          fn:'yrAutoRefresh',     ms:20000}
+  };
+  var lastTouch=0, running=false, lastRun={};
+  ['pointerdown','keydown','input','wheel','touchmove'].forEach(function(ev){
+    document.addEventListener(ev,function(e){ if(e.target&&e.target.closest&&e.target.closest('#page-output')) lastTouch=Date.now(); },{passive:true,capture:true});
+  });
+  function pageOn(){ var p=document.getElementById('page-output'); return !!(p&&p.classList.contains('active')); }
+  function curTab(){
+    for(var t in TABS){ var p=document.getElementById(TABS[t].pid); if(p && p.style.display!=='none') return t; }
+    return null;
+  }
+  // 現在能不能重畫:正在輸入、開著視窗、選取文字、剛操作過(滑動/點擊中)都先等
+  window.ovSyncSafe=function(pid){
+    if(document.hidden || !pageOn()) return false;
+    var panel=document.getElementById(pid); if(!panel || panel.style.display==='none') return false;
+    var pg=document.getElementById('page-output');
+    var a=document.activeElement;
+    if(a && a!==document.body && pg.contains(a)){
+      if(/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) || a.isContentEditable) return false;   // 輸入框有焦點:絕不打斷
+      if(Date.now()-lastTouch<60000) return false;                                            // 試算表選格中:閒置一分鐘才更新
+    }
+    if(document.querySelector('.modal-overlay.show')) return false;
+    var sel=window.getSelection&&window.getSelection();
+    if(sel && !sel.isCollapsed && sel.anchorNode && pg.contains(sel.anchorNode)) return false;
+    if(panel.querySelectorAll('.bl-grid-selected').length>1 && Date.now()-lastTouch<60000) return false;
+    if(Date.now()-lastTouch<3000) return false;
+    return true;
+  };
+  // 重畫前記下捲動位置(視窗+面板內可捲動的區塊),重畫後還原,畫面不會跳回頂端
+  window.ovSyncScrollSnap=function(pid){
+    var panel=document.getElementById(pid), wy=window.scrollY, list=[];
+    if(panel){
+      var seen={};
+      panel.querySelectorAll('*').forEach(function(el){
+        var key=el.id?('#'+el.id):(el.tagName+'.'+String(el.className||''));
+        var n=seen[key]=(seen[key]||0)+1;
+        if(el.scrollTop>0||el.scrollLeft>0) list.push({key:key,n:n,t:el.scrollTop,l:el.scrollLeft});
+      });
+    }
+    return function(){
+      if(panel && list.length){
+        var seen={}, want={};
+        list.forEach(function(x){ want[x.key+'|'+x.n]=x; });
+        panel.querySelectorAll('*').forEach(function(el){
+          var key=el.id?('#'+el.id):(el.tagName+'.'+String(el.className||''));
+          var n=seen[key]=(seen[key]||0)+1, x=want[key+'|'+n];
+          if(x){ el.scrollTop=x.t; el.scrollLeft=x.l; }
+        });
+      }
+      if(Math.abs(window.scrollY-wy)>1) window.scrollTo(window.scrollX, wy);
+    };
+  };
+  window.ovSyncKeepScroll=function(pid, render){
+    var restore=window.ovSyncScrollSnap(pid);
+    try{ render(); } finally{ restore(); }
+  };
+  async function tick(force){
+    if(running || document.hidden || !pageOn()) return;
+    var t=curTab(); if(!t) return;
+    var cfg=TABS[t], f=window[cfg.fn];
+    if(typeof f!=='function') return;
+    if(!force && Date.now()-(lastRun[t]||0)<cfg.ms) return;
+    if(!window.ovSyncSafe(cfg.pid)) return;
+    running=true; lastRun[t]=Date.now();
+    try{ await f(cfg.pid); }catch(e){ console.warn('output sync failed',e); }
+    finally{ running=false; }
+  }
+  setInterval(function(){ tick(false); }, 5000);
+  // 從背景切回來(手機鎖屏、切 App)馬上補一次
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) setTimeout(function(){ tick(true); },400); });
+  window.addEventListener('pageshow',function(e){ if(e.persisted) setTimeout(function(){ tick(true); },400); });
+  // 切分頁時各分頁會自己載入,把計時歸零免得馬上又重讀一次
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('#page-output .layout-tabs > .layout-tab[id^="otab-"]');
+    if(b) lastRun[b.id.slice(5)]=Date.now();
+  },true);
+})();
+</script>
+
 <script>
 (function(){
   var rows=[];      // 所有工程區（含工程編號等，唯讀欄位由 BOM 帶入）
@@ -40975,17 +41065,31 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(!sheet) return;
     sheet.innerHTML='<div class="empty-state">載入中...</div>';
     dirty={}; setSaved('');
+    var built=await outputFetchRows();
+    if(!built){ sheet.innerHTML='<div class="empty-state" style="color:var(--danger)">載入失敗,請確認資料庫已新增 unit_price / util_price / util_weight_kg 欄位（執行 output_value_migration.sql）</div>'; return; }
+    rows=built;
+    outputRenderPrice();
+  };
+  // 即時同步:別台電腦/手機改了單價,這裡定時靜默重讀。有未儲存的修改就不動,避免蓋掉正在改的值。
+  window.outputAutoRefresh=async function(){
+    if(!rows.length || Object.keys(dirty).length) return;
+    var built=await outputFetchRows();
+    if(!built || Object.keys(dirty).length || !window.ovSyncSafe('output-price-panel')) return;
+    rows=built;
+    window.ovSyncKeepScroll('output-price-panel', outputRenderPrice);
+  };
+  async function outputFetchRows(){
     // 工程編號需靠 project_id 對照 projects；直接進本頁時 allBOM 可能尚未載入，故一律自行抓取
     var res=await Promise.all([
       sbFetchAll('/rest/v1/zones?select=id,project_id,zone_code,sub_code,proc_code,unit_price,util_price,util_weight_kg,util_proc_code,price_note,status'),
       sbFetchAll('/rest/v1/projects?select=id,proj_num')
     ]);
     var r=res[0];
-    if(!r.ok){ sheet.innerHTML='<div class="empty-state" style="color:var(--danger)">載入失敗,請確認資料庫已新增 unit_price / util_price / util_weight_kg 欄位（執行 output_value_migration.sql）</div>'; return; }
+    if(!r.ok) return null;
     var projList=Array.isArray(res[1].data)?res[1].data:((typeof allBOM!=='undefined'&&Array.isArray(allBOM))?allBOM:[]);
     var projById={}; projList.forEach(function(p){ projById[String(p.id)]={num:p.proj_num||'', name:p.proj_name||''}; });
     var zs=Array.isArray(r.data)?r.data:[];
-    rows=zs.map(function(z){
+    var out=zs.map(function(z){
       var p=projById[String(z.project_id)]||{num:'',name:''};
       return { zid:z.id, proj_num:p.num, zone_code:z.zone_code||'', proc_code:z.proc_code||'', sub_code:z.sub_code||'',
                status:         String(z.status||'').trim(),
@@ -40995,13 +41099,13 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
                util_price:     z.util_price==null?null:Number(z.util_price),
                util_weight_kg: z.util_weight_kg==null?null:Number(z.util_weight_kg) };
     });
-    rows.sort(function(a,b){
+    out.sort(function(a,b){
       return String(a.proj_num).localeCompare(String(b.proj_num),undefined,{numeric:true,sensitivity:'base'})
           || String(a.zone_code).localeCompare(String(b.zone_code),undefined,{numeric:true,sensitivity:'base'})
           || String(a.sub_code).localeCompare(String(b.sub_code),undefined,{numeric:true,sensitivity:'base'});
     });
-    outputRenderPrice();
-  };
+    return out;
+  }
 
   // 單價儲存格顯示文字(鎖定/唯讀時共用):點工計價等文字備註 > 數字 > —
   function priceText(row){
@@ -41361,12 +41465,23 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
     if(ovrLoaded){ ovrView(ovrCurView); return; }
     var left=document.getElementById('ovr-daily-left');
     if(left) left.innerHTML='<div class="empty-state">載入中...</div>';
-    try{
+    try{ await ovrFetch(); }catch(e){ console.warn('ovrInit failed',e); if(left) left.innerHTML='<div class="empty-state">載入失敗</div>'; return; }
+    ovrInitDefaults();
+  };
+  // 即時同步:每日產量、單價有人改了就靜默重讀,維持目前的分頁、日期與捲動位置
+  window.ovrAutoRefresh=async function(){
+    if(!ovrLoaded) return;
+    try{ await ovrFetch(); }catch(e){ console.warn('ovr refresh failed',e); return; }
+    if(!window.ovSyncSafe('output-report-panel')) return;
+    window.ovSyncKeepScroll('output-report-panel', function(){ ovrView(ovrCurView); });
+  };
+  async function ovrFetch(){
       var res=await Promise.all([
         sbFetchAll('/rest/v1/daily_output?select=date,proj_num,zone_code,net_weight,spec,proc_code,sub_code'),
         sbFetchAll('/rest/v1/zones?select=project_id,zone_code,sub_code,proc_code,unit_price,util_price,util_weight_kg,price_note'),
         sbFetchAll('/rest/v1/projects?select=id,proj_num')
       ]);
+      if(ovrLoaded && (!res[0].ok || !res[1].ok)) throw new Error('refresh failed');   // 重讀失敗:保留畫面上的舊資料
       var proj={};
       var pr=Array.isArray(res[2].data)?res[2].data:((typeof allBOM!=='undefined'&&Array.isArray(allBOM))?allBOM:[]);
       pr.forEach(function(p){ proj[String(p.id)]=p.proj_num; });
@@ -41378,8 +41493,8 @@ var HAZARD_TPL_B64="UEsDBBQABgAIAAAAIQBGCMizqgEAAGUIAAATAAgCW0NvbnRlbnRfVHlwZXNd
         ovrZoneMap[zkey(pn,z.zone_code)]={ sub_code:z.sub_code, proc_code:z.proc_code, unit_price:z.unit_price, util_price:z.util_price, util_weight_kg:z.util_weight_kg, price_note:z.price_note||'' };
       });
       ovrLoaded=true;
-    }catch(e){ console.warn('ovrInit failed',e); if(left) left.innerHTML='<div class="empty-state">載入失敗</div>'; return; }
-
+  }
+  function ovrInitDefaults(){
     // 每日產值：預設日期 = 有資料的最新一天
     var latest=''; for(var i=0;i<ovrDaily.length;i++){ if(ovrDaily[i].date>latest) latest=ovrDaily[i].date; }
     if(!latest) latest=todayStr();
@@ -42003,12 +42118,21 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     blRecords={}; blDirty={}; blUtilEarlySel={};
     if(blDemo){ Object.keys(blDemoRec).forEach(function(k){ var r=blDemoRec[k]; if(r.ym===ym) blRecords[r.round+'|'+r.zone_id]=r; }); return; }
     var res=await sbFetchAll('/rest/v1/billing_records?ym=eq.'+ym+'&select=*');
-    var arr=Array.isArray(res.data)?res.data:[];
+    applyRecords(Array.isArray(res.data)?res.data:[]);
+  }
+  function applyRecords(arr){
+    blRecords={}; blDirty={}; blUtilEarlySel={};
     arr.forEach(function(r){ blRecords[r.round+'|'+r.zone_id]=r; });
   }
   // 跨月請款:掃全表,挑出「產量月不是本月、但請款日落在本月」的列,依請款日歸到第一/第二次。
   // 產量仍掛在來源月,這裡只是把實收金額列給本期看,故不另存承接表——改了請款日即時跟著跑。
   async function loadCrossBills(ym){
+    if(blDemo){ applyCross(ym, Object.keys(blDemoRec).map(function(k){ return blDemoRec[k]; })); return; }
+    var res=await sbFetchAll(crossUrl(ym));
+    applyCross(ym, Array.isArray(res.data)?res.data:[]);
+  }
+  function crossUrl(ym){ return '/rest/v1/billing_records?bill_date=gte.'+ym+'-01&bill_date=lte.'+monthEndOf(ym+'-01')+'&select=*'; }
+  function applyCross(ym, arr){
     blCross={1:[],2:[]};
     var take=function(r){
       if(r.ym===ym) return;                                        // 本月的列(不分次別)不是跨月
@@ -42017,11 +42141,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       var s=billRoundOf(r.bill_date); if(!s||s.ym!==ym) return;
       blCross[s.round].push(r);
     };
-    if(blDemo){ Object.keys(blDemoRec).forEach(function(k){ take(blDemoRec[k]); }); }
-    else{
-      var res=await sbFetchAll('/rest/v1/billing_records?bill_date=gte.'+ym+'-01&bill_date=lte.'+monthEndOf(ym+'-01')+'&select=*');
-      (Array.isArray(res.data)?res.data:[]).forEach(take);
-    }
+    arr.forEach(take);
   }
 
   var blDemo=false;   // 示範資料模式:略過 Supabase 抓取,不覆蓋注入的假資料
@@ -42039,7 +42159,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     if(cur && cur.key<=key) return;
     blUtilPaid[id]={ key:key, ym:r.ym, round:+r.round||0, date:r.bill_date||'' };
   }
-  async function blLoadBase(){
+  async function blLoadBase(silent){
     if(blDemo){
       blUtilPaid={};
       Object.keys(blDemoRec).forEach(function(k){ utilPaidTake(blDemoRec[k]); });
@@ -42056,6 +42176,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
       sbFetchAll('/rest/v1/billing_archive?select=zone_id,ym,round,util_bill_price,bill_date'),
       sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no&extra->>'+NONCO_KEY+'=in.(1,true)')
     ]);
+    if(silent && !res.every(function(x){ return x&&x.ok; })) throw new Error('refresh failed');   // 背景重讀失敗:保留舊資料
     blUtilPaid={};
     (Array.isArray(res[5].data)?res[5].data:[]).forEach(utilPaidTake);
     (Array.isArray(res[6].data)?res[6].data:[]).forEach(utilPaidTake);
@@ -42102,12 +42223,17 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   var BL_BACKLOG_MIN_YM='2026-07';
   var blAllRec={}, blArcMain={}, blPeriodGroups=null, blPeriodGroupsSrc=null;
   async function loadAllBillIdx(){
-    blAllRec={}; blArcMain={};
-    if(blDemo) return;
-    var res=await Promise.all([
+    if(blDemo){ blAllRec={}; blArcMain={}; return; }
+    applyAllBillIdx(await Promise.all(allBillIdxFetch()));
+  }
+  function allBillIdxFetch(){
+    return [
       sbFetchAll('/rest/v1/billing_records?select=ym,round,zone_id,bill_price,bill_status,bill_date,note'),
       sbFetchAll('/rest/v1/billing_archive?select=ym,round,zone_id,bill_price')
-    ]);
+    ];
+  }
+  function applyAllBillIdx(res){
+    blAllRec={}; blArcMain={};
     (Array.isArray(res[0].data)?res[0].data:[]).forEach(function(r){ blAllRec[r.ym+'|'+r.round+'|'+r.zone_id]=r; });
     (Array.isArray(res[1].data)?res[1].data:[]).forEach(function(r){ if(billedValue(r.bill_price)) blArcMain[r.ym+'|'+r.round+'|'+r.zone_id]=true; });
   }
@@ -42219,6 +42345,39 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     try{ await loadAllBillIdx(); }catch(e){ console.warn('billing index load failed',e); }
     blRender();
   };
+  // 即時同步:別人填了請款價格/日期/狀況,這裡定時靜默重讀。
+  // 有待存的修改、正在存檔、手機卡片展開中都先不動;資料全部抓完、確認仍沒人在輸入才一次套用,不會蓋掉剛打的字。
+  function blBusy(){
+    return !!(blAutosaveTimer || blSaving || blMobOpen || Object.keys(blDirty).some(function(k){ return blDirty[k]; }));
+  }
+  window.blAutoRefresh=async function(){
+    if(blDemo || !blLoaded || !blMonth || blBusy()) return;
+    var ym=blMonth, got;
+    try{
+      await blLoadBase(true);
+      got=await Promise.all([sbFetchAll('/rest/v1/billing_records?ym=eq.'+ym+'&select=*'), sbFetchAll(crossUrl(ym))].concat(allBillIdxFetch()));
+    }catch(e){ console.warn('billing refresh failed',e); return; }
+    if(!got.every(function(x){ return x&&x.ok; })) return;
+    if(ym!==blMonth || blBusy() || !window.ovSyncSafe('output-billing-panel')){ if(ym===blMonth) renderSummaries(); return; }
+    applyRecords(Array.isArray(got[0].data)?got[0].data:[]);
+    applyCross(ym, Array.isArray(got[1].data)?got[1].data:[]);
+    applyAllBillIdx([got[2],got[3]]);
+    window.ovSyncKeepScroll('output-billing-panel', function(){ blRender(); renderSummaries(); });
+  };
+  // 未請款 / 請款紀錄 / 年總覽:唯讀彙總,背景重讀時不顯示「載入中」以免閃一下
+  window.ubAutoRefresh=function(pid){ return ovQuietRender(pid, window.ubRender); };
+  window.arAutoRefresh=function(){ return ovQuietRender('output-archive-panel', window.arRender); };
+  window.yrAutoRefresh=function(){ return ovQuietRender('output-yearly-panel', function(){ return window.yrRender(); }); };
+  async function ovQuietRender(panelId, fn){
+    if(!window.ovSyncSafe(panelId)) return;
+    var panel=document.getElementById(panelId); if(!panel) return;
+    // 先在畫面外算好,算完再換上(fn 會把結果寫進固定 id 的容器,這裡暫時遮住「載入中」那一下)
+    var h=panel.offsetHeight; panel.style.minHeight=h+'px';
+    var keep=window.ovSyncScrollSnap(panelId);
+    window.ovSyncQuiet=true;
+    try{ await fn(); }catch(e){ console.warn('quiet render failed',e); }
+    finally{ window.ovSyncQuiet=false; panel.style.minHeight=''; keep(); }
+  }
 
   window.blNav=async function(delta){
     await blFlushPending();   // 換月前把本月待存的變更寫完,避免漏存
@@ -43233,7 +43392,12 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     scheduleBlAutosave();     // 自動儲存
   };
 
+  var blSaving=0;
   window.blSave=async function(auto){
+    blSaving++;
+    try{ return await blSaveInner(auto); } finally{ blSaving--; }
+  };
+  async function blSaveInner(auto){
     var keys=Object.keys(blDirty).filter(function(k){ return blDirty[k]; });
     if(!keys.length){ if(!auto) blSaved('沒有變更需要儲存','var(--text3)'); return; }
     blSaved(auto?'自動儲存中…':'儲存中…','var(--text3)');
@@ -43276,7 +43440,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
     }
     else blSaved(auto?'已自動儲存 ✓':'已全部儲存('+ok+' 筆) ✓','var(--success)');
     if(writeoffChanged) blRerenderSoon();
-  };
+  }
 
   // ── 未請款彙總(跨所有月份;直接由產量即時計算,不必先在請款核對頁存過) ──
   var ubReportText='',ubDetailsVisible=true;
@@ -43295,8 +43459,10 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   window.ubRender=async function(){
     var el=document.getElementById('ub-content'); if(!el) return;
     var reportEl=document.getElementById('ubr-content');
-    el.innerHTML='<div class="empty-state">載入中...</div>';
-    if(reportEl) reportEl.innerHTML='<div class="empty-state">載入中...</div>';
+    if(!window.ovSyncQuiet){
+      el.innerHTML='<div class="empty-state">載入中...</div>';
+      if(reportEl) reportEl.innerHTML='<div class="empty-state">載入中...</div>';
+    }
     try{ await blLoadBase(); }catch(e){ el.innerHTML='<div class="empty-state">載入失敗</div>'; if(reportEl) reportEl.innerHTML='<div class="empty-state">載入失敗</div>'; return; }
     // 只統計此產量月(含)之後;更舊的視為歷史已結清(對應「請款紀錄」只保留 2025-08 起)。要改就改這一行。
     var UB_MIN_YM='2026-07'; // 2025-08～2026-06 採原檔最新「累計未請款」快照；7月起即時計算
@@ -43539,7 +43705,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   window.arInit=function(){ arRender(); };
   window.arRender=async function(){
     var el=document.getElementById('ar-content'); if(!el) return;
-    el.innerHTML='<div class="empty-state">載入中...</div>';
+    if(!window.ovSyncQuiet) el.innerHTML='<div class="empty-state">載入中...</div>';
     var arr;
     if(blDemo){ arr=blDemoArc.slice(); }
     else {
@@ -43615,7 +43781,7 @@ window.BILLING_LEGACY_UNBILLED=[{"ym":"2025-08","proj_num":"B821","zone_code":"A
   window.yrInit=function(){ yrRender(); };
   window.yrRender=async function(requestedYear){
     var el=document.getElementById('yr-content'), sel=document.getElementById('yr-year'); if(!el||!sel) return;
-    el.innerHTML='<div class="empty-state">載入中...</div>';
+    if(!window.ovSyncQuiet) el.innerHTML='<div class="empty-state">載入中...</div>';
     var arr;
     if(blDemo) arr=blDemoArc.slice();
     else { var res=await sbFetchAll('/rest/v1/billing_archive?select=*'); arr=Array.isArray(res.data)?res.data:[]; }
