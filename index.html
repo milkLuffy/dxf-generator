@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.22.14"/>
+<meta name="sc-version" content="2026.11.24.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -31690,8 +31690,28 @@ function inspDefaultRecv(now) {
 }
 
 let _inspGenerating = false;
+// 按鈕入口:防連按、一定解鎖、任何沒接住的錯誤都顯示出來。
+// 以前流程中途若卡住或在 try 外丟錯,鎖不會解開,之後怎麼按都「沒反應」,只能重新整理。
 async function generateInspection() {
-  if (_inspGenerating) return;   // 防止快速連按造成重複報驗
+  if (_inspGenerating) {   // 防止快速連按造成重複報驗,但要讓使用者知道還在跑
+    setInspStatus('申驗單產生中，請稍候…（若超過一分鐘沒有結果，請重新整理頁面再試）', false);
+    return;
+  }
+  try { await _generateInspectionRun(); }
+  catch (err) {
+    console.error('產生申驗單失敗', err);
+    setInspStatus('產生失敗：' + ((err && err.message) || String(err)), false);
+  }
+  finally { _inspGenerating = false; }
+}
+// 資料夾授權最多等 45 秒;授權視窗沒回應或讀不到固定資料夾時,不要讓整個產單流程卡住。
+function inspPermissionWithTimeout(ms) {
+  return Promise.race([
+    inspEnsureFolderPermission(true).catch(() => 'error'),
+    new Promise(resolve => setTimeout(() => resolve('timeout'), ms))
+  ]);
+}
+async function _generateInspectionRun() {
   if (typeof PizZip === 'undefined' || typeof docxtemplater === 'undefined') {
     setInspStatus('Word 函式庫尚未載入，請檢查網路連線', false); return;
   }
@@ -31706,9 +31726,16 @@ async function generateInspection() {
   // 有實報構件才需要範本;全部都預報時只寫產量+暫存,不產 Word
   if (realChecked.length && !inspTemplateBuffer) { setInspStatus('請先上傳範本 .docx', false); return; }
   _inspGenerating = true;
+  setInspStatus('申驗單產生中…', true);
   // 資料夾權限一定要在「使用者剛按下按鈕」時就要,後面查床位／抓號碼／合併既有批次／
   // 組 Word 動輒數秒,手勢有效期早就過了,那時再要權限會被瀏覽器直接拒絕。
-  if (realChecked.length) { try { await inspEnsureFolderPermission(true); } catch(e) {} }
+  if (realChecked.length) {
+    const perm = await inspPermissionWithTimeout(45000);
+    if (perm === 'timeout') {
+      setInspStatus('「報驗」資料夾授權沒有回應，這次沒有產生申驗單。請按「設定固定「報驗」資料夾」重新選一次，再按產生。', false);
+      return;
+    }
+  }
 
   // Project info
   const pid = document.getElementById('insp-proj').value;
