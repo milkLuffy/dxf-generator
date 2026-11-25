@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.25.5"/>
+<meta name="sc-version" content="2026.11.25.6"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5446,6 +5446,10 @@ window.normalizeFullWidth=function(value){
     .sc-films .fp.on .ph{border-color:var(--accent2)}
     .sc-films .fp.on img{border-color:var(--accent2)}
     .sc-films .fp .pn{position:absolute;left:2px;top:2px;background:rgba(0,0,0,.62);color:#fff;font-size:10px;padding:0 4px;border-radius:3px}
+    .sc-films .fp.sub img,.sc-films .fp.sub .ph{opacity:.38}
+    .sc-films .fp.sub .dw{color:var(--text3);opacity:.7}
+    .sc-films .fp .sb{position:absolute;right:2px;top:2px;background:rgba(120,120,120,.85);color:#fff;font-size:9.5px;padding:0 4px;border-radius:3px;font-family:var(--mono)}
+    .sc-subtag{font-size:11.5px;color:var(--text3);border:1px dashed var(--border);border-radius:var(--rad);padding:2px 8px;white-space:nowrap}
     .sc-films .fp .dw{display:block;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--text3);font-family:var(--mono);line-height:1.5}
     .sc-right{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad-lg);display:flex;flex-direction:column;min-width:0}
     .sc-rbar{padding:8px 10px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -5503,10 +5507,11 @@ window.normalizeFullWidth=function(value){
       <div class="sc-main">
         <div class="sc-left">
           <div class="sc-bar">
-            <button class="btn-sm" onclick="scShowPage(scPi-1)">◀</button>
+            <button class="btn-sm" onclick="scStepPage(-1)" title="上一頁(跳過 2/2 不需自檢的頁)">◀</button>
             <span id="sc-pagelbl">— / —</span>
-            <button class="btn-sm" onclick="scShowPage(scPi+1)">▶</button>
+            <button class="btn-sm" onclick="scStepPage(1)" title="下一頁(跳過 2/2 不需自檢的頁)">▶</button>
             <span class="sc-field"><label>本頁圖號</label><input type="text" id="sc-pagedwg" size="10" placeholder="S4-B601" oninput="scPageDwgInput(this.value)"/></span>
+            <span id="sc-pagesub" class="sc-subtag" hidden></span>
             <span class="sc-rot">
               <button class="btn-sm" title="這頁往左轉 90°" onclick="scRotate(-90)">↺</button>
               <button class="btn-sm" title="這頁往右轉 90°" onclick="scRotate(90)">↻</button>
@@ -53821,8 +53826,8 @@ async function selfcheckInit(){
   document.addEventListener('keydown',e=>{
     if(!document.getElementById('page-selfcheck')?.classList.contains('active')) return;
     if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
-    if(e.key==='PageDown'||e.key==='ArrowRight'){ e.preventDefault(); scShowPage(scPi+1); }
-    if(e.key==='PageUp'||e.key==='ArrowLeft'){ e.preventDefault(); scShowPage(scPi-1); }
+    if(e.key==='PageDown'||e.key==='ArrowRight'){ e.preventDefault(); scStepPage(1); }
+    if(e.key==='PageUp'||e.key==='ArrowLeft'){ e.preventDefault(); scStepPage(-1); }
   });
   if(!allBOM.length){ try{ await loadBOM({noSync:true}); }catch(e){} }
   // 已完成的工程不列入(比照 BOM 列表預設隱藏已完成)
@@ -54169,12 +54174,37 @@ async function scPdfToPages(file){
 }
 
 /* ── 頁圖檢視 ── */
+/* 同一份圖面裡同一個圖號有好幾頁(圖號表的 S2-D901(1/2)、(2/2)):第一頁是 1/2,後面是 2/2…,通常不需自檢。
+   p.sub = 這是該圖號的第幾頁,p.subN = 該圖號共幾頁 */
+function scMarkSubPages(){
+  const total=new Map(), seen=new Map(), key=p=>String(p.dwg||'').trim().toUpperCase();
+  scPages.forEach(p=>{ const k=key(p); if(k) total.set(k,(total.get(k)||0)+1); });
+  scPages.forEach(p=>{ const k=key(p);
+    if(!k){ p.sub=0; p.subN=0; return; }
+    const n=(seen.get(k)||0)+1; seen.set(k,n); p.sub=n; p.subN=total.get(k); });
+}
+const scIsSub=p=>!!p&&p.sub>1;
+function scStepPage(dir){   // ◀▶/PageUp/PageDown:跳過 2/2 以後的頁;點縮圖仍可打開
+  if(!scPages.length) return;
+  let i=scPi+dir;
+  while(i>=0&&i<scPages.length&&scIsSub(scPages[i])) i+=dir;
+  if(i>=0&&i<scPages.length) scShowPage(i);
+  else scStatus(dir>0?'後面沒有需要自檢的頁了(其餘是 2/2 頁,可點下方縮圖打開)。':'前面沒有需要自檢的頁了。');
+}
+function scSubTag(){
+  const e=scEl('sc-pagesub'), p=scPages[scPi]; if(!e) return;
+  if(p&&p.subN>1){ e.hidden=false; e.textContent='('+p.sub+'/'+p.subN+')'+(p.sub>1?' 不需自檢':''); }
+  else e.hidden=true;
+}
 function scFilms(){
+  scMarkSubPages();
   const box=scEl('sc-films'); box.innerHTML='';
   scPages.forEach((p,i)=>{
-    const d=document.createElement('div'); d.className='fp'+(i===scPi?' on':''); d.onclick=()=>scShowPage(i);
-    const st=p.ocr==='wait'||p.ocr==='run'?'…辨識中':(p.dwg||'—');
-    d.innerHTML=(p.img?'<img src="'+p.img.src+'"/>':'<span class="ph"></span>')+'<span class="pn">'+(i+1)+'</span><span class="dw">'+esc(st)+'</span>';
+    const d=document.createElement('div'); d.className='fp'+(i===scPi?' on':'')+(scIsSub(p)?' sub':''); d.onclick=()=>scShowPage(i);
+    if(scIsSub(p)) d.title=(p.dwg||'')+' ('+p.sub+'/'+p.subN+'),通常不需自檢;翻頁會跳過';
+    const st=p.ocr==='wait'||p.ocr==='run'?'…辨識中':(p.dwg?p.dwg+(p.subN>1?' ('+p.sub+'/'+p.subN+')':''):'—');
+    d.innerHTML=(p.img?'<img src="'+p.img.src+'"/>':'<span class="ph"></span>')+'<span class="pn">'+(i+1)+'</span>'+
+      (scIsSub(p)?'<span class="sb">'+p.sub+'/'+p.subN+'</span>':'')+'<span class="dw">'+esc(st)+'</span>';
     box.appendChild(d);
   });
 }
@@ -54190,11 +54220,12 @@ async function scShowPage(n){
   cv.getContext('2d').drawImage(p.img,0,0,cv.width,cv.height);
   scEl('sc-pagelbl').textContent=(scPi+1)+' / '+scPages.length;
   scEl('sc-pagedwg').value=p.dwg||'';
+  scSubTag();
   Array.from(scEl('sc-films').children).forEach((el,i)=>el.classList.toggle('on',i===scPi));
   scEl('sc-sel').style.display='none';
   scDraftDirty(true);
 }
-function scPageDwgInput(v){ if(scPages[scPi]){ scPages[scPi].dwg=v.trim(); scPages[scPi].ocr='done'; scFilms(); scDraftDirty(); } }
+function scPageDwgInput(v){ if(scPages[scPi]){ scPages[scPi].dwg=v.trim(); scPages[scPi].ocr='done'; scFilms(); scSubTag(); scDraftDirty(); } }
 
 /* ── OCR 右下角圖號 ── */
 let scOcrWorker=null, scOcrBusy=false;
