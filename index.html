@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.25.6"/>
+<meta name="sc-version" content="2026.11.25.7"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5446,6 +5446,7 @@ window.normalizeFullWidth=function(value){
     .sc-films .fp.on .ph{border-color:var(--accent2)}
     .sc-films .fp.on img{border-color:var(--accent2)}
     .sc-films .fp .pn{position:absolute;left:2px;top:2px;background:rgba(0,0,0,.62);color:#fff;font-size:10px;padding:0 4px;border-radius:3px}
+    .sc-asrc{font-style:normal;font-size:9px;margin-left:3px;padding:0 3px;border-radius:3px;background:rgba(64,200,224,.16);color:var(--accent3)}
     .sc-films .fp.sub img,.sc-films .fp.sub .ph{opacity:.38}
     .sc-films .fp.sub .dw{color:var(--text3);opacity:.7}
     .sc-films .fp .sb{position:absolute;right:2px;top:2px;background:rgba(120,120,120,.85);color:#fff;font-size:9.5px;padding:0 4px;border-radius:3px;font-family:var(--mono)}
@@ -53877,6 +53878,33 @@ async function scZoneChange(){
 
 /* ── ① BOM → 產生自檢表 ── */
 function scLastNum(spec){ const m=String(spec||'').match(/(\d+(?:\.\d+)?)\s*$/); return m?m[1]:''; }
+/* A(全長)來源:BOM 規格和圖面有時有落差,優先取「多階資料分析」主材的實際長度。
+   主材 = 構件底下第一層(**)子件中,斷面跟構件規格一樣(去掉最後長度後相同)的那一筆;
+   只有一筆才採用。BOX 一律用 BOM 長度(常由好幾段組成);找不到主材(主材跟構件同長時多階不另存)也用 BOM。 */
+const scMaA=f=>f.aMa||'';
+const scSecOf=spec=>String(spec||'').toUpperCase().replace(/\s+/g,'').replace(/[*＊×]/g,'X').replace(/X\d+(?:\.\d+)?$/,'');
+async function scMaMainLengths(projNum,zoneCode){
+  if(isGuest||!currentSession||!projNum) return {hit:false,map:{}};
+  const up=v=>String(v==null?'':v).trim().toUpperCase();
+  const ar=await sbFetch('/rest/v1/multilevel_analyses?select=id,project_no,zone_code,mother_no,created_at&project_no=ilike.'+encodeURIComponent(projNum)+'&order=created_at.desc&limit=200');
+  if(!ar||!ar.ok) throw new Error('讀取多階資料失敗');
+  const list=(Array.isArray(ar.data)?ar.data:[]).filter(a=>up(a.project_no)===up(projNum));
+  const hit=list.find(a=>up(a.zone_code)===up(zoneCode))||list.find(a=>up(a.mother_no)===up(zoneCode));
+  if(!hit) return {hit:false,map:{}};
+  const ir=await sbFetchAll('/rest/v1/multilevel_analysis_items?select=component_no,component_spec,specification,part_level&analysis_id=eq.'+hit.id+'&part_level=lte.2');
+  if(!ir||!ir.ok||!Array.isArray(ir.data)) throw new Error('讀取多階明細失敗');
+  const by={};
+  ir.data.forEach(r=>{
+    const k=up(r.component_no); if(!k) return;
+    const cs=scSecOf(r.component_spec); if(!cs||cs===String(r.component_spec||'').toUpperCase().replace(/\s+/g,'')) return; // 構件規格沒有長度
+    if(scSecOf(r.specification)!==cs) return;
+    const len=scLastNum(r.specification); if(!len) return;
+    (by[k]=by[k]||{spec:r.component_spec,lens:new Set()}).lens.add(len);
+  });
+  const map={};
+  Object.keys(by).forEach(k=>{ const o=by[k]; map[k]={len:o.lens.size===1?[...o.lens][0]:'',multi:o.lens.size>1}; });
+  return {hit:true,map,label:hit.zone_code||hit.mother_no||''};
+}
 async function scGenForms(){
   const pid=scEl('sc-proj').value, zid=scEl('sc-zone').value;
   if(!pid||!zid){ alert('請先選擇工程與工程區'); return; }
@@ -53885,17 +53913,29 @@ async function scGenForms(){
   const r=await sbFetchAll('/rest/v1/components?select=seq,part_no,spec,qty,drawing_no&zone_id=eq.'+zid+'&order=seq');
   const comps=Array.isArray(r.data)?r.data:[];
   if(!comps.length){ scStatus('此工程區沒有 BOM 構件資料。'); alert('此工程區沒有 BOM 構件資料'); return; }
+  const p=allBOM.find(x=>String(x.id)===String(pid)), z=scZones.find(x=>String(x.id)===String(zid));
+  const meta={projNum:p?String(p.proj_num||'').trim():'',zoneCode:z?String(z.zone_code||'').trim():''};
+  scStatus('讀取多階資料主材長度…');
+  let ma={hit:false,map:{}}, maErr='';
+  try{ ma=await scMaMainLengths(meta.projNum,meta.zoneCode); }catch(e){ maErr=e.message||String(e); }
   scForms.forEach(f=>scGcUrl(f,null)); scForms=[]; scSelId=null;
+  let nMa=0;
   // 一個構件編號一張表(不依支數展開:同編號可能 2 支,展開反而難處理)
   comps.forEach(c=>{
+    const spec=String(c.spec||''), bomA=scLastNum(spec);
+    let A=bomA, aSrc='BOM';
+    const m=ma.map[String(c.part_no||'').trim().toUpperCase()];
+    if(m&&m.len&&!/^\s*BOX/i.test(spec)){ A=m.len; aSrc=m.len!==bomA?'多階':'BOM'; if(m.len!==bomA) nMa++; }
     scForms.push({ id:++scSeq, partNo:String(c.part_no||''), dwg:String(c.drawing_no||''),
-      spec:String(c.spec||''), dims:{A:scLastNum(c.spec)}, png:null, url:null, w:0, h:0 });
+      spec, dims:{A}, aSrc, bomA, aMa:aSrc==='多階'?A:'', png:null, url:null, w:0, h:0 });
   });
   scSelId=scForms.length?scForms[0].id:null;
   scRender();
-  const p=allBOM.find(x=>String(x.id)===String(pid)), z=scZones.find(x=>String(x.id)===String(zid));
-  scMeta={projNum:p?String(p.proj_num||'').trim():'',zoneCode:z?String(z.zone_code||'').trim():''};
-  scStatus('已依 BOM 產生 '+scForms.length+' 張自檢表('+scMeta.projNum+'-'+scMeta.zoneCode+')。載入共用製造圖後框選立面圖填入。');
+  scMeta=meta;
+  const aMsg=maErr?' ⚠ 多階資料讀取失敗('+maErr+'),A 全部照 BOM。'
+    :!ma.hit?' 此區沒有多階資料,A 照 BOM。'
+    :(nMa?' A 有 '+nMa+' 支依多階主材長度帶入(和 BOM 不同,卡片上標「多階」)。':' A 和多階主材長度一致。');
+  scStatus('已依 BOM 產生 '+scForms.length+' 張自檢表('+scMeta.projNum+'-'+scMeta.zoneCode+')。'+aMsg+'載入共用製造圖後框選立面圖填入。');
   scDraftDirty();
 }
 
@@ -54413,8 +54453,10 @@ function scCard(f,i){
       '<label>圖號</label><input type="text" data-k="dwg" value="'+esc(f.dwg)+'" placeholder="S4-B601"/>'+
       '<label>設計尺寸</label><input type="text" data-k="spec" value="'+esc(f.spec)+'" style="grid-column:2/5" placeholder="BH700X300X22X36X8180"/>'+
     '</div>'+
-    '<div class="abrow">'+SC_COLS.map(c=>'<div><span>'+c+'</span><input type="text" data-dim="'+c+'" value="'+esc(f.dims[c]||'')+'"'+
-      ' class="'+(f.dims[c]?'hasval':'')+'" placeholder="'+(c==='A'?'全長':'')+'"/></div>').join('')+'</div>';
+    '<div class="abrow">'+SC_COLS.map(c=>{
+      const fromMa=c==='A'&&f.aSrc==='多階'&&f.bomA&&f.dims.A===scMaA(f);
+      return '<div><span>'+c+(fromMa?'<i class="sc-asrc" title="依多階資料主材長度帶入;BOM 規格是 '+esc(f.bomA)+'">多階</i>':'')+'</span><input type="text" data-dim="'+c+'" value="'+esc(f.dims[c]||'')+'"'+
+      ' class="'+(f.dims[c]?'hasval':'')+'" placeholder="'+(c==='A'?'全長':'')+'"'+(fromMa?' title="依多階資料主材長度帶入;BOM 規格是 '+esc(f.bomA)+'"':'')+'/></div>'; }).join('')+'</div>';
   el.onclick=e=>{
     if(e.target.closest('input,button,img')) return;
     scSelId=(scSelId===f.id)?null:f.id;   // 再點一次取消選取
@@ -54685,7 +54727,7 @@ async function scDraftSave(){
       fileId, pi:scPi, pageDwg:fileId?scPages.map(p=>p.dwg||''):[],
       tpl:scTplB64||null, seq:scSeq, selId:scSelId,
       forms:scForms.map(f=>({id:f.id,partNo:f.partNo||'',dwg:f.dwg||'',spec:f.spec||'',dims:f.dims||{},
-        imgId:f.png?f.imgId||null:null,w:f.w||0,h:f.h||0}))};
+        imgId:f.png?f.imgId||null:null,w:f.w||0,h:f.h||0,aSrc:f.aSrc||'',bomA:f.bomA||'',aMa:f.aMa||''}))};
     await scDraftTx(['meta','imgs'],tx=>{
       const st=tx.objectStore('imgs');
       const k=st.getAllKeys();
@@ -54743,7 +54785,7 @@ async function scDraftRestore(d){
   scForms.forEach(f=>scGcUrl(f,null));
   const urls=new Map();
   scForms=d.forms.map(x=>{
-    const f={id:x.id,partNo:x.partNo||'',dwg:x.dwg||'',spec:x.spec||'',dims:Object.assign({},x.dims||{}),png:null,url:null,imgId:null,w:0,h:0};
+    const f={id:x.id,partNo:x.partNo||'',dwg:x.dwg||'',spec:x.spec||'',dims:Object.assign({},x.dims||{}),aSrc:x.aSrc||'',bomA:x.bomA||'',aMa:x.aMa||'',png:null,url:null,imgId:null,w:0,h:0};
     const b=x.imgId&&blobs.get(x.imgId);
     if(b){ if(!urls.has(x.imgId)) urls.set(x.imgId,URL.createObjectURL(b));
       Object.assign(f,{png:b,imgId:x.imgId,url:urls.get(x.imgId),w:x.w||0,h:x.h||0}); }
