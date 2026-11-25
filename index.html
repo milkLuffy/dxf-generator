@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.25.4"/>
+<meta name="sc-version" content="2026.11.25.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5357,12 +5357,12 @@ window.normalizeFullWidth=function(value){
               <span class="ds-title" style="font-size:13px;margin:0">圖號表（選填）</span>
               <input id="ds-sheet-file" class="ds-file-native" type="file" accept=".xlsx,.xls,.csv,.txt" onchange="dsSheetFileSelected(this)">
               <label class="btn" for="ds-sheet-file">選擇 Excel／CSV</label>
-              <button class="btn" onclick="dsSheetTogglePaste()">貼上</button>
+              <button class="btn" onclick="dsSheetTogglePaste()">貼上圖號表(圖號欄位)</button>
               <button id="ds-sheet-clear" class="btn" onclick="dsSheetClear()" hidden>清除圖號表</button>
               <span id="ds-sheet-status" class="ds-status" style="margin:0"></span>
             </div>
             <div id="ds-sheet-paste" hidden>
-              <textarea id="ds-sheet-text" class="ds-input" rows="5" placeholder="從 Excel 整張複製貼上（含「圖號」標題列），或一行一個圖號，例如：&#10;S4-D21041(1/2)&#10;S4-D21041(2/2)"></textarea>
+              <textarea id="ds-sheet-text" class="ds-input" rows="5" placeholder="從 Excel 複製貼上（可含「圖號」標題列，也可連前面的欄位一起貼），或一行一個圖號，例如：&#10;2D2G&#9;S4-D22001(1/2)&#10;2D2G&#9;S4-D22001(2/2)&#10;2D2G&#9;S4-D22002(1/2)&#10;2D2G&#9;S4-D22002(2/2)&#10;2D2G&#9;S4-D22004"></textarea>
               <div class="ds-row" style="margin-top:6px"><button class="btn btn-gen" onclick="dsSheetApplyText()">套用圖號表</button></div>
             </div>
             <div class="ds-status" style="margin:4px 0 0">有圖號表就照圖號表的順序一頁一頁對；S4-D21041(1/2)、(2/2) 兩頁都會對到 BOM 的 S4-D21041。沒有圖號表就照 BOM 圖號順序。圖號表依工程區存起來，下次上傳同一區不用再貼。</div>
@@ -55072,8 +55072,13 @@ function dsRenderPending() {
   const mapped = dsPending.pageMap.filter(Boolean).length;
   const partText = dsPending.uploadParts.length > 1 ? '；將分成 ' + dsPending.uploadParts.length + ' 份上傳' : '';
   const orderLen = dsOrderList().length;
-  const mismatch = dsPending.pages !== orderLen
-    ? '<div class="ds-map-warn">PDF 有 ' + dsPending.pages + ' 頁，' + (dsSheet ? '圖號表有 ' + orderLen + ' 張圖' : 'BOM 有 ' + orderLen + ' 個圖號') + '；請檢查封面、缺頁或重複圖號。</div>' : '';
+  const blocked = dsPendingBlocked();
+  const mismatch = blocked
+    ? '<div class="ds-map-warn"><b>頁數對不起來，暫時不能上傳。</b>' + dsPendingCountText() + '，系統無法把每一頁對到正確的圖號。' +
+      '請貼上這份圖面的圖號表；有封面的話把「第一個圖號從第 _ 頁開始」改掉再重排。' +
+      ' <button class="btn" onclick="dsSheetOpenPaste()">貼上圖號表(圖號欄位)</button></div>'
+    : dsPending.pages !== orderLen
+      ? '<div class="ds-map-warn">PDF 有 ' + dsPending.pages + ' 頁，' + (dsSheet ? '圖號表有 ' + orderLen + ' 張圖' : 'BOM 有 ' + orderLen + ' 個圖號') + '；請檢查封面、缺頁或重複圖號。</div>' : '';
   const rows = dsPending.pageMap.map((drawingNo, index) => {
     const detail = dsPendingDetailHtml(index);
     return '<div class="ds-map-row"><div class="ds-map-page">第 ' + (index + 1) + ' 頁</div>' +
@@ -55086,6 +55091,40 @@ function dsRenderPending() {
   box.innerHTML = '<div class="ds-map-head"><div><strong>' + dsEsc(dsPending.file.name) + '</strong><div class="ds-meta">' + dsPending.pages + ' 頁' + partText + '；目前標記 ' + mapped + ' 頁</div></div>' +
     '<div class="ds-row"><label class="ds-meta">第一個圖號從第</label><input id="ds-start-page" class="ds-page-input" type="number" min="1" max="' + dsPending.pages + '" value="' + dsPending.startPage + '"><span class="ds-meta">頁開始</span><button class="btn btn-gen" onclick="dsApplyDefaultMapping()">' + (dsSheet ? '依圖號表順序重排' : '依 BOM 圖號順序重排') + '</button></div></div>' +
     mismatch + '<div class="ds-map-list">' + rows + '</div>';
+  dsSyncSaveBtn();
+}
+
+// 新上傳的 PDF:從「第一個圖號」那頁算起的頁數要等於圖號表(沒有就是 BOM 圖號)的張數,否則對不到正確的圖,禁止上傳
+function dsPendingBlocked() {
+  if (!dsPending || dsPending.existingFile) return false;
+  return (dsPending.pages - (Number(dsPending.startPage) || 1) + 1) !== dsOrderList().length;
+}
+function dsPendingCountText() {
+  const n = dsOrderList().length, start = Number(dsPending?.startPage) || 1;
+  return 'PDF 有 ' + dsPending.pages + ' 頁' + (start > 1 ? '（從第 ' + start + ' 頁算起 ' + (dsPending.pages - start + 1) + ' 頁）' : '') +
+    '，' + (dsSheet ? '圖號表有 ' + n + ' 張圖' : 'BOM 只有 ' + n + ' 個圖號');
+}
+function dsSyncSaveBtn() {
+  const btn = dsEl('ds-save');
+  if (!btn) return;
+  btn.disabled = !dsPending || !dsPending.pageMap.some(Boolean) || dsPendingBlocked();
+  btn.title = dsPendingBlocked() ? '頁數和圖號表對不起來，請先貼上圖號表' : '';
+}
+function dsSheetOpenPaste() {
+  const box = dsEl('ds-sheet-paste');
+  if (!box) return;
+  box.hidden = false;
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => dsEl('ds-sheet-text')?.focus(), 250);
+}
+async function dsSheetAskPaste() {
+  if (!dsPendingBlocked()) return;
+  const k = await uiChoose('頁數對不起來，暫時不能上傳。\n' + dsPendingCountText() + '，系統沒辦法把每一頁對到正確的圖號。\n\n' +
+    '請貼上這份圖面的圖號表（從 Excel 複製，連前面那欄一起貼也可以），例如：\n' +
+    '2D2G\tS4-D22001(1/2)\n2D2G\tS4-D22001(2/2)\n2D2G\tS4-D22002(1/2)\n2D2G\tS4-D22002(2/2)\n2D2G\tS4-D22003(1/2)\n2D2G\tS4-D22003(2/2)\n2D2G\tS4-D22004\n2D2G\tS4-D22005(1/2)\n2D2G\tS4-D22005(2/2)\n\n' +
+    '有封面的話，把「第一個圖號從第 _ 頁開始」改成正確的頁再按重排。',
+    [{ key: 'later', label: '關閉' }, { key: 'paste', label: '貼上圖號表(圖號欄位)', primary: true }]);
+  if (k === 'paste') dsSheetOpenPaste();
 }
 
 function dsSetPageDrawing(index, drawingNo) {
@@ -55094,7 +55133,7 @@ function dsSetPageDrawing(index, drawingNo) {
   if (dsPending.labels) dsPending.labels[index] = '';   // 手動改了就不再顯示圖號表的分頁名稱
   const detail = dsEl('ds-map-detail-' + index);
   if (detail) detail.innerHTML = dsPendingDetailHtml(index);
-  dsEl('ds-save').disabled = !dsPending.pageMap.some(Boolean);
+  dsSyncSaveBtn();
 }
 
 function dsPendingDetailHtml(index) {
@@ -55129,7 +55168,6 @@ function dsApplyDefaultMapping() {
   dsPending.startPage = startPage;
   Object.assign(dsPending, dsSequentialAssign(dsPending.pages, startPage));
   dsRenderPending();
-  dsEl('ds-save').disabled = !dsPending.pageMap.some(Boolean);
 }
 
 function dsCopyPreviousDrawing(index) {
@@ -55306,6 +55344,12 @@ async function dsFileSelected(input) {
     };
     dsEl('ds-save').textContent = '上傳並儲存頁碼標記';
     dsApplyDefaultMapping();
+    if (dsPendingBlocked()) {
+      dsSetProgress(100, 'PDF 準備完成，但' + dsPendingCountText() + '，頁數對不起來；請先貼上圖號表再上傳。');
+      input.value = '';
+      dsSheetAskPaste();
+      return;
+    }
     dsSetProgress(100, 'PDF 準備完成，已依' + (dsSheet ? '圖號表' : ' BOM 圖號') + '順序預填；請預覽並修正後按「上傳並儲存頁碼標記」。');
     input.value = '';
   } catch (error) {
@@ -55412,6 +55456,7 @@ async function dsSavePending() {
   if (!dsPending || !dsProjectId() || !dsZoneId()) return;
   const mappedRows = dsPending.pageMap.map((drawingNo, index) => ({ drawingNo: String(drawingNo || '').trim(), pageNo: index + 1 })).filter(row => row.drawingNo);
   if (!mappedRows.length) { alert('至少要標記一頁圖號。'); return; }
+  if (dsPendingBlocked()) { dsSyncSaveBtn(); dsSheetAskPaste(); return; }
   const button = dsEl('ds-save'); button.disabled = true;
   if (dsPending.existingFile) {
     await dsSaveExistingMappings(mappedRows);
