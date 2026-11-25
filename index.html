@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.25.3"/>
+<meta name="sc-version" content="2026.11.25.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5522,7 +5522,7 @@ window.normalizeFullWidth=function(value){
         </div>
         <div class="sc-right">
           <div class="sc-rbar">
-            <b style="font-size:13px">自檢表</b><span id="sc-cnt" class="sc-dim">0 張</span>
+            <b style="font-size:13px">自檢表</b><span id="sc-cnt" class="sc-dim">0 張</span><span id="sc-draftlbl" class="sc-dim" title="做到一半的內容自動暫存在這台電腦的瀏覽器(不佔資料庫);當機或關掉後再開會問要不要繼續;匯出 Word 後自動刪除"></span>
             <span style="flex:1"></span>
             <label class="sc-chk" title="框選截圖時,同圖號+同規格且尚未有圖的表一併帶入同一張截圖"><input type="checkbox" id="sc-applysame" checked/>同圖號規格一併套用</label>
             <button class="btn-sm" onclick="scClearAll()">清空</button>
@@ -53809,9 +53809,14 @@ const scLoadMsg=m=>{ const e=scEl('sc-loadmsg'); if(e) e.textContent=m; };
 
 /* ── 初始化 ── */
 async function selfcheckInit(){
-  if(scInited){ if(scPages.length) scShowPage(scPi); return; }
+  if(scInited){ if(scPages.length) scShowPage(scPi); if(!scDraftReady&&!scDraftAsking) scDraftCheck(); return; }
   scInited=true;
   scBindCrop();
+  ['sc-jobno','sc-jobname'].forEach(id=>scEl(id)?.addEventListener('input',()=>scDraftDirty()));
+  scEl('sc-applysame')?.addEventListener('change',()=>scDraftDirty());
+  const scFlush=()=>{ if(scDraftTimer){ clearTimeout(scDraftTimer); scDraftTimer=0; scDraftSave(); } };
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') scFlush(); });
+  window.addEventListener('pagehide',scFlush);
   window.addEventListener('resize',()=>{ if(document.getElementById('page-selfcheck')?.classList.contains('active') && scPages.length) scShowPage(scPi); });
   document.addEventListener('keydown',e=>{
     if(!document.getElementById('page-selfcheck')?.classList.contains('active')) return;
@@ -53825,6 +53830,7 @@ async function selfcheckInit(){
     allBOM.filter(p=>String(p.status||'').trim()!=='已完成')
       .map(p=>'<option value="'+p.id+'">'+esc(p.proj_num)+' — '+esc(p.proj_name||'')+'</option>').join('');
   scRender();
+  scDraftCheck();
 }
 async function scProjChange(){
   const pid=scEl('sc-proj').value, zSel=scEl('sc-zone');
@@ -53861,6 +53867,7 @@ async function scZoneChange(){
     '<option value="'+f.id+'">'+esc(f.original_name)+'（'+Number(f.page_count||0)+' 頁）</option>').join('');
   sel.onchange=()=>{ btn.disabled=!sel.value; };
   scLoadMsg(scDrawingFiles.length?'已有 '+scDrawingFiles.length+' 份共用圖面':'尚無共用圖面，可從此上傳');
+  scDraftDirty();
 }
 
 /* ── ① BOM → 產生自檢表 ── */
@@ -53884,6 +53891,7 @@ async function scGenForms(){
   const p=allBOM.find(x=>String(x.id)===String(pid)), z=scZones.find(x=>String(x.id)===String(zid));
   scMeta={projNum:p?String(p.proj_num||'').trim():'',zoneCode:z?String(z.zone_code||'').trim():''};
   scStatus('已依 BOM 產生 '+scForms.length+' 張自檢表('+scMeta.projNum+'-'+scMeta.zoneCode+')。載入共用製造圖後框選立面圖填入。');
+  scDraftDirty();
 }
 
 /* ── ② 載入 PDF / 頁圖 ── */
@@ -54034,6 +54042,7 @@ async function scLoadStoredDrawing(file){
       }
     }
     scLoadMsg('已載入共用圖面 '+file.original_name+'，共 '+scPages.length+' 頁');
+    scDraftDirty();
     if(scPages.length){ scEl('sc-empty').hidden=true; scEl('sc-wrap').hidden=false; scFilms(); scShowPage(0); }
   }catch(err){ console.error(err); alert('載入共用圖面失敗：'+err.message); }
   finally{ scDrawingBusy=false; }
@@ -54183,8 +54192,9 @@ async function scShowPage(n){
   scEl('sc-pagedwg').value=p.dwg||'';
   Array.from(scEl('sc-films').children).forEach((el,i)=>el.classList.toggle('on',i===scPi));
   scEl('sc-sel').style.display='none';
+  scDraftDirty(true);
 }
-function scPageDwgInput(v){ if(scPages[scPi]){ scPages[scPi].dwg=v.trim(); scPages[scPi].ocr='done'; scFilms(); } }
+function scPageDwgInput(v){ if(scPages[scPi]){ scPages[scPi].dwg=v.trim(); scPages[scPi].ocr='done'; scFilms(); scDraftDirty(); } }
 
 /* ── OCR 右下角圖號 ── */
 let scOcrWorker=null, scOcrBusy=false;
@@ -54319,7 +54329,9 @@ async function scFillFromPage(idx,pr,target){
   const targets=[target];
   if(scEl('sc-applysame').checked&&scKey(target)!=='|')
     scForms.forEach(f=>{ if(f!==target&&!f.png&&scKey(f)===scKey(target)) targets.push(f); });
-  targets.forEach(f=>{ f.png=blob; scGcUrl(f,url); f.w=w; f.h=h; });
+  const imgId='i'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  targets.forEach(f=>{ f.png=blob; f.imgId=imgId; scGcUrl(f,url); f.w=w; f.h=h; });
+  scDraftDirty();
   return {w,h,n:targets.length};
 }
 function scPickTarget(pg){
@@ -54383,17 +54395,17 @@ function scCard(f,i){
     }
   };
   el.querySelectorAll('input[data-k]').forEach(inp=>{ inp.oninput=()=>{ f[inp.dataset.k]=inp.value;
-    if(inp.dataset.k==='spec'&&!f.dims.A){ f.dims.A=scLastNum(inp.value); } }; });
+    if(inp.dataset.k==='spec'&&!f.dims.A){ f.dims.A=scLastNum(inp.value); } scDraftDirty(); }; });
   el.querySelectorAll('input[data-dim]').forEach(inp=>{ inp.oninput=()=>{ f.dims[inp.dataset.dim]=inp.value.trim();
-    inp.classList.toggle('hasval',!!inp.value.trim()); }; });
+    inp.classList.toggle('hasval',!!inp.value.trim()); scDraftDirty(); }; });
   const big=el.querySelector('[data-act="big"]');
   if(big) big.onclick=()=>{ scEl('sc-bigimg').src=f.url; scEl('sc-big').showModal(); };
   const delshot=el.querySelector('[data-act="delshot"]');
   if(delshot) delshot.onclick=async()=>{
     if(!await uiConfirm('刪除第 '+(i+1)+' 張自檢表的截圖？構件資料會保留，可重新框選。')) return;
-    scGcUrl(f,null); f.png=null; f.w=0; f.h=0;
+    scGcUrl(f,null); f.png=null; f.imgId=null; f.w=0; f.h=0;
     scSelId=f.id;
-    scRender();
+    scRender(); scDraftDirty();
     scStatus('已刪除 '+(f.partNo||'第 '+(i+1)+' 張')+' 的截圖，請在左圖重新框選。');
   };
   el.querySelector('[data-act="del"]').onclick=async()=>{
@@ -54401,7 +54413,7 @@ function scCard(f,i){
     scGcUrl(f,null); f.png=null;
     scForms.splice(i,1);
     if(scSelId===f.id) scSelId=null;
-    scRender();
+    scRender(); scDraftDirty();
   };
   return el;
 }
@@ -54410,6 +54422,7 @@ async function scClearAll(){
   if(!await uiConfirm('清空全部 '+scForms.length+' 張自檢表?')) return;
   scForms.forEach(f=>{ scGcUrl(f,null); f.png=null; });
   scForms=[]; scSelId=null; scRender(); scStatus('已清空。');
+  scDraftDirty();
 }
 
 /* ── 匯出 Word(沿用 B820 範本引擎:抬頭列/圖框列/A~I列/6組構件列) ── */
@@ -54502,6 +54515,7 @@ async function scTplChange(inp){
   for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));
   scTplB64=btoa(s);
   scStatus('範本已換成 '+f.name+'(欄列結構需與 B820 範本一致)。');
+  scDraftDirty();
 }
 async function scExport(){
   if(!scForms.length) return;
@@ -54574,9 +54588,165 @@ async function scExport(){
     a.download=fname.replace(/[\\/:*?"<>|]/g,'')+'.docx';
     a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-    scStatus('✅ 已匯出 '+scForms.length+' 張自檢表。');
+    let draftGone=false;
+    if(scDraftReady){ try{ clearTimeout(scDraftTimer); scDraftTimer=0; await scDraftClear(); scDraftExported=true; draftGone=true; }catch(_){} }
+    scStatus('✅ 已匯出 '+scForms.length+' 張自檢表。'+(draftGone?'暫存已刪除(之後再修改會重新暫存)。':''));
   }catch(err){ console.error(err); scStatus('❌ 匯出失敗:'+err.message); alert('匯出失敗:'+err.message);
   }finally{ btn.disabled=false; }
+}
+
+/* ── 暫存草稿:做到一半當機/關掉可恢復 ──
+   只存在這台電腦的瀏覽器(IndexedDB),不佔資料庫;每位使用者各一份。
+   meta = 清單文字資料(小);imgs = 截圖 PNG 原檔(Blob,不轉 base64),同一張截圖只存一份、已存過的不重寫。
+   製造圖頁面不存,只記圖面快搜的檔案 id,恢復時重新載入。
+   修改後 1.2 秒沒動作才存;切到背景/關頁時立刻存。匯出 Word 成功後刪除;14 天沒動自動清掉。 */
+const SC_DRAFT_DB='zs-selfcheck-draft', SC_DRAFT_TTL=14*864e5, SC_DRAFT_DELAY=1200;
+let scDraftDbP=null, scDraftTimer=0, scDraftReady=false, scDraftAsking=false, scDraftBusy=false, scDraftAgain=false;
+let scDraftWarned=false, scDraftExported=false, scDraftPersistAsked=false;
+const scDraftUid=()=>String((typeof currentUser!=='undefined'&&currentUser&&currentUser.id)||'guest');
+const scDraftKey=()=>'draft:'+scDraftUid();
+const scDraftImgPrefix=()=>scDraftUid()+':';
+function scDraftDb(){
+  if(!scDraftDbP) scDraftDbP=new Promise((res,rej)=>{
+    if(!window.indexedDB){ rej(new Error('此瀏覽器不支援 IndexedDB')); return; }
+    const q=indexedDB.open(SC_DRAFT_DB,1);
+    q.onupgradeneeded=()=>{ const db=q.result; db.createObjectStore('meta'); db.createObjectStore('imgs'); };
+    q.onsuccess=()=>res(q.result);
+    q.onerror=()=>rej(q.error);
+  }).catch(e=>{ scDraftDbP=null; throw e; });
+  return scDraftDbP;
+}
+async function scDraftTx(stores,fn){   // 一次交易做完,完成才 resolve
+  const db=await scDraftDb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(stores,'readwrite'); let out;
+    fn(tx,v=>{ out=v; });
+    tx.oncomplete=()=>res(out); tx.onerror=tx.onabort=()=>rej(tx.error||new Error('暫存失敗'));
+  });
+}
+function scDraftTime(t){
+  const d=new Date(t), p=n=>String(n).padStart(2,'0'), now=new Date();
+  const hm=p(d.getHours())+':'+p(d.getMinutes());
+  return d.toDateString()===now.toDateString()?hm:(d.getMonth()+1)+'/'+d.getDate()+' '+hm;
+}
+function scDraftLbl(t){ const e=scEl('sc-draftlbl'); if(e) e.textContent=t?'· 已暫存 '+scDraftTime(t):''; }
+// nav=true:只是翻頁之類,匯出後不因此重建暫存
+function scDraftDirty(nav){
+  if(!scDraftReady) return;
+  if(nav&&scDraftExported) return;
+  if(!nav) scDraftExported=false;
+  clearTimeout(scDraftTimer);
+  scDraftTimer=setTimeout(()=>{ scDraftTimer=0; scDraftSave(); },SC_DRAFT_DELAY);
+}
+async function scDraftSave(){
+  if(!scDraftReady) return;
+  if(scDraftBusy){ scDraftAgain=true; return; }
+  scDraftBusy=true;
+  try{
+    if(!scForms.length){ await scDraftClear(); return; }
+    if(!scDraftPersistAsked){ scDraftPersistAsked=true; try{ navigator.storage?.persist?.().catch(()=>{}); }catch(_){} }
+    const pre=scDraftImgPrefix(), imgs=new Map();
+    scForms.forEach(f=>{ if(f.png&&f.imgId) imgs.set(pre+f.imgId,f.png); });
+    const fileId=(scPages[0]&&scPages[0].fileId)||'';
+    const meta={v:1,savedAt:Date.now(),
+      projId:scEl('sc-proj').value||'', zoneId:scEl('sc-zone').value||'', info:scMeta,
+      jobNo:scEl('sc-jobno').value||'', jobName:scEl('sc-jobname').value||'', applySame:!!scEl('sc-applysame').checked,
+      fileId, pi:scPi, pageDwg:fileId?scPages.map(p=>p.dwg||''):[],
+      tpl:scTplB64||null, seq:scSeq, selId:scSelId,
+      forms:scForms.map(f=>({id:f.id,partNo:f.partNo||'',dwg:f.dwg||'',spec:f.spec||'',dims:f.dims||{},
+        imgId:f.png?f.imgId||null:null,w:f.w||0,h:f.h||0}))};
+    await scDraftTx(['meta','imgs'],tx=>{
+      const st=tx.objectStore('imgs');
+      const k=st.getAllKeys();
+      k.onsuccess=()=>{
+        const have=new Set(k.result.filter(x=>String(x).startsWith(pre)));
+        have.forEach(id=>{ if(!imgs.has(id)) st.delete(id); });   // 已不用的截圖刪掉
+        imgs.forEach((b,id)=>{ if(!have.has(id)) st.put(b,id); }); // 只寫新的截圖
+      };
+      tx.objectStore('meta').put(meta,scDraftKey());
+    });
+    scDraftLbl(meta.savedAt); scDraftWarned=false;
+  }catch(e){
+    console.warn('自檢表暫存失敗',e);
+    if(!scDraftWarned){ scDraftWarned=true; scStatus('⚠ 暫存失敗('+(e&&e.message||e)+'),目前內容仍在畫面上,可照常匯出。'); }
+  }finally{
+    scDraftBusy=false;
+    if(scDraftAgain){ scDraftAgain=false; scDraftDirty(); }
+  }
+}
+async function scDraftClear(){
+  const pre=scDraftImgPrefix();
+  await scDraftTx(['meta','imgs'],tx=>{
+    tx.objectStore('meta').delete(scDraftKey());
+    const st=tx.objectStore('imgs'), k=st.getAllKeys();
+    k.onsuccess=()=>k.result.forEach(id=>{ if(String(id).startsWith(pre)) st.delete(id); });
+  });
+  scDraftLbl(0);
+}
+async function scDraftCheck(){
+  if(scDraftReady||scDraftAsking) return;
+  scDraftAsking=true;
+  try{
+    let d=null;
+    try{ d=await scDraftTx(['meta'],(tx,set)=>{ const r=tx.objectStore('meta').get(scDraftKey()); r.onsuccess=()=>set(r.result); }); }
+    catch(e){ console.warn('讀取自檢表暫存失敗',e); scDraftReady=true; return; }
+    if(!d||!Array.isArray(d.forms)||!d.forms.length){ scDraftReady=true; return; }
+    if(Date.now()-(d.savedAt||0)>SC_DRAFT_TTL){ scDraftReady=true; try{ await scDraftClear(); }catch(_){} return; }
+    const shot=d.forms.filter(f=>f.imgId).length;
+    const label=(d.info&&d.info.projNum&&d.info.zoneCode)?d.info.projNum+'-'+d.info.zoneCode:'手動建立的自檢表';
+    const k=await uiChoose('發現上次還沒做完的自檢表:\n'+label+',共 '+d.forms.length+' 張、已截圖 '+shot+' 張\n最後暫存:'+scDraftTime(d.savedAt)+
+      '\n\n要接著做嗎?',[{key:'discard',label:'捨棄'},{key:'resume',label:'繼續上次進度',primary:true}]);
+    if(k==='resume'){ await scDraftRestore(d); scDraftReady=true; scDraftLbl(d.savedAt); }
+    else if(k==='discard'){ scDraftReady=true; try{ await scDraftClear(); }catch(_){} scStatus('已捨棄上次的暫存。'); }
+    else scStatus('上次的暫存還留著(下次開這頁會再問);在那之前,這次的修改不會暫存。');
+  }finally{ scDraftAsking=false; }
+}
+async function scDraftRestore(d){
+  scStatus('恢復上次進度…');
+  const pre=scDraftImgPrefix(), ids=[...new Set(d.forms.map(f=>f.imgId).filter(Boolean))];
+  const blobs=new Map();
+  try{
+    await scDraftTx(['imgs'],tx=>{ const st=tx.objectStore('imgs');
+      ids.forEach(id=>{ const r=st.get(pre+id); r.onsuccess=()=>{ if(r.result) blobs.set(id,r.result); }; }); });
+  }catch(e){ console.warn('讀取暫存截圖失敗',e); }
+  scForms.forEach(f=>scGcUrl(f,null));
+  const urls=new Map();
+  scForms=d.forms.map(x=>{
+    const f={id:x.id,partNo:x.partNo||'',dwg:x.dwg||'',spec:x.spec||'',dims:Object.assign({},x.dims||{}),png:null,url:null,imgId:null,w:0,h:0};
+    const b=x.imgId&&blobs.get(x.imgId);
+    if(b){ if(!urls.has(x.imgId)) urls.set(x.imgId,URL.createObjectURL(b));
+      Object.assign(f,{png:b,imgId:x.imgId,url:urls.get(x.imgId),w:x.w||0,h:x.h||0}); }
+    return f;
+  });
+  scSeq=Math.max(Number(d.seq)||0,...scForms.map(f=>Number(f.id)||0));
+  scSelId=scForms.some(f=>f.id===d.selId)?d.selId:((scForms.find(f=>!f.png)||{}).id??null);
+  scMeta=d.info||{projNum:'',zoneCode:''};
+  scTplB64=d.tpl||null;
+  scEl('sc-applysame').checked=d.applySame!==false;
+  scRender();
+  const lost=d.forms.filter(f=>f.imgId&&!blobs.has(f.imgId)).length;
+  // 工程/工程區/製造圖
+  const pSel=scEl('sc-proj'), zSel=scEl('sc-zone');
+  if(d.projId&&[...pSel.options].some(o=>o.value===String(d.projId))){
+    pSel.value=String(d.projId); await scProjChange();
+    if(d.zoneId&&[...zSel.options].some(o=>o.value===String(d.zoneId))){ zSel.value=String(d.zoneId); await scZoneChange(); }
+  }
+  scEl('sc-jobno').value=d.jobNo||''; scEl('sc-jobname').value=d.jobName||'';
+  let drawMsg='';
+  if(d.fileId){
+    const file=scDrawingFiles.find(f=>String(f.id)===String(d.fileId));
+    if(file){
+      scEl('sc-drawing-file').value=file.id; scEl('sc-load-existing').disabled=false;
+      await scLoadStoredDrawing(file);
+      if(Array.isArray(d.pageDwg)&&d.pageDwg.length===scPages.length){
+        scPages.forEach((p,i)=>{ if(d.pageDwg[i]&&d.pageDwg[i]!==p.dwg){ p.dwg=d.pageDwg[i]; p.ocr='done'; } });
+        scFilms();
+      }
+      if(scPages.length) await scShowPage(Math.min(Number(d.pi)||0,scPages.length-1));
+    }else drawMsg=' 原本的製造圖已不在圖面快搜,請重新載入圖面。';
+  }
+  const shot=scForms.filter(f=>f.png).length;
+  scStatus('已恢復上次進度:'+scForms.length+' 張,已截圖 '+shot+' 張。'+(lost?' 有 '+lost+' 張截圖讀不到,請重新框選。':'')+drawMsg);
 }
 </script>
 <script>
