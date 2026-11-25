@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.24.2"/>
+<meta name="sc-version" content="2026.11.25.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -5267,6 +5267,11 @@ window.normalizeFullWidth=function(value){
     #page-drawingsearch .ds-map-warn{padding:9px 11px;border:1px solid #d29922;border-radius:8px;background:rgba(210,153,34,.12);color:#d29922;font-size:12px;line-height:1.6}
     #page-drawingsearch .ds-page-input{width:62px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px}
     #ds-viewer{width:min(1100px,96vw);height:min(850px,94vh);padding:0;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text)}
+    #ds-replace{width:min(560px,94vw);padding:18px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text)}
+    #ds-replace::backdrop{background:rgba(0,0,0,.6)}
+    #ds-replace .ds-replace-field{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;margin-top:6px}
+    #ds-replace .ds-replace-field>span:first-child{color:var(--text3);white-space:nowrap}
+    #ds-replace select{max-width:100%;flex:1 1 260px}
     #ds-viewer::backdrop{background:rgba(0,0,0,.72)}#ds-frame{width:100%;height:calc(100% - 48px);border:0;background:#fff}
     #ds-canvas-wrap{height:calc(100% - 48px);overflow:auto;background:#3b3b3b;padding:16px;text-align:center}
     #ds-canvas{display:block;margin:0 auto;background:#fff;box-shadow:0 2px 16px rgba(0,0,0,.35);max-width:none}
@@ -5383,11 +5388,31 @@ window.normalizeFullWidth=function(value){
             <span id="ds-viewer-pages" class="ds-meta">/ 1</span>
             <button id="ds-viewer-next" class="btn" onclick="dsViewerPage(1)" disabled>下一頁</button>
             <button id="ds-viewer-original" class="btn btn-gen" onclick="dsViewOriginalPage(dsViewerFileId, dsViewerPageNumber)" title="以原始畫質在新分頁開啟本頁，手機可雙指縮放">原始畫質</button>
+            <button id="ds-viewer-replace" class="btn" onclick="dsReplaceOpen(dsViewerFileId, dsViewerPageNumber)" title="上傳新的單頁 PDF 或圖片換掉這一頁，其他頁與頁碼標記不變" hidden>換這頁</button>
             <button class="btn" onclick="dsCloseViewer()">關閉</button>
           </div>
         </div>
         <iframe id="ds-frame" title="PDF 圖面預覽"></iframe>
         <div id="ds-canvas-wrap" hidden><canvas id="ds-canvas"></canvas></div>
+      </dialog>
+      <dialog id="ds-replace">
+        <div class="ds-title" id="ds-replace-title">單頁更新</div>
+        <div class="ds-status" id="ds-replace-file" style="margin:0 0 10px"></div>
+        <label class="ds-replace-field"><span>要換哪一頁</span><select id="ds-replace-page" class="filter-select" onchange="dsReplaceRender()"></select></label>
+        <div class="ds-row" style="margin:8px 0">
+          <input id="ds-replace-input" class="ds-file-native" type="file" accept="application/pdf,.pdf,image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" onchange="dsReplaceFileSelected(this)">
+          <label class="ds-file-picker" for="ds-replace-input"><span class="ds-file-badge">PDF/圖</span><span>選擇新的那一頁</span></label>
+          <span id="ds-replace-name" class="ds-file-name">尚未選擇檔案</span>
+        </div>
+        <label class="ds-replace-field" id="ds-replace-srcpage-row" hidden><span>用新檔的第幾頁</span><input id="ds-replace-srcpage" class="ds-page-input" type="number" min="1" value="1"><span id="ds-replace-srcpages" class="ds-meta"></span></label>
+        <div class="ds-status" id="ds-replace-note" style="margin:8px 0 0">只換這一頁：頁碼、圖號標記、報驗附圖照舊，其他頁不受影響。這一頁原本的 ↺↻ 轉正角度會清掉；手機預覽圖會自動重新產生。</div>
+        <div class="ds-progress" style="margin-top:10px"><i id="ds-replace-bar"></i></div>
+        <div class="ds-status" id="ds-replace-status" style="margin:4px 0 0"></div>
+        <div class="ds-row" style="justify-content:flex-end;margin-top:12px">
+          <button class="btn" id="ds-replace-preview" onclick="dsReplacePreviewOld()">看原本這頁</button>
+          <button class="btn" id="ds-replace-cancel" onclick="dsReplaceClose()">取消</button>
+          <button class="btn btn-gen" id="ds-replace-go" onclick="dsReplaceRun()" disabled>換掉這一頁</button>
+        </div>
       </dialog>
     </div>
 
@@ -54685,8 +54710,8 @@ async function dsEnsureStorageReady() {
   throw new Error(detail || ('無法檢查 Supabase Storage：HTTP ' + response.status));
 }
 
-async function dsStorageDownload(path) {
-  return sbStorageFetch(SUPA_URL + '/storage/v1/object/authenticated/' + DS_BUCKET + '/' + dsEncodedPath(path), { headers: dsStorageHeaders() });
+async function dsStorageDownload(path, opts = {}) {
+  return sbStorageFetch(SUPA_URL + '/storage/v1/object/authenticated/' + DS_BUCKET + '/' + dsEncodedPath(path), Object.assign({ headers: dsStorageHeaders() }, opts));
 }
 
 async function dsStorageRemove(paths) {
@@ -55128,6 +55153,7 @@ async function dsPreviewPendingPage(pageNumber) {
   dsEl('ds-viewer-next').disabled = true;
   dsEl('ds-canvas-wrap').hidden = true;
   const pendingOriginalBtn = dsEl('ds-viewer-original'); if (pendingOriginalBtn) pendingOriginalBtn.hidden = true;
+  const pendingReplaceBtn = dsEl('ds-viewer-replace'); if (pendingReplaceBtn) pendingReplaceBtn.hidden = true;
   dsEl('ds-frame').style.display = 'block';
   dsEl('ds-frame').src = dsObjectUrl + '#page=' + localPage + '&zoom=page-width';
   if (!dsEl('ds-viewer').open) dsEl('ds-viewer').showModal();
@@ -55433,9 +55459,10 @@ function dsRenderFiles() {
     return '<div class="ds-item ds-file-card' + (isActive ? ' is-active' : '') + '" role="button" tabindex="0" aria-label="選擇 ' + dsEsc(file.original_name) + ' 進行搜尋" onclick="if(!event.target.closest(\'button\'))dsActivateFile(\'' + file.id + '\')" onkeydown="dsFileCardKeydown(event,\'' + file.id + '\')"><div class="ds-item-main"><div>' + dsEsc(file.original_name) + (isActive ? ' · 搜尋中' : '') + '</div>' +
       '<div class="ds-meta">' + dsEsc(locationText) + '</div><div class="ds-meta">' +
       file.page_count + ' 頁 · 已標記 ' + rows.length + ' 頁／' + drawingCount + ' 個圖號 · ' + (Number(file.size_bytes || 0) / 1048576).toFixed(1) + ' MB' +
-      (uploadedAt ? ' · ' + dsEsc(uploadedAt) : '') + '</div></div><div class="ds-row">' +
+      (uploadedAt ? ' · ' + dsEsc(uploadedAt) : '') + dsReplacedText(file) + '</div></div><div class="ds-row">' +
       '<button class="btn" onclick="dsOpenFile(\'' + file.id + '\',1)">開啟</button>' +
       (canManage ? '<button class="btn" onclick="' + (sameZone ? 'dsEditFileMappings' : 'dsSelectFileZone') + '(\'' + file.id + '\')">' + (sameZone ? '編輯標記' : '切換並編輯') + '</button>' : '') +
+      (canManage && !dsTouchTab() ? '<button class="btn" onclick="dsReplaceOpen(\'' + file.id + '\',1)" title="上傳新的單頁 PDF 或圖片換掉某一頁，其他頁不用重傳">換頁</button>' : '') +
       (canManage ? '<button class="btn" onclick="dsDeleteFile(\'' + file.id + '\')">刪除</button>' : '') +
       '</div></div>';
   }).join('');
@@ -55705,14 +55732,24 @@ async function dsMergeRowsToPdf(uniqueRows, onProgress, title = '', files = null
     const row = uniqueRows[index];
     const file = (files || dsFiles).find(item => item.id === row.file_id) || dsAllFiles.find(item => item.id === row.file_id);
     if (!file) throw new Error('找不到第 ' + row.page_no + ' 頁所屬 PDF。');
-    const part = dsPartsForFile(file).find(item => Number(row.page_no) >= item.page_start && Number(row.page_no) <= item.page_end);
+    const partOf = () => dsPartsForFile(file).find(item => Number(row.page_no) >= item.page_start && Number(row.page_no) <= item.page_end);
+    let part = partOf();
     if (!part) throw new Error('找不到第 ' + row.page_no + ' 頁的儲存分段。');
     let source = sourceDocuments.get(part.storage_key);
     if (!source) {
-      const response = await dsStorageDownload(part.storage_key);
-      if (!response.ok) throw new Error((await response.text()) || ('PDF 下載失敗：HTTP ' + response.status));
-      source = await PDFLib.PDFDocument.load(await response.arrayBuffer(), { ignoreEncryption: true });
-      sourceDocuments.set(part.storage_key, source);
+      let response = await dsStorageDownload(part.storage_key);
+      // 別台電腦剛換過頁,舊檔已刪:重抓這份圖面的儲存位置再試一次
+      if (!response.ok && await dsRefreshFileRow(file)) {
+        part = partOf();
+        if (!part) throw new Error('找不到第 ' + row.page_no + ' 頁的儲存分段。');
+        source = sourceDocuments.get(part.storage_key);
+        if (!source) response = await dsStorageDownload(part.storage_key);
+      }
+      if (!source) {
+        if (!response.ok) throw new Error((await response.text()) || ('PDF 下載失敗：HTTP ' + response.status));
+        source = await PDFLib.PDFDocument.load(await response.arrayBuffer(), { ignoreEncryption: true });
+        sourceDocuments.set(part.storage_key, source);
+      }
     }
     await dsAddPrintSafePage(output, source.getPage(Number(row.page_no) - part.page_start), dsPageRot(file, row.page_no));
     if (onProgress) onProgress(index + 1, uniqueRows.length);
@@ -55850,7 +55887,8 @@ function dsPreviewPath(file, pageNo) {
   return seg[0] + '/' + seg[1] + '/' + file.id + '/preview-p' + String(pageNo).padStart(3, '0') + '.jpg';
 }
 async function dsLoadPreviewImage(file, pageNo) {
-  const response = await dsStorageDownload(dsPreviewPath(file, pageNo));
+  // 預覽圖路徑固定,換頁後同一路徑是新圖:一律跟伺服器確認(ETag 沒變只回 304),不吃瀏覽器舊快取
+  const response = await dsStorageDownload(dsPreviewPath(file, pageNo), { cache: 'no-cache' });
   if (!response.ok) return null;
   const url = URL.createObjectURL(await response.blob());
   try {
@@ -56305,6 +56343,7 @@ function dsViewerRenderMetrics(pdfPage, userRot = 0) {
 function dsFinishViewerPage(file, requestedPage, totalPages) {
   dsViewerPageNumber = requestedPage;
   const originalBtn = dsEl('ds-viewer-original'); if (originalBtn) originalBtn.hidden = false;
+  const replaceBtn = dsEl('ds-viewer-replace'); if (replaceBtn) replaceBtn.hidden = !dsCanReplace(file);
   dsEl('ds-viewer-title').textContent = file.original_name || 'PDF';
   dsEl('ds-viewer-part').textContent = '第 ' + requestedPage + ' / ' + totalPages + ' 頁';
   dsEl('ds-viewer-page').value = requestedPage;
@@ -56408,7 +56447,7 @@ async function dsRenderStoredPage(file, pageNumber) {
   dsScheduleViewerPrefetch(file, requestedPage + 1);
 }
 
-async function dsOpenFile(id, pageNumber) {
+async function dsOpenFile(id, pageNumber, retried = false) {
   const file = dsFiles.find(item => item.id === id) || dsAllFiles.find(item => item.id === id);
   if (!file?.storage_key) { alert('找不到此 PDF 的儲存位置。'); return; }
   if (dsTouchTab()) { dsOpenPages([{ file_id: id, page_no: Math.max(1, Number(pageNumber) || 1), part_no: file.original_name || '圖面' }], file.original_name || '圖面'); return; }
@@ -56432,6 +56471,11 @@ async function dsOpenFile(id, pageNumber) {
     }
     await dsRenderStoredPage(file, requestedPage);
   } catch (error) {
+    // 別台電腦剛換過頁,舊檔已刪:重抓儲存位置再開一次
+    if (!retried && await dsRefreshFileRow(file).catch(() => false)) {
+      await dsReleaseViewerPdf(); dsViewerFileId = ''; dsViewerPartIndex = -1; dsViewerPageCache.clear();
+      return dsOpenFile(id, pageNumber, true);
+    }
     console.error(error);
     alert('開啟圖面失敗：' + error.message);
   }
@@ -56455,6 +56499,225 @@ async function dsCloseViewer() {
   if (dsObjectUrl) { URL.revokeObjectURL(dsObjectUrl); dsObjectUrl = ''; }
   await dsReleaseViewerPdf();
   dsViewerFileId = ''; dsViewerPartIndex = -1; dsViewerPageNumber = 1;
+}
+
+/* ── 單頁更新(換頁)──
+   只換某一份圖面的某一頁:把那一頁所在的那一段 PDF 下載下來,其他頁原封不動複製,那一頁換成新的(單頁 PDF 或圖片),
+   整段存成新路徑上傳(<工程>/<工程區>/<檔案id>/part-001-r<時間>.pdf),再用 drawing_replace_part 把 storage_parts 指過去。
+   頁碼不變,所以頁碼標記、圖號對應、報驗附圖都照舊;換新路徑,瀏覽器快取不會拿到舊檔。
+   該頁的轉正角度清掉、舊預覽圖刪掉,電腦端接著只重產那一頁的手機預覽圖(drawing_replace_page_migration.sql)。 */
+let dsReplaceState = null, dsReplaceBusy = false;
+function dsCanReplace(file) {
+  if (!file || isGuest || !currentUser || dsTouchTab()) return false;
+  if (document.getElementById('page-drawingsearch')?.classList.contains('perm-ro')) return false;
+  return !!currentUser.isAdmin || String(file.created_by || '') === String(currentUser.id || '');
+}
+function dsReplacedText(file) {
+  const n = Object.keys(file?.page_updates || {}).length;
+  return n ? ' · 換過 ' + n + ' 頁' : '';
+}
+function dsReplaceSay(percent, text) {
+  const bar = dsEl('ds-replace-bar'); if (bar) bar.style.width = Math.max(0, Math.min(100, percent || 0)) + '%';
+  const st = dsEl('ds-replace-status'); if (st) st.textContent = text || '';
+}
+function dsReplaceSyncButtons() {
+  const s = dsReplaceState;
+  const go = dsEl('ds-replace-go');
+  if (go) { go.disabled = dsReplaceBusy || !s?.newFile; go.textContent = dsReplaceBusy ? '換頁中…' : '換掉第 ' + (s?.pageNo || '') + ' 頁'; }
+  ['ds-replace-page', 'ds-replace-input', 'ds-replace-srcpage', 'ds-replace-preview'].forEach(id => { const el = dsEl(id); if (el) el.disabled = dsReplaceBusy; });
+  const cancel = dsEl('ds-replace-cancel'); if (cancel) cancel.textContent = dsReplaceBusy ? '請稍候…' : '取消';
+  if (cancel) cancel.disabled = dsReplaceBusy;
+}
+function dsReplaceOpen(id, pageNo) {
+  const file = dsFiles.find(item => item.id === id) || dsAllFiles.find(item => item.id === id);
+  if (!file) return;
+  if (!dsCanReplace(file)) { alert(dsTouchTab() ? '換頁請用電腦操作（手機記憶體不夠處理整段原始 PDF）。' : '只有管理員或原上傳者可以換頁。'); return; }
+  const total = Number(file.page_count) || 0;
+  const page = Math.max(1, Math.min(total, Number(pageNo) || 1));
+  const drawingsByPage = new Map();
+  dsAllPageDrawings.concat(dsPageDrawings).forEach(row => {
+    if (row.file_id !== id) return;
+    const list = drawingsByPage.get(Number(row.page_no)) || [];
+    if (!list.includes(row.drawing_no)) list.push(row.drawing_no);
+    drawingsByPage.set(Number(row.page_no), list);
+  });
+  const updates = file.page_updates || {};
+  const opts = [];
+  for (let p = 1; p <= total; p++) {
+    const drawings = drawingsByPage.get(p) || [];
+    const when = updates[p] ? dsUploadedAt(updates[p]) : '';
+    opts.push('<option value="' + p + '"' + (p === page ? ' selected' : '') + '>第 ' + p + ' 頁 — ' + (drawings.length ? '圖號 ' + dsEsc(drawings.join('、')) : '未標記圖號') + (when ? '（' + dsEsc(when) + ' 換過）' : '') + '</option>');
+  }
+  dsEl('ds-replace-page').innerHTML = opts.join('');
+  dsEl('ds-replace-file').textContent = (file.original_name || 'PDF') + ' · 共 ' + total + ' 頁';
+  dsEl('ds-replace-input').value = '';
+  dsEl('ds-replace-name').textContent = '尚未選擇檔案';
+  dsEl('ds-replace-srcpage-row').hidden = true;
+  dsReplaceState = { fileId: id, pageNo: page, newFile: null, srcBytes: null, srcPages: 0 };
+  dsReplaceSay(0, '');
+  dsReplaceSyncButtons();
+  const dlg = dsEl('ds-replace');
+  if (!dlg.open) dlg.showModal();
+}
+function dsReplaceRender() {
+  if (!dsReplaceState) return;
+  dsReplaceState.pageNo = Number(dsEl('ds-replace-page').value) || 1;
+  dsReplaceSyncButtons();
+}
+function dsReplaceClose() {
+  if (dsReplaceBusy) return;
+  dsReplaceState = null;
+  dsEl('ds-replace').close();
+}
+function dsReplacePreviewOld() {
+  const s = dsReplaceState; if (!s) return;
+  dsEl('ds-replace').close();
+  dsOpenFile(s.fileId, s.pageNo);
+}
+async function dsReplaceFileSelected(input) {
+  const s = dsReplaceState; const f = input.files?.[0];
+  if (!s || !f) return;
+  s.newFile = null; s.srcBytes = null; s.srcPages = 0;
+  dsEl('ds-replace-srcpage-row').hidden = true;
+  dsEl('ds-replace-name').textContent = f.name;
+  const isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+  const isImg = /^image\/(jpeg|png|webp)$/.test(f.type) || /\.(jpe?g|png|webp)$/i.test(f.name);
+  if (!isPdf && !isImg) { dsReplaceSay(0, '請選 PDF 或 JPG／PNG 圖片。'); input.value = ''; dsReplaceSyncButtons(); return; }
+  try {
+    if (isPdf) {
+      dsReplaceSay(5, '讀取新檔…');
+      await scLoadLib('pdf-lib', 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js');
+      const bytes = await f.arrayBuffer();
+      const doc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+      s.srcPages = doc.getPageCount();
+      if (!s.srcPages) throw new Error('這份 PDF 沒有頁面');
+      s.srcBytes = bytes;
+      if (s.srcPages > 1) {
+        dsEl('ds-replace-srcpage-row').hidden = false;
+        dsEl('ds-replace-srcpage').max = s.srcPages;
+        dsEl('ds-replace-srcpage').value = Math.min(s.pageNo, s.srcPages);
+        dsEl('ds-replace-srcpages').textContent = '（新檔共 ' + s.srcPages + ' 頁，只會用其中一頁）';
+      }
+    }
+    s.newFile = f;
+    dsReplaceSay(0, '已選「' + f.name + '」' + (isPdf ? '（' + s.srcPages + ' 頁）' : '（圖片）') + '，按「換掉第 ' + s.pageNo + ' 頁」開始。');
+  } catch (error) {
+    console.error(error);
+    dsReplaceSay(0, '讀不到這個檔案：' + error.message);
+    input.value = '';
+  }
+  dsReplaceSyncButtons();
+}
+/* 圖片 → pdf-lib 可嵌入的 JPG/PNG(其他格式先畫到 canvas 轉 JPG) */
+async function dsReplaceEmbedImage(out, file) {
+  const bytes = await file.arrayBuffer();
+  if (/^image\/jpeg$/.test(file.type) || /\.jpe?g$/i.test(file.name)) return out.embedJpg(bytes);
+  if (/^image\/png$/.test(file.type) || /\.png$/i.test(file.name)) return out.embedPng(bytes);
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image(); img.src = url; await img.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d', { alpha: false }); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+    canvas.width = canvas.height = 0;
+    if (!blob) throw new Error('圖片轉檔失敗');
+    return out.embedJpg(await blob.arrayBuffer());
+  } finally { URL.revokeObjectURL(url); }
+}
+/* 從資料庫重抓這份圖面(別台電腦換過頁,手上的 storage_parts 會指到已刪掉的舊檔);有變就回 true */
+async function dsRefreshFileRow(file) {
+  if (!file?.id) return false;
+  const r = await sbFetch('/rest/v1/drawing_files?select=*&id=eq.' + encodeURIComponent(file.id));
+  const row = r.ok && Array.isArray(r.data) ? r.data[0] : null;
+  if (!row) return false;
+  const changed = JSON.stringify(row.storage_parts || null) !== JSON.stringify(file.storage_parts || null) || row.storage_key !== file.storage_key;
+  [file, dsFiles.find(item => item.id === file.id), dsAllFiles.find(item => item.id === file.id)].forEach(obj => { if (obj) Object.assign(obj, row); });
+  return changed;
+}
+async function dsReplaceRun() {
+  const s = dsReplaceState;
+  if (!s?.newFile || dsReplaceBusy) return;
+  const cached = dsFiles.find(item => item.id === s.fileId) || dsAllFiles.find(item => item.id === s.fileId);
+  if (!cached) return;
+  const pageNo = s.pageNo;
+  if (!await uiConfirm('確定把「' + (cached.original_name || 'PDF') + '」第 ' + pageNo + ' 頁換成「' + s.newFile.name + '」？\n\n其他頁、頁碼標記與圖號對應都不變。')) return;
+  dsReplaceBusy = true; dsReplaceSyncButtons();
+  let newKey = '', rpcDone = false;
+  try {
+    dsReplaceSay(3, '確認圖面最新狀態…');
+    await scLoadLib('pdf-lib', 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js');
+    await dsRefreshFileRow(cached);
+    const file = cached;
+    if (pageNo < 1 || pageNo > Number(file.page_count)) throw new Error('頁碼超出範圍');
+    const parts = dsPartsForFile(file);
+    const partIndex = parts.findIndex(part => pageNo >= part.page_start && pageNo <= part.page_end);
+    const part = parts[partIndex];
+    if (!part?.storage_key) throw new Error('找不到第 ' + pageNo + ' 頁的儲存分段');
+    dsReplaceSay(8, '下載第 ' + pageNo + ' 頁所在的那一段 PDF' + (part.size_bytes ? '（' + (part.size_bytes / 1048576).toFixed(1) + ' MB）' : '') + '…');
+    const response = await dsStorageDownload(part.storage_key);
+    if (!response.ok) throw new Error((await response.text()) || ('PDF 下載失敗：HTTP ' + response.status));
+    const source = await PDFLib.PDFDocument.load(await response.arrayBuffer(), { ignoreEncryption: true });
+    const count = source.getPageCount();
+    const local = pageNo - part.page_start;
+    if (local < 0 || local >= count) throw new Error('這一段 PDF 頁數不符（' + count + ' 頁），請重新整理後再試');
+    dsReplaceSay(35, '組合新的頁面…');
+    const out = await PDFLib.PDFDocument.create();
+    try { const t = source.getTitle(); if (t) out.setTitle(t); } catch (_) {}
+    const others = Array.from({ length: count }, (_, i) => i).filter(i => i !== local);
+    const copied = others.length ? await out.copyPages(source, others) : [];
+    let newPage = null;
+    if (s.srcBytes) {
+      const src = await PDFLib.PDFDocument.load(s.srcBytes, { ignoreEncryption: true });
+      const srcIndex = Math.max(1, Math.min(s.srcPages, Number(dsEl('ds-replace-srcpage').value) || 1)) - 1;
+      [newPage] = await out.copyPages(src, [srcIndex]);
+    }
+    let c = 0;
+    for (let i = 0; i < count; i++) {
+      if (i !== local) { out.addPage(copied[c++]); continue; }
+      if (newPage) { out.addPage(newPage); continue; }
+      // 圖片:頁面長邊跟原本那頁一樣,比例照圖片
+      const old = source.getPage(local).getSize();
+      const long = Math.max(old.width, old.height) || 1190.55;
+      const image = await dsReplaceEmbedImage(out, s.newFile);
+      const w = image.width >= image.height ? long : long * image.width / image.height;
+      const h = image.width >= image.height ? long * image.height / image.width : long;
+      out.addPage([w, h]).drawImage(image, { x: 0, y: 0, width: w, height: h });
+    }
+    const bytes = await out.save({ useObjectStreams: true, addDefaultPage: false, objectsPerTick: 50 });
+    if (bytes.length > 50 * 1024 * 1024) throw new Error('換頁後這一段 PDF 有 ' + (bytes.length / 1048576).toFixed(1) + ' MB，超過 50 MB 上限；請把新頁的檔案縮小一點再試');
+    const seg = String(file.storage_key || '').split('/');
+    newKey = seg[0] + '/' + seg[1] + '/' + file.id + '/part-' + String(partIndex + 1).padStart(3, '0') + '-r' + Date.now() + '.pdf';
+    const partFile = new File([bytes], 'part-' + String(partIndex + 1).padStart(3, '0') + '.pdf', { type: 'application/pdf' });
+    await dsStorageUpload(newKey, partFile, uploaded => dsReplaceSay(45 + Math.round(uploaded / Math.max(1, bytes.length) * 40), '上傳新的 PDF… ' + Math.round(uploaded / Math.max(1, bytes.length) * 100) + '%'));
+    dsReplaceSay(88, '更新圖面資料…');
+    const rpc = await sbFetch('/rest/v1/rpc/drawing_replace_part', { method: 'POST', body: JSON.stringify({ p_id: file.id, p_old_key: part.storage_key, p_new_key: newKey, p_size: bytes.length, p_page: pageNo }) });
+    if (!rpc.ok) throw new Error(dsErrorMessage(rpc, '圖面資料更新失敗；請確認已執行 drawing_replace_page_migration.sql'));
+    rpcDone = true;
+    dsReplaceSay(92, '清掉舊檔與舊預覽圖…');
+    try { await dsStorageRemove([part.storage_key, dsPreviewPath(file, pageNo)]); } catch (error) { console.warn('換頁：舊檔刪除失敗(不影響使用)', error); }
+    // 正在看這份圖面的話,丟掉舊的 PDF 與頁面快取
+    const viewing = dsEl('ds-viewer').open && String(dsViewerFileId) === String(file.id);
+    if (String(dsViewerFileId) === String(file.id)) { await dsReleaseViewerPdf(); dsViewerFileId = ''; dsViewerPartIndex = -1; }
+    dsViewerPageCache.clear();
+    await dsLoadAllUploaded(false);
+    dsFiles = dsFiles.map(item => dsAllFiles.find(row => row.id === item.id) || item);
+    dsRenderFiles();
+    dsReplaceSay(100, '完成：第 ' + pageNo + ' 頁已換成新的，其他頁與頁碼標記不變。手機預覽圖會在背景重新產生。');
+    dsSetProgress(0, '「' + (file.original_name || 'PDF') + '」第 ' + pageNo + ' 頁已更新。');
+    const updated = dsAllFiles.find(row => row.id === file.id);
+    if (updated) dsEnsurePreviews([updated]);   // 不 await:只會補產生剛刪掉的那一頁
+    dsReplaceBusy = false; dsReplaceSyncButtons();
+    dsReplaceState = null;
+    setTimeout(() => { const dlg = dsEl('ds-replace'); if (dlg.open && !dsReplaceBusy && !dsReplaceState) dlg.close(); }, 1200);
+    if (viewing) dsOpenFile(file.id, pageNo);
+  } catch (error) {
+    console.error(error);
+    if (newKey && !rpcDone) { try { await dsStorageRemove([newKey]); } catch (_) {} }
+    dsReplaceSay(0, '換頁失敗：' + error.message);
+    alert('換頁失敗：' + error.message);
+    dsReplaceBusy = false; dsReplaceSyncButtons();
+  }
 }
 
 async function dsDeleteFile(id) {
