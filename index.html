@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.25.1"/>
+<meta name="sc-version" content="2026.11.25.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -61283,5 +61283,65 @@ async function ldDashPlan(){
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 })();
 </script>
+<style>
+/* ── 手機版按鈕整齊化(2026-11-25):日期框不撐破卡片、導覽列改同寬格線並縮緊 ── */
+@media(max-width:768px),(pointer:coarse) and (max-width:1100px){
+  /* iOS 原生日期框有自己的最小寬度,寬度設 100% 仍會凸出卡片(每日產量、通知管理) */
+  input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-width:0;max-width:100%;box-sizing:border-box}
+  input[type=date]::-webkit-date-and-time-value,input[type=month]::-webkit-date-and-time-value{text-align:center;margin:0}
+  .lf>input[type=date],#page-daily #daily-view-date{display:block;width:100%}
+
+  /* 出勤回報(主頁/每日/週回報/月回報/月總覽):三欄格線
+     第一列 月份框或週期標籤;第二列 上一 / 本 / 下一 同寬;其他按鈕與說明滿版 */
+  #page-attendance .dash-date-nav{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:center}
+  #page-attendance .dash-date-nav>*{grid-column:1/-1;order:5;min-width:0!important;box-sizing:border-box;margin:0}
+  #page-attendance .dash-date-nav>span:first-child{display:none}
+  #page-attendance .dash-date-nav>:is(.dash-date,.date-wk-show,[id$="-label"]){order:1}
+  #page-attendance .dash-date-nav>.dash-date{width:100%!important}
+  #page-attendance .dash-date-nav>:is(.date-wk-show,[id$="-label"]){text-align:center}
+  #page-attendance .dash-date-nav>[id$="-label"]{font-size:15px!important;font-weight:700}
+  #page-attendance .dash-date-nav>.dash-nav-btn[onclick$="(-1)"]{grid-column:auto;order:2}
+  #page-attendance .dash-date-nav>.dash-nav-btn[onclick$="(0)"]{grid-column:auto;order:3}
+  #page-attendance .dash-date-nav>.dash-nav-btn[onclick$="(1)"]{grid-column:auto;order:4}
+  #page-attendance .dash-date-nav :is(.dash-nav-btn,.btn-add-new){width:100%;min-height:40px;padding:0 4px;font-size:14px;justify-content:center;white-space:nowrap}
+  #page-attendance .dash-date-nav>span[id]:not([id$="-label"]){text-align:center}
+  /* 主頁月份:月份框佔兩欄,重新整理放同一列右邊 */
+  #att-tab-main .dash-date-nav>.dash-date{grid-column:1/3}
+  #att-tab-main .dash-date-nav>.btn-add-new{grid-column:3/4;order:1}
+
+  /* 長榮日報:六欄格線 —— 日期滿版、星期一列、前一天/今天/後一天 同寬、重新整理/下載 Excel 各半 */
+  #page-egdaily .page-header>div[style]:not(.page-title){display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+  #page-egdaily .page-header>div[style]:not(.page-title)>*{min-width:0;width:100%!important;box-sizing:border-box;margin:0;justify-content:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #page-egdaily .page-header .btn-sm{min-height:40px;padding:0 4px;font-size:12px}
+  #page-egdaily #eg-date{grid-column:1/-1;order:1;width:100%!important}
+  #page-egdaily #eg-date-show{grid-column:1/-1;order:2;text-align:center;margin:0}
+  #page-egdaily #eg-nav-prev{grid-column:span 2;order:3}
+  #page-egdaily #eg-nav-today{grid-column:span 2;order:4}
+  #page-egdaily #eg-nav-next{grid-column:span 2;order:5}
+  #page-egdaily .page-header>div[style]:not(.page-title)>.btn-sm:not([id]){grid-column:span 3;order:6}
+
+  /* 人事與五金成本:兩欄格線 —— 當日/本月/上月 滿版等分、起訖日各半、五金口徑滿版等分 */
+  #page-cost .ct-bar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 8px}
+  #page-cost .ct-bar>*{min-width:0;margin:0!important;order:5}
+  #page-cost .ct-bar>.ct-seg{grid-column:1/-1;display:flex}
+  #page-cost .ct-bar>.ct-seg:first-child{order:1}
+  #page-cost .ct-seg button{flex:1 1 0;min-height:40px;padding:0 4px;font-size:14px}
+  #page-cost .ct-bar>:is(.ovr-seg-sep,span[style*="text3"]:not([id])){display:none}
+  #page-cost .ct-bar>input[type=date]{order:2;width:100%;min-height:40px;font-size:16px}
+  #page-cost .ct-bar>.date-wk-show{order:3;text-align:center;margin:0;font-size:12px}
+  #page-cost .ct-bar>.ct-seg:not(:first-child){order:4}
+  #page-cost #ct-status{grid-column:1/-1;text-align:right}
+
+  /* 系統健康 錯誤紀錄:兩欄格線 —— 期間/類型、狀態/重新整理、搜尋滿版、筆數滿版 */
+  #page-health #hl-pane-errors>.toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  #page-health #hl-pane-errors>.toolbar>*{min-width:0;width:100%!important;box-sizing:border-box;margin:0}
+  #page-health #hl-pane-errors>.toolbar>:is(select,input,.btn){min-height:40px}
+  #page-health #hl-pane-errors>.toolbar>:is(select,input){font-size:16px}
+  #page-health #hl-pane-errors>.toolbar>.btn{justify-content:center}
+  #page-health #hl-pane-errors>.toolbar>#hl-f-q{grid-column:1/-1;order:2}
+  #page-health #hl-pane-errors>.toolbar>span[style*="flex:1"]{display:none}
+  #page-health #hl-pane-errors>.toolbar>#hl-err-count{grid-column:1/-1;order:3;text-align:center}
+}
+</style>
 </body>
 </html>
