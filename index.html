@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.26.4"/>
+<meta name="sc-version" content="2026.11.26.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -57785,6 +57785,11 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       var mat=cell(cols.mat),unit=cell(cols.unit),split=unit.match(/^(\S+)\s+(\S+)$/);
       if(split){mat+=split[1];unit=split[2];}
       var qty=cell(cols.qty),code=cell(cols.code);
+      // 表頭「線」「代碼」被拆成兩欄時,E(工地用)會落在「線」那格、H 才在「代碼」那格(例 B259-1D2B 的 ZBJK/ZSH):
+      // 代碼格不是 Q/H/E 時,往前找到淨重(或數量)後面為止,哪一格是 Q/H/E 就用哪一個(S 是線路,不算)
+      if(code!=='Q'&&code!=='H'&&code!=='E'){
+        for(var ck=cols.code-1,cs=Math.max(cols.nw,cols.tw,cols.qty);ck>cs;ck--){var cv=cell(ck);if(cv==='Q'||cv==='H'||cv==='E'){code=cv;break;}}
+      }
       maPushItem(current,stack,level.length,{
         sequence:Number(cell(cols.seq))||0,
         partNo:partNo,
