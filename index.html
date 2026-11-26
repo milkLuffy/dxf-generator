@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.26.19"/>
+<meta name="sc-version" content="2026.11.26.20"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -7792,7 +7792,9 @@ window.normalizeFullWidth=function(value){
     .pmc-box{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:6px 0 10px;background:var(--bg2)}
     .pmc-note{font-size:11px;color:var(--text3);line-height:1.6;margin-bottom:6px}
     .pmc-wrap{overflow-x:auto}
-    .pmc-tbl{width:100%;border-collapse:collapse;font-size:12px}
+    .pmc-tbl{width:100%;min-width:720px;border-collapse:collapse;font-size:12px;table-layout:fixed}
+    .pmc-tbl td,.pmc-tbl th{overflow-wrap:anywhere}
+    .pmc-actsel{font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);max-width:100%}
     .pmc-tbl th{color:var(--text3);font-weight:400;text-align:left;padding:6px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
     .pmc-tbl td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:top}
     .pmc-tbl .pmc-spec{font-family:var(--mono);color:var(--text);font-size:13px}
@@ -49839,9 +49841,45 @@ async function pmChkSubsRead(){
   let v=[]; try{ v=JSON.parse((r.data&&r.data[0]&&r.data[0].value)||'[]'); }catch(e){}
   return Array.isArray(v)?v.filter(x=>x&&x.need&&x.got):[];
 }
-async function pmChkSubsLoad(){
-  try{ pmChkSubs=await pmChkSubsRead(); if(pmMaLoaded) pmChkRefresh(); }catch(e){ console.warn(e); }
+const PM_WAIVE_KEY='pm_chk_waive';
+let pmChkWaive=[];
+async function pmChkCfgRead(key){
+  const r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+key);
+  if(!r.ok) throw new Error('讀取設定失敗');
+  let v=[]; try{ v=JSON.parse((r.data&&r.data[0]&&r.data[0].value)||'[]'); }catch(e){}
+  return Array.isArray(v)?v:[];
 }
+async function pmChkCfgWrite(key,list){
+  const w=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key,value:JSON.stringify(list)})});
+  if(!w.ok) throw new Error('儲存失敗');
+}
+async function pmChkSubsLoad(){
+  try{
+    const [a,b]=await Promise.all([pmChkSubsRead(),pmChkCfgRead(PM_WAIVE_KEY).catch(()=>[])]);
+    pmChkSubs=a; pmChkWaive=b.filter(x=>x&&x.key&&x.zone); if(pmMaLoaded) pmChkRefresh();
+  }catch(e){ console.warn(e); }
+}
+// 漏單列的「處理…」下拉:用某個多領的規格代用(全部工程區套用),或這一區免補(只算這一區)
+function pmChkAct(sel){
+  const v=sel.value; sel.value='';
+  const d=sel.closest('tr').dataset;
+  if(v==='waive') return pmChkWaiveSet(d.proj,d.zone,d.need,d.ns,Number(d.q)||0);
+  if(v.startsWith('sub:')){ const o=sel.selectedOptions&&sel.selectedOptions[0]; const opt=[...sel.options].find(x=>x.value===v); return pmChkSubSet(d.need,v.slice(4),true,d.ns,(opt&&opt.dataset.gs)||v.slice(4)); }
+}
+async function pmChkWaiveSet(proj,zone,key,spec,qty){
+  if(!pmChkSubCanEdit()){ alert('沒有編輯權限'); return; }
+  const undo=qty===null;
+  if(!undo&&!confirm('確認 '+proj+'-'+zone+' 的「'+spec+'」少的 '+pmChkQty(qty)+' 不用補?\n只算這個工程區,之後可以撤銷。')) return;
+  if(undo&&!confirm('撤銷 '+proj+'-'+zone+'「'+spec+'」的免補?')) return;
+  try{
+    const same=x=>pmChkUp(x.proj)===pmChkUp(proj)&&pmChkUp(x.zone)===pmChkUp(zone)&&x.key===key;
+    const list=(await pmChkCfgRead(PM_WAIVE_KEY)).filter(x=>x&&!same(x));
+    if(!undo) list.push({proj,zone,key,spec,qty,by:(currentUser&&currentUser.name)||'',at:new Date().toISOString()});
+    await pmChkCfgWrite(PM_WAIVE_KEY,list);
+    pmChkWaive=list; pmChkRefresh();
+  }catch(e){ alert(e.message||'儲存失敗'); }
+}
+function pmChkWaiveUndo(el){ const d=el.closest('tr').dataset; pmChkWaiveSet(d.proj,d.zone,d.need,d.ns,null); }
 function pmChkSubCanEdit(){ try{ return typeof pagePerm==='function'?pagePerm('prod')==='edit':true; }catch(e){ return true; } }
 // 寫入前重讀一次,避免蓋掉別人剛存的
 async function pmChkSubSet(need,got,ok,needSpec,gotSpec){
@@ -49862,7 +49900,7 @@ function pmChkSubUndo(el){
   pmChkSubSet(d.need,d.got,null,d.ns,d.gs);
 }
 // 疑似替代只配同一類:同直徑剪力釘(D19…)、同尺寸螺栓(M20…)
-function pmChkFam(key){ if(key.startsWith('瓷罩|')) return ''; const m=key.match(/^([MD]\d+)X/); return m?m[1]:''; }
+function pmChkFam(key){ if(key.startsWith('瓷罩|')) return ''; const m=key.match(/^([^X]+?)X\d/); return m?m[1]:''; }
 function pmChkUp(s){ return String(s==null?'':s).trim().toUpperCase(); }
 // 規格比對鍵:全形轉半形、大寫、去空白、去掉「-聚亨」這類廠商尾巴(橫線後面接中文)
 function pmChkSpecKey(spec){
@@ -49923,6 +49961,14 @@ function pmChkZone(proj,zone){
       const t=Math.min(A.need-A.got, B.got-B.need); if(!(t>0)) return;
       A.got+=t; B.got-=t; (A.subs||(A.subs=[])).push({rule:r,qty:t,gotSpec:B.spec||r.gotSpec});
     });
+    // 這一區確認免補的:補到差額 0(已領數量照實顯示)
+    const zk=pmChkUp(proj)+'|'+pmChkUp(zone);
+    pmChkWaive.forEach(w=>{
+      if(pmChkUp(w.proj)+'|'+pmChkUp(w.zone)!==zk) return;
+      const A=lines.get(w.key); if(!A) return;
+      const t=Math.min(Number(w.qty)||0, A.need-A.got); if(!(t>0)) return;
+      A.got+=t; A.waived=(A.waived||0)+t; A.waive=w;
+    });
     const list=[...lines.values()].filter(l=>l.need||l.got).map(l=>Object.assign(l,{diff:Math.round((l.got-l.need)*10000)/10000}));
     // 疑似替代:同一類、一缺一多、數量剛好一樣,而且沒被判定過「不是」
     const no=new Set(pmChkSubs.filter(r=>r.ok===false).map(r=>r.need+'\u0001'+r.got));
@@ -49941,7 +49987,7 @@ function pmChkZone(proj,zone){
     else if(cand){ level='violet'; text='待確認替代 '+cand; }
     else if(extra){ level='amber'; text='多領 '+extra; }
     else { level='green'; text='多階齊'; }
-    return {analysis:a, lines:list, short, extra, ok, cand, notices, zState:zs, level, text};
+    return {analysis:a, proj, zone, lines:list, short, extra, ok, cand, notices, zState:zs, level, text};
   });
 }
 function pmChkPill(cls,txt,attrs){ return '<span class="pmc-pill pmc-'+cls+'"'+(attrs||'')+'>'+esc(txt)+'</span>'; }
@@ -49968,6 +50014,7 @@ function pmChkTableHtml(c,here){
   const ed=pmChkSubCanEdit(), done=true;
   const subAttr=(need,got,ns,gs)=>' data-need="'+esc(need)+'" data-got="'+esc(got)+'" data-ns="'+esc(ns)+'" data-gs="'+esc(gs)+'"';
   const hq=k=>{ const q=here&&here.get(k); return q?pmChkQty(q):''; };
+  const zAttr=l=>' data-proj="'+esc(c.proj)+'" data-zone="'+esc(c.zone)+'" data-need="'+esc(l.key)+'" data-ns="'+esc(l.spec)+'"';
   const groups=[
     {k:'short',t:'漏單・領料單少打',cls:'red',rows:c.lines.filter(l=>l.diff<0&&!l.cand)},
     {k:'cand',t:'疑似規格替代・請確認',cls:'violet',rows:c.lines.filter(l=>l.cand)},
@@ -49976,7 +50023,7 @@ function pmChkTableHtml(c,here){
   ].filter(g=>g.rows.length);
   const cols=here?6:5;
   const row=(l,g)=>{
-    let spec='<div class="pmc-spec">'+esc(l.spec||'—')+'</div>', got=pmChkQty(l.got), diff=pmChkSigned(l.diff), act='', hk=hq(l.key), attr='';
+    let spec='<div class="pmc-spec">'+esc(l.spec||'—')+'</div>', got=pmChkQty(l.got-(l.waived||0)), diff=pmChkSigned(l.diff), act='', hk=hq(l.key), attr='';
     if(l.cand){
       const B=l.cand;
       attr=subAttr(l.key,B.key,l.spec,B.spec);
@@ -49985,6 +50032,17 @@ function pmChkTableHtml(c,here){
       act=ed?'<div class="pmc-acts"><button class="btn" onclick="pmChkSubBtn(this,true)">確認可替代</button><button class="btn" onclick="pmChkSubBtn(this,false)">不是，算缺</button></div>':'<span class="pmc-sub">需成品材頁編輯權限才能確認</span>';
     }else if(l.subs){
       act=pmChkPill('green','替代 OK')+l.subs.map(x=>'<div class="pmc-sub"'+subAttr(x.rule.need,x.rule.got,x.rule.needSpec||l.spec,x.rule.gotSpec||x.gotSpec)+'>'+pmChkQty(x.qty)+' 用 '+esc(x.gotSpec)+'・'+esc(x.rule.by||'')+' '+esc(String(x.rule.at||'').slice(5,10).replace('-','/'))+(ed?'・<a href="javascript:void 0" onclick="pmChkSubUndo(this)">撤銷</a>':'')+'</div>').join('');
+    }else if(l.waived){
+      attr=zAttr(l);
+      act=pmChkPill('green','免補 OK')+'<div class="pmc-sub">少 '+pmChkQty(l.waived)+' 不用補・'+esc(l.waive.by||'')+' '+esc(String(l.waive.at||'').slice(5,10).replace('-','/'))+(ed?'・<a href="javascript:void 0" onclick="pmChkWaiveUndo(this)">撤銷</a>':'')+'</div>';
+    }else if(g.k==='short'){
+      attr=zAttr(l)+' data-q="'+esc(-l.diff)+'"';
+      if(ed){
+        const ex=c.lines.filter(x=>x.diff>0&&!x.candOf);
+        act='<select class="pmc-actsel" onchange="pmChkAct(this)"><option value="">處理…</option>'+
+          (ex.length?'<optgroup label="用多領的規格代用(全部工程區套用)">'+ex.map(x=>'<option value="sub:'+esc(x.key)+'" data-gs="'+esc(x.spec)+'">'+esc(x.spec)+'(多 '+pmChkQty(x.diff)+')</option>').join('')+'</optgroup>':'')+
+          '<optgroup label="只算這個工程區"><option value="waive">這區不用補(少 '+pmChkQty(-l.diff)+')</option></optgroup></select>';
+      }
     }else if(g.k==='extra'&&!l.need){ act='<span class="pmc-sub">多階沒有這個規格</span>'; }
     return '<tr class="pmc-r-'+g.cls+'"'+attr+'><td>'+spec+'<div class="pmc-sub">'+esc(l.desc||'')+'</div></td><td class="pmc-n pmc-need">'+(l.need?pmChkQty(l.need):'—')+'</td><td class="pmc-n pmc-got">'+got+'</td><td class="pmc-n pmc-d pmc-d-'+g.cls+'">'+diff+'</td>'+(here?'<td class="pmc-n pmc-here">'+hk+'</td>':'')+'<td>'+act+'</td></tr>';
   };
@@ -49994,7 +50052,7 @@ function pmChkTableHtml(c,here){
       (g.k==='ok'?'<span class="pmc-fold'+(fold?'':' open')+'">'+(fold?'顯示':'隱藏')+'<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>':'')+'</td></tr>'+
       (fold?'':g.rows.map(l=>row(l,g)).join(''))+'</tbody>';
   }).join('');
-  return '<div class="pmc-wrap"><table class="pmc-tbl mc-off"><thead><tr><th>規格／品名</th><th class="pmc-n pmc-need">多階數量</th><th class="pmc-n pmc-got">領料單打單</th><th class="pmc-n">差額</th>'+(here?'<th class="pmc-n">本單</th>':'')+'<th>備註</th></tr></thead>'+body+'</table></div>';
+  return '<div class="pmc-wrap"><table class="pmc-tbl mc-off"><colgroup><col><col style="width:96px"><col style="width:104px"><col style="width:112px">'+(here?'<col style="width:72px">':'')+'<col style="width:240px"></colgroup><thead><tr><th>規格／品名</th><th class="pmc-n pmc-need">多階數量</th><th class="pmc-n pmc-got">領料單打單</th><th class="pmc-n">差額</th>'+(here?'<th class="pmc-n">本單</th>':'')+'<th>備註</th></tr></thead>'+body+'</table></div>';
 }
 function pmChkSourceHtml(c,proj,zone){
   const d=String(c.analysis.created_at||'').slice(0,10);
