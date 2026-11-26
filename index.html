@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.26.12"/>
+<meta name="sc-version" content="2026.11.26.13"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -7799,7 +7799,10 @@ window.normalizeFullWidth=function(value){
     .pmc-grp .pmc-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;background:var(--text3);vertical-align:0}
     .pmc-grp-red .pmc-dot{background:var(--red)}.pmc-grp-amber .pmc-dot{background:var(--yellow)}.pmc-grp-violet .pmc-dot{background:var(--purple)}.pmc-grp-green .pmc-dot{background:var(--green)}
     .pmc-grp-n{font-weight:400;color:var(--text3);margin-left:8px}
-    .pmc-fold{float:right;font-weight:400;font-size:12px}
+    .pmc-grp-fold{cursor:pointer;user-select:none}.pmc-grp-fold:hover td{background:color-mix(in srgb,var(--text) 6%,var(--bg3))}
+    .pmc-fold{float:right;display:inline-flex;align-items:center;gap:3px;font-weight:400;font-size:11px;color:var(--text3)}
+    .pmc-fold svg{transition:transform .15s}.pmc-fold.open svg{transform:rotate(180deg)}
+    .pmc-grp-fold:hover .pmc-fold{color:var(--text2)}
     .pmc-r-violet td{background:color-mix(in srgb,var(--purple) 6%,transparent)}
     .pmc-rules{font-size:11px;color:var(--text3);margin:-2px 0 8px;line-height:1.6}.pmc-rules summary{cursor:pointer;width:max-content}
     .pmc-in{padding:10px 12px}
@@ -49977,8 +49980,8 @@ function pmChkTableHtml(c,here){
   };
   const body=groups.map(g=>{
     const fold=g.k==='ok'&&!pmChkShowOk;
-    return '<tbody><tr class="pmc-grp pmc-grp-'+g.cls+'"><td colspan="'+cols+'"><span class="pmc-dot"></span>'+esc(g.t)+'<span class="pmc-grp-n">'+g.rows.length+' 項</span>'+
-      (g.k==='ok'?'<a href="javascript:void 0" class="pmc-fold" onclick="pmChkToggleOk()">'+(fold?'展開 ▾':'收起 ▴')+'</a>':'')+'</td></tr>'+
+    return '<tbody><tr class="pmc-grp pmc-grp-'+g.cls+(g.k==='ok'?' pmc-grp-fold':'')+'"'+(g.k==='ok'?' onclick="pmChkToggleOk()" title="'+(fold?'顯示':'隱藏')+'已齊的項目"':'')+'><td colspan="'+cols+'"><span class="pmc-dot"></span>'+esc(g.t)+'<span class="pmc-grp-n">'+g.rows.length+' 項</span>'+
+      (g.k==='ok'?'<span class="pmc-fold'+(fold?'':' open')+'">'+(fold?'顯示':'隱藏')+'<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>':'')+'</td></tr>'+
       (fold?'':g.rows.map(l=>row(l,g)).join(''))+'</tbody>';
   }).join('');
   return '<div class="pmc-wrap"><table class="pmc-tbl mc-off"><thead><tr><th>規格／品名</th><th class="pmc-n">多階</th><th class="pmc-n">已領</th><th class="pmc-n">差額</th>'+(here?'<th class="pmc-n">本單</th>':'')+'<th>備註</th></tr></thead>'+body+'</table></div>';
