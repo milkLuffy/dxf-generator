@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.26.6"/>
+<meta name="sc-version" content="2026.11.26.7"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -49814,6 +49814,8 @@ function pmChkZState(proj,zone){
   if(st.includes('轉包')) return 'sub';
   return st.every(s=>s==='OK')?'done':'open';
 }
+// 業主供料(柱內灌漿螺帽)、灌漿管:不開成品材領料單,不列入核對
+const PM_CHK_OWNER_RE=/業主供料|^灌漿管/;
 function pmChkZone(proj,zone){
   return prodMemo('pmChk:'+proj+'|'+zone,()=>{
     const a=pmMaLoaded?pmMaLatest(proj,zone):null; if(!a) return null;
@@ -49821,6 +49823,7 @@ function pmChkZone(proj,zone){
     const line=(key,spec,desc,unit)=>{ let l=lines.get(key); if(!l) lines.set(key,l={key,spec,desc,unit,need:0,got:0}); if(!l.spec&&spec)l.spec=spec; if(!l.desc&&desc)l.desc=desc; if(!l.unit&&unit)l.unit=unit; return l; };
     pmMaItemsOf(a.id).forEach(i=>{
       const q=Number(i.quantity)||0, desc=String(i.description||'').trim();
+      if(PM_CHK_OWNER_RE.test(desc)) return; // 業主供料/灌漿管不走成品材領料單
       line(pmChkSpecKey(i.specification),String(i.specification||'').trim(),desc,i.unit).need+=q;
       // 多階寫「剪力釘(附瓷罩)」一行,領料單把瓷罩另開一行 → 瓷罩依直徑另外核對
       const dia=desc.includes('附瓷罩')?pmChkDia(i.specification):'';
@@ -49884,7 +49887,7 @@ function pmChkRenderDetail(){
     const st=l.diff<0?pmChkPill(c.zState==='done'?'red':'gray','少 '+pmChkQty(-l.diff)):l.diff>0?pmChkPill('amber',l.need?'多 '+pmChkQty(l.diff):'多階沒有'):pmChkPill('green','齊');
     return '<tr><td>'+esc(l.spec||'—')+'</td><td>'+esc(l.desc||'')+'</td><td class="pmc-n">'+(l.need?pmChkQty(l.need):'—')+'</td><td class="pmc-n">'+(l.got?pmChkQty(l.got):'0')+'</td><td>'+st+'</td></tr>';
   }).join('');
-  box.innerHTML='<div class="pmc-box"><div class="pmc-note">多階來源:'+esc(proj)+'-'+esc(zone)+' '+esc(d)+' 版(#'+esc(c.analysis.id)+')　領料單 '+c.notices+' 張　'+esc(zt)+'<br>已排除工地用 E;規格比對忽略空白與「-聚亨」這類廠商尾巴;瓷罩需求=同直徑附瓷罩剪力釘數量</div>'+
+  box.innerHTML='<div class="pmc-box"><div class="pmc-note">多階來源:'+esc(proj)+'-'+esc(zone)+' '+esc(d)+' 版(#'+esc(c.analysis.id)+')　領料單 '+c.notices+' 張　'+esc(zt)+'<br>已排除工地用 E、業主供料與灌漿管;規格比對忽略空白與「-聚亨」這類廠商尾巴;瓷罩需求=同直徑附瓷罩剪力釘數量</div>'+
     (c.lines.length?'<div class="pmc-wrap"><table class="pmc-tbl mc-off"><thead><tr><th>規格</th><th>品名</th><th class="pmc-n">多階</th><th class="pmc-n">已領</th><th>狀態</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="pmc-note">此版多階資料沒有成品材。</div>')+'</div>';
 }
 // 成品材領料頁:工具列按鈕 + 有差異的工程區清單
