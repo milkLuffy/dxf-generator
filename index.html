@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.26.20"/>
+<meta name="sc-version" content="2026.11.26.21"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -14297,7 +14297,7 @@ function auditTblLabel(t){ return AUDIT_TBL_LABEL[t]||t||'—'; }
 // 欄位名 → 中文(顯示「對象/內容」時翻譯用;沒列到的顯示原欄名)
 const AUDIT_FIELD_LABEL={
   id:'ID', created_at:'建立時間', updated_at:'更新時間', created_by:'建立者', user_id:'使用者',
-  name:'名稱', account:'帳號', email:'Email', phone:'電話', remark:'備註', note:'備註',
+  source_ref:'來源', name:'名稱', account:'帳號', email:'Email', phone:'電話', remark:'備註', note:'備註',
   status:'狀態', qty:'數量', unit:'單位', spec:'規格', date:'日期', seq:'排序', title:'標題', content:'內容',
   reviewed_at:'審核時間', reviewed_by:'審核人', applied_at:'申請時間', notified_at:'通知時間',
   scope:'類型', due_date:'期限', owner_id:'建立者', assignee_ids:'指派對象', created_by_name:'建立者姓名',
@@ -26304,6 +26304,7 @@ const HEALTH_SCHEMA=[
   ['profiles','device_exempt','device_exempt_migration.sql(裝置綁定豁免)'],
   ['profiles','read_only','read_only_account_migration.sql(唯讀帳號)'],
   ['todos','is_template,parent_id,repeat_unit,repeat_interval,repeat_from,repeat_until','todos_migration.sql(重複待辦)'],
+  ['todos','source_ref','bevel_jig_todo_migration.sql(削翼靠磨自動待辦)'],
   ['todo_users','','todos_migration.sql(檢視表)'],
   ['leave_requests','','leave_requests_migration.sql'],
   ['leave_board','','leave_requests_migration.sql(檢視表)'],
@@ -32541,10 +32542,13 @@ async function bjSave(){
   btn.disabled=false;
   if(!r.ok){ bjStatus('記錄失敗('+(r.status||'?')+'):'+((r.data&&(r.data.message||r.data.hint))||''),false); alert('記錄失敗,請稍後再試'); return; }
   bjEl('bj-codes').value='';
-  bjStatus('已記錄 '+projNum+'-'+zoneCode+','+codes.length+' 個削翼編號'+(old.length?'(其中 '+old.length+' 個重複)':''),true);
+  bjStatus('已記錄 '+projNum+'-'+zoneCode+','+codes.length+' 個削翼編號'+(old.length?'(其中 '+old.length+' 個重複)':'')+',已加入全體待辦,開單後自動完成',true);
   await bjLoad();
   bjPreview();
+  bjTodoRefresh();
 }
+// 資料庫觸發器(bevel_jig_todo_sync)會自動建/結案「削翼靠模待開單」團體待辦,這裡只負責把主頁待辦與鈴鐺重抓一次
+function bjTodoRefresh(){ try{ if(typeof loadTodos==='function') loadTodos(); }catch(e){} }
 async function bjLoad(){
   const r=await sbFetch('/rest/v1/bevel_jig_logs?select=*&order=created_at.desc&limit=1000');
   if(!r.ok||!Array.isArray(r.data)){ bjEl('bj-log').innerHTML='<div class="log-empty">無法載入紀錄</div>'; return; }
@@ -32591,8 +32595,9 @@ async function bjToggleOrdered(id,on,el){
   if(!r.ok||!Array.isArray(r.data)||!r.data.length){ alert('已開單儲存失敗('+(r.status||'?')+')'); if(el){ el.checked=!on; el.disabled=false; } return; }
   Object.assign(e,patch);
   const zr=await bjSyncZone(e,on);
-  bjStatus((on?'已開單:':'已取消開單:')+e.proj_num+'-'+e.zone_code+'('+(e.codes||[]).length+' 個)'+zr,zr.indexOf('失敗')<0);
+  bjStatus((on?'已開單:':'已取消開單:')+e.proj_num+'-'+e.zone_code+'('+(e.codes||[]).length+' 個)'+zr+(on?'(待辦已自動完成)':'(待辦已重開)'),zr.indexOf('失敗')<0);
   bjRenderLog();
+  bjTodoRefresh();
 }
 // 連動上線準備「削翼靠模已開單」(zones.bevel_jig_at):勾已開單 → 這一區還沒勾就補上(已勾的保留原時間/人員);
 // 取消 → 這一區沒有其他已開單的削翼紀錄才清掉
@@ -32617,6 +32622,7 @@ async function bjDelete(id){
   if(!r.ok){ alert('刪除失敗'); return; }
   bjStatus('已刪除 '+e.proj_num+'-'+e.zone_code+' 的紀錄',true);
   await bjLoad();
+  bjTodoRefresh();
 }
 function bjExportCSV(){
   if(!bjLogs.length){ bjStatus('沒有紀錄可匯出',false); return; }
