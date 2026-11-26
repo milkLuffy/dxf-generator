@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.26.15"/>
+<meta name="sc-version" content="2026.11.26.16"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -7794,6 +7794,8 @@ window.normalizeFullWidth=function(value){
     .pmc-tbl .pmc-alt{font-size:12px;color:var(--purple);margin-top:2px}
     .pmc-tbl .pmc-d{font-weight:600;white-space:nowrap}
     .pmc-d-red,.pmc-d-amber,.pmc-d-violet,.pmc-d-gray{color:var(--red)}.pmc-d-green{color:var(--text3);font-weight:400!important}
+    .pmc-tbl .pmc-need{color:var(--accent2);font-weight:600}
+    .pmc-tbl .pmc-got{color:var(--accent3);font-weight:600}
     .pmc-tbl .pmc-here{color:var(--accent2,var(--text));font-weight:600}
     .pmc-grp td{background:var(--bg3);font-size:12px;font-weight:600;color:var(--text);padding:6px 10px}
     .pmc-grp .pmc-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;background:var(--text3);vertical-align:0}
@@ -49976,7 +49978,7 @@ function pmChkTableHtml(c,here){
     }else if(l.subs){
       act=pmChkPill('green','替代 OK')+l.subs.map(x=>'<div class="pmc-sub"'+subAttr(x.rule.need,x.rule.got,x.rule.needSpec||l.spec,x.rule.gotSpec||x.gotSpec)+'>'+pmChkQty(x.qty)+' 用 '+esc(x.gotSpec)+'・'+esc(x.rule.by||'')+' '+esc(String(x.rule.at||'').slice(5,10).replace('-','/'))+(ed?'・<a href="javascript:void 0" onclick="pmChkSubUndo(this)">撤銷</a>':'')+'</div>').join('');
     }else if(g.k==='extra'&&!l.need){ act='<span class="pmc-sub">多階沒有這個規格</span>'; }
-    return '<tr class="pmc-r-'+g.cls+'"'+attr+'><td>'+spec+'<div class="pmc-sub">'+esc(l.desc||'')+'</div></td><td class="pmc-n">'+(l.need?pmChkQty(l.need):'—')+'</td><td class="pmc-n">'+got+'</td><td class="pmc-n pmc-d pmc-d-'+g.cls+'">'+diff+'</td>'+(here?'<td class="pmc-n pmc-here">'+hk+'</td>':'')+'<td>'+act+'</td></tr>';
+    return '<tr class="pmc-r-'+g.cls+'"'+attr+'><td>'+spec+'<div class="pmc-sub">'+esc(l.desc||'')+'</div></td><td class="pmc-n pmc-need">'+(l.need?pmChkQty(l.need):'—')+'</td><td class="pmc-n pmc-got">'+got+'</td><td class="pmc-n pmc-d pmc-d-'+g.cls+'">'+diff+'</td>'+(here?'<td class="pmc-n pmc-here">'+hk+'</td>':'')+'<td>'+act+'</td></tr>';
   };
   const body=groups.map(g=>{
     const fold=g.k==='ok'&&!pmChkShowOk;
@@ -49984,7 +49986,7 @@ function pmChkTableHtml(c,here){
       (g.k==='ok'?'<span class="pmc-fold'+(fold?'':' open')+'">'+(fold?'顯示':'隱藏')+'<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>':'')+'</td></tr>'+
       (fold?'':g.rows.map(l=>row(l,g)).join(''))+'</tbody>';
   }).join('');
-  return '<div class="pmc-wrap"><table class="pmc-tbl mc-off"><thead><tr><th>規格／品名</th><th class="pmc-n">多階數量</th><th class="pmc-n">領料單打單</th><th class="pmc-n">差額</th>'+(here?'<th class="pmc-n">本單</th>':'')+'<th>備註</th></tr></thead>'+body+'</table></div>';
+  return '<div class="pmc-wrap"><table class="pmc-tbl mc-off"><thead><tr><th>規格／品名</th><th class="pmc-n pmc-need">多階數量</th><th class="pmc-n pmc-got">領料單打單</th><th class="pmc-n">差額</th>'+(here?'<th class="pmc-n">本單</th>':'')+'<th>備註</th></tr></thead>'+body+'</table></div>';
 }
 function pmChkSourceHtml(c,proj,zone){
   const d=String(c.analysis.created_at||'').slice(0,10);
