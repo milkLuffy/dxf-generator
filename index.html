@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.26.3"/>
+<meta name="sc-version" content="2026.11.26.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -57829,17 +57829,21 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
         var lv=line.match(/^(\*{2,})\s+(\d+)\s+\S+/);
         if(!current||!lv)return;
         var codeMatch=line.trimEnd().match(/\s([QHE])$/);   // 行尾代碼:Q 帷幕、H 水電、E 工地用
-        var qtyText=maFixedField(line,116,122);
+        // 材質/單位/數量不照固定欄切:數量是靠右對齊,三位數以上會伸進單位欄;有些列(例 防爆拉桿)整列還會偏一格,
+        // 兩位數就被切成「ST 1」+1。改成從材質欄起整段由右往左認:數量 → 單位 → 材質,後面接 4 個重量
+        var mu=maFixedField(line,98,999).match(/^(?:(.*?)\s+)?([^\s\d.][^\s]*)\s+(\d+(?:\.\d+)?)\s+(-?[\d,]*\.?\d+)\s+(-?[\d,]*\.?\d+)\s+(-?[\d,]*\.?\d+)\s+(-?[\d,]*\.?\d+)(?:\s|$)/);
+        var qtyText=mu?mu[3]:maFixedField(line,116,122);
+        var tw4=mu?[mu[4],mu[5],mu[6],mu[7]].map(maNumOrEmpty):(maTailWeights(line)||['','','','']);
         maPushItem(current,stack,lv[1].length,{
           sequence:Number(lv[2])||0,
           partNo:maFixedField(line,18,37),
           description:maFixedField(line,37,68),
           specification:maFixedField(line,68,98),
-          material:maFixedField(line,98,109),
-          unit:maFixedField(line,109,116),
+          material:mu?(mu[1]||'').trim():maFixedField(line,98,109),
+          unit:mu?mu[2]:maFixedField(line,109,116),
           quantity:qtyText===''?'':Number(qtyText),
-          unitWeight:(maTailWeights(line)||[''])[0],
-          unitNet:maPerUnit((maTailWeights(line)||['','','',''])[3],qtyText),
+          unitWeight:tw4[0],
+          unitNet:maPerUnit(tw4[3],qtyText),
           code:codeMatch?codeMatch[1]:''
         });
       });
