@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.26.2"/>
+<meta name="sc-version" content="2026.11.26.3"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -32539,8 +32539,25 @@ async function bjToggleOrdered(id,on,el){
   const r=await sbFetch('/rest/v1/bevel_jig_logs?id=eq.'+encodeURIComponent(id)+'&select=id',{method:'PATCH',headers:{'Prefer':'return=representation'},body:JSON.stringify(patch)});
   if(!r.ok||!Array.isArray(r.data)||!r.data.length){ alert('已開單儲存失敗('+(r.status||'?')+')'); if(el){ el.checked=!on; el.disabled=false; } return; }
   Object.assign(e,patch);
-  bjStatus((on?'已開單:':'已取消開單:')+e.proj_num+'-'+e.zone_code+'('+(e.codes||[]).length+' 個)',true);
+  const zr=await bjSyncZone(e,on);
+  bjStatus((on?'已開單:':'已取消開單:')+e.proj_num+'-'+e.zone_code+'('+(e.codes||[]).length+' 個)'+zr,zr.indexOf('失敗')<0);
   bjRenderLog();
+}
+// 連動上線準備「削翼靠模已開單」(zones.bevel_jig_at):勾已開單 → 這一區還沒勾就補上(已勾的保留原時間/人員);
+// 取消 → 這一區沒有其他已開單的削翼紀錄才清掉
+async function bjSyncZone(e,on){
+  if(!e.zone_id) return '';
+  if(!on && bjLogs.some(x=>x!==e&&String(x.zone_id)===String(e.zone_id)&&x.ordered_at)) return '(此區還有其他已開單紀錄,上線準備維持已開單)';
+  const patch=on?{bevel_jig_at:e.ordered_at,bevel_jig_by:e.ordered_by}:{bevel_jig_at:null,bevel_jig_by:null};
+  const r=await sbFetch('/rest/v1/zones?id=eq.'+encodeURIComponent(e.zone_id)+(on?'&bevel_jig_at=is.null':'')+'&select=id',{method:'PATCH',headers:{'Prefer':'return=representation'},body:JSON.stringify(patch)});
+  if(!r.ok) return '(上線準備同步失敗:'+(r.status||'?')+')';
+  if(Array.isArray(r.data)&&r.data.length){
+    const upd=z=>{ if(String(z.id)===String(e.zone_id)) Object.assign(z,patch); };
+    if(typeof prodReceiptZones!=='undefined'&&Array.isArray(prodReceiptZones)) prodReceiptZones.forEach(upd);
+    if(typeof ldZones!=='undefined'&&Array.isArray(ldZones)) ldZones.forEach(upd);
+    if(typeof prodMemoReset==='function') prodMemoReset();
+  }
+  return on?'(上線準備「削翼靠模已開單」已同步)':'(上線準備「削翼靠模已開單」已取消)';
 }
 async function bjDelete(id){
   const e=bjLogs.find(x=>String(x.id)===String(id)); if(!e) return;
