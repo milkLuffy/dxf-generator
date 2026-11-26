@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.26.18"/>
+<meta name="sc-version" content="2026.11.26.19"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -49800,7 +49800,7 @@ function prodPmCell(pred){
 // ══ 成品材領料 × 多階資料核對 ══
 // 多階資料(該工程區最新一版)的成品材 = 應領總量;成品材領料通知單細項 = 實際打進來的。
 // 依規格加總後逐項比對:少領(可能漏單)、多領、多階沒有。工地用 E 在多階那邊已排除。
-// 轉紅的時機:SP狀態表該工程區的「成品材 Z」全部標完成(OK)時還有缺 → 確定漏單;之前一律灰色只顯示差額。
+// 轉紅的時機:多階有、領料單少打(差額負)就是漏單,不看 SP 成品材 Z 狀態(Z 狀態只在核對表說明列出)。
 let pmMaAnalyses=[], pmMaItems=[], pmMaLoaded=false, pmMaBusy=false, pmChkExpanded=false;
 async function pmMaFetch(){
   if(pmMaBusy) return; pmMaBusy=true;
@@ -49936,7 +49936,8 @@ function pmChkZone(proj,zone){
     const zs=pmChkZState(proj,zone);
     let level, text;
     if(zs==='sub'){ level='gray'; text='轉包'; }
-    else if(short){ level=zs==='done'?'red':'gray'; text=zs==='done'?'多階缺 '+short:'尚差 '+short+' 項'; }
+    // 多階有、領料單少打 = 漏單,不管 SP 成品材 Z 有沒有完成(使用者 2026-11-26 決定)
+    else if(short){ level='red'; text='漏單 '+short; }
     else if(cand){ level='violet'; text='待確認替代 '+cand; }
     else if(extra){ level='amber'; text='多領 '+extra; }
     else { level='green'; text='多階齊'; }
@@ -49964,11 +49965,11 @@ function pmChkToggleOk(){ pmChkShowOk=!pmChkShowOk; pmChkRenderDetail(); pmDetai
 function pmChkSigned(n){ return n>0?'+'+pmChkQty(n):n<0?'−'+pmChkQty(-n):'0'; }
 // 核對表共用產生器:工程區詳情頁、成品材細項彈窗都用這個(here = 本張通知單各比對鍵的數量,詳情頁不傳)
 function pmChkTableHtml(c,here){
-  const ed=pmChkSubCanEdit(), done=c.zState==='done';
+  const ed=pmChkSubCanEdit(), done=true;
   const subAttr=(need,got,ns,gs)=>' data-need="'+esc(need)+'" data-got="'+esc(got)+'" data-ns="'+esc(ns)+'" data-gs="'+esc(gs)+'"';
   const hq=k=>{ const q=here&&here.get(k); return q?pmChkQty(q):''; };
   const groups=[
-    {k:'short',t:done?'缺料・確定漏單':'尚未領齊',cls:done?'red':'gray',rows:c.lines.filter(l=>l.diff<0&&!l.cand)},
+    {k:'short',t:'漏單・領料單少打',cls:'red',rows:c.lines.filter(l=>l.diff<0&&!l.cand)},
     {k:'cand',t:'疑似規格替代・請確認',cls:'violet',rows:c.lines.filter(l=>l.cand)},
     {k:'extra',t:'多領／多階沒有',cls:'amber',rows:c.lines.filter(l=>l.diff>0&&!l.candOf)},
     {k:'ok',t:'已齊',cls:'green',rows:c.lines.filter(l=>l.diff===0)}
@@ -49997,7 +49998,7 @@ function pmChkTableHtml(c,here){
 }
 function pmChkSourceHtml(c,proj,zone){
   const d=String(c.analysis.created_at||'').slice(0,10);
-  const zt={done:'SP 成品材 Z 已完成 → 缺的就是漏單',open:'SP 成品材 Z 未完成,還在領料中',sub:'成品材 Z 轉包',none:'SP狀態表沒有成品材 Z 項目'}[c.zState];
+  const zt={done:'SP 成品材 Z 已完成',open:'SP 成品材 Z 未完成',sub:'成品材 Z 轉包',none:'SP狀態表沒有成品材 Z 項目'}[c.zState];
   return '<div class="pmc-note">多階 '+esc(proj)+'-'+esc(zone)+' #'+esc(c.analysis.id)+'('+esc(d)+')・領料單 '+c.notices+' 張・'+esc(zt)+'</div>'+
     '<details class="pmc-rules"><summary>比對規則</summary>應領=該工程區最新一版多階的成品材;已排除工地用 E、業主供料、灌漿管、分類「一次」(BOX *** 階)。規格比對忽略空白、「-」與「-聚亨」這類廠商尾巴;瓷罩需求=同直徑附瓷罩剪力釘數量。同一類(同直徑剪力釘、同尺寸螺栓)一缺一多且數量相同會列為疑似替代,確認後全部工程區套用。</details>';
 }
@@ -50012,7 +50013,7 @@ function pmChkRenderDetail(){
   }
   if(btn){ btn.style.display=''; btn.textContent='與多階核對 '+(pmChkExpanded?'▴':'▾'); }
   if(sum) sum.innerHTML=c.lines.length?(
-    (c.short?pmChkPill(c.zState==='done'?'red':'gray','缺 '+c.short):'')+(c.cand?pmChkPill('violet','待確認替代 '+c.cand):'')+(c.extra?pmChkPill('amber','多領 '+c.extra):'')+(c.ok?pmChkPill('green','齊 '+c.ok):'')):pmChkPill('none','多階無成品材');
+    (c.short?pmChkPill('red','漏單 '+c.short):'')+(c.cand?pmChkPill('violet','待確認替代 '+c.cand):'')+(c.extra?pmChkPill('amber','多領 '+c.extra):'')+(c.ok?pmChkPill('green','齊 '+c.ok):'')):pmChkPill('none','多階無成品材');
   if(!pmChkExpanded){ box.innerHTML=''; return; }
   box.innerHTML='<div class="pmc-box">'+pmChkSourceHtml(c,proj,zone)+(c.lines.length?pmChkTableHtml(c,null):'<div class="pmc-note">此版多階資料沒有成品材。</div>')+'</div>';
 }
@@ -50037,10 +50038,10 @@ function pmChkListRender(){
   if(!pmMaLoaded){ box.innerHTML='<div class="pmc-box"><div class="pmc-note">多階資料載入中或無法載入。</div></div>'; return; }
   const tr=rows.map(({z,c})=>{
     const parts=[]; if(c.cand) parts.push('待確認替代 '+c.cand+' 項'); if(c.short) parts.push('缺 '+c.short+' 項'); if(c.extra) parts.push('多領 '+c.extra+' 項');
-    const st=c.level==='red'?pmChkPill('red','確定漏單'):c.level==='violet'?pmChkPill('violet','待確認'):c.level==='amber'?pmChkPill('amber','多領'):pmChkPill('gray',c.notices?'進行中':'未開始');
+    const st=c.level==='red'?pmChkPill('red','漏單'):c.level==='violet'?pmChkPill('violet','待確認'):c.level==='amber'?pmChkPill('amber','多領'):pmChkPill('gray',c.notices?'進行中':'未開始');
     return '<tr class="pmc-link" data-proj="'+esc(z.proj)+'" data-zone="'+esc(z.zone)+'" onclick="pmChkOpenZone(this.dataset.proj,this.dataset.zone)"><td>'+esc(z.proj)+'-'+esc(z.zone)+'</td><td>'+esc(parts.join('、'))+(c.notices?'':'(還沒有領料單)')+'</td><td>'+st+'</td></tr>';
   }).join('');
-  box.innerHTML='<div class="pmc-box"><div class="pmc-note">看板上有多階資料的工程區,與多階成品材比對有差異的才列出(點一列看核對表)。紅=SP 成品材 Z 已完成仍有缺,確定漏單;紫=疑似規格替代,點進去確認;灰=還在領料中。</div>'+
+  box.innerHTML='<div class="pmc-box"><div class="pmc-note">看板上有多階資料的工程區,與多階成品材比對有差異的才列出(點一列看核對表)。紅=多階有、領料單少打,漏單;紫=疑似規格替代,點進去確認;灰=還在領料中。</div>'+
     (rows.length?'<div class="pmc-wrap"><table class="pmc-tbl mc-off"><thead><tr><th>工程區</th><th>差異</th><th>狀態</th></tr></thead><tbody>'+tr+'</tbody></table></div>':'<div class="pmc-note">全部對上,沒有差異。</div>')+'</div>';
 }
 // ── 保留料的狀態判定 ──
@@ -51142,11 +51143,10 @@ function pmChkRowIssues(p){
   const proj=String(p&&p.proj_no||'').trim(); if(!proj) return [];
   return pmZonesOfRow(p).map(zone=>({proj,zone,c:pmChkZone(proj,zone)})).filter(x=>x.c&&x.c.zState!=='sub'&&(x.c.short||x.c.cand));
 }
-// 不掛徽章(工程區欄放不下),只用列底色/左側色條:紅=確定漏單(淡紅底+紅條)、灰條=還在領料尚差、紫條=待確認替代
+// 不掛徽章(工程區欄放不下),只用列底色/左側色條:紅=漏單(淡紅底+紅條)、紫條=待確認替代
 function pmChkRowClass(p){
   const iss=pmChkRowIssues(p);
-  if(iss.some(x=>x.c.short&&x.c.zState==='done')) return 'pmc-row-red';
-  if(iss.some(x=>x.c.short)) return 'pmc-row-gray';
+  if(iss.some(x=>x.c.short)) return 'pmc-row-red';
   return iss.length?'pmc-row-violet':'';
 }
 function pmZoneText(p){ const z=pmZonesOfRow(p); return '<input type="text" class="lt-edit spx-vcell" readonly value="'+esc(z.join('.'))+'" title="由領料明細/事由自動判定的工程區"/>'; }
