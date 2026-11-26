@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.27.1"/>
+<meta name="sc-version" content="2026.11.27.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -21815,10 +21815,10 @@ function renderZoneQtySummary() {
     const db = sumQ(zoneDailyBatches[c.part_no]);
     done += Math.min(need, db || ((zoneDailyMap[c.part_no] || String(ext.A202 || '').trim()) ? need : 0));
   });
-  el.classList.toggle('long', bom >= 1000);   // 四位數以上:手機縮小字,避免 1234/1286 超出格子
+  el.classList.toggle('long', bom >= 10000);  // 五位數以上:手機縮小字,避免超出格子
   const pct = n => bom ? Math.round(n * 100 / bom) : 0;
   const cell = (label, n, color) => '<div class="zqs-c" title="' + label + ' ' + n + ' / ' + bom + ' 支(' + pct(n) + '%)">' +
-    '<div class="zqs-l">' + label + '</div><div class="zqs-n">' + n + '<small>/' + bom + '</small></div>' +
+    '<div class="zqs-l">' + label + '</div><div class="zqs-n">' + n + '</div>' +
     '<div class="zqs-bar"><i style="width:' + pct(n) + '%;background:' + color + '"></i></div></div>';
   el.innerHTML = cell('進料', mat, 'var(--accent2)') + cell('上線', on, 'var(--accent)') + cell('完成', done, 'var(--green)') +
     '<div class="zqs-c bom" title="BOM 總支數(不含非本公司製作)"><div class="zqs-l">BOM 總支數</div><div class="zqs-n">' + bom +
