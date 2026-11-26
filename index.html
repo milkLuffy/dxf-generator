@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.26.8"/>
+<meta name="sc-version" content="2026.11.26.9"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -4627,6 +4627,7 @@ window.normalizeFullWidth=function(value){
 .ma-tag.q{background:rgba(191,90,242,.14);color:var(--purple);border:1px solid rgba(191,90,242,.35)}
 .ma-tag.h{background:rgba(64,200,224,.12);color:var(--accent3);border:1px solid rgba(64,200,224,.35)}
 .ma-tag.sp{background:rgba(255,255,255,.08);color:var(--text2);border:1px solid var(--border)}
+.ma-tag.one{background:var(--bg3);color:var(--text3);border:1px dashed var(--border)}
 .ma-tag.e{background:rgba(255,159,10,.12);color:var(--yellow);border:1px dashed rgba(255,159,10,.45)}
 /* ── 有／無板全區試算(報驗頁按鈕開啟的彈窗) ── */
 .ibt-sum{display:flex;flex-wrap:wrap;gap:14px;font-family:var(--mono);font-size:11px;color:var(--text2)}
@@ -49779,7 +49780,7 @@ async function pmMaFetch(){
   try{
     const [ra,ri]=await Promise.all([
       sbFetchAll('/rest/v1/multilevel_analyses?select=id,project_no,zone_code,created_at&order=id'),
-      sbFetchAll('/rest/v1/multilevel_analysis_items?select=analysis_id,description,specification,unit,quantity,part_level,component_spec&category=eq.'+encodeURIComponent('成品材'))
+      sbFetchAll('/rest/v1/multilevel_analysis_items?select=analysis_id,description,specification,unit,quantity&category=eq.'+encodeURIComponent('成品材'))
     ]);
     if(ra&&ra.ok&&Array.isArray(ra.data)&&ri&&ri.ok&&Array.isArray(ri.data)){ pmMaAnalyses=ra.data; pmMaItems=ri.data; pmMaLoaded=true; }
   }catch(e){ console.warn('多階核對資料載入失敗',e); }
@@ -49816,8 +49817,6 @@ function pmChkZState(proj,zone){
 }
 // 業主供料(柱內灌漿螺帽)、灌漿管:不開成品材領料單,不列入核對
 const PM_CHK_OWNER_RE=/業主供料|^灌漿管/;
-// BOX 構件裡階層 *** (part_level 3)的零件是一次加工的東西,上面的成品材不算我們要領的
-function pmChkIsBoxPrimary(i){ return Number(i.part_level)===3 && /^BOX/i.test(String(i.component_spec||'').trim()); }
 function pmChkZone(proj,zone){
   return prodMemo('pmChk:'+proj+'|'+zone,()=>{
     const a=pmMaLoaded?pmMaLatest(proj,zone):null; if(!a) return null;
@@ -49826,7 +49825,6 @@ function pmChkZone(proj,zone){
     pmMaItemsOf(a.id).forEach(i=>{
       const q=Number(i.quantity)||0, desc=String(i.description||'').trim();
       if(PM_CHK_OWNER_RE.test(desc)) return; // 業主供料/灌漿管不走成品材領料單
-      if(pmChkIsBoxPrimary(i)) return; // BOX 柱 *** 階的成品材屬一次加工,不由我們領料
       line(pmChkSpecKey(i.specification),String(i.specification||'').trim(),desc,i.unit).need+=q;
       // 多階寫「剪力釘(附瓷罩)」一行,領料單把瓷罩另開一行 → 瓷罩依直徑另外核對
       const dia=desc.includes('附瓷罩')?pmChkDia(i.specification):'';
@@ -49890,7 +49888,7 @@ function pmChkRenderDetail(){
     const st=l.diff<0?pmChkPill(c.zState==='done'?'red':'gray','少 '+pmChkQty(-l.diff)):l.diff>0?pmChkPill('amber',l.need?'多 '+pmChkQty(l.diff):'多階沒有'):pmChkPill('green','齊');
     return '<tr><td>'+esc(l.spec||'—')+'</td><td>'+esc(l.desc||'')+'</td><td class="pmc-n">'+(l.need?pmChkQty(l.need):'—')+'</td><td class="pmc-n">'+(l.got?pmChkQty(l.got):'0')+'</td><td>'+st+'</td></tr>';
   }).join('');
-  box.innerHTML='<div class="pmc-box"><div class="pmc-note">多階來源:'+esc(proj)+'-'+esc(zone)+' '+esc(d)+' 版(#'+esc(c.analysis.id)+')　領料單 '+c.notices+' 張　'+esc(zt)+'<br>已排除工地用 E、業主供料、灌漿管與 BOX 柱一次加工(*** 階)成品材;規格比對忽略空白與「-聚亨」這類廠商尾巴;瓷罩需求=同直徑附瓷罩剪力釘數量</div>'+
+  box.innerHTML='<div class="pmc-box"><div class="pmc-note">多階來源:'+esc(proj)+'-'+esc(zone)+' '+esc(d)+' 版(#'+esc(c.analysis.id)+')　領料單 '+c.notices+' 張　'+esc(zt)+'<br>已排除工地用 E、業主供料、灌漿管與 分類「一次」(BOX *** 階);規格比對忽略空白與「-聚亨」這類廠商尾巴;瓷罩需求=同直徑附瓷罩剪力釘數量</div>'+
     (c.lines.length?'<div class="pmc-wrap"><table class="pmc-tbl mc-off"><thead><tr><th>規格</th><th>品名</th><th class="pmc-n">多階</th><th class="pmc-n">已領</th><th>狀態</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="pmc-note">此版多階資料沒有成品材。</div>')+'</div>';
 }
 // 成品材領料頁:工具列按鈕 + 有差異的工程區清單
@@ -57539,10 +57537,11 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     {key:'L',label:'角鐵 L'},
     {key:'成品材',label:'成品材'},
     {key:'SP',label:'SP'},
-    {key:'E',label:'工地用 E'}
+    {key:'E',label:'工地用 E'},
+    {key:'一次',label:'一次'}
   ];
-  var MA_PART_ORDER=['BH','RH','BOX','BT','FW','U','Q','H','FB','L','成品材','SP','E'];
-  var MA_PART_SHEET={BH:'BH',RH:'RH',BOX:'BOX',BT:'BT',FW:'FW板',U:'槽鐵U',Q:'帷幕Q',H:'水電H',FB:'FB',L:'角鐵L','成品材':'成品材',SP:'SP',E:'工地用E'};
+  var MA_PART_ORDER=['BH','RH','BOX','BT','FW','U','Q','H','FB','L','成品材','SP','E','一次'];
+  var MA_PART_SHEET={BH:'BH',RH:'RH',BOX:'BOX',BT:'BT',FW:'FW板',U:'槽鐵U',Q:'帷幕Q',H:'水電H',FB:'FB',L:'角鐵L','成品材':'成品材',SP:'SP',E:'工地用E','一次':'一次'};
   // 複合分頁:不是 maPartCategory 會回傳的分類,只是把數個分類併在同一個分頁看
   var MA_CAT_GROUP={BHRH:['BH','RH']};
   var maPartsCat='ALL',maPartsMode='grouped',maSearchQuery='';
@@ -57575,6 +57574,8 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     return out.trim();
   }
   function maPartCategory(item){
+    // 一次:BOX 底下 *** 階(含更下層)的零件都是一次加工做好的,跟我們無關(板、FB、剪力釘、灌漿螺帽…全部)
+    if(item.primary||item.category==='一次')return '一次';
     if(item.code==='Q')return 'Q';
     if(item.code==='H')return 'H';
     // 工地用(不是我們的,不用點):多階行尾代碼 E(例 ZBJK 高張力圓頭鎖斷螺栓、ZSH 剪力釘),或零件編號 E 開頭(板/FB)。
@@ -57653,6 +57654,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
       item.parentNo=parent.partNo;item.parentRef=parent;
       var pq=Number(parent.quantity),q=Number(item.quantity);
       if(item.quantity!==''&&parent.quantity!==''&&!isNaN(pq)&&!isNaN(q))item.quantity=maQtyFmt(q*pq);
+      if(parent.primary||(depth===3&&maPartCategory(parent)==='BOX'))item.primary=true;
       if(parent.code==='Q'||parent.code==='H')item.code=parent.code;
       else{
         var pn=String(parent.partNo||'').trim().toUpperCase(),cn=String(item.partNo||'').trim().toUpperCase();
@@ -57781,6 +57783,7 @@ window.SC_TPL_B64="UEsDBBQABgAIAAAAIQB25OZ6mQEAALEHAAATAAgCW0NvbnRlbnRfVHlwZXNdL
     if(cat==='Q')return '<span class="ma-tag q">帷幕 Q</span>';
     if(cat==='H')return '<span class="ma-tag h">水電 H</span>';
     if(cat==='E')return '<span class="ma-tag e">工地用 E</span>';
+    if(cat==='一次')return '<span class="ma-tag one">一次</span>';
     return '<span class="ma-tag sp">'+maEsc(cat)+'</span>';
   }
   function maProjectFileBase(){
