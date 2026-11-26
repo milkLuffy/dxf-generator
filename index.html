@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.25.7"/>
+<meta name="sc-version" content="2026.11.26.1"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -53891,15 +53891,35 @@ async function scMaMainLengths(projNum,zoneCode){
   const list=(Array.isArray(ar.data)?ar.data:[]).filter(a=>up(a.project_no)===up(projNum));
   const hit=list.find(a=>up(a.zone_code)===up(zoneCode))||list.find(a=>up(a.mother_no)===up(zoneCode));
   if(!hit) return {hit:false,map:{}};
-  const ir=await sbFetchAll('/rest/v1/multilevel_analysis_items?select=component_no,component_spec,specification,part_level&analysis_id=eq.'+hit.id+'&part_level=lte.2');
+  const ir=await sbFetchAll('/rest/v1/multilevel_analysis_items?select=component_no,component_spec,specification,part_level,parent_part_no&analysis_id=eq.'+hit.id+'&part_level=lte.3');
   if(!ir||!ir.ok||!Array.isArray(ir.data)) throw new Error('讀取多階明細失敗');
-  const by={};
+  const by={}, sub={}, cspec={};
   ir.data.forEach(r=>{
     const k=up(r.component_no); if(!k) return;
     const cs=scSecOf(r.component_spec); if(!cs||cs===String(r.component_spec||'').toUpperCase().replace(/\s+/g,'')) return; // 構件規格沒有長度
+    cspec[k]=cs;
+    if(+r.part_level===3){ // 組合斷面(例 BH)的 ** 主材不另存,只存它的 *** 翼板/腹板
+      const pk=up(r.parent_part_no); if(!pk) return;
+      ((sub[k]=sub[k]||{})[pk]=sub[k][pk]||[]).push(up(r.specification).replace(/\s+/g,'').replace(/[*＊×]/g,'X'));
+      return;
+    }
     if(scSecOf(r.specification)!==cs) return;
     const len=scLastNum(r.specification); if(!len) return;
-    (by[k]=by[k]||{spec:r.component_spec,lens:new Set()}).lens.add(len);
+    (by[k]=by[k]||{lens:new Set()}).lens.add(len);
+  });
+  // 沒有 ** 主材時:用同一個上一層的 *** 鋼板組回 H 斷面(翼板 PL tf×B、腹板 PL tw×(H−2tf) 或 tw×H),兩片同長才採用
+  Object.keys(sub).forEach(k=>{
+    if(by[k]) return;
+    const m=String(cspec[k]||'').match(/^[A-Z]*H(\d+(?:\.\d+)?)X(\d+(?:\.\d+)?)X(\d+(?:\.\d+)?)X(\d+(?:\.\d+)?)$/); if(!m) return;
+    const [H,B,tw,tf]=m.slice(1).map(Number);
+    Object.keys(sub[k]).forEach(pk=>{
+      const pl=sub[k][pk].map(t=>t.match(/^PL(\d+(?:\.\d+)?)X(\d+(?:\.\d+)?)X(\d+(?:\.\d+)?)$/)).filter(Boolean).map(x=>x.slice(1).map(Number));
+      const fl=pl.filter(x=>x[0]===tf&&x[1]===B), wb=pl.filter(x=>x[0]===tw&&(x[1]===H-2*tf||x[1]===H));
+      if(!fl.length||!wb.length) return;
+      const lens=new Set([...fl,...wb].map(x=>String(x[2])));
+      if(lens.size!==1) return;
+      (by[k]=by[k]||{lens:new Set()}).lens.add([...lens][0]);
+    });
   });
   const map={};
   Object.keys(by).forEach(k=>{ const o=by[k]; map[k]={len:o.lens.size===1?[...o.lens][0]:'',multi:o.lens.size>1}; });
