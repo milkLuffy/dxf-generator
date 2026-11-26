@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.26.17"/>
+<meta name="sc-version" content="2026.11.26.18"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -7785,6 +7785,8 @@ window.normalizeFullWidth=function(value){
     .pmc-zcell{display:flex;align-items:center;gap:2px;flex-wrap:wrap}.pmc-zcell .lt-edit{flex:1 1 60px;min-width:60px}
     #spx-product tr.pmc-row-red td{background:color-mix(in srgb,var(--red) 9%,transparent)}
     #spx-product tr.pmc-row-red td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+    #spx-product tr.pmc-row-gray td:first-child{box-shadow:inset 3px 0 0 var(--text3)}
+    #spx-product tr.pmc-row-violet td:first-child{box-shadow:inset 3px 0 0 var(--purple)}
     .pmc-none{background:transparent;border:1px dashed var(--border);color:var(--text3);font-weight:400}
     .pmc-sum{font-weight:400}
     .pmc-box{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:6px 0 10px;background:var(--bg2)}
@@ -51134,23 +51136,18 @@ function pmZonesOfRow(p){
   return [...new Set(String(p&&p.reason||'').split(/[、,，]/).map(s=>String(s).trim().split(/\s+/)[0]||'').map(s=>s.toUpperCase()).filter(Boolean))];
 }
 // 顯示用儲存格:沿用一般欄位的 input 外觀(唯讀),但寬度依內容縮放,不占大格
-// 成品材領料表的工程區欄:差額有負的(缺料)或疑似替代才掛徽章;SP 成品材 Z 已完成仍缺 → 紅色「漏單」並整列染紅
+// 成品材領料表:這一列的工程區與多階比對有負差額(缺料)或疑似替代
 function pmChkRowIssues(p){
   if(!pmMaLoaded||typeof pmChkZone!=='function') return [];
   const proj=String(p&&p.proj_no||'').trim(); if(!proj) return [];
   return pmZonesOfRow(p).map(zone=>({proj,zone,c:pmChkZone(proj,zone)})).filter(x=>x.c&&x.c.zState!=='sub'&&(x.c.short||x.c.cand));
 }
-function pmChkRowClass(p){ return pmChkRowIssues(p).some(x=>x.c.short&&x.c.zState==='done')?'pmc-row-red':''; }
-function pmZoneCell(p){
-  const iss=pmChkRowIssues(p), multi=pmZonesOfRow(p).length>1;
-  const pills=iss.map(({proj,zone,c})=>{
-    const red=c.short&&c.zState==='done';
-    const cls=c.short?(red?'red':'gray'):'violet';
-    const txt=(multi?zone+' ':'')+(c.short?(red?'缺 '+c.short+'・漏單':'尚差 '+c.short):'待確認 '+c.cand);
-    const tip=c.short?(red?'SP 成品材 Z 已完成,與多階比對還缺 '+c.short+' 項':'SP 成品材 Z 未完成,與多階比對尚差 '+c.short+' 項'):'有 '+c.cand+' 項疑似規格替代待確認';
-    return pmChkPill(cls,txt,' title="'+esc(tip)+'(點擊看核對)" data-proj="'+esc(proj)+'" data-zone="'+esc(zone)+'" onclick="event.stopPropagation();pmOpenZoneDetails(this.dataset.proj,this.dataset.zone)" style="cursor:pointer"');
-  }).join('');
-  return pills?'<div class="pmc-zcell">'+pmZoneText(p)+pills+'</div>':pmZoneText(p);
+// 不掛徽章(工程區欄放不下),只用列底色/左側色條:紅=確定漏單(淡紅底+紅條)、灰條=還在領料尚差、紫條=待確認替代
+function pmChkRowClass(p){
+  const iss=pmChkRowIssues(p);
+  if(iss.some(x=>x.c.short&&x.c.zState==='done')) return 'pmc-row-red';
+  if(iss.some(x=>x.c.short)) return 'pmc-row-gray';
+  return iss.length?'pmc-row-violet':'';
 }
 function pmZoneText(p){ const z=pmZonesOfRow(p); return '<input type="text" class="lt-edit spx-vcell" readonly value="'+esc(z.join('.'))+'" title="由領料明細/事由自動判定的工程區"/>'; }
 function pmWeldingText(p){ const z=pmZonesOfRow(p); return '<input type="text" class="lt-edit spx-vcell" readonly value="'+esc(z.join('.'))+'" title="由領料明細/細目自動判定的焊材"/>'; }
@@ -51730,7 +51727,7 @@ const SPX={
   product:{ tbl:'product_material', sort:spxNewestFirst,
     rowClass:pmChkRowClass,
     cols:[
-      {k:'pick_date',h:'日期',date:true,noData:true,defFn:spxToday},{k:'proj_no',h:'工程編號'},{k:'_zone',h:'工程區',virtual:true,noData:true,render:pmZoneCell,str:p=>pmZonesOfRow(p).join('.')},{k:'serial',h:'流水編號'},{k:'reason',h:'細目',wide:true},{k:'remark',h:'備註',wide:true},{k:'is_picked',h:'是否領料',check:true,bool:true,noData:true,def:false},{k:'pickup_date',h:'領料日期',date:true,noData:true},{k:'_priced',h:'計價',virtual:true,noData:true,render:pmPricedCell,str:pmPricedText},{k:'_details',h:'細項',virtual:true,noData:true}
+      {k:'pick_date',h:'日期',date:true,noData:true,defFn:spxToday},{k:'proj_no',h:'工程編號'},{k:'_zone',h:'工程區',virtual:true,noData:true,render:pmZoneText,str:p=>pmZonesOfRow(p).join('.')},{k:'serial',h:'流水編號'},{k:'reason',h:'細目',wide:true},{k:'remark',h:'備註',wide:true},{k:'is_picked',h:'是否領料',check:true,bool:true,noData:true,def:false},{k:'pickup_date',h:'領料日期',date:true,noData:true},{k:'_priced',h:'計價',virtual:true,noData:true,render:pmPricedCell,str:pmPricedText},{k:'_details',h:'細項',virtual:true,noData:true}
     ]}
   // 焊材領料:同一張 product_material,僅記錄用 → 不放「是否領料/領料日期」
   ,welding:{ tbl:'product_material', sort:spxNewestFirst,
