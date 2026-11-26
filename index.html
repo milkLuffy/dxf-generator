@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.26.1"/>
+<meta name="sc-version" content="2026.11.26.2"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -1298,6 +1298,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:
 .log-table td.log-act-td{white-space:nowrap}
 .log-dl{border:1px solid var(--border);border-radius:5px;background:var(--bg3);color:var(--accent2);font-size:11.5px;padding:2px 9px;cursor:pointer;margin-right:4px}
 .log-dl:hover{border-color:var(--accent2)}
+/* 削翼靠磨 */
+#page-beveljig .proj-row select{flex:1;min-width:0}
+.bj-input{width:100%;min-height:150px;resize:vertical;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rad);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.6;padding:10px 12px}
+.bj-input:focus{outline:none;border-color:var(--accent2)}
+.bj-preview{margin:8px 0 4px;font-size:12.5px;color:var(--text2);line-height:1.7}
+.bj-preview .bj-tag{display:inline-block;font-family:var(--mono);color:var(--accent2);background:rgba(79,142,247,.1);border-radius:3px;padding:1px 6px;margin:0 4px 3px 0}
+.bj-tag.dup,.log-table td.frames span.dup{box-shadow:inset 0 0 0 1.5px var(--danger)}
+.bj-tag.same{box-shadow:inset 0 0 0 1.5px var(--yellow)}
+.bj-preview .bj-warn{color:var(--danger)}
+.log-table td.bj-n{white-space:nowrap;color:var(--text);font-weight:600}
+.bj-dupnote{display:block;font-size:10.5px;color:var(--danger);margin-top:2px}
 .log-table tr.log-row-done td{opacity:.72}
 .btn-del-row:hover{color:var(--danger)}
 
@@ -3650,6 +3661,9 @@ table.perm-mx .perm-mx-role{width:104px;max-width:104px;box-sizing:border-box}
           </div>
           <div class="nav-item" onclick="navTo('sp')" id="nav-sp">
             <span class="nav-icon">📐</span><span class="nav-label">S/P 板厚分類剖析</span>
+          </div>
+          <div class="nav-item" onclick="navTo('beveljig')" id="nav-beveljig">
+            <span class="nav-icon">✂</span><span class="nav-label">削翼靠磨</span>
           </div>
           <div class="nav-item" onclick="navTo('dxf')" id="nav-dxf">
             <span class="nav-icon">⚙️</span><span class="nav-label">水電靠模生產器</span>
@@ -9630,6 +9644,42 @@ window.normalizeFullWidth=function(value){
       </div>
     </div>
 
+    <!-- 削翼靠磨 -->
+    <div class="page" id="page-beveljig">
+      <div class="page-title">削翼靠磨</div>
+      <div class="proj-section">
+        <div class="section-label">工程資訊</div>
+        <div class="proj-row">
+          <select class="filter-select" id="bj-proj" onchange="bjProjChange()"><option value="">— 選擇工程編號 —</option></select>
+          <select class="filter-select" id="bj-zone" onchange="bjPreview()"><option value="">— 先選工程編號 —</option></select>
+        </div>
+      </div>
+      <div class="proj-section">
+        <div class="section-label">削翼編號</div>
+        <textarea class="bj-input" id="bj-codes" placeholder="一行一個,也可用空白或逗號隔開&#10;CF8040CE&#10;CF8040CG&#10;CF8035BE" oninput="bjPreview()"></textarea>
+        <div class="bj-preview" id="bj-preview"></div>
+        <div class="dxf-actions">
+          <button class="btn btn-add-row" type="button" onclick="bjClearInput()">清空</button>
+          <button class="btn btn-gen" type="button" id="bj-save" onclick="bjSave()">記錄</button>
+        </div>
+      </div>
+      <div class="statusbar" id="bj-statusbar"><div class="dot"></div><span id="bj-status-text">就緒</span></div>
+      <div class="log-section">
+        <div class="log-header">
+          <div class="log-title-row">
+            <div class="log-title">削翼編號紀錄</div>
+            <div class="log-count" id="bj-count">—</div>
+          </div>
+          <div class="log-actions-bar">
+            <span class="log-ord-filter" id="bj-ord-filter"></span>
+            <input class="log-filter" id="bj-filter" placeholder="搜尋工程 / 工程區 / 編號 / 人員..." oninput="bjRenderLog()"/>
+            <button class="btn-sm btn-export" onclick="bjExportCSV()">↓ 匯出 CSV</button>
+          </div>
+        </div>
+        <div id="bj-log"><div class="log-empty">載入中...</div></div>
+      </div>
+    </div>
+
     <!-- DXF -->
     <div class="page" id="page-dxf">
       <div class="page-title">水電靠模生產器</div>
@@ -15189,6 +15239,7 @@ const PAGE_META=[
   {k:'multilevel',   label:'多階資料分析',     sec:'tools'},
   {k:'bomtool',      label:'BOM 剖析工具',   sec:'tools'},
   {k:'sp',           label:'S/P 板厚分類剖析',sec:'tools'},
+  {k:'beveljig',     label:'削翼靠磨',       sec:'tools'},
   {k:'dxf',          label:'水電靠模生產器', sec:'tools'},
   {k:'hazard',       label:'列印危害告知',   sec:'tools'},
   {k:'selfcheck',    label:'自檢表產生器',   sec:'tools'},
@@ -15596,6 +15647,7 @@ function navTo(page, viewState) {
   if(page==='sop') sopInit();
   if(page==='namelabels'&&typeof window.nlInit==='function') window.nlInit();
   if(page==='todo') todoInit();
+  if(page==='beveljig') bjInit();
   if(page==='dxf') { dxfFillProjNums(); loadLog(); }   // 產生紀錄每次進頁重抓(別人勾的已開單才看得到)
   if(page==='bom') { if(allBOM.length) setBomView(bomView); loadBOM(); }
   if(page==='inspect') inspInit();
@@ -32355,6 +32407,160 @@ function exportCSV(){
   const a=document.createElement('a'); a.href=url; a.download='DXF_產生紀錄.csv';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setDXFStatus('已匯出 CSV',true);
+}
+
+// ── 削翼靠磨:選工程編號＋工程區,輸入削翼編號(例 CF8040CE),每次一筆紀錄(數量、已開單);
+//    同一個工程編號裡重複出現的編號標紅框(不同工程區也算),輸入時先提示 ──
+let bjLogs=[], bjZones=[], bjOrdFilter='all', bjInited=false;
+const bjEl=id=>document.getElementById(id);
+const bjKey=v=>String(v==null?'':v).trim().toUpperCase();
+function bjStatus(msg,ok){ bjEl('bj-status-text').textContent=msg; bjEl('bj-statusbar').className='statusbar'+(ok?' ok':''); }
+function bjCanEdit(){ return !isGuest&&!!currentUser&&pagePerm('beveljig')==='edit'; }
+// 編號:換行、空白、逗號、頓號都當分隔;去掉 # 開頭,一律大寫;同一次輸入重複的只留一個
+function bjParse(text){
+  const all=String(text||'').split(/[\s,，、;；]+/).map(t=>bjKey(t).replace(/^#+/,'')).filter(t=>/[A-Z0-9]/.test(t));
+  const seen=new Set(), codes=[], rep=new Set();
+  all.forEach(c=>{ if(seen.has(c)) rep.add(c); else { seen.add(c); codes.push(c); } });
+  return {codes, rep:[...rep]};
+}
+const bjDate=t=>{ const d=new Date(t); return isNaN(d)?'':d.toLocaleDateString('zh-TW',{month:'2-digit',day:'2-digit'}); };
+// 某個工程編號底下,每個編號出現在哪幾筆紀錄
+function bjIndex(projNum){
+  const P=bjKey(projNum), m=new Map();
+  bjLogs.forEach(e=>{ if(bjKey(e.proj_num)!==P||!Array.isArray(e.codes)) return;
+    e.codes.forEach(c=>{ const k=bjKey(c); if(!k) return; (m.get(k)||m.set(k,[]).get(k)).push(e); }); });
+  return m;
+}
+const bjWhere=list=>list.map(e=>(e.zone_code||'')+' '+bjDate(e.created_at)).join('、');
+async function bjInit(){
+  if(!bjInited){
+    bjInited=true;
+    if(!allBOM.length){ try{ await loadBOM({noSync:true}); }catch(e){} }
+    bjEl('bj-proj').innerHTML='<option value="">— 選擇工程編號 —</option>'+
+      allBOM.filter(p=>String(p.status||'').trim()!=='已完成')
+        .slice().sort((a,b)=>String(a.proj_num||'').localeCompare(String(b.proj_num||''),undefined,{numeric:true,sensitivity:'base'}))
+        .map(p=>'<option value="'+p.id+'">'+esc(p.proj_num)+(p.proj_name?' — '+esc(p.proj_name):'')+'</option>').join('');
+  }
+  const ro=!bjCanEdit();
+  ['bj-proj','bj-zone','bj-codes','bj-save'].forEach(id=>{ const el=bjEl(id); if(el) el.disabled=ro; });
+  await bjLoad();   // 每次進頁重抓(別人勾的已開單才看得到)
+}
+async function bjProjChange(){
+  const pid=bjEl('bj-proj').value, zs=bjEl('bj-zone');
+  bjZones=[];
+  if(!pid){ zs.innerHTML='<option value="">— 先選工程編號 —</option>'; bjPreview(); return; }
+  zs.innerHTML='<option value="">— 載入中… —</option>';
+  const r=await sbFetch('/rest/v1/zones?select=id,zone_code,status&project_id=eq.'+encodeURIComponent(pid)+'&order=zone_code');
+  if(bjEl('bj-proj').value!==pid) return;
+  bjZones=(r.ok&&Array.isArray(r.data)?r.data:[]).filter(z=>String(z.status||'').trim()!=='已完成');
+  zs.innerHTML='<option value="">— 選擇工程區 —</option>'+bjZones.map(z=>'<option value="'+z.id+'">'+esc(z.zone_code)+'</option>').join('');
+  bjPreview();
+}
+function bjSel(){
+  const p=allBOM.find(x=>String(x.id)===String(bjEl('bj-proj').value));
+  const z=bjZones.find(x=>String(x.id)===String(bjEl('bj-zone').value));
+  return {p,z,projNum:p?String(p.proj_num||'').trim():'',zoneCode:z?String(z.zone_code||'').trim():''};
+}
+// 輸入預覽:幾個編號、這次輸入裡重複的、這個工程編號以前記錄過的(紅框)
+function bjPreview(){
+  const box=bjEl('bj-preview'); if(!box) return;
+  const {codes,rep}=bjParse(bjEl('bj-codes').value), {projNum,zoneCode}=bjSel();
+  if(!codes.length){ box.innerHTML=''; return; }
+  const idx=projNum?bjIndex(projNum):new Map();
+  let nOld=0;
+  const tags=codes.map(c=>{ const hit=idx.get(c);
+    if(hit&&hit.length){ nOld++; return '<span class="bj-tag dup" title="此工程已記錄過:'+esc(bjWhere(hit))+'">'+esc(c)+'</span>'; }
+    return '<span class="bj-tag">'+esc(c)+'</span>'; }).join('');
+  box.innerHTML='<div>共 <b>'+codes.length+'</b> 個'+(projNum?'　'+esc(projNum)+(zoneCode?'-'+esc(zoneCode):''):'')+'</div>'+tags
+    +(rep.length?'<div class="bj-warn">這次輸入重複,已只留一個:'+esc(rep.join('、'))+'</div>':'')
+    +(nOld?'<div class="bj-warn">紅框 '+nOld+' 個:這個工程編號以前已經記錄過(滑鼠移上去看工程區與日期),仍可記錄</div>':'');
+}
+function bjClearInput(){ bjEl('bj-codes').value=''; bjPreview(); }
+async function bjSave(){
+  if(!bjCanEdit()){ alert('沒有削翼靠磨的編輯權限'); return; }
+  const {p,z,projNum,zoneCode}=bjSel();
+  if(!p||!z){ bjStatus('請先選擇工程編號與工程區',false); alert('請先選擇工程編號與工程區'); return; }
+  const {codes}=bjParse(bjEl('bj-codes').value);
+  if(!codes.length){ bjStatus('請輸入削翼編號',false); alert('請輸入削翼編號'); return; }
+  const idx=bjIndex(projNum), old=codes.filter(c=>idx.has(c));
+  if(old.length && !(await uiConfirm(projNum+' 已經記錄過 '+old.length+' 個編號:\n'+old.map(c=>c+'('+bjWhere(idx.get(c))+')').join('\n')+'\n\n仍要記錄?(紀錄裡會標成重複)'))) return;
+  const btn=bjEl('bj-save'); btn.disabled=true;
+  const payload={user_name:currentUser.name||'',user_id:currentUser.id||null,project_id:p.id,zone_id:z.id,proj_num:projNum,zone_code:zoneCode,codes};
+  const r=await sbFetch('/rest/v1/bevel_jig_logs',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)});
+  btn.disabled=false;
+  if(!r.ok){ bjStatus('記錄失敗('+(r.status||'?')+'):'+((r.data&&(r.data.message||r.data.hint))||''),false); alert('記錄失敗,請稍後再試'); return; }
+  bjEl('bj-codes').value='';
+  bjStatus('已記錄 '+projNum+'-'+zoneCode+','+codes.length+' 個削翼編號'+(old.length?'(其中 '+old.length+' 個重複)':''),true);
+  await bjLoad();
+  bjPreview();
+}
+async function bjLoad(){
+  const r=await sbFetch('/rest/v1/bevel_jig_logs?select=*&order=created_at.desc&limit=1000');
+  if(!r.ok||!Array.isArray(r.data)){ bjEl('bj-log').innerHTML='<div class="log-empty">無法載入紀錄</div>'; return; }
+  bjLogs=r.data; bjRenderLog(); bjPreview();
+}
+function bjSetOrdFilter(f){ bjOrdFilter=f; bjRenderLog(); }
+function bjRenderLog(){
+  const q=bjKey(bjEl('bj-filter').value);
+  let logs=bjLogs.filter(e=>!q||[e.proj_num,e.zone_code,e.user_name,...(Array.isArray(e.codes)?e.codes:[])].some(v=>bjKey(v).includes(q)));
+  const nOpen=logs.filter(e=>!e.ordered_at).length;
+  bjEl('bj-ord-filter').innerHTML=[['open','未開單',nOpen],['done','已開單',logs.length-nOpen],['all','全部',logs.length]]
+    .map(([k,l,n])=>'<button type="button" class="log-ord-chip'+(bjOrdFilter===k?' active':'')+'" onclick="bjSetOrdFilter(\''+k+'\')">'+l+' '+n+'</button>').join('');
+  if(bjOrdFilter!=='all') logs=logs.filter(e=>bjOrdFilter==='done'?!!e.ordered_at:!e.ordered_at);
+  logs=logs.slice().sort((a,b)=>(a.ordered_at?1:0)-(b.ordered_at?1:0));   // 未開單在前,各自新到舊
+  const nCodes=logs.reduce((s,e)=>s+(Array.isArray(e.codes)?e.codes.length:0),0);
+  bjEl('bj-count').textContent=logs.length+' 筆・'+nCodes+' 個';
+  if(!logs.length){ bjEl('bj-log').innerHTML='<div class="log-empty">'+(bjLogs.length?'沒有符合的紀錄':'尚無紀錄')+'</div>'; return; }
+  const canOrder=bjCanEdit(), idxs={};
+  let html='<div class="log-wrap"><table class="log-table"><thead><tr><th>日期/時間</th><th>人員</th><th>工程編號</th><th>工程區</th><th>數量</th><th>削翼編號</th><th>開單</th><th></th></tr></thead><tbody>';
+  logs.forEach(e=>{
+    const P=bjKey(e.proj_num), idx=idxs[P]||(idxs[P]=bjIndex(e.proj_num));
+    const dt=new Date(e.created_at);
+    const date=dt.toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'}), time=dt.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+    const codes=Array.isArray(e.codes)?e.codes:[];
+    let nDup=0;
+    const tags=codes.map(c=>{ const list=idx.get(bjKey(c))||[];
+      if(list.length>1){ nDup++; return '<span class="dup" title="同工程編號共記錄 '+list.length+' 次:'+esc(bjWhere(list))+'">'+esc(c)+'</span>'; }
+      return '<span>'+esc(c)+'</span>'; }).join('');
+    const done=!!e.ordered_at;
+    const ord='<label class="log-ord'+(done?' done':'')+'"><input type="checkbox"'+(done?' checked':'')+(canOrder?'':' disabled')+' onchange="bjToggleOrdered('+e.id+',this.checked,this)">'+(done?'已開單':'未開單')+'</label>'
+      +(done?'<div class="log-ord-who">'+esc(bjDate(e.ordered_at))+' '+esc(e.ordered_by||'')+'</div>':'');
+    const canDel=canOrder&&(currentUser.isAdmin||(e.user_id&&e.user_id===currentUser.id));
+    html+='<tr class="'+(done?'log-row-done':'')+'"><td class="date">'+date+'<br>'+time+'</td><td class="op">'+esc(e.user_name||'—')+'</td><td class="proj">'+esc(e.proj_num||'—')+'</td><td>'+esc(e.zone_code||'—')+'</td>'
+      +'<td class="bj-n">'+codes.length+' 個'+(nDup?'<span class="bj-dupnote">重複 '+nDup+'</span>':'')+'</td><td class="frames">'+tags+'</td><td class="log-ord-td">'+ord+'</td>'
+      +'<td class="log-act-td">'+(canDel?'<button class="btn-del-row" onclick="bjDelete('+e.id+')" title="刪除這筆紀錄">✕</button>':'')+'</td></tr>';
+  });
+  bjEl('bj-log').innerHTML=html+'</tbody></table></div>';
+}
+async function bjToggleOrdered(id,on,el){
+  const e=bjLogs.find(x=>String(x.id)===String(id)); if(!e) return;
+  const patch=on?{ordered_at:new Date().toISOString(),ordered_by:(currentUser&&currentUser.name)||null}:{ordered_at:null,ordered_by:null};
+  if(el) el.disabled=true;
+  const r=await sbFetch('/rest/v1/bevel_jig_logs?id=eq.'+encodeURIComponent(id)+'&select=id',{method:'PATCH',headers:{'Prefer':'return=representation'},body:JSON.stringify(patch)});
+  if(!r.ok||!Array.isArray(r.data)||!r.data.length){ alert('已開單儲存失敗('+(r.status||'?')+')'); if(el){ el.checked=!on; el.disabled=false; } return; }
+  Object.assign(e,patch);
+  bjStatus((on?'已開單:':'已取消開單:')+e.proj_num+'-'+e.zone_code+'('+(e.codes||[]).length+' 個)',true);
+  bjRenderLog();
+}
+async function bjDelete(id){
+  const e=bjLogs.find(x=>String(x.id)===String(id)); if(!e) return;
+  if(!(await uiConfirm('刪除這筆紀錄?\n'+e.proj_num+'-'+e.zone_code+','+(e.codes||[]).length+' 個削翼編號'))) return;
+  const r=await sbFetch('/rest/v1/bevel_jig_logs?id=eq.'+encodeURIComponent(id),{method:'DELETE'});
+  if(!r.ok){ alert('刪除失敗'); return; }
+  bjStatus('已刪除 '+e.proj_num+'-'+e.zone_code+' 的紀錄',true);
+  await bjLoad();
+}
+function bjExportCSV(){
+  if(!bjLogs.length){ bjStatus('沒有紀錄可匯出',false); return; }
+  const header=['日期時間','人員','工程編號','工程區','數量','削翼編號','已開單'];
+  const rows=bjLogs.map(e=>{ const c=Array.isArray(e.codes)?e.codes:[];
+    return [new Date(e.created_at).toLocaleString('zh-TW'),e.user_name,e.proj_num,e.zone_code,c.length,c.join(' | '),e.ordered_at?(new Date(e.ordered_at).toLocaleDateString('zh-TW')+' '+(e.ordered_by||'')):'']
+      .map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(','); });
+  const url=URL.createObjectURL(new Blob(['﻿'+[header.join(','),...rows].join('\r\n')],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a'); a.href=url; a.download='削翼靠磨紀錄.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+  bjStatus('已匯出 CSV',true);
 }
 
 // ── Preview ──
@@ -61463,7 +61669,7 @@ async function ldDashPlan(){
 // 第一個有內容的格當卡片標題;長文字整列寬;空白格不顯示;合併很多欄的列(分組/小計)整條顯示。
 // 不想被轉的表格加 class="mc-off";某一格固定整列寬加 class="mc-wide mc-wide-fixed"。
 (function(){
-  const MCARD_PAGES=['output','dxf','payroll','leave','pricing','audit','emp','payrollcfg'];
+  const MCARD_PAGES=['output','dxf','beveljig','payroll','leave','pricing','audit','emp','payrollcfg'];
   const MQ=window.matchMedia('(max-width:768px),(pointer:coarse) and (max-width:1100px)');
   const MIN_COLS=4;
   // 「重點卡片」規格:依表頭名稱指定每一欄的角色,讓卡片有主次(預設小卡,compact:0 改一般卡)——
