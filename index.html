@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.26.10"/>
+<meta name="sc-version" content="2026.11.26.11"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -7778,6 +7778,10 @@ window.normalizeFullWidth=function(value){
     .pmc-gray{background:rgba(128,128,128,.14);color:var(--text2)}
     .pmc-green{background:var(--green-light,rgba(50,160,80,.16));color:var(--green)}
     .pmc-amber{background:rgba(220,150,20,.16);color:var(--yellow)}
+    .pmc-violet{background:color-mix(in srgb,var(--purple) 16%,transparent);color:var(--purple)}
+    .pmc-cand td{background:color-mix(in srgb,var(--purple) 7%,transparent)}
+    .pmc-sub{font-size:11px;color:var(--text3);margin-top:2px}
+    .pmc-acts{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap}.pmc-acts .btn{font-size:11px;padding:2px 8px;min-height:0}
     .pmc-none{background:transparent;border:1px dashed var(--border);color:var(--text3);font-weight:400}
     .pmc-sum{font-weight:400}
     .pmc-box{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:6px 0 10px;background:var(--bg2)}
@@ -49778,6 +49782,7 @@ let pmMaAnalyses=[], pmMaItems=[], pmMaLoaded=false, pmMaBusy=false, pmChkExpand
 async function pmMaFetch(){
   if(pmMaBusy) return; pmMaBusy=true;
   try{
+    pmChkSubsLoad();
     const [ra,ri]=await Promise.all([
       sbFetchAll('/rest/v1/multilevel_analyses?select=id,project_no,zone_code,created_at&order=id'),
       sbFetchAll('/rest/v1/multilevel_analysis_items?select=analysis_id,description,specification,unit,quantity&category=eq.'+encodeURIComponent('成品材'))
@@ -49791,6 +49796,46 @@ async function pmMaFetch(){
   if(prodDetailCtx.proj||prodDetailCtx.zone) pmChkRenderDetail();
   pmChkListRender();
 }
+// ── 規格替代(全部工程區套用):存 app_config.pm_spec_subs = [{need,got,needSpec,gotSpec,ok,by,at}]
+//   need/got 是 pmChkSpecKey 比對鍵;ok=true 確認可替代、ok=false 判定不是(不再問)
+const PM_SUBS_KEY='pm_spec_subs';
+let pmChkSubs=[];
+function pmChkRefresh(){
+  prodMemoReset();
+  if(prodDataLoaded && typeof prodRenderBoard==='function') prodRenderBoard();
+  if(prodDetailCtx.proj||prodDetailCtx.zone) pmChkRenderDetail();
+  pmChkListRender();
+}
+async function pmChkSubsRead(){
+  const r=await sbFetch('/rest/v1/app_config?select=value&key=eq.'+PM_SUBS_KEY);
+  if(!r.ok) throw new Error('讀取替代規格失敗');
+  let v=[]; try{ v=JSON.parse((r.data&&r.data[0]&&r.data[0].value)||'[]'); }catch(e){}
+  return Array.isArray(v)?v.filter(x=>x&&x.need&&x.got):[];
+}
+async function pmChkSubsLoad(){
+  try{ pmChkSubs=await pmChkSubsRead(); if(pmMaLoaded) pmChkRefresh(); }catch(e){ console.warn(e); }
+}
+function pmChkSubCanEdit(){ try{ return typeof pagePerm==='function'?pagePerm('prod')==='edit':true; }catch(e){ return true; } }
+// 寫入前重讀一次,避免蓋掉別人剛存的
+async function pmChkSubSet(need,got,ok,needSpec,gotSpec){
+  if(!pmChkSubCanEdit()){ alert('沒有編輯權限'); return; }
+  if(ok===true && !confirm('確認「'+needSpec+'」可以用「'+gotSpec+'」替代?\n之後所有工程區遇到這兩個規格都直接算替代 OK。')) return;
+  try{
+    const list=(await pmChkSubsRead()).filter(x=>!(x.need===need&&x.got===got));
+    if(ok!==null) list.push({need,got,needSpec,gotSpec,ok,by:(currentUser&&currentUser.name)||'',at:new Date().toISOString()});
+    const w=await sbFetch('/rest/v1/app_config?on_conflict=key',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:PM_SUBS_KEY,value:JSON.stringify(list)})});
+    if(!w.ok) throw new Error('儲存失敗');
+    pmChkSubs=list; pmChkRefresh();
+  }catch(e){ alert(e.message||'儲存失敗'); }
+}
+function pmChkSubBtn(el,ok){ const d=el.closest('[data-need]').dataset; pmChkSubSet(d.need,d.got,ok,d.ns,d.gs); }
+function pmChkSubUndo(el){
+  const d=el.closest('[data-need]').dataset;
+  if(!confirm('撤銷「'+d.ns+' → '+d.gs+'」的替代設定?\n所有工程區都會恢復成缺料/多領。')) return;
+  pmChkSubSet(d.need,d.got,null,d.ns,d.gs);
+}
+// 疑似替代只配同一類:同直徑剪力釘(D19…)、同尺寸螺栓(M20…)
+function pmChkFam(key){ if(key.startsWith('瓷罩|')) return ''; const m=key.match(/^([MD]\d+)X/); return m?m[1]:''; }
 function pmChkUp(s){ return String(s==null?'':s).trim().toUpperCase(); }
 // 規格比對鍵:全形轉半形、大寫、去空白、去掉「-聚亨」這類廠商尾巴(橫線後面接中文)
 function pmChkSpecKey(spec){
@@ -49844,16 +49889,31 @@ function pmChkZone(proj,zone){
         line(key,key.startsWith('瓷罩|')?'瓷罩 '+key.slice(3):String(d.spec||'').trim(),item,'').got+=q;
       });
     });
-    const list=[...lines.values()].map(l=>Object.assign(l,{diff:Math.round((l.got-l.need)*10000)/10000}));
+    // 已確認的替代規格:多領那項的數量移去補缺的那項
+    pmChkSubs.forEach(r=>{
+      if(r.ok!==true) return;
+      const A=lines.get(r.need), B=lines.get(r.got); if(!A||!B||A===B) return;
+      const t=Math.min(A.need-A.got, B.got-B.need); if(!(t>0)) return;
+      A.got+=t; B.got-=t; (A.subs||(A.subs=[])).push({rule:r,qty:t,gotSpec:B.spec||r.gotSpec});
+    });
+    const list=[...lines.values()].filter(l=>l.need||l.got).map(l=>Object.assign(l,{diff:Math.round((l.got-l.need)*10000)/10000}));
+    // 疑似替代:同一類、一缺一多、數量剛好一樣,而且沒被判定過「不是」
+    const no=new Set(pmChkSubs.filter(r=>r.ok===false).map(r=>r.need+'\u0001'+r.got));
+    list.filter(l=>l.diff<0&&pmChkFam(l.key)).forEach(A=>{
+      const B=list.find(b=>b.diff===-A.diff&&!b.candOf&&b!==A&&pmChkFam(b.key)===pmChkFam(A.key)&&!no.has(A.key+'\u0001'+b.key));
+      if(B){ A.cand=B; B.candOf=A; }
+    });
     list.sort((x,y)=>(x.diff<0?0:x.diff>0?1:2)-(y.diff<0?0:y.diff>0?1:2) || x.diff-y.diff || x.spec.localeCompare(y.spec,'zh-Hant'));
-    const short=list.filter(l=>l.diff<0).length, extra=list.filter(l=>l.diff>0).length, ok=list.length-short-extra;
+    const cand=list.filter(l=>l.cand).length;
+    const short=list.filter(l=>l.diff<0&&!l.cand).length, extra=list.filter(l=>l.diff>0&&!l.candOf).length, ok=list.filter(l=>l.diff===0).length;
     const zs=pmChkZState(proj,zone);
     let level, text;
     if(zs==='sub'){ level='gray'; text='轉包'; }
     else if(short){ level=zs==='done'?'red':'gray'; text=zs==='done'?'多階缺 '+short:'尚差 '+short+' 項'; }
+    else if(cand){ level='violet'; text='待確認替代 '+cand; }
     else if(extra){ level='amber'; text='多領 '+extra; }
     else { level='green'; text='多階齊'; }
-    return {analysis:a, lines:list, short, extra, ok, notices, zState:zs, level, text};
+    return {analysis:a, lines:list, short, extra, ok, cand, notices, zState:zs, level, text};
   });
 }
 function pmChkPill(cls,txt,attrs){ return '<span class="pmc-pill pmc-'+cls+'"'+(attrs||'')+'>'+esc(txt)+'</span>'; }
@@ -49881,15 +49941,24 @@ function pmChkRenderDetail(){
   }
   if(btn){ btn.style.display=''; btn.textContent='與多階核對 '+(pmChkExpanded?'▴':'▾'); }
   if(sum) sum.innerHTML=c.lines.length?(
-    (c.ok?pmChkPill('green','齊 '+c.ok):'')+(c.short?pmChkPill(c.zState==='done'?'red':'gray','缺 '+c.short):'')+(c.extra?pmChkPill('amber','多領 '+c.extra):'')):pmChkPill('none','多階無成品材');
+    (c.ok?pmChkPill('green','齊 '+c.ok):'')+(c.cand?pmChkPill('violet','待確認替代 '+c.cand):'')+(c.short?pmChkPill(c.zState==='done'?'red':'gray','缺 '+c.short):'')+(c.extra?pmChkPill('amber','多領 '+c.extra):'')):pmChkPill('none','多階無成品材');
   if(!pmChkExpanded){ box.innerHTML=''; return; }
   const d=String(c.analysis.created_at||'').slice(0,10);
   const zt={done:'SP 成品材 Z 已完成 → 缺的就是漏單',open:'SP 成品材 Z 未完成 → 還在領料中,缺的先列灰色',sub:'成品材 Z 轉包',none:'SP狀態表沒有成品材 Z 項目'}[c.zState];
+  const ed=pmChkSubCanEdit();
+  const subAttr=(need,got,ns,gs)=>' data-need="'+esc(need)+'" data-got="'+esc(got)+'" data-ns="'+esc(ns)+'" data-gs="'+esc(gs)+'"';
   const rows=c.lines.map(l=>{
-    const st=l.diff<0?pmChkPill(c.zState==='done'?'red':'gray','少 '+pmChkQty(-l.diff)):l.diff>0?pmChkPill('amber',l.need?'多 '+pmChkQty(l.diff):'多階沒有'):pmChkPill('green','齊');
-    return '<tr><td>'+esc(l.spec||'—')+'</td><td>'+esc(l.desc||'')+'</td><td class="pmc-n">'+(l.need?pmChkQty(l.need):'—')+'</td><td class="pmc-n">'+(l.got?pmChkQty(l.got):'0')+'</td><td>'+st+'</td></tr>';
+    if(l.candOf) return '';
+    if(l.cand){
+      const B=l.cand;
+      return '<tr class="pmc-cand"'+subAttr(l.key,B.key,l.spec,B.spec)+'><td>'+esc(l.spec)+' → <b>'+esc(B.spec)+'</b><div class="pmc-sub">缺 '+pmChkQty(-l.diff)+'、多領 '+pmChkQty(B.diff)+',同一類'+(B.desc&&B.desc!==l.desc?'(領料品名:'+esc(B.desc)+')':'')+'</div></td><td>'+esc(l.desc||'')+'</td><td class="pmc-n">'+pmChkQty(l.need)+'</td><td class="pmc-n">'+pmChkQty(l.got+B.diff)+'</td><td>'+pmChkPill('violet','疑似替代')+
+        (ed?'<div class="pmc-acts"><button class="btn" onclick="pmChkSubBtn(this,true)">確認可替代</button><button class="btn" onclick="pmChkSubBtn(this,false)">不是，算缺</button></div>':'')+'</td></tr>';
+    }
+    const subNote=(l.subs||[]).map(x=>'<div class="pmc-sub"'+subAttr(x.rule.need,x.rule.got,x.rule.needSpec||l.spec,x.rule.gotSpec||x.gotSpec)+'>其中 '+pmChkQty(x.qty)+' 用 '+esc(x.gotSpec)+' 替代(全部工程區套用・'+esc(x.rule.by||'')+' '+esc(String(x.rule.at||'').slice(5,10).replace('-','/'))+' 確認'+(ed?'・<a href="javascript:void 0" onclick="pmChkSubUndo(this)">撤銷</a>':'')+')</div>').join('');
+    const st=l.diff<0?pmChkPill(c.zState==='done'?'red':'gray','少 '+pmChkQty(-l.diff)):l.diff>0?pmChkPill('amber',l.need?'多 '+pmChkQty(l.diff):'多階沒有'):(l.subs?pmChkPill('green','替代 OK'):pmChkPill('green','齊'));
+    return '<tr><td>'+esc(l.spec||'—')+subNote+'</td><td>'+esc(l.desc||'')+'</td><td class="pmc-n">'+(l.need?pmChkQty(l.need):'—')+'</td><td class="pmc-n">'+(l.got?pmChkQty(l.got):'0')+'</td><td>'+st+'</td></tr>';
   }).join('');
-  box.innerHTML='<div class="pmc-box"><div class="pmc-note">多階來源:'+esc(proj)+'-'+esc(zone)+' '+esc(d)+' 版(#'+esc(c.analysis.id)+')　領料單 '+c.notices+' 張　'+esc(zt)+'<br>已排除工地用 E、業主供料、灌漿管與 分類「一次」(BOX *** 階);規格比對忽略空白與「-聚亨」這類廠商尾巴;瓷罩需求=同直徑附瓷罩剪力釘數量</div>'+
+  box.innerHTML='<div class="pmc-box"><div class="pmc-note">多階來源:'+esc(proj)+'-'+esc(zone)+' '+esc(d)+' 版(#'+esc(c.analysis.id)+')　領料單 '+c.notices+' 張　'+esc(zt)+'<br>已排除工地用 E、業主供料、灌漿管與 分類「一次」(BOX *** 階);規格比對忽略空白與「-聚亨」這類廠商尾巴;瓷罩需求=同直徑附瓷罩剪力釘數量;同一類一缺一多且數量相同會標「疑似替代」,確認後全部工程區套用</div>'+
     (c.lines.length?'<div class="pmc-wrap"><table class="pmc-tbl mc-off"><thead><tr><th>規格</th><th>品名</th><th class="pmc-n">多階</th><th class="pmc-n">已領</th><th>狀態</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="pmc-note">此版多階資料沒有成品材。</div>')+'</div>';
 }
 // 成品材領料頁:工具列按鈕 + 有差異的工程區清單
@@ -49897,9 +49966,9 @@ let pmChkListOpen=false;
 function pmChkListToggle(){ pmChkListOpen=!pmChkListOpen; pmChkListRender(); }
 function pmChkListRows(){
   if(!pmMaLoaded) return [];
-  const rank={red:0,gray:1,amber:2};
+  const rank={red:0,violet:1,gray:2,amber:3};
   return prodGroupZones(prodBuildUnits()).map(z=>({z,c:pmChkZone(z.proj,z.zone)}))
-    .filter(x=>x.c&&x.c.lines.length&&(x.c.short||x.c.extra)&&x.c.zState!=='sub')
+    .filter(x=>x.c&&x.c.lines.length&&(x.c.short||x.c.extra||x.c.cand)&&x.c.zState!=='sub')
     .sort((a,b)=>(rank[a.c.level]??3)-(rank[b.c.level]??3)||a.z.proj.localeCompare(b.z.proj,'zh-Hant')||a.z.zone.localeCompare(b.z.zone,'zh-Hant'));
 }
 function pmChkListRender(){
@@ -49912,11 +49981,11 @@ function pmChkListRender(){
   if(!pmChkListOpen) return;
   if(!pmMaLoaded){ box.innerHTML='<div class="pmc-box"><div class="pmc-note">多階資料載入中或無法載入。</div></div>'; return; }
   const tr=rows.map(({z,c})=>{
-    const parts=[]; if(c.short) parts.push('缺 '+c.short+' 項'); if(c.extra) parts.push('多領 '+c.extra+' 項');
-    const st=c.level==='red'?pmChkPill('red','確定漏單'):c.level==='amber'?pmChkPill('amber','多領'):pmChkPill('gray',c.notices?'進行中':'未開始');
+    const parts=[]; if(c.cand) parts.push('待確認替代 '+c.cand+' 項'); if(c.short) parts.push('缺 '+c.short+' 項'); if(c.extra) parts.push('多領 '+c.extra+' 項');
+    const st=c.level==='red'?pmChkPill('red','確定漏單'):c.level==='violet'?pmChkPill('violet','待確認'):c.level==='amber'?pmChkPill('amber','多領'):pmChkPill('gray',c.notices?'進行中':'未開始');
     return '<tr class="pmc-link" data-proj="'+esc(z.proj)+'" data-zone="'+esc(z.zone)+'" onclick="pmChkOpenZone(this.dataset.proj,this.dataset.zone)"><td>'+esc(z.proj)+'-'+esc(z.zone)+'</td><td>'+esc(parts.join('、'))+(c.notices?'':'(還沒有領料單)')+'</td><td>'+st+'</td></tr>';
   }).join('');
-  box.innerHTML='<div class="pmc-box"><div class="pmc-note">看板上有多階資料的工程區,與多階成品材比對有差異的才列出(點一列看核對表)。紅=SP 成品材 Z 已完成仍有缺,確定漏單;灰=還在領料中。</div>'+
+  box.innerHTML='<div class="pmc-box"><div class="pmc-note">看板上有多階資料的工程區,與多階成品材比對有差異的才列出(點一列看核對表)。紅=SP 成品材 Z 已完成仍有缺,確定漏單;紫=疑似規格替代,點進去確認;灰=還在領料中。</div>'+
     (rows.length?'<div class="pmc-wrap"><table class="pmc-tbl mc-off"><thead><tr><th>工程區</th><th>差異</th><th>狀態</th></tr></thead><tbody>'+tr+'</tbody></table></div>':'<div class="pmc-note">全部對上,沒有差異。</div>')+'</div>';
 }
 // ── 保留料的狀態判定 ──
