@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.27.3"/>
+<meta name="sc-version" content="2026.11.27.4"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -34255,14 +34255,21 @@ async function shipRecordDispatch(txt){
   }
   if(meta.colN>0){ const c={kind:'col',beds:meta.colBeds,col_qty:meta.colN,layout_ids:meta.colIds,message:'C棟'+meta.colBeds.join('.')+'需出'+meta.colN+'支柱子',created_by_name:who}; recs.push(c); legacy.push(c); }
   if(!recs.length) return;
-  let r=await sbFetch('/rest/v1/ship_dispatches',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(recs)});
+  // 一次寫多筆時 PostgREST 要求每筆欄位一模一樣(PGRST102),樑(cars/batch_id…)和柱(col_qty)同時派會整批被拒:缺的欄位補 null
+  const sameKeys=arr=>{ const ks=[...new Set(arr.flatMap(o=>Object.keys(o)))]; return arr.map(o=>{ const x={}; ks.forEach(k=>{ x[k]=(k in o)?o[k]:null; }); return x; }); };
+  let r=await sbFetch('/rest/v1/ship_dispatches',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(sameKeys(recs))});
   if(!r.ok&&recs.length!==legacy.length&&/batch_id|trip_no|trip_of|PGRST204/.test(JSON.stringify(r.data||''))){
     // 分車欄位還沒建:退回一筆記整批,派車時間照樣留著
     shipTripColsMissing=true;
     alert('派車已記錄,但還不能分車記錄(每車各自記車到時間)。\n請到 Supabase SQL Editor 執行 ship_dispatches_migration.sql 最後「分車記錄」那段。');
-    r=await sbFetch('/rest/v1/ship_dispatches',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(legacy)});
+    r=await sbFetch('/rest/v1/ship_dispatches',{method:'POST',headers:{'Prefer':'return=representation'},body:JSON.stringify(sameKeys(legacy))});
   }
-  if(!r.ok){ console.warn('ship dispatch record failed',r.status,r.data); if(r.status===404||/ship_dispatches/.test(JSON.stringify(r.data||''))) shipDispatchReady=false; return; }
+  if(!r.ok){
+    console.warn('ship dispatch record failed',r.status,r.data);
+    if(r.status===404||/ship_dispatches/.test(JSON.stringify(r.data||''))){ shipDispatchReady=false; return; }
+    alert('派車訊息已複製,但派車紀錄沒有存成功(勾選先保留),請稍後再按一次「複製派車訊息」。\n'+String((r.data&&(r.data.message||r.data.code))||r.status||''));
+    return;
+  }
   shipLastRecorded={txt,at:Date.now()};
   if(Array.isArray(r.data)) shipDispatches=shipDispatches.concat(r.data);
   shipBoardSel={}; shipCars=1;
