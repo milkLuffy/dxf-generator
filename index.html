@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png"/>
 <meta name="theme-color" content="#1f7a55"/>
-<meta name="sc-version" content="2026.11.27.4"/>
+<meta name="sc-version" content="2026.11.27.5"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="鎮山工程"/>
@@ -19256,7 +19256,7 @@ async function dashLoadStats() {
   const [dRes, lRes, cRes, eRes, mRes] = await Promise.all([
     sbFetchAll(daily),
     projOk ? (dashActiveProjs.length ? sbFetchAll('/rest/v1/layout_items?select=proj_num,zone_code,part_no,work_date,qty&proj_num=in.(' + inProj + ')') : none) : sbFetchAll('/rest/v1/layout_items?select=proj_num,zone_code,part_no,work_date,qty'),
-    projOk ? (inZone ? sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,qty&zone_id=in.(' + inZone + ')') : none) : sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,qty'),
+    projOk ? (inZone ? sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,qty,spec&zone_id=in.(' + inZone + ')') : none) : sbFetchAll('/rest/v1/components?select=zone_id,part_no,net_weight,qty,spec'),
     projOk ? (inZone ? sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no,extra&zone_id=in.(' + inZone + ')') : none) : sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no,extra'),
     projOk ? (inZone ? sbFetchAll('/rest/v1/material_receipts?select=zone_id,part_no,date,qty&zone_id=in.(' + inZone + ')') : none) : sbFetchAll('/rest/v1/material_receipts?select=zone_id,part_no,date,qty')
   ]);
@@ -19536,7 +19536,7 @@ function dashRenderProgress() {
       needQty += q;
       // 進料: 累計至 progressDate 的進料支數
       const recs = dashReceipts[c.zone_id + '|' + c.part_no] || [];
-      feed += recs.filter(x => !x.date || x.date <= progressDate).reduce((s,x) => s + (parseInt(x.qty)||0), 0);
+      feed += compFeedGot(c, recs.filter(x => !x.date || x.date <= progressDate).reduce((s,x) => s + (parseInt(x.qty)||0), 0));   // BOX 不登記進料,當作已進
       // 上線: 累計上線支數,不超過該編號 BOM 支數(重複上線不灌水)
       const oq = onlineQty[k + '|' + pn] || 0;
       online += q > 0 ? Math.min(oq, q) : oq;
@@ -21188,6 +21188,13 @@ async function showZoneDetail(id) {
 
 // BOM 基本附加欄固定；版次欄至少 R0～R6，並依實際資料自動延伸且多保留下一欄。
 const COMP_BASE_EXT_COLS = ['加工機','進料','A201','A202','出貨','流水編號'];
+// BOX(柱)不登記進料:進料格顯示灰色「—」不能填,進料統計一律當作整支已進料;加工機空白時當「一次」(只顯示,不寫資料庫)
+function compIsBox(c) { return /^\s*BOX/i.test(String((c && c.spec) || '')); }
+function compFeedGot(c, got) { return compIsBox(c) ? (parseInt(c.qty) || 0) : got; }
+function compMachineVal(r) {
+  const v = (zoneCompExt[r.part_no] || {})['加工機'];
+  return (v == null || String(v).trim() === '') && compIsBox(r) ? '一次' : (v || '');
+}
 const COMP_EXT_COLS = COMP_BASE_EXT_COLS.concat(Array.from({length:7},(_,i)=>'R'+i));
 function compRevisionCols(extraMap){
   let used=-1;Object.values(extraMap||zoneCompExt||{}).forEach(ex=>Object.keys(ex||{}).forEach(k=>{const m=/^R(\d+)$/.exec(k);if(m&&String(ex[k]||'').trim())used=Math.max(used,Number(m[1]));}));
@@ -21223,6 +21230,8 @@ function zoneDateQtyText(batches, need) {
 // 統一取得「構件總表」某欄位的實際顯示值(渲染與篩選共用同一份邏輯,避免像進料/A201/A202/出貨/流水編號
 // 這種自動帶入的欄位,篩選抓不到畫面上實際顯示的值)
 function compExtDisplayValue(r, c) {
+  if (c === '加工機') return compMachineVal(r);
+  if (c === '進料' && compIsBox(r)) return '—';
   if (c === '進料') {
     const singleDate = zoneSingleReceiptDate(r);
     if (singleDate) return zoneDateSlashShort(singleDate);
@@ -21502,6 +21511,7 @@ function toggleMatMode() {
 // 勾/取消單一構件(不重繪整表,只更新計數,保留其他勾選狀態);勾選時預設補到應進數量,可再自行調整成較少的數量
 function toggleMatPart(part, checked) {
   if (!part) return;
+  if (checked && compIsBox(zoneComponents.find(c => c.part_no === part))) return;   // BOX 不登記進料(全選也跳過)
   if (checked) {
     zoneMatChecked.add(part);
     if (zoneMatQty[part] == null) {
@@ -21808,7 +21818,7 @@ function renderZoneQtySummary() {
     if (need <= 0) return;
     const ext = zoneCompExt[c.part_no] || {};
     bom += need;
-    mat += Math.min(need, (zoneReceipts[c.part_no] || []).reduce((s, x) => s + (parseInt(x.qty) || 0), 0));
+    mat += compFeedGot(c, Math.min(need, (zoneReceipts[c.part_no] || []).reduce((s, x) => s + (parseInt(x.qty) || 0), 0)));
     // 有批次紀錄就照支數;只有手填日期(沒批次)視為整支都有
     const ob = sumQ(zoneOnlineBatches[c.part_no]);
     on += Math.min(need, ob || ((zoneOnlineMap[c.part_no] || String(ext.A201 || '').trim()) ? need : 0));
@@ -21897,13 +21907,15 @@ function renderCompTable() {
     html += '<tr'+(compIs2nd(ext['加工機'])?' class="comp-2nd"':'')+'>';   // 加工機＝二次製作 → 整列淺底色
     if (showChk) {
       const dp = String(r.part_no||'').replace(/"/g,'&quot;');
-      if (zoneMatMode) html += '<td class="chk-col"><input type="checkbox" class="nonco-chk" data-part="'+dp+'"'+(zoneMatChecked.has(r.part_no)?' checked':'')+' onchange="toggleMatPart(this.dataset.part, this.checked)"></td>';
+      if (zoneMatMode) html += '<td class="chk-col"><input type="checkbox" class="nonco-chk" data-part="'+dp+'"'+(compIsBox(r)?' disabled title="BOX 不登記進料"':(zoneMatChecked.has(r.part_no)?' checked':''))+' onchange="toggleMatPart(this.dataset.part, this.checked)"></td>';
       else html += '<td class="chk-col"><input type="checkbox" class="nonco-chk" data-part="'+dp+'" onchange="toggleExcludePart(this.dataset.part, this.checked)"></td>';
     }
     vcols.forEach(col => {
       if (!col.ext) { html += '<td'+(col.key==='part_no'?' class="partno"':'')+'>'+(r[col.key]||'')+'</td>'; return; }
       const c = col.label;
-      if (c === '進料') {
+      if (c === '進料' && compIsBox(r)) {
+        html += '<td><span style="color:var(--text3)" title="BOX 不登記進料(統計當作已進料)">—</span></td>';
+      } else if (c === '進料') {
         const recs = zoneReceipts[r.part_no] || [];
         const got = recs.reduce((s,x) => s + (parseInt(x.qty)||0), 0);
         const need = parseInt(r.qty) || 0;
@@ -21950,7 +21962,7 @@ function renderCompTable() {
         const title = raw ? '自動帶入流水編號' : '尚無流水編號;由「每日產量」自動帶入,不可手動填寫';
         html += '<td><input type="text" value="'+d+'" data-part="'+r.part_no+'" data-col="'+c+'" readonly style="color:var(--accent3)" title="'+title+'"/></td>';
       } else {
-        const val = (ext[c]||'').replace(/"/g,'&quot;');
+        const val = String(c === '加工機' ? compMachineVal(r) : (ext[c]||'')).replace(/"/g,'&quot;');
         html += '<td><input type="text" value="'+val+'" data-part="'+r.part_no+'" data-col="'+c+'" oninput="compExtEdit(this)" onfocus="compExtFocus(this)" onchange="compExtCommit(this)"/></td>';
       }
     });
@@ -27098,9 +27110,11 @@ function exportZoneExcel() {
     const base = [r.seq, r.part_no, r.common_no, r.spec, r.qty, parseFloat(r.net_weight)||r.net_weight, r.drawing_no];
     const extVals = extCols.map(c => {
       if (c === '進料') {
+        if (compIsBox(r)) return '—';
         const recs = zoneReceipts[r.part_no] || [];
         return recs.reduce((s,x) => s + (parseInt(x.qty)||0), 0);
       }
+      if (c === '加工機') return compMachineVal(r);
       if (c === 'A201' || c === 'A202' || c === '出貨' || c === '流水編號') return compExtDisplayValue(r,c);
       return ext[c]||'';
     });
@@ -61288,7 +61302,7 @@ async function rdyFeedFetch(ids){
   if(!ids.length) return rdyFeedById;
   const inZ='('+ids.join(',')+')', arr=r=>(r&&r.ok&&Array.isArray(r.data))?r.data:[];
   const [rc,rm,re]=await Promise.all([
-    sbFetchAll('/rest/v1/components?select=zone_id,part_no,qty&zone_id=in.'+inZ),
+    sbFetchAll('/rest/v1/components?select=zone_id,part_no,qty,spec&zone_id=in.'+inZ),
     sbFetchAll('/rest/v1/material_receipts?select=zone_id,part_no,qty&zone_id=in.'+inZ),
     sbFetchAll('/rest/v1/component_ext?select=zone_id,part_no,extra&zone_id=in.'+inZ)
   ]);
@@ -61302,7 +61316,7 @@ async function rdyFeedFetch(ids){
   const out={}; ids.forEach(id=>{ out[id]={feed:0,need:0,parts:0,at:now}; });
   arr(rc).forEach(c=>{
     const o=out[String(c.zone_id)], k=c.zone_id+'|'+c.part_no; if(!o||nonco.has(k)) return;
-    o.parts++; o.need+=parseInt(c.qty)||0; o.feed+=got[k]||0;
+    o.parts++; o.need+=parseInt(c.qty)||0; o.feed+=compFeedGot(c, got[k]||0);   // BOX 不登記進料,當作已進
   });
   Object.assign(rdyFeedById,out);
   return rdyFeedById;
